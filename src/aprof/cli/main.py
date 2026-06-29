@@ -10,6 +10,7 @@ from aprof.reports.comparison import write_compare_report
 from aprof.agents.profiling.harness import HarnessRequest, run_harness
 from aprof.profiling.msprof import MsprofCommandBuilder, parse_msprof_simulator, probe_msprof_environment
 from aprof.reports.analysis import write_analysis_report, write_environment_report
+from aprof.integrations.cannbot import get_skill_markdown, list_skills, resolve_skill
 from aprof.profiling.skills import skill_specs_to_dicts
 
 
@@ -79,6 +80,16 @@ def main(argv: list[str] | None = None) -> int:
     command.add_argument("--launch-count", type=int, default=1)
 
     subparsers.add_parser("skills", help="List available profiling skills")
+
+    cannbot = subparsers.add_parser(
+        "cannbot-skills", help="List or inspect CANNBot skills from third_party/cannbot-skills"
+    )
+    cannbot.add_argument("name", nargs="?", help="skill name, e.g. ops-profiling")
+    cannbot.add_argument(
+        "--show",
+        action="store_true",
+        help="print SKILL.md content when name is provided",
+    )
 
     args = parser.parse_args(argv)
 
@@ -150,6 +161,37 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "skills":
         print(json.dumps(skill_specs_to_dicts(), indent=2, ensure_ascii=False))
+        return 0
+
+    if args.command == "cannbot-skills":
+        if args.name:
+            skill = resolve_skill(args.name)
+            if args.show:
+                print(get_skill_markdown(args.name))
+            else:
+                print(
+                    json.dumps(
+                        {
+                            "name": skill.name,
+                            "category": skill.category,
+                            "path": str(skill.path),
+                            "skill_md": str(skill.skill_md),
+                        },
+                        indent=2,
+                        ensure_ascii=False,
+                    )
+                )
+            return 0
+        payload = [
+            {
+                "name": skill.name,
+                "category": skill.category,
+                "path": str(skill.path),
+                "skill_md": str(skill.skill_md),
+            }
+            for skill in list_skills()
+        ]
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
         return 0
 
     parser.error(f"unsupported command: {args.command}")
