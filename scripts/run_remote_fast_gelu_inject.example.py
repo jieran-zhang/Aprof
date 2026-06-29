@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Upload fast_gelu inject cases to PKU remote, build, msprof sim, download artifacts."""
+"""Upload fast_gelu inject cases to remote host, build, msprof sim, download artifacts.
+
+Copy to run_remote_fast_gelu_inject.py (gitignored) and set:
+  APROF_REMOTE_HOST, APROF_REMOTE_PORT (optional, default 22),
+  APROF_REMOTE_USER, APROF_REMOTE_PASS, APROF_REMOTE_ROOT (optional)
+"""
 from __future__ import annotations
 
 import json
@@ -9,9 +14,15 @@ import sys
 
 import paramiko
 
-HOST, PORT, USER, PASS = "xeon6.pku-dasys.cn", 2222, "u2300013210", "2300013210@pdc2026"
-ENV = "source /usr/local/Ascend/ascend-toolkit/latest/set_env.sh"
-REMOTE_ROOT = "/home/u2300013210/aprof_fast_gelu_inject"
+HOST = os.environ["APROF_REMOTE_HOST"]
+PORT = int(os.environ.get("APROF_REMOTE_PORT", "22"))
+USER = os.environ["APROF_REMOTE_USER"]
+PASS = os.environ["APROF_REMOTE_PASS"]
+ENV = os.environ.get(
+    "APROF_REMOTE_ENV",
+    "source /usr/local/Ascend/ascend-toolkit/latest/set_env.sh",
+)
+REMOTE_ROOT = os.environ.get("APROF_REMOTE_ROOT", f"/home/{USER}/aprof_fast_gelu_inject")
 ASC_ARCH = os.environ.get("ASC_ARCH", "dav-3510")
 CASES = ["baseline", "inject_blockdim", "inject_tail", "inject_tilelen_small"]
 TEXT_EXT = {".sh", ".asc", ".h", ".py", ".md", ".json"}

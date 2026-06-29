@@ -1,14 +1,25 @@
 #!/usr/bin/env python3
-"""Re-run msprof sim for one fast_gelu inject case on remote (with ulimit fix)."""
+"""Re-run msprof sim for one fast_gelu inject case on remote (with ulimit fix).
+
+Copy to run_remote_fast_gelu_inject_sim.py (gitignored) and set:
+  APROF_REMOTE_HOST, APROF_REMOTE_PORT (optional), APROF_REMOTE_USER,
+  APROF_REMOTE_PASS, APROF_REMOTE_ROOT (optional), INJECT_CASE (optional)
+"""
 import json
 import os
 import sys
 
 import paramiko
 
-HOST, PORT, USER, PASS = "xeon6.pku-dasys.cn", 2222, "u2300013210", "2300013210@pdc2026"
-ENV = "source /usr/local/Ascend/ascend-toolkit/latest/set_env.sh"
-REMOTE_ROOT = "/home/u2300013210/aprof_fast_gelu_inject"
+HOST = os.environ["APROF_REMOTE_HOST"]
+PORT = int(os.environ.get("APROF_REMOTE_PORT", "22"))
+USER = os.environ["APROF_REMOTE_USER"]
+PASS = os.environ["APROF_REMOTE_PASS"]
+ENV = os.environ.get(
+    "APROF_REMOTE_ENV",
+    "source /usr/local/Ascend/ascend-toolkit/latest/set_env.sh",
+)
+REMOTE_ROOT = os.environ.get("APROF_REMOTE_ROOT", f"/home/{USER}/aprof_fast_gelu_inject")
 LOCAL_COMMON = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "benchmarks", "aprof_injected_ops", "common")
 )

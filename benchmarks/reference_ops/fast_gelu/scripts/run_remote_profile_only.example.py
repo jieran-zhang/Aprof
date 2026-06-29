@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Re-run only msprof hardware capture on remote (after verify passed)."""
+"""Re-run only msprof hardware capture on remote (after verify passed).
+
+Copy to run_remote_profile_only.py (gitignored); requires run_remote.py with credentials.
+"""
 import os
 import sys
 

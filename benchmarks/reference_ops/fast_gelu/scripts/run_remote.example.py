@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Upload fast_gelu benchmark to PKU remote NPU host, build, verify, and profile."""
+"""Upload fast_gelu benchmark to remote NPU host, build, verify, and profile.
+
+Copy to run_remote.py (gitignored) and set:
+  APROF_REMOTE_HOST, APROF_REMOTE_PORT (optional), APROF_REMOTE_USER,
+  APROF_REMOTE_PASS, APROF_REMOTE_ROOT (optional)
+"""
 from __future__ import annotations
 
 import os
@@ -8,9 +13,15 @@ import sys
 
 import paramiko
 
-HOST, PORT, USER, PASS = "xeon6.pku-dasys.cn", 2222, "u2300013210", "2300013210@pdc2026"
-ENV = "source /usr/local/Ascend/ascend-toolkit/latest/set_env.sh"
-REMOTE_ROOT = "/home/u2300013210/aprof_fast_gelu"
+HOST = os.environ["APROF_REMOTE_HOST"]
+PORT = int(os.environ.get("APROF_REMOTE_PORT", "22"))
+USER = os.environ["APROF_REMOTE_USER"]
+PASS = os.environ["APROF_REMOTE_PASS"]
+ENV = os.environ.get(
+    "APROF_REMOTE_ENV",
+    "source /usr/local/Ascend/ascend-toolkit/latest/set_env.sh",
+)
+REMOTE_ROOT = os.environ.get("APROF_REMOTE_ROOT", f"/home/{USER}/aprof_fast_gelu")
 ASC_ARCH = os.environ.get("ASC_ARCH", "dav-2201")
 TEXT_EXT = {".sh", ".asc", ".h", ".cpp", ".py", ".md", ".json", ".txt", ".cmake"}
 
@@ -157,7 +168,6 @@ def main() -> int:
     for remote_rel, local_name in downloads:
         download_if_exists(sftp, remote_rel, os.path.join(LOCAL_OUT, local_name))
 
-    # try download one representative msprof csv if present
     _, ls_out = run(
         ssh,
         f"find {REMOTE_ROOT}/msprof_hw_output -maxdepth 3 -type f "
