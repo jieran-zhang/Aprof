@@ -1,0 +1,88 @@
+{
+  "soc_version": "Ascend910B1",
+  "description": "MVP architecture model for AProf. Numeric limits are intentionally tagged by source because public Ascend microarchitecture data is incomplete.",
+  "components": {
+    "vector": {
+      "kind": "compute",
+      "limit_per_us": 2000000,
+      "unit": "ops/us",
+      "source": "assumed_for_mvp_fixture_calibration",
+      "confidence": "low",
+      "notes": "Represents a software-aware vector path ceiling for the controlled PoC fixtures, not a published silicon peak.",
+      "metric_mapping": ["trace args.ops", "VECTOR pipeline windows", "core*_instr_exe.csv vector instruction mix"],
+      "required_evidence": ["trace.json VECTOR windows", "operation count or instruction mix", "source hotspot CSV"],
+      "next_experiment": "collect VECTOR instruction timeline and check whether the active data type path matches the expected vector issue path"
+    },
+    "cube": {
+      "kind": "compute",
+      "limit_per_us": 8000000,
+      "unit": "ops/us",
+      "source": "placeholder",
+      "confidence": "low",
+      "notes": "Reserved for matmul/cube operators in a later iteration.",
+      "metric_mapping": ["trace args.ops", "CUBE pipeline windows"],
+      "required_evidence": ["trace.json CUBE windows", "matrix instruction count"],
+      "next_experiment": "collect CUBE pipeline windows and compare the matrix instruction path with the operator data type"
+    },
+    "scalar": {
+      "kind": "control",
+      "limit_per_us": 20000,
+      "unit": "ops/us",
+      "source": "assumed_for_mvp_fixture_calibration",
+      "confidence": "low",
+      "notes": "Used to flag scalar/control phases whose large time fraction is more important than high throughput.",
+      "metric_mapping": ["SCALAR or FLOWCTRL trace windows", "source hotspot CSV"],
+      "required_evidence": ["trace.json SCALAR/FLOWCTRL windows", "code hotspot CSV with -g build"],
+      "next_experiment": "rebuild with -g if needed and inspect scalar/control hotspot lines for invariant work or debug code"
+    },
+    "mte2": {
+      "kind": "data_movement",
+      "limit_per_us": 90000,
+      "unit": "bytes/us",
+      "source": "assumed_for_mvp_fixture_calibration",
+      "confidence": "low",
+      "notes": "Models GM-to-AICORE movement for fixture-level attribution.",
+      "metric_mapping": ["MTE2 trace windows", "trace args.bytes", "core*_instr_exe.csv load/copy instructions"],
+      "required_evidence": ["trace.json MTE2 windows", "bytes moved per window", "source hotspot CSV"],
+      "next_experiment": "inspect MTE2 load tiling, GM alignment, and overlap with vector compute"
+    },
+    "mte3": {
+      "kind": "data_movement",
+      "limit_per_us": 90000,
+      "unit": "bytes/us",
+      "source": "assumed_for_mvp_fixture_calibration",
+      "confidence": "low",
+      "notes": "Models AICORE-to-GM movement for fixture-level attribution.",
+      "metric_mapping": ["MTE3 trace windows", "trace args.bytes", "core*_instr_exe.csv store/copy instructions"],
+      "required_evidence": ["trace.json MTE3 windows", "bytes moved per window", "source hotspot CSV"],
+      "next_experiment": "inspect MTE3 store tiling, GM alignment, and whether copy-out dominates after compute optimization"
+    },
+    "gm": {
+      "kind": "memory",
+      "limit_per_us": 1800000,
+      "unit": "bytes/us",
+      "source": "public_rule_of_thumb_from_msprof_tuning_examples",
+      "confidence": "medium",
+      "notes": "A coarse GM bandwidth placeholder used only when trace events are labeled as global memory.",
+      "metric_mapping": ["GM or memory trace windows", "bytes moved"],
+      "required_evidence": ["trace.json memory windows", "bytes moved per window"],
+      "next_experiment": "collect memory-path timeline evidence and separate GM traffic from MTE pipeline activity"
+    },
+    "idle": {
+      "kind": "idle",
+      "limit_per_us": 1,
+      "unit": "idle/us",
+      "source": "derived",
+      "confidence": "high",
+      "notes": "Synthetic component for launch gaps or synchronization time.",
+      "metric_mapping": ["metadata total_duration_us minus active trace duration"],
+      "required_evidence": ["metadata total duration", "trace window timestamps"],
+      "next_experiment": "narrow the profiling window around launch or synchronization gaps"
+    }
+  },
+  "shared_constraints": [
+    "MTE2 and MTE3 may share effective memory bandwidth when active in nearby windows.",
+    "Fixture limits are software-aware attainable limits for method validation, not final hardware characterization.",
+    "All numeric limits must be replaced or recalibrated before claiming absolute Ascend910B1 performance."
+  ]
+}

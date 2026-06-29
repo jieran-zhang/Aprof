@@ -1,0 +1,270 @@
+# Ascend C Direct Invoke and `msprof op simulator` SOP
+
+End-to-end procedure for the `ReduceSum_ref` direct-invoke skeleton on the
+`Ascend950PR_950x` simulator. Validated on this host (CANN 9.1.0-beta.1, no
+physical NPU). The working mode is `--config` (kernel-launcher driven).
+
+References:
+- [msopprof simulator user guide (CANN 9.1.0-beta.1)](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910beta1/devaids/optool/docs/zh/user_guide/msopprof_simulator_user_guide.md)
+- [msProf JSON 配置文件说明 (CANN 8.0.RC3 alpha)](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/80RC3alpha003/devaids/auxiliarydevtool/atlasopdev_16_0104.html)
+  — gives the only public `op_config.json` schema example.
+
+---
+
+## 1. Build a Direct-Invoke Framework from Kernel Code
+
+For a vector-style Ascend C kernel, start from the `add_custom` direct-invoke template:
+
+```bash
+cp -r .cursor/skills/ops-ascendc-direct-invoke-template/references/add_custom <your_op>
+cd <your_op>
+```
+
+Rename `add_custom` everywhere and fill in the `[MODIFY]` points:
+
+- `op_kernel/<your_op>_kernel.asc`: kernel class, entry function, I/O count, compute logic.
+- `op_kernel/<your_op>_tiling.h`: tiling structure shared between host and kernel.
+- `op_host/<your_op>.asc`: host-side ACL setup + `<<<>>>` launch.
+- `CMakeLists.txt`: target name, source files, `--npu-arch`.
+
+For the `Ascend950PR_950x` simulator on this host use:
+
+```cmake
+target_compile_options(<your_op> PRIVATE
+    $<$<COMPILE_LANGUAGE:ASC>:--npu-arch=dav-3510>
+)
+```
+
+Direct launch in the host `.asc`:
+
+```cpp
+<your_op>_kernel<<<blockNum, nullptr, stream>>>(inputDevice, outputDevice, tilingDevice);
+aclrtSynchronizeStream(stream);
+```
+
+Do **not** use `aclrtBinaryLoadFromFile()`; that path needs a separate kernel
+metadata json that the host build does not emit.
+
+## 2. Build the Host Executable (real-NPU use only)
+
+```bash
+source scripts/setup_env.sh
+cd benchmark/ReduceSum_ref
+rm -rf build
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j"$(nproc)"
+```
+
+Output: `benchmark/ReduceSum_ref/build/reduce_sum`. Generate input data with
+`python3 scripts/gen_data.py 1 8 fp32`. This executable is **for real hardware
+only** (`aclInit` will fail without an NPU), and `--application` mode is not
+viable against the current simulator package — see section 6.
+
+## 3. Build a Device-Side Kernel `.o` (simulator use)
+
+`msprof op simulator --config` needs a standalone device ELF, produced in two
+steps with `bisheng` + `ld.lld`:
+
+```bash
+source scripts/setup_env.sh
+cd benchmark/ReduceSum_ref
+mkdir -p build_sim
+BISHENG=$ASCEND_HOME_PATH/bin/bisheng
+LD=$ASCEND_HOME_PATH/bin/ld.lld
+
+"$BISHENG" -fPIC --aicore-only --npu-arch=dav-3510 -O2 \
+    -I op_kernel -I op_host \
+    -I "$ASCEND_HOME_PATH/include" \
+    -I "$ASCEND_HOME_PATH/x86_64-linux/include" \
+    -I "$ASCEND_HOME_PATH/compiler/tikcpp/tikcfw" \
+    -I "$ASCEND_HOME_PATH/compiler/tikcpp/tikcfw/impl" \
+    -I "$ASCEND_HOME_PATH/compiler/tikcpp/tikcfw/interface" \
+    --asc-aicore-lang -c op_kernel/reduce_sum_kernel.asc \
+    -o build_sim/reduce_sum_kernel.obj
+
+"$LD" -m aicorelinux -Ttext=0 build_sim/reduce_sum_kernel.obj -static \
+    -o build_sim/reduce_sum_kernel.o
+
+file build_sim/reduce_sum_kernel.o
+# expected: ELF 64-bit LSB executable, *unknown arch 0x1029*, statically linked
+```
+
+Tip: add `-g` to the `bisheng` command if you want the **code-hotspot CSV**
+(`*_code_exe_*.csv`) to map cycles back to source lines. Without `-g` the file
+is generated but only contains the header row.
+
+## 4. Prepare `input.bin`, `tiling.bin`, and `op_config.json`
+
+For the `M=1, N=8, fp32, blockdim=1` case:
+
+```bash
+cd benchmark/ReduceSum_ref
+python3 - <<'PY'
+import struct, numpy as np
+m, n = 1, 8
+np.arange(m*n, dtype=np.float32).tofile("build_sim/input.bin")
+# 8 uint32: m, n, inputStrideN, rowsPerCore, perLoopN, perLoopNAligned, loopCount, tailN
+open("build_sim/tiling.bin","wb").write(struct.pack("8I", 1, 8, 8, 1, 8, 8, 1, 0))
+PY
+```
+
+`op_config.json` (top-level fields **not** inside `test_cases`; each case uses
+`param_desc[]` with `param_type` ∈ {`input`, `output`, `workspace`, `tiling`}):
+
+```json
+{
+  "kernel_name": "reduce_sum_kernel",
+  "kernel_path": "./reduce_sum_kernel.o",
+  "blockdim": 1,
+  "mode": "ca",
+  "device_id": 0,
+  "magic": "RT_DEV_BINARY_MAGIC_ELF_AIVEC",
+  "test_cases": [
+    {
+      "case_name": "reduce_sum_m1n8",
+      "param_desc": [
+        {"param_type": "input",  "type": "float32", "shape": [1, 8], "data_path": "./input.bin", "name": "x"},
+        {"param_type": "output", "type": "float32", "shape": [1],                                "name": "y"},
+        {"param_type": "tiling", "tiling_data_size": 32, "tiling_data_path": "./tiling.bin"}
+      ]
+    }
+  ]
+}
+```
+
+Notes:
+- `mode: "ca"` selects the cycle-accurate model (slowest but most detailed).
+- `magic` must match the kernel architecture (`RT_DEV_BINARY_MAGIC_ELF_AIVEC` for
+  the vector entry generated by `__global__ __vector__`).
+- Paths are resolved relative to the current working directory, which is
+  `build_sim/` in the commands below.
+
+## 5. Run `msprof op simulator --config`
+
+```bash
+source scripts/setup_env.sh           # prepends simulator lib to LD_LIBRARY_PATH
+cd benchmark/ReduceSum_ref/build_sim
+rm -rf ../msprof_sim_output/OPPROF_*
+
+msprof op simulator \
+    --config=./op_config.json \
+    --output=../msprof_sim_output \
+    --timeout=10
+```
+
+Per the official guide, `--config` mode:
+- **must rely on `LD_LIBRARY_PATH`** (set by `scripts/setup_env.sh`) and
+  **does not accept `--soc-version`**.
+- does not need `--aic-metrics=PipeUtilization` (that flag belongs to the
+  real-hardware `msprof op` mode; simulator does not produce a
+  `pipe_utilization.csv`).
+- `--timeout` is in minutes (range 1..2880); the official guide recommends
+  ≤5 min runs. The 1×8 reduce on this host needs ~3 min for kernel execution
+  + ~7 min for dump parsing.
+
+A successful run prints (excerpt):
+
+```text
+[INFO]  Op profiling analysis start.
+[INFO]  Running simulation task: Binary Simulation Running, use simulator in LD_LIBRARY_PATH
+[INFO] Top sim cfg file: .../dav_3510/lib/Ascend950pr_9599_sim.toml
+...
+[INFO] AicWrapper attach AIC 0..31, num_vec_core=2, num_subcore=3
+[INFO] Model Start Time: ...
+[INFO] <ProfInit> Start profiling on kernel: reduce_sum_kernel
+[info] [block_start] : AIV, task_id=0, core_id=0, block_id=0
+[info] [block_end]   : AIV, task_id=0, core_id=0, block_id=0
+```
+
+## 6. Report Locations (verified)
+
+After parse completes:
+
+```text
+benchmark/ReduceSum_ref/msprof_sim_output/OPPROF_<timestamp>_<id>/
+└── device0/
+    ├── tmp_dump/                      # 7000+ raw simulator dumps (cube/vec/mte)
+    └── <kernel_name>/<launch_idx>/
+        ├── dump/                      # per-launch raw dumps (intermediate)
+        └── simulator/
+            ├── trace.json             # whole-op timeline (Chrome Tracing / MindStudio Insight)
+            ├── visualize_data.bin     # MindStudio Insight artifact
+            └── <core>.<unit>/         # per-core sub-folder, e.g. core0.veccore0
+                ├── <core>_code_exe_*.csv    # code hotspot (needs -g; header-only without)
+                ├── <core>_instr_exe_*.csv   # per-instruction cycles + pipe + detail
+                └── trace.json               # per-core timeline
+```
+
+Sample row from `core0.veccore0_instr_exe_*.csv`:
+
+```text
+instr,addr,pipe,call_count,cycles,running_time(us),detail
+VF,282121064,PUSHQ,1,564,0.300000,"addr:0x10d0da00,instr_num:0x8,"
+SET_FLAG,282121124,VECTOR,1,555,0.300000,"PIPE:VEC,TRIGGERPIPE:SCALAR,..."
+ST_XD_XN,282120960,SCALAR,1,546,0.300000,"dtype:B32,XD:X24=0,XN:X7=0x1b94d800,..."
+```
+
+## 7. Visualising the Report
+
+- `trace.json` → open `chrome://tracing` and drag the file in (W/S/A/D to zoom/pan),
+  or import into MindStudio Insight.
+- `visualize_data.bin` → MindStudio Insight only (provides timeline + code hotspot
+  + GM bandwidth view).
+- `*_instr_exe_*.csv` / `*_code_exe_*.csv` → directly readable; sort by `cycles`
+  to find the slowest instructions / source lines.
+
+## 8. From-Kernel-Code Recap
+
+Given a finished kernel `.asc`, the minimum reproducible pipeline is:
+
+1. Copy the `add_custom` template, swap names, fix `--npu-arch`.
+2. (Optional, only for real NPU) `cmake --build` the host executable.
+3. `bisheng --asc-aicore-lang --aicore-only -c kernel.asc -o k.obj`,
+   `ld.lld -m aicorelinux -Ttext=0 k.obj -static -o k.o`.
+4. Generate `input.bin`, `tiling.bin`; write `op_config.json` per section 4.
+5. `source scripts/setup_env.sh && cd build_sim && msprof op simulator --config=./op_config.json --output=../msprof_sim_output --timeout=10`.
+6. Read `<OPPROF>/device0/<kernel>/0/simulator/{trace.json,visualize_data.bin}`
+   and the per-core `*_instr_exe_*.csv`.
+
+## 9. Why `--application` Mode Was Abandoned on This Host (kept for record)
+
+Earlier attempts used `msprof op simulator --application=./reduce_sum
+--soc-version=Ascend950PR_950x ...`. They all failed with empty
+`OPPROF_*/device0/` because the simulator HAL in this CANN beta does not
+finish `aclrtSetDevice → PrimaryContextRetain.SetOverflowAddr`. The plog
+under `~/ascend/log/debug/plog/` records the real failure:
+
+```text
+[ERROR] RUNTIME ... [context.cc:494] SetOverflowAddr: overflowAddr DevMemAlloc failed, retCode=0x7020010.
+[ERROR] RUNTIME ... [context.cc:518] Setup: set overflowAddr failed, retCode=0x7020010.
+[ERROR] RUNTIME ... [runtime.cc:2341] PrimaryContextRetain: Failed to setup context.
+```
+
+After this error, the host process is left hanging by the failed teardown,
+so `msprof` cannot observe a child exit and always falls back to:
+
+```text
+[INFO] The timeout has reached and the application will be forcibly killed.
+[WARN] Can not get object kernel dump path
+```
+
+Per the [official guide](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910beta1/devaids/optool/docs/zh/user_guide/msopprof_simulator_user_guide.md),
+the recommended pre-condition for `--application` is "the application must
+already run correctly", i.e. on a real device or in a simulator package whose
+HAL is complete — neither is the case here. Always prefer `--config` on this
+machine.
+
+## 10. Reference Quick Commands
+
+```bash
+# kill leftover simulator processes (they can hold build/ and build_sim/ files)
+pkill -9 -f "msopprof simulator" 2>/dev/null
+pkill -9 -f "kernel-launcher"    2>/dev/null
+
+# inspect simulator-side plog after a failed run
+ls -t ~/ascend/log/debug/plog/ | head
+tail -80 ~/ascend/log/debug/plog/$(ls -t ~/ascend/log/debug/plog/ | head -1)
+
+# tail the msprof run log live
+tail -f /tmp/msprof_cfg.log
+```

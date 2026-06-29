@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aprof"
+version = "0.1.0"
+description = "Agent-native Ascend operator performance attribution."
+requires-python = ">=3.9"
+dependencies = [
+    "openai>=1.40",
+    "PyYAML>=6.0",
+]
+
+[project.scripts]
+aprof = "aprof.cli.main:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["aprof*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
