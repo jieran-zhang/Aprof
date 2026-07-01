@@ -3,7 +3,7 @@
 本文记录如何在 **AProf** 仓库中，基于 CANNBot `ops-direct-invoke` / `ops-profiling` skills，将 [ops-nn FastGelu](https://gitcode.com/cann/ops-nn/tree/master/activation/fast_gelu) 落地为可编译、可验证、可采集性能的直调 benchmark。
 
 > 工程路径：`benchmarks/reference_ops/fast_gelu/`  
-> 验证平台：Ascend950 (`dav-3510`)，CANN 需通过 `source scripts/setup_env.sh` 激活。
+> 验证平台：支持 Ascend950 (`dav-3510`) 与 Ascend910B (`dav-2201`)；按需通过 `-DCMAKE_ASC_ARCHITECTURES=...`（或远程脚本的 `ASC_ARCH`）切换，CANN 需通过 `source scripts/setup_env.sh` 激活。
 
 ---
 
