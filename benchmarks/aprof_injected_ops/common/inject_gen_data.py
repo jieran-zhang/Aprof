@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import random
 import struct
 from pathlib import Path
@@ -35,10 +36,42 @@ def swi_glu_golden(x: list[float], output_elements: int) -> list[float]:
     return out
 
 
+def gelu_mul_golden(x: list[float]) -> list[float]:
+    # y = x * fast_gelu(x) = x * (x / (1 + exp(-1.702 * x)))
+    return [v * v / (1.0 + math.exp(-1.702 * v)) for v in x]
+
+
+def fast_gelu_grad_golden(x: list[float], grad: list[float]) -> list[float]:
+    # y = x / (1 + exp(-s x)), s = 1.702
+    # dy/dx = (1 + exp(-s x) * (1 - s x)) / (1 + exp(-s x))^2
+    s = 1.702
+    out = []
+    for v, g in zip(x, grad):
+        e = math.exp(-s * v)
+        denom = (1.0 + e) ** 2
+        dydx = (1.0 + e * (1.0 - s * v)) / denom
+        out.append(g * dydx)
+    return out
+
+
+def foreach_norm_golden(x: list[float], num_tensors: int, tensor_length: int) -> list[float]:
+    out = []
+    for i in range(num_tensors):
+        s = 0.0
+        base = i * tensor_length
+        for j in range(tensor_length):
+            v = x[base + j]
+            s += v * v
+        out.append(math.sqrt(s))
+    return out
+
+
 GOLDEN_FUNCS: dict[str, Callable] = {
     "fast_gelu": lambda x, n: fast_gelu_golden(x[:n]),
     "mish": lambda x, n: mish_golden(x[:n]),
     "swi_glu": swi_glu_golden,
+    "gelu_mul": lambda x, n: gelu_mul_golden(x[:n]),
+    "fast_gelu_grad": lambda x, n: fast_gelu_grad_golden(x[:n], x[:n]),  # grad = x for benchmark
 }
 
 
@@ -114,7 +147,7 @@ def main_with_config(
         "kernel_name": f"{op_name}_kernel",
         "kernel_path": f"./{op_name}_kernel.o",
         "blockdim": args.blockdim,
-        "mode": "ca",
+        "mode": os.environ.get("MSPROF_OP_CONFIG_MODE", "ca"),
         "device_id": 0,
         "magic": "RT_DEV_BINARY_MAGIC_ELF_AIVEC",
         "test_cases": [
@@ -149,6 +182,113 @@ def main_with_config(
         "tile_num": tile_num,
         "tail_length": tail_length,
         "tile_num_multiplier": args.tile_num_mul,
+        "variant_flags": variant_flags,
+    }
+    (root / "metadata.json").write_text(json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8")
+    (build_sim / "metadata.json").write_text(json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(json.dumps(metadata, indent=2, ensure_ascii=False))
+
+
+def main_foreach_norm(
+    *,
+    variant_name: str,
+    injected_label: str,
+    injected_problem: str,
+    default_num_tensors: int,
+    default_tensor_length: int,
+    default_tile_length: int,
+    default_blockdim: int,
+    variant_flags: int,
+) -> None:
+    """Generator for foreach_norm: N tensors of length L -> N L2-norm scalars."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--num-tensors", type=int, default=default_num_tensors)
+    parser.add_argument("--tensor-length", type=int, default=default_tensor_length)
+    parser.add_argument("--tile-length", type=int, default=default_tile_length)
+    parser.add_argument("--blockdim", type=int, default=default_blockdim)
+    parser.add_argument("--seed", type=int, default=20260611)
+    args = parser.parse_args()
+
+    root = Path.cwd()
+    data_dir = root / "data"
+    build_sim = root / "build_sim"
+    data_dir.mkdir(exist_ok=True)
+    build_sim.mkdir(exist_ok=True)
+
+    num_tensors = max(1, args.num_tensors)
+    tensor_length = max(8, align_up(args.tensor_length, 8))
+    tile_length = max(8, align_up(args.tile_length, 8))
+    tile_length = min(tile_length, tensor_length)
+
+    total_elems = num_tensors * tensor_length
+    input_stride = align_up(total_elems, 8)
+    output_stride = align_up(num_tensors, 8)
+    tensors_per_core = math.ceil(num_tensors / args.blockdim)
+
+    rng = random.Random(args.seed)
+    logical_x = [rng.uniform(-3.0, 3.0) for _ in range(total_elems)]
+    padded_x = [0.0] * input_stride
+    padded_x[:total_elems] = logical_x
+    y = foreach_norm_golden(logical_x, num_tensors, tensor_length)
+    padded_y = [0.0] * output_stride
+    padded_y[:num_tensors] = y
+
+    write_floats(data_dir / "input.bin", padded_x)
+    write_floats(data_dir / "golden.bin", padded_y)
+    write_floats(build_sim / "input.bin", padded_x)
+
+    # AprofForeachTilingData: 9 uint32 fields = 36 bytes
+    tiling = (
+        num_tensors,
+        tensor_length,
+        tile_length,
+        align_up(tile_length, 8),
+        tensors_per_core,
+        input_stride,
+        output_stride,
+        args.blockdim,
+        variant_flags,
+    )
+    (build_sim / "tiling.bin").write_bytes(struct.pack("9I", *tiling))
+
+    op_config = {
+        "kernel_name": "foreach_norm_kernel",
+        "kernel_path": "./foreach_norm_kernel.o",
+        "blockdim": args.blockdim,
+        "mode": os.environ.get("MSPROF_OP_CONFIG_MODE", "ca"),
+        "device_id": 0,
+        "magic": "RT_DEV_BINARY_MAGIC_ELF_AIVEC",
+        "test_cases": [
+            {
+                "case_name": f"foreach_norm_{variant_name}_case0",
+                "param_desc": [
+                    {
+                        "param_type": "input",
+                        "type": "float32",
+                        "shape": [input_stride],
+                        "data_path": "./input.bin",
+                        "name": "x",
+                    },
+                    {"param_type": "output", "type": "float32", "shape": [output_stride], "name": "y"},
+                    {"param_type": "tiling", "tiling_data_size": 36, "tiling_data_path": "./tiling.bin"},
+                ],
+            }
+        ],
+    }
+    (build_sim / "op_config.json").write_text(json.dumps(op_config, indent=2), encoding="utf-8")
+
+    metadata = {
+        "op_name": "foreach_norm",
+        "variant": variant_name,
+        "injected_label": injected_label,
+        "injected_problem": injected_problem,
+        "num_tensors": num_tensors,
+        "tensor_length": tensor_length,
+        "tile_length": tile_length,
+        "tensors_per_core": tensors_per_core,
+        "blockdim": args.blockdim,
+        "input_stride": input_stride,
+        "output_stride": output_stride,
         "variant_flags": variant_flags,
     }
     (root / "metadata.json").write_text(json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8")
