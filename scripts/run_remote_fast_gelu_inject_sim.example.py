@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Re-run msprof sim for one fast_gelu inject case on remote (with ulimit fix).
 
-Copy to run_remote_fast_gelu_inject_sim.py (gitignored) and set:
-  APROF_REMOTE_HOST, APROF_REMOTE_PORT (optional), APROF_REMOTE_USER,
-  APROF_REMOTE_PASS, APROF_REMOTE_ROOT (optional), INJECT_CASE (optional)
+Fill scripts/server_config.json (see server_config.example.json).
+APROF_REMOTE_* / INJECT_CASE env vars override the JSON file when set.
 """
 import json
 import os
@@ -11,22 +10,22 @@ import sys
 
 import paramiko
 
-HOST = os.environ["APROF_REMOTE_HOST"]
-PORT = int(os.environ.get("APROF_REMOTE_PORT", "22"))
-USER = os.environ["APROF_REMOTE_USER"]
-PASS = os.environ["APROF_REMOTE_PASS"]
-ENV = os.environ.get(
-    "APROF_REMOTE_ENV",
-    "source /usr/local/Ascend/ascend-toolkit/latest/set_env.sh",
-)
-REMOTE_ROOT = os.environ.get("APROF_REMOTE_ROOT", f"/home/{USER}/aprof_fast_gelu_inject")
+sys.path.insert(0, os.path.dirname(__file__))
+from remote_server_config import connect_ssh, load_server_config, require_server_config
+
+_CFG = load_server_config()
+require_server_config(_CFG)
+
+ENV = str(_CFG["env"])
+REMOTE_ROOT = str(_CFG["remote_root"])
+ASC_ARCH = str(_CFG["asc_arch"])
 LOCAL_COMMON = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "benchmarks", "aprof_injected_ops", "common")
 )
 LOCAL_OUT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "benchmarks", "aprof_injected_ops", "fast_gelu", "remote_inject_out")
 )
-CASE = os.environ.get("INJECT_CASE", "inject_blockdim")
+CASE = str(_CFG["inject_case"])
 
 
 def read_lf(path: str) -> bytes:
@@ -49,9 +48,7 @@ def run(ssh, cmd: str, timeout: int = 2400) -> tuple[int, str]:
 
 
 def main() -> int:
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(HOST, port=PORT, username=USER, password=PASS, timeout=60)
+    ssh = connect_ssh(_CFG)
     sftp = ssh.open_sftp()
     upload_file(sftp, os.path.join(LOCAL_COMMON, "inject_run.sh"), f"{REMOTE_ROOT}/common/inject_run.sh")
 
@@ -60,7 +57,7 @@ def main() -> int:
         f"{ENV} && cd {case_remote} && "
         f"export APROF_INJECT_COMMON={REMOTE_ROOT}/common && "
         f"export APROF_INJECT_RUN={REMOTE_ROOT}/common/inject_run.sh && "
-        "export ASC_ARCH=dav-3510 && export MSPROF_TIMEOUT=10 && "
+        f"export ASC_ARCH={ASC_ARCH} && export MSPROF_TIMEOUT=10 && "
         "ulimit -n 65536 2>/dev/null || ulimit -n 4096; "
         "bash run.sh all 2>&1 | tail -60"
     )

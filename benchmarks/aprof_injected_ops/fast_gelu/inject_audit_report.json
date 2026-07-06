@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "op_name": "fast_gelu",
+  "cases": [
+    {
+      "variant": "baseline",
+      "label": "baseline",
+      "problem_family": "baseline",
+      "quality_status": "active",
+      "single_factor": true,
+      "warnings": [],
+      "metadata": {
+        "output_elements": 2048,
+        "blockdim": 1,
+        "tile_length": 256,
+        "tile_num": 8,
+        "tail_length": 0,
+        "tile_num_multiplier": 1,
+        "variant_flags": 0
+      }
+    },
+    {
+      "variant": "inject_blockdim",
+      "label": "blockdim_too_small",
+      "problem_family": "blockdim",
+      "quality_status": "deprecated_or_weak",
+      "single_factor": false,
+      "warnings": [
+        "blockdim equals baseline; current case changes workload size, not blockDim policy"
+      ],
+      "metadata": {
+        "output_elements": 512,
+        "blockdim": 1,
+        "tile_length": 256,
+        "tile_num": 2,
+        "tail_length": 0,
+        "tile_num_multiplier": 1,
+        "variant_flags": 0
+      }
+    },
+    {
+      "variant": "inject_dynshape",
+      "label": "fixed_tiling_dynamic_shape",
+      "problem_family": "dynshape",
+      "quality_status": "weak",
+      "single_factor": false,
+      "warnings": [
+        "dynshape needs multi-shape comparison or host tiling scaffold",
+        "tile_length equals output_elements after clamping; fixed-large-tiling signal is weak"
+      ],
+      "metadata": {
+        "output_elements": 640,
+        "blockdim": 1,
+        "tile_length": 640,
+        "tile_num": 1,
+        "tail_length": 0,
+        "tile_num_multiplier": 1,
+        "variant_flags": 2
+      }
+    },
+    {
+      "variant": "inject_tail",
+      "label": "tail_inefficient",
+      "problem_family": "tail",
+      "quality_status": "active",
+      "single_factor": true,
+      "warnings": [],
+      "metadata": {
+        "output_elements": 2305,
+        "blockdim": 1,
+        "tile_length": 256,
+        "tile_num": 10,
+        "tail_length": 1,
+        "tile_num_multiplier": 1,
+        "variant_flags": 1
+      }
+    },
+    {
+      "variant": "inject_tilelen_large",
+      "label": "tileLength_too_large",
+      "problem_family": "tilelen_large",
+      "quality_status": "weak",
+      "single_factor": false,
+      "warnings": [
+        "tileLength_large also changes output_elements; not a clean single-factor case"
+      ],
+      "metadata": {
+        "output_elements": 8192,
+        "blockdim": 1,
+        "tile_length": 4096,
+        "tile_num": 2,
+        "tail_length": 0,
+        "tile_num_multiplier": 1,
+        "variant_flags": 0
+      }
+    },
+    {
+      "variant": "inject_tilelen_small",
+      "label": "tileLength_too_small",
+      "problem_family": "tilelen_small",
+      "quality_status": "active",
+      "single_factor": true,
+      "warnings": [],
+      "metadata": {
+        "output_elements": 2048,
+        "blockdim": 1,
+        "tile_length": 16,
+        "tile_num": 128,
+        "tail_length": 0,
+        "tile_num_multiplier": 1,
+        "variant_flags": 0
+      }
+    },
+    {
+      "variant": "inject_tilenum",
+      "label": "tileNum_unreasonable",
+      "problem_family": "tilenum",
+      "quality_status": "weak",
+      "single_factor": false,
+      "warnings": [
+        "tileNum case also changes tile_length; not a clean single-factor case"
+      ],
+      "metadata": {
+        "output_elements": 2048,
+        "blockdim": 1,
+        "tile_length": 128,
+        "tile_num": 64,
+        "tail_length": 0,
+        "tile_num_multiplier": 4,
+        "variant_flags": 0
+      }
+    }
+  ],
+  "summary": {
+    "total": 7,
+    "active": 3,
+    "weak": 3,
+    "deprecated_or_weak": 1
+  }
+}

@@ -15,11 +15,31 @@ description: Ascend C 算子 aprof/msprof 数据采集设计 Skill。用于在�
 
 ## 工作流
 
-1. 先读取 [todo.md](todo.md)，确认目标问题族和所需 metric 分组。
+1. 先读取 [references/metric-bundles.md](references/metric-bundles.md)，确认目标问题族和所需 metric 分组。
 2. 若用户只给现象，先把现象映射到一个或多个诊断问题族。
-3. 输出采集清单时按“必需 CSV、可选 CSV、Trace/Timeline、代码/TilingData、NPU 架构分母”分组。
-4. 对缺失数据明确说明无法直接诊断的原因，并给出下一步采集命令或文件要求。
-5. 采集完成后切换到 `/ascendc-aprof-diagnosis` 使用对应诊断矩阵归因。
+3. 读取 [references/metric-to-msprof.md](references/metric-to-msprof.md)，把 metric 映射到 `hw-op`、`hw-msprof` 或 `sim`。
+4. 读取 [references/report-parsing.md](references/report-parsing.md)，写清楚 report 拉回后如何解析字段和派生值。
+5. 输出 `profiling_plan.json`，契约见 [../references/contracts.md](../references/contracts.md)。
+6. 对缺失数据明确说明无法直接诊断的原因，并给出下一步采集命令或文件要求。
+7. 采集完成后切换到 `/ascendc-aprof-diagnosis` 使用对应诊断矩阵归因。
+
+## 命令选型
+
+- 优先选择能直接产出目标 metric 的真实硬件采集：
+  - `hw-op`：需要 `OpBasicInfo.csv`、`PipeUtilization.csv`、`Memory.csv` 等 msopprof 8 CSV 时优先。
+  - `hw-msprof`：需要 7 组 `aic-metrics`、sample、`remote_hw_summary.txt` 或对比摘要时优先。
+- 只有在无 NPU、只需 timeline/proxy metric，或明确要求 simulator 时，才选择 `sim`。
+- simulator 只能作为 trace / 指令 / 源码热点代理，不能声称产出 `PipeUtilization.csv`、`Memory.csv` 等上板 CSV。
+
+## 输出契约
+
+输出必须包含：
+
+- `profile_mode`：`sim` / `hw-msprof` / `hw-op`。
+- `msprof_command`：首选命令、fallback 命令、simulator 命令。
+- `required_artifacts`：诊断必须存在的 CSV、trace 或 summary。
+- `parser_plan`：每个 metric 对应的文件、字段、公式和输出 key。
+- `remote_deploy_args`：传给 `aprof-remote-kernel-deploy` 的参数。
 
 ## 输出要求
 
@@ -27,3 +47,4 @@ description: Ascend C 算子 aprof/msprof 数据采集设计 Skill。用于在�
 - 所有派生 metric 必须写清楚分子、分母和数据来源。
 - 对 CSV 无法直接支持的问题，明确标注需要 trace/timeline、代码审查、TilingData 或对比实验。
 - 面向用户的采集任务要可执行：说明需要提供哪些文件、字段、shape、dtype、blockDim、TilingData 和平台参数。
+- 若输入来自 `diagnosis_hypotheses.json`，必须保留 `linked_hypotheses`，方便最终诊断追溯证据。

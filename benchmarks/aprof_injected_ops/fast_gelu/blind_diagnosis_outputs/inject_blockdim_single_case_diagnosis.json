@@ -1,0 +1,116 @@
+{
+  "case_id": "anonymous_case",
+  "input": "../blind_inputs/inject_blockdim.json",
+  "roofline": {
+    "evidence_level": "roofline-estimated + trace-proxy",
+    "hardware_context": {
+      "soc_version": "dav-3510",
+      "aiv_core_num": 64,
+      "aic_core_num": 32,
+      "ub_bytes_per_core": 253952,
+      "frequency_hz": 1650000000,
+      "vector_peak_flops": 54000000000000,
+      "gm_bandwidth_bytes_per_s": 1600000000000,
+      "source": "npu-arch typical DAV_3510 reference, not runtime-measured"
+    },
+    "work_bytes": {
+      "read_bytes_min": 2048,
+      "write_bytes_min": 2048,
+      "traffic_lower_bound_bytes": 4096,
+      "source": "shape/dtype estimate"
+    },
+    "work_ops": {
+      "estimated_elementwise_ops_min": 2048,
+      "formula": "512 elements * minimum elementwise op proxy",
+      "note": "Exp/Div are proxy operations; not true FLOPs"
+    },
+    "arithmetic_intensity_ops_per_byte": 0.5,
+    "estimated_memory_roof_ops_per_s": 800000000000,
+    "estimated_compute_roof_ops_per_s": 54000000000000,
+    "roofline_bound": "estimated memory-side bound",
+    "achieved_ops_per_s": null,
+    "achieved_bandwidth_bytes_per_s": null,
+    "trace_proxy": {
+      "timeline_span": 1.885000079870224,
+      "total_duration": 3.8270000224001706,
+      "unit": "simulator trace units"
+    }
+  },
+  "diagnoses": [
+    {
+      "problem": "AIV core parallelism is severely underused",
+      "problem_family": "tiling/ai_core_utilization",
+      "confidence": "high",
+      "evidence_level": "roofline-estimated",
+      "metrics": [
+        {
+          "name": "blockDim",
+          "value": 1,
+          "source": "tiling_context",
+          "supports": "only one vector block participates"
+        },
+        {
+          "name": "aiv_core_coverage",
+          "value": "1 / 64 = 1.56%",
+          "source": "tiling_context + hardware_context",
+          "supports": "parallel coverage is low against DAV_3510 AIV denominator"
+        },
+        {
+          "name": "output_elements_per_active_core",
+          "value": 512,
+          "source": "shape/tiling",
+          "supports": "all elements are assigned to one active core"
+        }
+      ],
+      "roofline_interpretation": "Whole-device throughput is capped by blockDim=1 even if the active core is efficient; true utilization requires real Task Duration and hardware counters.",
+      "recommendation": "Make blockDim shape-aware and distribute work across available AIV cores when the shape is large enough."
+    },
+    {
+      "problem": "Tile pipeline is mostly serialized by barriers and non-overlapped copy/compute",
+      "problem_family": "pipeline_parallel/data_movement",
+      "confidence": "medium",
+      "evidence_level": "trace-proxy",
+      "metrics": [
+        {
+          "name": "barriers_per_tile_source",
+          "value": "at least 5 PipeBarrier calls on the normal tile path",
+          "source": "kernel_source",
+          "supports": "copy, vector math, and output are serialized by barriers"
+        },
+        {
+          "name": "tile_num",
+          "value": 2,
+          "source": "tiling_context",
+          "supports": "both tiles follow the same serial copy/compute/copy path"
+        },
+        {
+          "name": "load_store_move_like_duration",
+          "value": "approximately 2.476 / 3.827 = 64.7%",
+          "source": "trace.json summary",
+          "supports": "load/store/move-like simulator events dominate the trace proxy"
+        },
+        {
+          "name": "RV_SMEM_BAR_duration",
+          "value": "0.068 / 3.827 = 1.8%",
+          "source": "trace.json summary",
+          "supports": "sync exists, but real wait ratio is unavailable"
+        }
+      ],
+      "roofline_interpretation": "Trace proxy suggests copy/scheduling overhead is significant, but real MTE/VEC bound and overlap rate need PipeUtilization.csv or Memory.csv.",
+      "recommendation": "Use queue/double-buffer style overlap where applicable and reduce full-pipeline barriers on the hot tile path."
+    }
+  ],
+  "missing_evidence": [
+    "Memory.csv",
+    "ArithmeticUtilization.csv",
+    "PipeUtilization.csv",
+    "OpBasicInfo.csv",
+    "Runtime PlatformAscendC hardware denominators"
+  ],
+  "confidence_notes": [
+    "No baseline, variant name, inject manifest, label alignment report, or ground-truth label was used.",
+    "Parallelism diagnosis is high confidence from tiling and hardware denominator.",
+    "Pipeline/data-movement diagnosis is medium confidence because evidence is simulator trace proxy only.",
+    "Roofline is estimated/proxy, not a direct hardware utilization measurement."
+  ]
+}
