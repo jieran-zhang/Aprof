@@ -33,8 +33,8 @@ link_agent() {
 link_skill "$PLUGIN_ROOT" "aprof-ascendc-remote-kernel-deploy"
 
 # Companion skills referenced in AGENTS.md
-if [[ -d "$REPO_ROOT/skills/aprof/benchmark/ascendc-msprof-simulator" ]]; then
-  link_skill "$REPO_ROOT/skills/aprof/benchmark/ascendc-msprof-simulator" "aprof-ascendc-msprof-simulator"
+if [[ -d "$REPO_ROOT/skills/aprof/benchmark/ascendc-kernel-direct-invoke" ]]; then
+  link_skill "$REPO_ROOT/skills/aprof/benchmark/ascendc-kernel-direct-invoke" "aprof-ascendc-kernel-direct-invoke"
 fi
 
 if [[ -d "$CANNBOT_OPS/ops-profiling" ]]; then
@@ -53,7 +53,7 @@ cat > "$CURSOR_DIR/aprof-remote-kernel-deploy-manifest.json" <<EOF
   "installed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "skills": [
     "aprof-ascendc-remote-kernel-deploy",
-    "aprof-ascendc-msprof-simulator",
+    "aprof-ascendc-kernel-direct-invoke",
     "ops-profiling"
   ],
   "agents": [

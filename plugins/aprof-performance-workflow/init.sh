@@ -35,8 +35,7 @@ link_agent() {
 
 link_skill "$REPO_ROOT/skills/aprof/diagnosis" "aprof-ascendc-diagnosis"
 link_skill "$REPO_ROOT/skills/aprof/profiling" "aprof-ascendc-profiling"
-link_skill "$REPO_ROOT/skills/aprof/remote-kernel-deploy" "aprof-ascendc-remote-kernel-deploy"
-link_skill "$REPO_ROOT/skills/aprof/benchmark/ascendc-msprof-simulator" "aprof-ascendc-msprof-simulator"
+link_skill "$REPO_ROOT/skills/aprof/benchmark/ascendc-kernel-direct-invoke" "aprof-ascendc-kernel-direct-invoke"
 
 if [[ -d "$CANNBOT_OPS/ops-profiling" ]]; then
   link_skill "$CANNBOT_OPS/ops-profiling" "ops-profiling"
@@ -52,14 +51,10 @@ fi
 
 link_agent "$REPO_ROOT/skills/aprof/diagnosis/AGENTS.md" "aprof-diagnosis-agent"
 link_agent "$REPO_ROOT/skills/aprof/profiling/AGENTS.md" "aprof-profiling-agent"
-link_agent "$REPO_ROOT/skills/aprof/remote-kernel-deploy/AGENTS.md" "aprof-remote-kernel-deploy"
-link_agent "$REPO_ROOT/skills/aprof/remote-kernel-deploy/agents/aprof-remote-deployer.md" "aprof-remote-deployer"
 
 link_agent "$PLUGIN_ROOT/AGENTS.md" "aprof-performance-workflow"
-for agent in "$PLUGIN_ROOT"/agents/*.md; do
-  name="$(basename "$agent" .md)"
-  link_agent "$agent" "$name"
-done
+link_agent "$PLUGIN_ROOT/agents/aprof-diagnosis-wrapper.md" "aprof-diagnosis-wrapper"
+link_agent "$PLUGIN_ROOT/agents/aprof-profiling-wrapper.md" "aprof-profiling-wrapper"
 
 cat > "$CURSOR_DIR/aprof-performance-workflow-manifest.json" <<EOF
 {
@@ -68,8 +63,7 @@ cat > "$CURSOR_DIR/aprof-performance-workflow-manifest.json" <<EOF
   "skills": [
     "aprof-ascendc-diagnosis",
     "aprof-ascendc-profiling",
-    "aprof-ascendc-remote-kernel-deploy",
-    "aprof-ascendc-msprof-simulator",
+    "aprof-ascendc-kernel-direct-invoke",
     "ops-profiling",
     "npu-arch"
   ],
@@ -77,11 +71,8 @@ cat > "$CURSOR_DIR/aprof-performance-workflow-manifest.json" <<EOF
     "aprof-performance-workflow",
     "aprof-diagnosis-agent",
     "aprof-profiling-agent",
-    "aprof-remote-kernel-deploy",
-    "aprof-remote-deployer",
     "aprof-diagnosis-wrapper",
-    "aprof-profiling-wrapper",
-    "aprof-remote-wrapper"
+    "aprof-profiling-wrapper"
   ]
 }
 EOF

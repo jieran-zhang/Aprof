@@ -40,6 +40,8 @@ def main() -> int:
             "passed": sum(1 for c in cases if c["pass"]),
             "failed": sum(1 for c in cases if not c["pass"]),
             "weak": sum(1 for c in cases if c.get("quality_status") in {"weak", "deprecated_or_weak"}),
+            "unverified": sum(1 for c in cases if c.get("quality_status") == "unverified"),
+            "unsupported": sum(1 for c in cases if c.get("quality_status") == "unsupported"),
         },
     }
     if args.write_report:
@@ -56,10 +58,18 @@ def validate_case(case_dir: Path) -> dict:
     metadata = read_json(case_dir / "metadata.json")
     inject_manifest = read_json(case_dir / "inject_manifest.json")
     quality_status = inject_manifest.get("quality", {}).get("status", "missing_manifest")
+    ground_truth = inject_manifest.get("ground_truth", {})
+    applicability = inject_manifest.get("applicability", {})
     warnings: list[str] = []
+    errors: list[str] = []
 
     if case_dir.name.startswith("inject_") and metadata.get("injected_label") in {None, "baseline"}:
-        warnings.append("inject case has no injected_label")
+        errors.append("inject case has no injected_label")
+    if case_dir.name.startswith("inject_") and quality_status == "active":
+        if not ground_truth.get("problem_family") or not ground_truth.get("problem_id"):
+            errors.append("active inject case must include ground_truth.problem_family and ground_truth.problem_id")
+        if applicability.get("status") not in {"applied", "validated"}:
+            errors.append("active inject case must have applicability.status=applied or validated")
     if case_dir.name == "inject_blockdim" and metadata.get("blockdim") == read_baseline_blockdim(case_dir):
         warnings.append("blockdim equals baseline; sim-only blockdim signal is weak")
     if case_dir.name == "inject_dynshape":
@@ -67,13 +77,17 @@ def validate_case(case_dir: Path) -> dict:
     if case_dir.name == "inject_tilenum" and metadata.get("tile_num_multiplier", 1) != 1 and metadata.get("tile_length") != 256:
         warnings.append("tilenum changes tile_num_multiplier and tile_length; not a clean single-factor case")
 
-    passed = not missing and quality_status != "missing_manifest"
+    passed = not missing and quality_status != "missing_manifest" and not errors
     return {
         "variant": case_dir.name,
         "pass": passed,
         "missing": missing,
         "injected_label": metadata.get("injected_label", "unknown"),
+        "problem_family": ground_truth.get("problem_family", metadata.get("problem_family", "unknown")),
+        "problem_id": ground_truth.get("problem_id", metadata.get("problem_id", "unknown")),
+        "applicability_status": applicability.get("status", "unknown"),
         "quality_status": quality_status,
+        "errors": errors,
         "warnings": warnings,
     }
 

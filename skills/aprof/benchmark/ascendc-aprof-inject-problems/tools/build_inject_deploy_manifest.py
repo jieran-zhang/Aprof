@@ -40,7 +40,13 @@ def main() -> int:
         inject_manifest = case_dir / "inject_manifest.json"
         quality_status = "unknown"
         if inject_manifest.is_file():
-            quality_status = json.loads(inject_manifest.read_text(encoding="utf-8")).get("quality", {}).get("status", "unknown")
+            manifest_data = json.loads(inject_manifest.read_text(encoding="utf-8"))
+            quality_status = manifest_data.get("quality", {}).get("status", "unknown")
+            ground_truth = manifest_data.get("ground_truth", {})
+            applicability = manifest_data.get("applicability", {})
+        else:
+            ground_truth = {}
+            applicability = {}
         cases.append(
             {
                 "variant": case_dir.name,
@@ -49,6 +55,9 @@ def main() -> int:
                 "profiling_plan": str(profiling_plan),
                 "inject_manifest": str(inject_manifest) if inject_manifest.exists() else "",
                 "ground_truth_label": metadata.get("injected_label", "unknown"),
+                "problem_family": ground_truth.get("problem_family", metadata.get("problem_family", "unknown")),
+                "problem_id": ground_truth.get("problem_id", metadata.get("problem_id", "unknown")),
+                "applicability_status": applicability.get("status", "unknown"),
                 "quality_status": quality_status,
             }
         )

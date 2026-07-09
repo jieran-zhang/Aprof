@@ -1,11 +1,11 @@
 # Report Parsing Plan
 
-本文描述 msprof report 拉回后如何整理并获取 metric 的具体值。短期以 CSV/trace 文件和 `ops-profiling` summary 为准；不要编造不存在的 parser。
+本文描述 msprof report 生成后如何整理并获取 metric 的具体值。短期以 CSV/trace 文件和 `ops-profiling` summary 为准；不要编造不存在的 parser。
 
 ## 通用步骤
 
-1. 读取 `remote_out/deploy_results.json`，确认 `has_artifacts == true`。
-2. 生成或读取 `remote_out/artifact_manifest.json`，确认 `required_artifacts` 均已满足。
+1. 根据 `profiling_plan.json.execution_plan.output_dir` 或用户提供的 report 目录定位产物。
+2. 生成或读取 `profiling_results.json`，确认 `required_artifacts` 均已满足。
 3. 按 `profiling_plan.json.parser_plan` 逐项读取 CSV、trace 或 summary。
 4. 输出 metric 值时保留来源路径、字段名、公式和单位。
 5. 缺字段时不要猜值，记录到 `missing_required_artifacts` 或 `notes`。
@@ -15,14 +15,14 @@
 典型路径：
 
 ```text
-remote_out/msprof_hw_output/OPPROF_*/OpBasicInfo.csv
-remote_out/msprof_hw_output/OPPROF_*/PipeUtilization.csv
-remote_out/msprof_hw_output/OPPROF_*/Memory.csv
-remote_out/msprof_hw_output/OPPROF_*/ArithmeticUtilization.csv
-remote_out/msprof_hw_output/OPPROF_*/ResourceConflictRatio.csv
-remote_out/msprof_hw_output/OPPROF_*/L2Cache.csv
-remote_out/msprof_hw_output/OPPROF_*/MemoryUB.csv
-remote_out/msprof_hw_output/OPPROF_*/MemoryL0.csv
+profiling_out/msprof_hw_output/OPPROF_*/OpBasicInfo.csv
+profiling_out/msprof_hw_output/OPPROF_*/PipeUtilization.csv
+profiling_out/msprof_hw_output/OPPROF_*/Memory.csv
+profiling_out/msprof_hw_output/OPPROF_*/ArithmeticUtilization.csv
+profiling_out/msprof_hw_output/OPPROF_*/ResourceConflictRatio.csv
+profiling_out/msprof_hw_output/OPPROF_*/L2Cache.csv
+profiling_out/msprof_hw_output/OPPROF_*/MemoryUB.csv
+profiling_out/msprof_hw_output/OPPROF_*/MemoryL0.csv
 ```
 
 解析建议：
@@ -47,25 +47,25 @@ remote_out/msprof_hw_output/OPPROF_*/MemoryL0.csv
 典型路径：
 
 ```text
-remote_out/msprof_hw_output/PROF_GROUP_*/PROF_*/*.csv
-remote_out/msprof_hw_output/PROF_GROUP_*/PROF_Sample/**/aicore.db
-remote_out/remote_hw_summary.txt
+profiling_out/msprof_hw_output/PROF_GROUP_*/PROF_*/*.csv
+profiling_out/msprof_hw_output/PROF_GROUP_*/PROF_Sample/**/aicore.db
+profiling_out/hw_summary.txt
 ```
 
 解析建议：
 
-- 优先读取 `remote_hw_summary.txt` 获取主 bound、逐核摘要和 ops-profiling 归纳。
+- 优先读取 `hw_summary.txt` 获取主 bound、逐核摘要和 ops-profiling 归纳。
 - 如需结构化数值，再读取 `PROF_GROUP_*` 下对应 CSV。
-- `remote_hw_summary.txt` 只能作为摘要证据，不能替代缺失的原始 CSV 字段。
+- `hw_summary.txt` 只能作为摘要证据，不能替代缺失的原始 CSV 字段。
 
 ## sim
 
 典型路径：
 
 ```text
-remote_out/msprof_sim_output/OPPROF_*/simulator/trace.json
-remote_out/msprof_sim_output/OPPROF_*/simulator/core0.veccore0/*_instr_exe_*.csv
-remote_out/msprof_sim_output/OPPROF_*/simulator/core0.veccore0/*_code_exe_*.csv
+profiling_out/msprof_sim_output/OPPROF_*/simulator/trace.json
+profiling_out/msprof_sim_output/OPPROF_*/simulator/core0.veccore0/*_instr_exe_*.csv
+profiling_out/msprof_sim_output/OPPROF_*/simulator/core0.veccore0/*_code_exe_*.csv
 ```
 
 解析建议：
@@ -75,12 +75,13 @@ remote_out/msprof_sim_output/OPPROF_*/simulator/core0.veccore0/*_code_exe_*.csv
 - `*_code_exe_*.csv`：定位源码热点。
 - sim metric 是 proxy；最终报告必须标注 `Trace/对比` 或 `sim-proxy`。
 
-## artifact_manifest.json 生成规则
+## profiling_results.json 生成规则
 
-根据 `profiling_plan.json.required_artifacts` 检查本地 `remote_out`：
+根据 `profiling_plan.json.required_artifacts` 检查本地 report 目录：
 
 - 找到匹配文件则加入 `artifacts[]`。
 - 没找到则加入 `missing_required_artifacts[]`。
 - 只有缺失列表为空时，`ready_for_diagnosis = true`。
+- 按 `parser_plan[]` 解析得到的值加入 `metric_values[]`，并记录来源文件、字段、公式、单位。
 
 示例输出见 [../../references/contracts.md](../../references/contracts.md)。

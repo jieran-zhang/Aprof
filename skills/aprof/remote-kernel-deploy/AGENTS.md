@@ -4,7 +4,7 @@ description: AProf 远程算子部署 Agent。编排 SSH 上传、远端 kernel 
 mode: primary
 skills:
   - ascendc-remote-kernel-deploy
-  - ascendc-msprof-simulator
+  - ascendc-kernel-direct-invoke
   - ops-profiling
 agents:
   - aprof-remote-deployer

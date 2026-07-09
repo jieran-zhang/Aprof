@@ -25,24 +25,19 @@ kernel_path: <path/to/kernel.asc>
 op_dir: <path/to/direct-invoke-op>
 ```
 
-若只想生成计划，不执行远程采集：
+若只想生成计划，不执行 msprof：
 
 ```text
 @aprof-performance-workflow
-只生成 diagnosis_hypotheses.json 和 profiling_plan.json，不执行远程 msprof。
+只生成 diagnosis_hypotheses.json 和 profiling_plan.json，不执行 msprof。
 ```
 
-若允许远程采集，需要先配置：
-
-```text
-scripts/server_config.json
-```
-
-然后给出上板所需命令：
+若允许采集，给出执行所需命令：
 
 ```text
 run_cmd: ./<binary> <args>
 gen_data_cmd: python3 scripts/gen_data.py ...
+profiling_output_dir: profiling_out
 ```
 
 ## 产物
@@ -50,9 +45,9 @@ gen_data_cmd: python3 scripts/gen_data.py ...
 典型产物包括：
 
 - `diagnosis_hypotheses.json`：源码阶段的问题假设和最多 3 个 metric。
-- `profiling_plan.json`：msprof 命令、远程执行参数和 report 解析方案。
-- `remote_out/deploy_results.json`：远程执行结果。
-- `remote_out/artifact_manifest.json`：产物是否满足采集计划。
+- `profiling_plan.json`：msprof 命令、执行计划和 report 解析方案。
+- `profiling_results.json`：采集产物、缺失项和 metric 解析值。
+- `profiling_out/`：`msprof` 生成的 CSV、trace 或 summary。
 - `final_diagnosis.md`：带硬件数据支撑的最终诊断。
 
 ## 边界

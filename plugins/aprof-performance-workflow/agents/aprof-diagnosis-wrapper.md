@@ -19,7 +19,8 @@ permission:
 
 - `kernel_source` / `kernel_path` / `op_dir`
 - 可选 `operator_context`
-- 可选 `profiling_artifacts`
+- 可选 `profiling_results.json`
+- 可选 report 目录路径
 
 ## 输出
 
@@ -30,4 +31,4 @@ permission:
 
 - 透传源码、上下文和 report 路径，不内联改写诊断规则。
 - 确保最多 3 个 hypothesis 和最多 3 个 metric。
-- 若 report 缺失，停止在源码假设阶段并交给 profiling wrapper。
+- 若 report 缺失，停止在源码假设阶段并交给 profiling wrapper 生成采集计划。

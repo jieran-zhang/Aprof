@@ -1,6 +1,6 @@
 # AProf Agent Contracts
 
-本文定义 AProf workflow 中三个 agent 之间传递的结构化契约。字段名必须保持稳定；未知信息使用 `null`、空数组或 `unknown`，不要编造。
+本文定义 AProf workflow 中 diagnosis agent 与 profiling agent 之间传递的结构化契约。字段名必须保持稳定；未知信息使用 `null`、空数组或 `unknown`，不要编造。
 
 ## diagnosis_hypotheses.json
 
@@ -65,7 +65,7 @@
 
 ## profiling_plan.json
 
-由 `aprof-profiling-agent` 产出。输入是 `metrics[]` 及其描述，输出 msprof 采集方案、远程执行参数和 report 解析方案。
+由 `aprof-profiling-agent` 产出。输入是 `metrics[]` 及其描述，输出 msprof 采集方案、执行计划和 report 解析方案。
 
 ```json
 {
@@ -76,19 +76,19 @@
   "profile_mode": "hw-op",
   "mode_reason": "需要 Memory.csv 与 PipeUtilization.csv 中的真实硬件计数，simulator 无法直接产出 8 CSV",
   "msprof_command": {
-    "preferred": "msprof op --warm-up=3 --output=../msprof_hw_output ./<binary> <args>",
-    "fallback": "bash ../ops_profiling/scripts/msprof_profile_run.sh --warm-up=3 --output=../msprof_hw_output -- ./<binary> <args>",
-    "simulator": "msprof op simulator --config=./op_config.json --output=../msprof_sim_output --timeout=8"
+    "preferred": "msprof op --warm-up=3 --output=profiling_out/msprof_hw_output ./<binary> <args>",
+    "fallback": "bash ../ops_profiling/scripts/msprof_profile_run.sh --warm-up=3 --output=profiling_out/msprof_hw_output -- ./<binary> <args>",
+    "simulator": "msprof op simulator --config=./op_config.json --output=profiling_out/msprof_sim_output --timeout=8"
   },
   "required_artifacts": [
     {
-      "path_pattern": "msprof_hw_output/OPPROF_*/Memory.csv",
+      "path_pattern": "profiling_out/msprof_hw_output/OPPROF_*/Memory.csv",
       "reason": "读取 GM_to_UB_datas 与 MTE 指令数"
     }
   ],
   "optional_artifacts": [
     {
-      "path_pattern": "msprof_hw_output/OPPROF_*/PipeUtilization.csv",
+      "path_pattern": "profiling_out/msprof_hw_output/OPPROF_*/PipeUtilization.csv",
       "reason": "辅助判断 MTE2/MTE3 是否为主 bound"
     }
   ],
@@ -104,17 +104,17 @@
       "output_key": "single_copyin_bytes"
     }
   ],
-  "remote_deploy_args": {
+  "execution_plan": {
     "profile_mode": "hw-op",
     "run_cmd": "./<binary> <args>",
     "gen_data_cmd": null,
     "warm_up": 3,
+    "output_dir": "profiling_out/msprof_hw_output",
     "summarize": true,
-    "steps": "upload,build,profile,summarize,download"
+    "steps": "prepare,profile,summarize,parse"
   },
   "handoff": {
-    "next_agent": "aprof-remote-kernel-deploy",
-    "after_remote": "aprof-diagnosis-agent"
+    "after_profiling": "aprof-diagnosis-agent"
   }
 }
 ```
@@ -122,25 +122,41 @@
 约束：
 
 - 优先选择能直接产出所需 metric 的真实硬件模式：`hw-op` 或 `hw-msprof`。
-- 只有 metric 可由 `trace.json`、`*_instr_exe_*.csv` 或 `*_code_exe_*.csv` 代理，或远端无 NPU 时，才选择 `sim`。
-- `remote_deploy_args.profile_mode` 必须是 `sim`、`hw-msprof`、`hw-op` 之一，并与 `profile_mode` 一致。
+- 只有 metric 可由 `trace.json`、`*_instr_exe_*.csv` 或 `*_code_exe_*.csv` 代理，或当前 profiling 环境无 NPU 时，才选择 `sim`。
+- `execution_plan.profile_mode` 必须是 `sim`、`hw-msprof`、`hw-op` 之一，并与 `profile_mode` 一致。
 
-## artifact_manifest.json
+## profiling_results.json
 
-由 remote deploy 阶段在本地 `remote_out` 下生成，或由 workflow 根据 `deploy_results.json` 与下载文件列表补齐。用于判断 `profiling_plan.json` 是否已满足。
+由 `aprof-profiling-agent` 在执行 msprof 或读取用户提供 report 后生成。用于判断 `profiling_plan.json` 是否已满足，并把 report 中解析出的 metric 值交回 diagnosis。
 
 ```json
 {
   "profile_mode": "hw-op",
-  "local_out": "benchmarks/example/remote_out",
-  "deploy_results": "benchmarks/example/remote_out/deploy_results.json",
+  "output_dir": "benchmarks/example/profiling_out",
+  "has_artifacts": true,
   "artifacts": [
     {
       "kind": "csv",
       "name": "Memory.csv",
-      "path": "benchmarks/example/remote_out/msprof_hw_output/OPPROF_xxx/Memory.csv",
+      "path": "benchmarks/example/profiling_out/msprof_hw_output/OPPROF_xxx/Memory.csv",
       "satisfies": [
         "single_copyin_bytes"
+      ]
+    }
+  ],
+  "metric_values": [
+    {
+      "metric": "single_copyin_bytes",
+      "value": 256.0,
+      "unit": "bytes",
+      "source_path": "benchmarks/example/profiling_out/msprof_hw_output/OPPROF_xxx/Memory.csv",
+      "fields": {
+        "GM_to_UB_datas(KB)": 128,
+        "ai*_mte2_instructions": 512
+      },
+      "formula": "GM_to_UB_datas(KB) * 1024 / ai*_mte2_instructions",
+      "linked_hypotheses": [
+        "H1"
       ]
     }
   ],
@@ -155,7 +171,7 @@
 - `ready_for_diagnosis` 只有在 `missing_required_artifacts` 为空时才能为 `true`。
 - sim 模式至少需要 `trace.json` 或 `*_instr_exe_*.csv` 才能进入 sim-only 诊断。
 - hw-op 模式优先确认 `OpBasicInfo.csv`、`PipeUtilization.csv`、`Memory.csv`。
-- hw-msprof 模式优先确认 `PROF_GROUP_*` 下的 CSV、`aicore.db` 或 `remote_hw_summary.txt`。
+- hw-msprof 模式优先确认 `PROF_GROUP_*` 下的 CSV、`aicore.db` 或 `hw_summary.txt`。
 
 ## single_case_diagnosis.json
 

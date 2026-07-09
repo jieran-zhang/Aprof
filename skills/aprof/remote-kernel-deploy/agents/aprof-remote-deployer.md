@@ -4,7 +4,7 @@ description: 执行远程算子上传、编译、msprof 采集与报告下载。
 mode: subagent
 skills:
   - ascendc-remote-kernel-deploy
-  - ascendc-msprof-simulator
+  - ascendc-kernel-direct-invoke
   - ops-profiling
 permission:
   bash: allow

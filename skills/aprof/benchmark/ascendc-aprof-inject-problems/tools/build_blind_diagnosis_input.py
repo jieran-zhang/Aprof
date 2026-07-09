@@ -37,6 +37,7 @@ FORBIDDEN_KEYS = {
     "injected_problem",
     "problem",
     "problem_family",
+    "problem_id",
     "quality_status",
     "quality_note",
     "knobs",
@@ -72,8 +73,8 @@ def main() -> int:
             "single_case_only": True,
             "baseline_allowed": False,
             "ground_truth_allowed": False,
-            "forbidden_keys": sorted(FORBIDDEN_KEYS),
-            "forbidden_files": sorted(FORBIDDEN_FILES),
+            "ground_truth_fields_redacted": True,
+            "ground_truth_files_redacted": True,
         },
         "kernel": {
             "source_files": collect_sources(case_dir, args.max_source_bytes),
@@ -221,6 +222,7 @@ def sanitize_obj(value: Any) -> Any:
 
 def sanitize_text(text: str) -> str:
     text = re.sub(r"APROF_INJECT_[A-Z0-9_]+", "APROF_FEATURE_FLAG", text)
+    text = re.sub(r"APROF_PATCH_[A-Z0-9_]+", "APROF_PATCH_MARKER", text)
     text = re.sub(r"\bMaybeInject[A-Za-z0-9_]*\b", "MaybeFeaturePath", text)
     text = re.sub(r"\binject_[A-Za-z0-9_]+\b", "anonymous_variant", text)
     text = re.sub(r"\binjected_(label|problem)\b", "redacted_ground_truth", text)

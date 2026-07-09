@@ -30,8 +30,11 @@ def main() -> int:
         variant = case["variant"]
         if selected and variant not in selected:
             continue
-        if not args.include_weak and case.get("quality_status") in {"weak", "deprecated_or_weak"}:
+        if not args.include_weak and case.get("quality_status") in {"weak", "deprecated_or_weak", "unsupported"}:
             results[variant] = {"skipped": True, "reason": f"quality_status={case.get('quality_status')}"}
+            continue
+        if case.get("applicability_status") == "unsupported":
+            results[variant] = {"skipped": True, "reason": "applicability_status=unsupported"}
             continue
         cmd = [
             sys.executable,
@@ -61,7 +64,7 @@ def main() -> int:
         "op_name": manifest.get("op_name", "unknown"),
         "profile_mode": manifest.get("profile_mode", "sim"),
         "cases": results,
-        "batch_pass": all(not r.get("skipped") and r.get("returncode", 1) == 0 for r in results.values()),
+        "batch_pass": all(r.get("skipped") or r.get("returncode", 1) == 0 for r in results.values()),
     }
     out = Path(manifest["batch_local_out"]) / "batch_results.json"
     out.parent.mkdir(parents=True, exist_ok=True)

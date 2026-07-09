@@ -8,22 +8,40 @@ from pathlib import Path
 
 
 LABEL_TO_FAMILY = {
-    "blockdim_too_small": "blockdim",
-    "tail_inefficient": "tail",
-    "tileLength_too_small": "tilelen_small",
-    "tileLength_too_large": "tilelen_large",
-    "tileNum_unreasonable": "tilenum",
-    "fixed_tiling_dynamic_shape": "dynshape",
-}
-
-LABEL_TO_EXPECTED = {
     "blockdim_too_small": "tiling",
     "tail_inefficient": "tiling",
     "tileLength_too_small": "tiling",
     "tileLength_too_large": "tiling",
     "tileNum_unreasonable": "tiling",
     "fixed_tiling_dynamic_shape": "tiling",
+    "redundant_copyin": "data_movement",
+    "extra_copyout": "data_movement",
+    "small_datacopy_granularity": "data_movement",
+    "serial_copy_compute_copyout": "pipeline_parallel",
+    "double_buffer_disabled": "pipeline_parallel",
+    "excessive_pipe_barrier": "pipeline_parallel",
+    "ub_temp_overallocated": "onchip_memory",
+    "gm_spill_intermediate": "onchip_memory",
+    "low_ub_reuse": "onchip_memory",
+    "underused_blockdim": "ai_core_utilization",
+    "overlaunched_empty_cores": "ai_core_utilization",
+    "tail_core_imbalance": "ai_core_utilization",
+    "scalar_loop_redundant": "api_algorithm",
+    "small_vector_api_chunks": "api_algorithm",
+    "redundant_cast_or_vector_copy": "api_algorithm",
+}
+
+LABEL_TO_EXPECTED = {
     "baseline": "baseline",
+}
+
+LABEL_TO_PROBLEM_ID = {
+    "blockdim_too_small": "blockdim_too_small",
+    "tail_inefficient": "tail_inefficient",
+    "tileLength_too_small": "tile_length_too_small",
+    "tileLength_too_large": "tile_length_too_large",
+    "tileNum_unreasonable": "tile_num_unreasonable",
+    "fixed_tiling_dynamic_shape": "fixed_tiling_dynamic_shape",
 }
 
 
@@ -49,7 +67,7 @@ def main() -> int:
             write_json(case_dir / "profiling_plan.json", build_sim_plan(metadata, case_dir.name))
 
     report = {
-        "schema_version": 1,
+        "schema_version": 2,
         "op_name": op_root.name,
         "cases": cases,
         "summary": {
@@ -122,7 +140,13 @@ def build_manifest(case_dir: Path, metadata: dict, audit: dict) -> dict:
         "ground_truth": {
             "injected_label": label,
             "problem_family": audit["problem_family"],
-            "expected_diagnosis_family": LABEL_TO_EXPECTED.get(label, "unknown"),
+            "problem_id": metadata.get("problem_id", LABEL_TO_PROBLEM_ID.get(label, label)),
+            "expected_diagnosis_family": LABEL_TO_EXPECTED.get(label, audit["problem_family"]),
+        },
+        "applicability": {
+            "status": "applied" if audit["quality_status"] != "deprecated_or_weak" else "unverified",
+            "source_modes": ["existing_aprof_baseline"],
+            "patch_results": [],
         },
         "knobs_changed": infer_knobs(metadata, audit),
         "kernel_flags": {

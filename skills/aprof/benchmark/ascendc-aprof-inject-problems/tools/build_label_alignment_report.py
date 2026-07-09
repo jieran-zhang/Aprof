@@ -54,8 +54,14 @@ def build_case(variant: str, manifest: dict, metadata: dict, predictions: dict) 
     label = metadata.get("injected_label", "unknown")
     quality = manifest.get("quality", {})
     quality_status = quality.get("status", "missing_manifest")
+    ground_truth = manifest.get("ground_truth", {})
+    problem_family = ground_truth.get("problem_family", metadata.get("problem_family", "unknown"))
+    problem_id = ground_truth.get("problem_id", metadata.get("problem_id", "unknown"))
     predicted = prediction_for(predictions, variant)
-    if quality_status in {"weak", "deprecated_or_weak", "missing_manifest"}:
+    if quality_status == "active" and (problem_family in {"", "unknown"} or problem_id in {"", "unknown"}):
+        status = "skipped"
+        reason = "active case missing problem_family/problem_id"
+    elif quality_status in {"weak", "deprecated_or_weak", "missing_manifest", "unsupported", "unverified"}:
         status = "skipped"
         reason = f"quality_status={quality_status}"
     elif predicted is None:
@@ -70,6 +76,9 @@ def build_case(variant: str, manifest: dict, metadata: dict, predictions: dict) 
     return {
         "variant": variant,
         "ground_truth_label": label,
+        "problem_family": problem_family,
+        "problem_id": problem_id,
+        "applicability_status": manifest.get("applicability", {}).get("status", "unknown"),
         "predicted_label": predicted,
         "status": status,
         "quality_status": quality_status,
@@ -79,6 +88,8 @@ def build_case(variant: str, manifest: dict, metadata: dict, predictions: dict) 
             f"metadata.tile_num={metadata.get('tile_num')}",
             f"metadata.tail_length={metadata.get('tail_length')}",
             f"metadata.variant_flags={metadata.get('variant_flags')}",
+            f"metadata.problem_family={metadata.get('problem_family')}",
+            f"metadata.problem_id={metadata.get('problem_id')}",
         ],
     }
 
@@ -106,12 +117,12 @@ def render_markdown(report: dict) -> str:
         "",
         "## Cases",
         "",
-        "| Variant | Ground Truth | Predicted | Status | Reason |",
-        "| ------- | ------------ | --------- | ------ | ------ |",
+        "| Variant | Family | Problem ID | Ground Truth | Predicted | Status | Reason |",
+        "| ------- | ------ | ---------- | ------------ | --------- | ------ | ------ |",
     ]
     for case in report["cases"]:
         lines.append(
-            "| {variant} | {ground_truth_label} | {predicted_label} | {status} | {reason} |".format(
+            "| {variant} | {problem_family} | {problem_id} | {ground_truth_label} | {predicted_label} | {status} | {reason} |".format(
                 **{k: str(v) for k, v in case.items()}
             )
         )

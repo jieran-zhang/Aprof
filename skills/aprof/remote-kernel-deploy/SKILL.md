@@ -10,7 +10,7 @@ description: 通过 SSH 将本地 Ascend C 算子工程同步到远程 CANN 主�
 - **输入**：本地算子目录（simulator 用 `run.sh build/sim`；上板用 cmake 直调可执行文件）
 - **输出**：本地 `{op_dir}/remote_out/` 下的 profiling 产物 + `deploy_results.json`
 - **上游计划**：可接收 `/ascendc-aprof-profiling` 生成的 `profiling_plan.json`
-- **simulator 细节**：`skills/aprof/benchmark/ascendc-msprof-simulator/SKILL.md`
+- **直调 / simulator 细节**：`skills/aprof/benchmark/ascendc-kernel-direct-invoke/SKILL.md`
 - **上板采集 / 解析细节**：`ops-profiling` skill（`msprof_profile_run.sh`、`msprof_perf_summary.py`）
 - **工具**：`skills/aprof/remote-kernel-deploy/tools/remote_msprof_deploy.py`
 - **Agent 编排**：`skills/aprof/remote-kernel-deploy/AGENTS.md`（安装：`bash skills/aprof/remote-kernel-deploy/init.sh`）
@@ -423,7 +423,7 @@ python skills/aprof/remote-kernel-deploy/tools/remote_msprof_deploy.py \
 
 ## 相关资源
 
-- Simulator SOP：`skills/aprof/benchmark/ascendc-msprof-simulator/SKILL.md`
+- Direct-invoke / Simulator SOP：`skills/aprof/benchmark/ascendc-kernel-direct-invoke/SKILL.md`
 - 上板采集 / 解析 / 对比批量：`ops-profiling` skill（`references/msprof-guide.md`、`references/msprof-op-guide.md`）
 - SSH 配置：`scripts/remote_server_config.py`
 - 参考：`benchmarks/reference_ops/fast_gelu/`（上板）、`benchmarks/aprof_injected_ops/fast_gelu/baseline`（sim）

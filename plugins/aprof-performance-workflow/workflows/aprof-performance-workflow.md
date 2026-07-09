@@ -10,9 +10,9 @@ flowchart TD
   DiagnosisAgent --> Hypotheses["diagnosis_hypotheses.json"]
   Hypotheses --> ProfilingAgent["aprof-profiling-agent"]
   ProfilingAgent --> ProfilingPlan["profiling_plan.json"]
-  ProfilingPlan --> RemoteAgent["aprof-remote-kernel-deploy"]
-  RemoteAgent --> Artifacts["deploy_results.json + artifact_manifest.json"]
-  Artifacts --> FinalDiagnosis["aprof-diagnosis-agent final diagnosis"]
+  ProfilingPlan --> ProfilingRun["msprof execution + report parsing"]
+  ProfilingRun --> ProfilingResults["profiling_results.json + CSV/trace/summary"]
+  ProfilingResults --> FinalDiagnosis["aprof-diagnosis-agent final diagnosis"]
 ```
 
 ## Step 1：源码诊断
@@ -40,27 +40,28 @@ flowchart TD
 门禁：
 
 - `profile_mode` 是 `sim`、`hw-msprof`、`hw-op` 之一。
-- `remote_deploy_args.profile_mode` 与 `profile_mode` 一致。
+- `execution_plan.profile_mode` 与 `profile_mode` 一致。
 - 每个 metric 在 `parser_plan[]` 中有解析来源。
 
-## Step 3：远程执行与拉取 report
+## Step 3：执行 msprof 并解析 report
 
-调用 `aprof-remote-kernel-deploy`：
+继续由 `aprof-profiling-agent` 执行：
 
-- 输入：本地 `op_dir`、`profiling_plan.json`、`remote_deploy_args`。
-- 执行：`remote_msprof_deploy.py --profiling-plan <profiling_plan.json>`。
-- 输出：`deploy_results.json`、`artifact_manifest.json`、CSV/trace。
+- 输入：本地 `op_dir`、`profiling_plan.json`、`execution_context`。
+- 执行：`profiling_plan.json.msprof_command.preferred`，必要时使用 fallback。
+- 输出：`profiling_results.json`、CSV/trace/summary。
 
 门禁：
 
-- `deploy_results.json.has_artifacts == true`。
-- 若传入 `profiling_plan.json`，`artifact_manifest.json.ready_for_diagnosis == true`。
+- `profiling_results.json.has_artifacts == true`。
+- `profiling_results.json.ready_for_diagnosis == true` 时才进入强证据归因。
+- 若产物缺失，记录 `missing_required_artifacts[]`，不要猜测 metric 值。
 
 ## Step 4：最终证据归因
 
 再次调用 `aprof-diagnosis-agent`：
 
-- 输入：源码、`diagnosis_hypotheses.json`、`profiling_plan.json`、`artifact_manifest.json`、report 目录。
+- 输入：源码、`diagnosis_hypotheses.json`、`profiling_plan.json`、`profiling_results.json`、report 目录。
 - 输出：`final_diagnosis.md`。
 
 最终报告必须包含：
@@ -71,8 +72,8 @@ flowchart TD
 
 ## 只生成计划模式
 
-如果用户未授权远程采集，workflow 在 Step 2 停止，并输出：
+如果用户未授权执行 msprof，workflow 在 Step 2 停止，并输出：
 
 - `diagnosis_hypotheses.json`。
 - `profiling_plan.json`。
-- 需要用户补充的 `run_cmd`、`gen_data_cmd`、远程配置或 NPU 环境信息。
+- 需要用户补充的 `run_cmd`、`gen_data_cmd`、输出目录或 NPU / simulator 环境信息。

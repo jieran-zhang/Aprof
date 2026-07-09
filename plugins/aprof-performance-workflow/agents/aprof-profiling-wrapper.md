@@ -1,10 +1,10 @@
 ---
 name: aprof-profiling-wrapper
-description: AProf workflow 内部 profiling wrapper。负责把 diagnosis metric 转换为 profiling_plan.json。
+description: AProf workflow 内部 profiling wrapper。负责把 diagnosis metric 转换为 profiling_plan.json，并执行 msprof、解析 report 得到 metric。
 mode: subagent
 skills:
   - ascendc-aprof-profiling
-  - ascendc-msprof-simulator
+  - ascendc-kernel-direct-invoke
   - ops-profiling
   - npu-arch
 permission:
@@ -25,9 +25,11 @@ permission:
 ## 输出
 
 - `profiling_plan.json`
+- `profiling_results.json`（执行 msprof 后）
 
 ## 规则
 
 - 按 metric 选择 `hw-op`、`hw-msprof` 或 `sim`。
 - 保留 `linked_hypotheses`，不要丢失诊断追溯关系。
-- 若缺 `run_cmd`，仍输出计划并标注需要用户补充。
+- 若缺 `run_cmd` 或用户未授权执行，仍输出计划并标注需要用户补充。
+- 执行后必须检查 required artifacts，并按 `parser_plan` 输出 metric 值、来源文件和缺失项。

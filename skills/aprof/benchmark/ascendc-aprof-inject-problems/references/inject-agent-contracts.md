@@ -1,10 +1,8 @@
 # AProf Inject Agent Contracts
 
-本文定义 `aprof-inject-problems-agent` 的结构化输入输出。所有字段必须可追溯；未知值使用 `null`、空数组或 `unknown`，不要编造。
+All fields must be traceable. Unknown values use `null`, empty arrays, or `"unknown"`; do not invent validation evidence.
 
 ## inject_request.json
-
-用户或 workflow 提供的注入请求。
 
 ```json
 {
@@ -12,9 +10,10 @@
   "source_mode": "existing_aprof_baseline",
   "source_path": "benchmarks/aprof_injected_ops/fast_gelu/baseline",
   "output_root": "benchmarks/aprof_injected_ops/fast_gelu",
-  "problem_family": "tilelen_small",
-  "variant": "inject_tilelen_small",
-  "profile_mode": "sim",
+  "problem_family": "data_movement",
+  "problem_id": "redundant_copyin",
+  "variant": "inject_redundant_copyin",
+  "profile_mode": "hw-op",
   "remote_verify": true,
   "operator_context": {
     "shape": [2048],
@@ -30,54 +29,61 @@
 }
 ```
 
-字段约束：
+Constraints:
 
-- `source_mode` 只能是 `kernel_only`、`scaffold_project`、`existing_aprof_baseline`。
-- `problem_family` 使用 `blockdim`、`tail`、`tilelen_small`、`tilelen_large`、`tilenum`、`dynshape`。
-- `profile_mode` 使用 `sim`、`hw-msprof`、`hw-op`。`kernel_only` 和 `existing_aprof_baseline` 默认 `sim`。
+- `source_mode`: `kernel_only`, `existing_aprof_baseline`, or `scaffold_project`.
+- `problem_family`: `tiling`, `data_movement`, `pipeline_parallel`, `onchip_memory`, `ai_core_utilization`, or `api_algorithm`.
+- `problem_id`: concrete recipe id from `inject-problems-meta.md`.
+- Legacy family aliases `blockdim`, `tail`, `tilelen_small`, `tilelen_large`, `tilenum`, and `dynshape` may be used only as shorthand for tiling recipes.
+- `profile_mode`: `sim`, `hw-msprof`, or `hw-op`.
 
 ## inject_manifest.json
 
-每个 injected case 的产物说明，放在 case 根目录。
+Each generated case writes `inject_manifest.json` in its root.
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "op_name": "fast_gelu",
-  "variant": "inject_tilelen_small",
+  "variant": "inject_redundant_copyin",
   "source_mode": "existing_aprof_baseline",
   "source_path": "benchmarks/aprof_injected_ops/fast_gelu/baseline",
-  "case_dir": "benchmarks/aprof_injected_ops/fast_gelu/inject_tilelen_small",
+  "case_dir": "benchmarks/aprof_injected_ops/fast_gelu/inject_redundant_copyin",
   "profile_mode": "sim",
   "ground_truth": {
-    "injected_label": "tileLength_too_small",
-    "problem_family": "tilelen_small",
-    "expected_diagnosis_family": "tiling"
+    "injected_label": "redundant_copyin",
+    "problem_family": "data_movement",
+    "problem_id": "redundant_copyin",
+    "expected_diagnosis_family": "data_movement"
+  },
+  "applicability": {
+    "status": "applied",
+    "source_modes": ["existing_aprof_baseline", "scaffold_project"],
+    "patch_results": [
+      {"patch_id": "redundant_copyin", "applied": true, "reason": "applied"}
+    ]
   },
   "knobs_changed": [
     {
-      "file": "scripts/gen_data.py",
-      "field": "default_tile_length",
-      "baseline": 256,
-      "injected": 16,
-      "reason": "增加 tile 数和循环/同步开销"
+      "field": "APROF_INJECT_REDUNDANT_COPYIN",
+      "injected": 1,
+      "reason": "requires Memory.csv or trace proxy to confirm redundant MTE2"
     }
   ],
   "kernel_flags": {
-    "APROF_INJECT_TAIL": 0,
-    "APROF_INJECT_DYNSHAPE": 0
+    "APROF_INJECT_REDUNDANT_COPYIN": 1
   },
   "allowed_files_changed": [
-    "scripts/gen_data.py",
+    "op_kernel/fast_gelu_kernel.asc",
     "op_kernel/aprof_variant_config.h",
     "metadata.json"
   ],
   "quality": {
     "single_factor": true,
     "preserve_math": true,
-    "confidence": "high",
-    "status": "active",
-    "notes": []
+    "confidence": "pending_validation",
+    "status": "unverified",
+    "notes": ["requires build/run/profile validation before active use"]
   },
   "artifacts": {
     "metadata": "metadata.json",
@@ -86,33 +92,34 @@
 }
 ```
 
-`quality.status` 使用：
+`applicability.status`:
 
-- `active`：可用于 benchmark 与诊断评估。
-- `weak`：信号弱或只能作为辅助样例。
-- `deprecated_or_weak`：历史 case 保留但不应用于判断准确率。
+- `applied`: recipe changed the requested source safely.
+- `unsupported`: source mode or kernel shape did not support the recipe.
+- `unverified`: reserved for imported/manual cases where applicability cannot be audited.
 
-## profiling_plan.json for inject
+`quality.status`:
 
-每个 case 的远程验证计划，复用 [../../../references/contracts.md](../../../references/contracts.md) 的 `profiling_plan.json`，并允许在 `remote_deploy_args` 中增加 inject 字段：
+- `active`: build/run/profile evidence passed; may count toward diagnosis accuracy.
+- `unverified`: generated but not fully validated yet.
+- `unsupported`: should not be built/profiled unless debugging the recipe.
+- `weak` / `deprecated_or_weak`: retained but excluded from accuracy.
+
+## profiling_plan.json
+
+Per-case profiling plans follow `skills/aprof/references/contracts.md#profiling_planjson` and add inject-specific remote deploy args:
 
 ```json
 {
-  "plan_id": "inject_sim_fast_gelu_tilelen_small",
-  "profile_mode": "sim",
-  "mode_reason": "AProf injected sim-only case uses run.sh build/sim and msprof op simulator",
+  "plan_id": "inject_hw-op_fast_gelu_inject_redundant_copyin",
+  "profile_mode": "hw-op",
+  "mode_reason": "data_movement/redundant_copyin requires validation before active label use",
   "required_artifacts": [
-    {
-      "path_pattern": "msprof_sim_output/**/trace.json",
-      "reason": "sim timeline"
-    },
-    {
-      "path_pattern": "*_instr_exe_*.csv",
-      "reason": "instruction-level evidence"
-    }
+    {"path_pattern": "msprof_hw_output/OPPROF_*/Memory.csv", "reason": "real memory traffic and MTE counts"},
+    {"path_pattern": "msprof_hw_output/OPPROF_*/PipeUtilization.csv", "reason": "pipe utilization and per-core timing"}
   ],
   "remote_deploy_args": {
-    "profile_mode": "sim",
+    "profile_mode": "hw-op",
     "steps": "upload,build,profile,download",
     "msprof_timeout": 8,
     "remote_env_exports": [
@@ -123,9 +130,9 @@
 }
 ```
 
-## inject_deploy_manifest.json
+Sim-only cases may request trace and `*_instr_exe_*.csv`, but those artifacts are proxy evidence only.
 
-一个 op 的批量远程验证清单，放在 `benchmarks/aprof_injected_ops/<op>/inject_deploy_manifest.json`。
+## inject_deploy_manifest.json
 
 ```json
 {
@@ -137,13 +144,16 @@
   "batch_local_out": "benchmarks/aprof_injected_ops/fast_gelu/remote_inject_out",
   "cases": [
     {
-      "variant": "inject_tilelen_small",
-      "local_dir": "benchmarks/aprof_injected_ops/fast_gelu/inject_tilelen_small",
-      "local_out": "benchmarks/aprof_injected_ops/fast_gelu/remote_inject_out/inject_tilelen_small",
-      "profiling_plan": "benchmarks/aprof_injected_ops/fast_gelu/inject_tilelen_small/profiling_plan.json",
-      "inject_manifest": "benchmarks/aprof_injected_ops/fast_gelu/inject_tilelen_small/inject_manifest.json",
-      "ground_truth_label": "tileLength_too_small",
-      "quality_status": "active"
+      "variant": "inject_redundant_copyin",
+      "local_dir": "benchmarks/aprof_injected_ops/fast_gelu/inject_redundant_copyin",
+      "local_out": "benchmarks/aprof_injected_ops/fast_gelu/remote_inject_out/inject_redundant_copyin",
+      "profiling_plan": "benchmarks/aprof_injected_ops/fast_gelu/inject_redundant_copyin/profiling_plan.json",
+      "inject_manifest": "benchmarks/aprof_injected_ops/fast_gelu/inject_redundant_copyin/inject_manifest.json",
+      "ground_truth_label": "redundant_copyin",
+      "problem_family": "data_movement",
+      "problem_id": "redundant_copyin",
+      "applicability_status": "applied",
+      "quality_status": "unverified"
     }
   ]
 }
@@ -151,13 +161,11 @@
 
 ## validation_summary.json
 
-每个 case 远程验证完成后的汇总，放在 `local_out` 下。
-
 ```json
 {
   "schema_version": 1,
-  "variant": "inject_tilelen_small",
-  "ground_truth_label": "tileLength_too_small",
+  "variant": "inject_redundant_copyin",
+  "ground_truth_label": "redundant_copyin",
   "profile_mode": "sim",
   "build_pass": true,
   "run_pass": "skipped",
@@ -173,11 +181,11 @@
 }
 ```
 
-`run_pass` 和 `accuracy_check` 使用 `true`、`false` 或 `skipped`。sim-only case 默认 `skipped`，full-scaffold case 必须给真实结果。
+For full direct-invoke projects, `run_pass` and `accuracy_check` must be real booleans. For sim-only cases they remain `"skipped"`.
 
 ## label_alignment_report.json
 
-由 label alignment 工具或 diagnosis workflow 输出。
+Label alignment is an offline step after blind diagnosis:
 
 ```json
 {
@@ -185,22 +193,23 @@
   "op_name": "fast_gelu",
   "cases": [
     {
-      "variant": "inject_tilelen_small",
-      "ground_truth_label": "tileLength_too_small",
-      "predicted_label": "tileLength_too_small",
-      "pass": true,
-      "confidence": "medium",
-      "evidence": [
-        "metadata.tile_length=16",
-        "trace.json present"
-      ]
+      "variant": "inject_redundant_copyin",
+      "ground_truth_label": "redundant_copyin",
+      "problem_family": "data_movement",
+      "problem_id": "redundant_copyin",
+      "predicted_label": "redundant_copyin",
+      "status": "pass",
+      "quality_status": "active"
     }
   ],
   "summary": {
     "total": 1,
     "passed": 1,
     "failed": 0,
+    "pending": 0,
     "skipped": 0
   }
 }
 ```
+
+Do not pass this file, `inject_manifest.json`, `metadata.json.injected_label`, `problem_id`, or variant names to diagnosis.
