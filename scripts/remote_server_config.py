@@ -74,8 +74,8 @@ def _load_private_key(path: str, passphrase: str) -> paramiko.PKey:
 
 def connect_ssh(cfg: dict[str, str | int]) -> paramiko.SSHClient:
     ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
+    ssh.load_system_host_keys()
+    ssh.set_missing_host_key_policy(paramiko.RejectPolicy())
     host = str(cfg["host"])
     port = int(cfg["port"])
     user = str(cfg["user"])
