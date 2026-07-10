@@ -1,6 +1,6 @@
 ---
 name: ascendc-kernel-direct-invoke
-description: Build a runnable AscendC kernel direct-invoke scaffold from a single kernel file or kernel folder. Use when Codex needs to turn `*_kernel.asc` into a `<<<>>>` host-run project, generate CMake/run/data/simulator glue, validate direct launch ABI, or optionally collect hardware `msprof --application` or `msprof op simulator` reports.
+description: Build a runnable AscendC kernel direct-invoke scaffold from a single kernel file or kernel folder. Use when an agent needs to turn `*_kernel.asc` into a `<<<>>>` host-run project, generate CMake/run/data/simulator glue, validate direct launch ABI, or optionally collect hardware `msprof --application` or `msprof op simulator` reports.
 ---
 
 # AscendC Kernel Direct Invoke
