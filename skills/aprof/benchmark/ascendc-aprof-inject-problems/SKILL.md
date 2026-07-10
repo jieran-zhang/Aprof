@@ -1,78 +1,83 @@
 ---
 name: ascendc-aprof-inject-problems
-description: Ascend C 向量算子 benchmark 注入 Skill。用于在 direct-invoke Ascend C 工程中注入受控的性能反模式，构建 AProf 可诊断的 injected benchmark case；适用于从 baseline 派生 inject_* 变体、生成 ground-truth label、跑通 build/gen/sim 并验证诊断对齐时。
+description: AscendC AProf benchmark performance-problem injection. Use when Codex needs to create known-ground-truth injected cases from a direct-invoke scaffold, AProf baseline, or kernel file; supports six diagnosis families: tiling, data movement, pipeline parallelism, on-chip memory, AI Core utilization, and API/algorithm inefficiency.
 ---
 
-# AscendC AProf Benchmark 性能问题注入
+# AscendC AProf Inject Problems
 
-## 使用场景
+Use this skill to create benchmark variants with known performance-problem ground truth while preserving mathematical correctness and buildability.
 
-当需要为 AProf benchmark 库构造“已知根因”的算子变体时使用本 Skill：
+## Workflow
 
-- 已有 `benchmarks/aprof_injected_ops/<op>/baseline/` 或可复用的 direct-invoke 基线工程。
-- 需要注入单一、可控的性能反模式，同时保持算子数学正确性和可编译性。
-- 需要为 Diagnosis agent 提供 `metadata.json` ground-truth label 和可复现的 msprof 证据。
-- 需要把 weekly report / 设计文档中的性能问题沉淀为可执行注入配方。
+1. Read `references/inject-agent-contracts.md`.
+2. Detect `source_mode`:
+   - `existing_aprof_baseline`: AProf sim-only baseline, usually under `benchmarks/aprof_injected_ops/<op>/baseline/`.
+   - `scaffold_project`: complete direct-invoke project with CMake/host runner.
+   - `kernel_only`: single kernel file; first create a direct-invoke scaffold with `/ascendc-kernel-direct-invoke`.
+3. Choose `problem_family` and `problem_id`. Use `tools/inject_case.py --list-recipes` to inspect supported recipes.
+4. Load the relevant family reference:
+   - `references/tiling-inject.md`
+   - `references/data-movement-inject.md`
+   - `references/pipeline-parallel-inject.md`
+   - `references/onchip-memory-inject.md`
+   - `references/ai-core-utilization-inject.md`
+   - `references/api-algorithm-inject.md`
+5. Generate the case with `tools/inject_case.py`.
+6. Validate structure with `tools/validate_inject_cases.py`.
+7. Build/run/profile locally or through `/ascendc-remote-kernel-deploy`.
+8. Mark a case `active` only after build and required run/profile evidence pass. Newly generated cases default to `unverified`.
+9. For diagnosis evaluation, build blind inputs with `tools/build_blind_diagnosis_input.py`; never pass ground truth to diagnosis.
 
-## 注入流程
+## Recipe Command
 
-1. 确认 baseline 已存在且 `bash run.sh build` / `bash run.sh gen` 可通过。
-2. 选择要注入的问题族，读取本 Skill 对应 reference 文档。
-3. 从 baseline 复制到 `benchmarks/aprof_injected_ops/<op>/inject_<variant>/`。
-4. 仅修改 reference 中列出的旋钮，不改算子数学逻辑。
-5. 运行 `bash run.sh build`；需要刷新数据时运行 `bash run.sh gen`。
-6. 可选：运行 `bash run.sh sim` 采集单核 msprof simulator 产物。
-7. 用 `/ascendc-aprof-diagnosis` 或 `python scripts/run_closed_loop.py` 验证 label 对齐。
-
-## 目标工程布局
-
-每个 injected case 推荐保持统一结构：
-
-```text
-benchmarks/aprof_injected_ops/<op>/<variant>/
-  run.sh
-  scripts/gen_data.py
-  op_kernel/aprof_variant_config.h
-  op_kernel/<op>_kernel.asc
-  metadata.json
-  build_sim/
-  msprof_sim_output/        # 可选，sim 后生成
+```bash
+python skills/aprof/benchmark/ascendc-aprof-inject-problems/tools/inject_case.py \
+  --source-mode existing_aprof_baseline \
+  --source-path benchmarks/aprof_injected_ops/fast_gelu/baseline \
+  --output-root benchmarks/aprof_injected_ops/fast_gelu \
+  --problem-family data_movement \
+  --problem-id redundant_copyin
 ```
 
-常用旋钮文件：
+Legacy aliases are still accepted when `--problem-id` is omitted:
 
-| 文件 | 作用 |
-| --- | --- |
-| `scripts/gen_data.py` | `DEFAULT_BLOCKDIM`、`DEFAULT_TILE_LENGTH`、`DEFAULT_TILE_NUM_MUL`、输出 shape、injected label |
-| `op_kernel/aprof_variant_config.h` | `APROF_INJECT_TAIL`、`APROF_INJECT_DYNSHAPE` 等编译期开关 |
-| `op_kernel/<op>_kernel.asc` | tail / loop / tiling 行为 |
-| `metadata.json` | AProf ground-truth：`injected_label`、`blockdim`、`tile_length`、`tile_num`、`tail_length` |
+```bash
+--problem-family tilelen_small
+--problem-family tail
+--problem-family blockdim
+```
 
-## 当前内置注入问题
+## Quality Rules
 
-- BlockDim 不合理：[references/blockdim-inject.md](references/blockdim-inject.md)
-- Tail 处理低效：[references/tail-inject.md](references/tail-inject.md)
-- tileLength 过小：[references/tilelen-small-inject.md](references/tilelen-small-inject.md)
-- tileLength 过大：[references/tilelen-large-inject.md](references/tilelen-large-inject.md)
-- tileNum 不合理：[references/tilenum-inject.md](references/tilenum-inject.md)
-- 动态 shape 固定 Tiling：[references/dynshape-inject.md](references/dynshape-inject.md)
+- Every case injects one primary problem only.
+- `inject_manifest.json.ground_truth` must include `problem_family`, `problem_id`, and `injected_label`.
+- `quality.status=active` is reserved for cases with completed build/run/profile validation.
+- `quality.status=unverified` is the default after generation.
+- `quality.status=unsupported` means the recipe could not find a safe source-code anchor or the source mode is not applicable.
+- `quality.status=weak` / `deprecated_or_weak` samples must not count toward diagnosis accuracy.
+- `kernel_only` inputs must not be treated as runnable until `/ascendc-kernel-direct-invoke` produces a complete IO-aware scaffold.
 
-## 问题索引与诊断标签
+## Validation And Evaluation
 
-完整索引、variant 命名和 AProf label 映射见：
+```bash
+python skills/aprof/benchmark/ascendc-aprof-inject-problems/tools/validate_inject_cases.py \
+  --op-root benchmarks/aprof_injected_ops/fast_gelu
 
-- [references/inject-problems-meta.md](references/inject-problems-meta.md)
+python skills/aprof/benchmark/ascendc-aprof-inject-problems/tools/build_inject_deploy_manifest.py \
+  --op-root benchmarks/aprof_injected_ops/fast_gelu \
+  --write-case-plans
 
-## 关联 Skill
+python skills/aprof/benchmark/ascendc-aprof-inject-problems/tools/build_blind_diagnosis_input.py \
+  --case-dir benchmarks/aprof_injected_ops/fast_gelu/inject_redundant_copyin \
+  --trace <trace.json> \
+  --out benchmarks/aprof_injected_ops/fast_gelu/blind_inputs/case.json
+```
 
-- Simulator 采集：`skills/aprof/benchmark/ascendc-msprof-simulator`
-- 性能诊断：`skills/aprof/diagnosis`（`/ascendc-aprof-diagnosis`）
-- Profiling 规划：`skills/aprof/profiling`（`/ascendc-aprof-profiling`）
+Label alignment must use blind diagnosis outputs. Do not expose `metadata.json.injected_label`, `problem_id`, `inject_manifest.json`, audit reports, or variant names to the diagnosis agent.
 
-## 约束
+## Related Skills
 
-- 一次只注入一个问题族；其余旋钮保持与 baseline 一致。
-- 不修改算子数学正确性，只改 tiling / 调度 / 分支路径。
-- `metadata.json.injected_label` 必须与 reference 中 ground-truth label 一致。
-- 优先单核 simulator 采集；仅在需要跨核失衡对比时提高 `blockdim`。
-- 注入来源可追溯：本 Skill 源自 `project_log/2026-06-11-weekly-report.md` 第 63-68 行向量算子性能问题清单。
+- Direct-invoke scaffolding: `skills/aprof/benchmark/ascendc-kernel-direct-invoke`
+- Remote build/profile: `skills/aprof/remote-kernel-deploy`
+- Profiling plan and report parsing: `skills/aprof/profiling`
+- Diagnosis matrices: `skills/aprof/diagnosis`

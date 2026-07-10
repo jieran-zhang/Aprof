@@ -36,6 +36,7 @@ MODE="${1:-all}"
 shift || true
 
 mkdir -p build_sim data msprof_sim_output
+chmod 700 msprof_sim_output
 
 case "$MODE" in
   gen|all|build|sim)
@@ -61,6 +62,9 @@ fi
 
 if [ "$MODE" = "sim" ] || [ "$MODE" = "all" ]; then
   rm -rf msprof_sim_output/OPPROF_*
+  # msprof rejects group/other-writable paths (common after SFTP upload).
+  chmod 700 msprof_sim_output build_sim
+  chmod u=rw,go= build_sim/* 2>/dev/null || true
   ulimit -n 65536 2>/dev/null || ulimit -n 4096 2>/dev/null || true
   cd build_sim
   msprof op simulator --config=./op_config.json --output=../msprof_sim_output --timeout="${MSPROF_TIMEOUT:-5}"

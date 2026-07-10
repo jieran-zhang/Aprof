@@ -1,0 +1,256 @@
+{
+  "case_id": "anonymous_case",
+  "input_policy": {
+    "single_case_only": true,
+    "baseline_allowed": false,
+    "ground_truth_allowed": false,
+    "forbidden_keys": [
+      "injected_label",
+      "injected_problem",
+      "knobs",
+      "label",
+      "problem",
+      "problem_family",
+      "quality_note",
+      "quality_status",
+      "variant",
+      "variant_name"
+    ],
+    "forbidden_files": [
+      "inject_audit_report.json",
+      "inject_manifest.json",
+      "label_alignment_report.json"
+    ]
+  },
+  "kernel": {
+    "source_files": [
+      {
+        "path": "op_kernel/aprof_variant_config.h",
+        "content": "#ifndef APROF_VARIANT_CONFIG_H\n#define APROF_VARIANT_CONFIG_H\n\n#define APROF_FEATURE_FLAG 0\n#define APROF_FEATURE_FLAG 0\n\n#endif // APROF_VARIANT_CONFIG_H\n",
+        "truncated": false
+      },
+      {
+        "path": "op_kernel/aprof_vector_tiling.h",
+        "content": "#ifndef APROF_VECTOR_TILING_H\n#define APROF_VECTOR_TILING_H\n\n#include <cstdint>\n\nstruct AprofVectorTilingData {\n    uint32_t inputElements;\n    uint32_t outputElements;\n    uint32_t inputStride;\n    uint32_t outputStride;\n    uint32_t elemsPerCore;\n    uint32_t tileLength;\n    uint32_t tileLengthAligned;\n    uint32_t tileNum;\n    uint32_t tailLength;\n    uint32_t variantFlags;\n};\n\n#endif // APROF_VECTOR_TILING_H\n",
+        "truncated": false
+      },
+      {
+        "path": "op_kernel/fast_gelu_kernel.asc",
+        "content": "#include \"kernel_operator.h\"\n#include \"aprof_vector_tiling.h\"\n#include \"aprof_variant_config.h\"\n\nusing namespace AscendC;\n\nnamespace {\nconstexpr uint32_t kFp32BlockElems = 8;\n\n__aicore__ inline uint32_t MinU32(uint32_t a, uint32_t b)\n{\n    return a < b ? a : b;\n}\n\n__aicore__ inline uint32_t AlignUpU32(uint32_t value, uint32_t align)\n{\n    return ((value + align - 1) / align) * align;\n}\n\n__aicore__ inline void LoadTiling(__gm__ uint8_t* tilingGM, AprofVectorTilingData& tiling)\n{\n    __gm__ AprofVectorTilingData* ptr = reinterpret_cast<__gm__ AprofVectorTilingData*>(tilingGM);\n    tiling.inputElements = ptr->inputElements;\n    tiling.outputElements = ptr->outputElements;\n    tiling.inputStride = ptr->inputStride;\n    tiling.outputStride = ptr->outputStride;\n    tiling.elemsPerCore = ptr->elemsPerCore;\n    tiling.tileLength = ptr->tileLength;\n    tiling.tileLengthAligned = ptr->tileLengthAligned;\n    tiling.tileNum = ptr->tileNum;\n    tiling.tailLength = ptr->tailLength;\n    tiling.variantFlags = ptr->variantFlags;\n}\n\n__aicore__ inline void MaybeFeaturePath(LocalTensor<float>& local, GlobalTensor<float>& gm, uint32_t offset,\n                                             const DataCopyParams& copyParams, uint32_t curN, uint32_t tileLength)\n{\n#if APROF_FEATURE_FLAG\n    if (curN < tileLength) {\n        DataCopy(local, gm[offset], copyParams);\n        PipeBarrier<PIPE_ALL>();\n    }\n#endif\n}\n} // namespace\n\nextern \"C\" __global__ __vector__ void fast_gelu_kernel(__gm__ uint8_t* inputGM, __gm__ uint8_t* outputGM,\n                                                   __gm__ uint8_t* tilingGM)\n{\n    AprofVectorTilingData tiling;\n    LoadTiling(tilingGM, tiling);\n    if (tiling.outputElements == 0 || tiling.tileLength == 0 || tiling.tileLengthAligned == 0) {\n        return;\n    }\n\n    const uint32_t blockIdx = GetBlockIdx();\n    const uint32_t coreStart = blockIdx * tiling.elemsPerCore;\n    if (coreStart >= tiling.outputElements) {\n#if APROF_FEATURE_FLAG\n        PipeBarrier<PIPE_ALL>();\n#endif\n        return;\n    }\n    const uint32_t coreElems = MinU32(tiling.elemsPerCore, tiling.outputElements - coreStart);\n\n    TPipe pipe;\n    TBuf<> aBuf;\n    TBuf<> bBuf;\n    TBuf<> tmpBuf;\n    TBuf<> outBuf;\n    pipe.InitBuffer(aBuf, tiling.tileLengthAligned * sizeof(float));\n    pipe.InitBuffer(bBuf, tiling.tileLengthAligned * sizeof(float));\n    pipe.InitBuffer(tmpBuf, tiling.tileLengthAligned * sizeof(float));\n    pipe.InitBuffer(outBuf, tiling.tileLengthAligned * sizeof(float));\n\n    LocalTensor<float> aLocal = aBuf.Get<float>();\n    LocalTensor<float> bLocal = bBuf.Get<float>();\n    LocalTensor<float> tmpLocal = tmpBuf.Get<float>();\n    LocalTensor<float> outLocal = outBuf.Get<float>();\n\n    GlobalTensor<float> inputGlobal;\n    GlobalTensor<float> outputGlobal;\n    inputGlobal.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(inputGM), tiling.inputStride);\n    outputGlobal.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(outputGM), tiling.outputStride);\n\n    for (uint32_t tileIdx = 0; tileIdx < tiling.tileNum; ++tileIdx) {\n        const uint32_t localOffset = tileIdx * tiling.tileLength;\n        if (localOffset >= coreElems) {\n            PipeBarrier<PIPE_ALL>();\n            continue;\n        }\n        const uint32_t curN = MinU32(tiling.tileLength, coreElems - localOffset);\n        const uint32_t curAligned = AlignUpU32(curN, kFp32BlockElems);\n        const uint32_t outOffset = coreStart + localOffset;\n\n        DataCopyParams copyParams;\n        copyParams.blockCount = 1;\n        copyParams.blockLen = curAligned / kFp32BlockElems;\n        copyParams.srcStride = 0;\n        copyParams.dstStride = 0;\n\n        DataCopy(aLocal, inputGlobal[outOffset], copyParams);\n        PipeBarrier<PIPE_ALL>();\n        MaybeFeaturePath(aLocal, inputGlobal, outOffset, copyParams, curN, tiling.tileLength);\n\n        // y = x / (1 + exp(-1.702 * x))\n        Muls(tmpLocal, aLocal, -1.702f, curN);\n        PipeBarrier<PIPE_V>();\n        Exp(tmpLocal, tmpLocal, curN);\n        PipeBarrier<PIPE_V>();\n        Adds(tmpLocal, tmpLocal, 1.0f, curN);\n        PipeBarrier<PIPE_V>();\n        Div(outLocal, aLocal, tmpLocal, curN);\n\n        PipeBarrier<PIPE_ALL>();\n        DataCopy(outputGlobal[outOffset], outLocal, copyParams);\n    }\n}\n",
+        "truncated": false
+      }
+    ],
+    "metadata": {
+      "op_name": "fast_gelu",
+      "output_stride": 512,
+      "input_stride": 512,
+      "tile_num": 2,
+      "tail_length": 0,
+      "tile_num_multiplier": 1,
+      "output_elements": 512,
+      "blockdim": 1,
+      "tile_length": 256
+    }
+  },
+  "profiling_artifacts": {
+    "trace_summaries": [
+      {
+        "path": "anonymous_trace.json",
+        "event_count": 546,
+        "timeline_span": 1.885000079870224,
+        "total_duration": 3.8270000224001706,
+        "top_by_duration": [
+          {
+            "name": "MOV_SRC_TO_DST_ALIGNv2",
+            "duration": 0.9039999842643738
+          },
+          {
+            "name": "LD_XD_XN_IMM",
+            "duration": 0.4830000093206763
+          },
+          {
+            "name": "VF",
+            "duration": 0.38200000673532486
+          },
+          {
+            "name": "STI_XN_IMM",
+            "duration": 0.2850000038743019
+          },
+          {
+            "name": "DC_PRELOAD_XN_IMM",
+            "duration": 0.23800000548362732
+          },
+          {
+            "name": "RV_VLD",
+            "duration": 0.2259999979287386
+          },
+          {
+            "name": "ST_XD_XN_IMM",
+            "duration": 0.22099999897181988
+          },
+          {
+            "name": "RV_VST",
+            "duration": 0.11999999731779099
+          },
+          {
+            "name": "STP_XI_XJ_XN",
+            "duration": 0.08399999979883432
+          },
+          {
+            "name": "MOV_XD_IMM",
+            "duration": 0.0760000036098063
+          },
+          {
+            "name": "RV_PLT",
+            "duration": 0.07200000062584877
+          },
+          {
+            "name": "RV_VEXP",
+            "duration": 0.07199999690055847
+          },
+          {
+            "name": "RV_VDIV",
+            "duration": 0.07199999690055847
+          },
+          {
+            "name": "RV_SMEM_BAR",
+            "duration": 0.06799999997019768
+          },
+          {
+            "name": "RV_SEND",
+            "duration": 0.05399999930523336
+          },
+          {
+            "name": "MOVK",
+            "duration": 0.03800000180490315
+          },
+          {
+            "name": "ADD",
+            "duration": 0.03600000170990825
+          },
+          {
+            "name": "ZEROEXT",
+            "duration": 0.03600000170990825
+          },
+          {
+            "name": "SHL",
+            "duration": 0.034000001614913344
+          },
+          {
+            "name": "RV_VMULS",
+            "duration": 0.03200000151991844
+          }
+        ],
+        "top_by_count": [
+          {
+            "name": "thread_name",
+            "count": 44
+          },
+          {
+            "name": "thread_sort_index",
+            "count": 44
+          },
+          {
+            "name": "MOV_XD_IMM",
+            "count": 38
+          },
+          {
+            "name": "RV_VLD",
+            "count": 32
+          },
+          {
+            "name": "RV_PLT",
+            "count": 24
+          },
+          {
+            "name": "RV_VST",
+            "count": 24
+          },
+          {
+            "name": "MOVK",
+            "count": 19
+          },
+          {
+            "name": "STI_XN_IMM",
+            "count": 19
+          },
+          {
+            "name": "ADD",
+            "count": 18
+          },
+          {
+            "name": "ZEROEXT",
+            "count": 18
+          },
+          {
+            "name": "SHL",
+            "count": 17
+          },
+          {
+            "name": "MOV_XD_SPR",
+            "count": 16
+          },
+          {
+            "name": "AND",
+            "count": 16
+          },
+          {
+            "name": "ADD_IMM",
+            "count": 12
+          },
+          {
+            "name": "ST_XD_XN_IMM",
+            "count": 12
+          },
+          {
+            "name": "SUB_IMM",
+            "count": 11
+          },
+          {
+            "name": "process_name",
+            "count": 10
+          },
+          {
+            "name": "process_sort_index",
+            "count": 10
+          },
+          {
+            "name": "SBITSET",
+            "count": 10
+          },
+          {
+            "name": "CMP",
+            "count": 9
+          }
+        ],
+        "evidence_level": "trace-proxy"
+      }
+    ]
+  },
+  "hardware_context": {
+    "soc_version": "dav-3510",
+    "source": "npu-arch typical DAV_3510 Server values; replace with PlatformAscendC/runtime values when available",
+    "assumption": "typical_dav3510_server",
+    "aiv_core_num": 64,
+    "aic_core_num": 32,
+    "ub_bytes_per_core": 253952,
+    "l1_bytes_per_core": 524288,
+    "l0c_bytes_per_core": 262144,
+    "bt_bytes_per_core": 4096,
+    "frequency_hz": 1650000000,
+    "vector_peak_flops": 54000000000000,
+    "cube_peak_flops": null,
+    "gm_bandwidth_bytes_per_s": 1600000000000,
+    "notes": [
+      "Vector peak and GM bandwidth are reference values, not runtime-measured values.",
+      "Use runtime PlatformAscendC / msprof fields for roofline-direct diagnosis."
+    ]
+  },
+  "required_output_contract": "skills/aprof/references/contracts.md#single_case_diagnosisjson",
+  "diagnosis_requirements": [
+    "Diagnose this kernel independently; do not compare with baseline.",
+    "For each diagnosis item, provide at least two supporting metrics.",
+    "Use roofline-single-case.md and mark evidence as direct, estimated, or trace-proxy.",
+    "Do not infer or mention injected labels, variants, or ground truth."
+  ]
+}

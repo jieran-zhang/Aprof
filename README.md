@@ -155,7 +155,7 @@ cd benchmarks/reference_ops/reduce_sum
 bash run.sh
 ```
 
-采集 simulator 报告时，参考 skill：`skills/aprof/benchmark/ascendc-msprof-simulator/SKILL.md`。
+从单个 kernel 搭建直调工程，或继续采集 simulator 报告时，参考 skill：`skills/aprof/benchmark/ascendc-kernel-direct-invoke/SKILL.md`。
 
 ### Injected case：可控性能问题库
 
@@ -184,14 +184,14 @@ python scripts/run_closed_loop.py
 | `ascendc-aprof-diagnosis` | `skills/aprof/diagnosis/` | 性能问题 → metric 诊断矩阵 |
 | `ascendc-aprof-profiling` | `skills/aprof/profiling/` | 诊断前规划采集任务 |
 | `ascendc-aprof-inject-problems` | `skills/aprof/benchmark/ascendc-aprof-inject-problems/` | 构造 injected benchmark |
-| `ascendc-msprof-simulator` | `skills/aprof/benchmark/ascendc-msprof-simulator/` | kernel → msprof simulator 端到端 SOP |
+| `ascendc-kernel-direct-invoke` | `skills/aprof/benchmark/ascendc-kernel-direct-invoke/` | kernel → direct-invoke 工程，可选 simulator 采集 |
 
 CANNBot 官方 skills（如 `ops-profiling`、`npu-arch`、`ascendc-direct-invoke-template`）位于 `third_party/cannbot-skills/`，可通过 `aprof cannbot-skills` 查看。
 
 在 Cursor / Agent 中，通常按这个顺序使用：
 
 1. 用 `ascendc-aprof-inject-problems` 或 reference case 准备 benchmark
-2. 用 `ascendc-msprof-simulator` 采集 profiling 产物
+2. 用 `ascendc-kernel-direct-invoke` 搭直调工程并按需采集 simulator profiling 产物
 3. 用 `ascendc-aprof-profiling` 规划缺失 metric
 4. 用 `ascendc-aprof-diagnosis` 做归因与下一步建议
 5. 需要更完整的 Ascend/CANN 能力时，调用 `third_party/cannbot-skills` 中的技能，例如 `ops-profiling`、`npu-arch`、`ascendc-direct-invoke-template`

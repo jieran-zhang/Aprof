@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "op_name": "fast_gelu",
+  "variant": "baseline",
+  "source_mode": "existing_aprof_baseline",
+  "source_path": "/Users/jieran/workspace/Aprof/benchmarks/aprof_injected_ops/fast_gelu/baseline",
+  "case_dir": "/Users/jieran/workspace/Aprof/benchmarks/aprof_injected_ops/fast_gelu/baseline",
+  "profile_mode": "sim",
+  "ground_truth": {
+    "injected_label": "baseline",
+    "problem_family": "baseline",
+    "expected_diagnosis_family": "baseline"
+  },
+  "knobs_changed": [
+    {
+      "field": "output_elements",
+      "injected": 2048,
+      "reason": "baseline"
+    },
+    {
+      "field": "blockdim",
+      "injected": 1,
+      "reason": "baseline"
+    },
+    {
+      "field": "tile_length",
+      "injected": 256,
+      "reason": "baseline"
+    },
+    {
+      "field": "tile_num",
+      "injected": 8,
+      "reason": "baseline"
+    },
+    {
+      "field": "tail_length",
+      "injected": 0,
+      "reason": "baseline"
+    },
+    {
+      "field": "tile_num_multiplier",
+      "injected": 1,
+      "reason": "baseline"
+    },
+    {
+      "field": "variant_flags",
+      "injected": 0,
+      "reason": "baseline"
+    }
+  ],
+  "kernel_flags": {
+    "APROF_INJECT_TAIL": 0,
+    "APROF_INJECT_DYNSHAPE": 0
+  },
+  "allowed_files_changed": [
+    "scripts/gen_data.py",
+    "op_kernel/aprof_variant_config.h",
+    "metadata.json"
+  ],
+  "quality": {
+    "single_factor": true,
+    "preserve_math": true,
+    "confidence": "high",
+    "status": "active",
+    "notes": []
+  },
+  "artifacts": {
+    "metadata": "metadata.json",
+    "profiling_plan": "profiling_plan.json"
+  }
+}

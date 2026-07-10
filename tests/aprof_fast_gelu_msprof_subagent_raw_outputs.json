@@ -1,0 +1,1259 @@
+{
+  "schema_version": 1,
+  "benchmark": "fast_gelu",
+  "created_from_run": "2026-07-09 msprof-assisted sub-agent diagnosis",
+  "notes": [
+    "Sub-agents were instructed not to read benchmarks/aprof_benchmark/fast_gelu/.ground_truth during diagnosis.",
+    "Hardware msprof/NPU commands were required to run outside the sandbox with require_escalated.",
+    "Shell commands were required to use login:false.",
+    "Actual msprof profiling was serialized with /usr/bin/flock /tmp/aprof_fast_gelu_msprof/msprof.lock.",
+    "Each case used an isolated /tmp/aprof_fast_gelu_msprof work/output directory."
+  ],
+  "summary": {
+    "total_cases": 12,
+    "hw_msprof_success": 12,
+    "simulator_fallback_used": 0,
+    "exact": 10,
+    "partial": 1,
+    "mismatch": 1
+  },
+  "cases": [
+    {
+      "case_id": "op_0001",
+      "ground_truth": {
+        "problem_family": "tiling",
+        "problem_id": "tile_length_too_small"
+      },
+      "normalized_diagnosis": "tile_length_too_small",
+      "comparison_result": "exact",
+      "raw_output": {
+        "case_id": "op_0001",
+        "profiling_status": {
+          "status": "hw_msprof_success",
+          "说明": "已按 plugins/aprof-performance-workflow 读取指定 workflow/wrapper 文档并执行硬件 msprof。首次 profile 已采到 kernel 指标但应用在写 output/output.bin 后报错；在仅属于本次的 /tmp 副本中创建 build/output 后重跑成功，最终采用 clean profile。未执行 simulator fallback。"
+        },
+        "msprof_command": "workdir=/tmp/aprof_fast_gelu_msprof/work/op_0001_20260709131256_2; /usr/bin/flock /tmp/aprof_fast_gelu_msprof/msprof.lock env APROF_TMP_ROOT=/tmp/aprof_fast_gelu_msprof/op_0001_20260709131256_2 APROF_MSPROF_OUTPUT=/tmp/aprof_fast_gelu_msprof/op_0001_20260709131256_2/msprof_hw_output_20260709131256_2_clean ./run.sh profile",
+        "msprof_output_dir": "/tmp/aprof_fast_gelu_msprof/op_0001_20260709131256_2/msprof_hw_output_20260709131256_2_clean/PROF_000001_20260709131546078_02388957IJBFLMHF",
+        "final_diagnosis": "主要问题是 blockdim=1 串行化 + tile_length=16 过小，导致 2048 个 float32 被单个 AI_VECTOR_CORE block 拆成 128 个极小 tile 执行。msprof 显示 kernel 只有 1 个 Block Num，在设备 aiv_num=40 上 blockdim 利用率约 2.5%；单 kernel Task Duration 为 33.440 us，AIV 时间 32.867 us，但 aiv_vec_ratio 只有 0.222，MTE2/MTE3 ratio 分别为 0.483/0.446，说明主要时间不是有效向量计算饱和，而是 tiny tile 下 DataCopy、PipeBarrier 和流水启动/同步开销占比过高。host launch API 约 388.33 us、node launch 约 643.18 us，远大于 kernel 本身，也进一步说明这个算子粒度太小；不过根因仍在 kernel/tiling 的单核小 tile 组织方式。",
+        "problem_code_locations": [
+          {
+            "path": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0001/op_host/main.asc",
+            "lines": "14-17, 33-44",
+            "问题": "kBlockDim=1、kTileLength=16；BuildTiling 将 elemsPerCore 设为 2048，并得到 tileNum=128，造成单 block 处理全部元素且 tile 粒度极小。"
+          },
+          {
+            "path": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0001/op_kernel/fast_gelu_kernel.asc",
+            "lines": "86-117",
+            "问题": "对 tiling.tileNum 做 128 次循环，每次仅处理 curN=16 个 float。每 tile 包含输入 DataCopy、多个 PipeBarrier、Muls/Exp/Adds/Div、输出 DataCopy，固定开销被放大。"
+          },
+          {
+            "path": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0001/op_kernel/fast_gelu_kernel.asc",
+            "lines": "102-116",
+            "问题": "每 16 元素执行一次 64B load、5 个显式 PipeBarrier、64B store；总计约 256 次 DataCopy 和 640 次 PipeBarrier。"
+          }
+        ],
+        "raw_msprof_metrics": {
+          "source_files": {
+            "op_summary_csv": "mindstudio_profiler_output/op_summary_20260709131551.csv",
+            "task_time_csv": "mindstudio_profiler_output/task_time_20260709131551.csv",
+            "op_statistic_csv": "mindstudio_profiler_output/op_statistic_20260709131551.csv",
+            "api_statistic_csv": "mindstudio_profiler_output/api_statistic_20260709131551.csv",
+            "device_info": "device_0/info.json.0"
+          },
+          "op_summary": {
+            "Op Name": "fast_gelu_kernel",
+            "Task Type": "AI_VECTOR_CORE",
+            "Task Duration(us)": 33.44,
+            "Block Num": 1,
+            "Mix Block Num": 0,
+            "aicore_time(us)": 0.0,
+            "aiv_time(us)": 32.867,
+            "aiv_total_cycles": 54230,
+            "aiv_vec_time(us)": 7.312,
+            "aiv_vec_ratio": 0.222,
+            "aiv_scalar_time(us)": 5.594,
+            "aiv_scalar_ratio": 0.17,
+            "aiv_mte2_time(us)": 15.867,
+            "aiv_mte2_ratio": 0.483,
+            "aiv_mte3_time(us)": 14.664,
+            "aiv_mte3_ratio": 0.446,
+            "aiv_icache_miss_rate": 0.01,
+            "cube_utilization(%)": 0.0
+          },
+          "task_time": {
+            "kernel_name": "fast_gelu_kernel",
+            "kernel_type": "AI_VECTOR_CORE",
+            "task_time(us)": 33.439
+          },
+          "op_statistic": {
+            "Count": 1,
+            "Total Time(us)": 33.44,
+            "Avg Time(us)": 33.44
+          },
+          "runtime_api_us": {
+            "aclrtLaunchKernelWithHostArgs": 388.33,
+            "LaunchKernelV2": 382.85,
+            "node.launch": 643.18,
+            "aclrtMemcpy_total_count3": 65.41,
+            "aclrtSynchronizeStream": 19.31,
+            "aclrtCreateStream": 1550.84,
+            "aclrtResetDevice": 392118.86
+          },
+          "device_info": {
+            "aiv_num": 40,
+            "ai_core_num": 20,
+            "aiv_frequency_MHz": 1650
+          }
+        },
+        "derived_metrics": {
+          "total_elements": 2048,
+          "tile_length": 16,
+          "tile_count": 128,
+          "time_per_element_us": 0.016328125,
+          "time_per_element_ns": 16.328125,
+          "time_per_tile_us": 0.26125,
+          "aiv_time_per_tile_us": 0.2567734375,
+          "blockdim_utilization": {
+            "block_num": 1,
+            "aiv_num": 40,
+            "utilization_percent": 2.5
+          },
+          "estimated_datacopy_calls": 256,
+          "estimated_pipebarrier_calls": 640,
+          "estimated_bytes_per_tile": 128,
+          "estimated_total_gm_bytes": 16384,
+          "estimated_effective_gm_bandwidth_GB_s": 0.4899521531,
+          "mte2_plus_mte3_ratio_nonexclusive": 0.929,
+          "vec_ratio": 0.222,
+          "launch_api_to_kernel_task_ratio": 11.6127392344,
+          "node_launch_to_kernel_task_ratio": 19.2338516746
+        },
+        "evidence_chain": [
+          "源码 main.asc 将 blockdim 固定为 1、tile_length 固定为 16；2048/16 得到 tile_count=128。",
+          "msprof op_summary 显示 fast_gelu_kernel 为 AI_VECTOR_CORE，Task Duration=33.440 us，Block Num=1；device info 显示 aiv_num=40，因此 blockdim 利用率约 2.5%。",
+          "PipeUtilization 字段显示 aiv_vec_ratio=0.222，而 aiv_mte2_ratio=0.483、aiv_mte3_ratio=0.446，向量计算占比低，搬运/流水相关占比高。",
+          "源码每 tile 只有 16 个 float，但执行 2 次 DataCopy 和 5 次 PipeBarrier；派生得到每 tile 仅 128B GM 流量、约 0.261 us/tile，固定开销被 128 次循环放大。",
+          "host runtime API 中 aclrtLaunchKernelWithHostArgs=388.33 us、node launch=643.18 us，显著大于 33.44 us kernel，说明该 workload 粒度过小；这支持扩大 tile、增加 blockdim/并行度或融合调用粒度。"
+        ],
+        "confidence": 0.9,
+        "diagnosis_mode": "msprof_assisted"
+      }
+    },
+    {
+      "case_id": "op_0002",
+      "ground_truth": {
+        "problem_family": "tiling",
+        "problem_id": "tail_inefficient"
+      },
+      "normalized_diagnosis": "tail_inefficient",
+      "comparison_result": "exact",
+      "raw_output": {
+        "case_id": "op_0002",
+        "profiling_status": "hw_msprof_success；已在 /tmp 复制 case 后上板采集，clean profile 中应用正常输出 op_0002 run completed，未触发 simulator fallback。第一次 profile 因 build/output 未预建在 kernel 后写 output/output.bin 失败，已重新采集 clean report 作为最终依据。",
+        "msprof_command": "/usr/bin/flock /tmp/aprof_fast_gelu_msprof/msprof.lock env APROF_TMP_ROOT=/tmp/aprof_fast_gelu_msprof/op_0002_202607091315_clean APROF_MSPROF_OUTPUT=/tmp/aprof_fast_gelu_msprof/op_0002_202607091315_clean/msprof_hw_output_202607091315_clean ./run.sh profile",
+        "msprof_output_dir": "/tmp/aprof_fast_gelu_msprof/op_0002_202607091315_clean/msprof_hw_output_202607091315_clean/PROF_000001_20260709131503349_02387670AHCPBNCR",
+        "final_diagnosis": "主要性能问题是尾块路径存在条件开启的重复 GM->Local DataCopy 和额外 PIPE_ALL barrier。shape=2057、tile_length=256 时共有 9 个 tile，最后一个 tail tile 只有 9 个有效元素，却在 fast_gelu_kernel.asc:102 先执行一次输入 DataCopy，又因 APROF_FEATURE_00=1 在 fast_gelu_kernel.asc:104 调用 MaybeFeaturePath，并在 fast_gelu_kernel.asc:39-41 对 tail tile 再执行同一段 DataCopy 和 PIPE_ALL。msprof 显示该 kernel 为单次 AI_VECTOR_CORE task，Task Duration=8.580us，AIV 向量计算占比仅 8.51%，MTE2+MTE3 合计占 AIV time 47.56%，说明时间大量落在搬运/流水同步相关开销而不是有效 vector 计算。结合 tail_length=9、tail tile 有效率仅 3.52%、tail 输入 copy 被重复 100% 的派生指标，最终判断 op_0002 的性能退化点是尾块低效处理中的重复 copy/barrier。",
+        "problem_code_locations": [
+          {
+            "path": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0002/op_kernel/aprof_variant_config.h",
+            "lines": "4",
+            "evidence": "APROF_FEATURE_00 被置为 1，启用 tail-only feature path。"
+          },
+          {
+            "path": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0002/op_kernel/fast_gelu_kernel.asc",
+            "lines": "35-42",
+            "evidence": "MaybeFeaturePath 在 curN < tileLength 时再次 DataCopy(local, gm[offset], copyParams) 并插入 PipeBarrier<PIPE_ALL>()；该条件只命中尾块。"
+          },
+          {
+            "path": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0002/op_kernel/fast_gelu_kernel.asc",
+            "lines": "102-104",
+            "evidence": "主循环已对当前 tile 执行 DataCopy，随后又调用 MaybeFeaturePath，导致 tail tile 重复读同一 GM 区间。"
+          },
+          {
+            "path": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0002/op_host/main.asc",
+            "lines": "41-45",
+            "evidence": "tileLength=256，tileNum=ceil(2057/256)=9，tailLength=2057%256=9，构成极小 tail tile。"
+          }
+        ],
+        "raw_msprof_metrics": {
+          "source_files": {
+            "op_summary": "mindstudio_profiler_output/op_summary_20260709131507.csv",
+            "op_statistic": "mindstudio_profiler_output/op_statistic_20260709131507.csv",
+            "task_time": "mindstudio_profiler_output/task_time_20260709131507.csv",
+            "api_statistic": "mindstudio_profiler_output/api_statistic_20260709131507.csv",
+            "metric_db": "device_0/sqlite/metric_summary.db"
+          },
+          "kernel_task": {
+            "op_name": "fast_gelu_kernel",
+            "task_type": "AI_VECTOR_CORE",
+            "stream_id": 113,
+            "task_id": 0,
+            "block_num": 1,
+            "task_duration_us": 8.58,
+            "task_wait_time_us": 0,
+            "op_statistic_count": 1,
+            "op_statistic_avg_time_us": 8.58
+          },
+          "ai_core_and_aiv": {
+            "aicore_time_us": 0.0,
+            "aic_total_cycles": 0,
+            "aiv_time_us": 8.024848484848485,
+            "aiv_total_cycles": 13241,
+            "aiv_vec_time_us": 0.6830303030303031,
+            "aiv_vec_ratio": 0.08511441734008006,
+            "aiv_scalar_time_us": 3.0909090909090913,
+            "aiv_scalar_ratio": 0.3851672834378068,
+            "aiv_mte2_time_us": 2.510909090909091,
+            "aiv_mte2_ratio": 0.31289177554565367,
+            "aiv_mte3_time_us": 1.3060606060606061,
+            "aiv_mte3_ratio": 0.1627520580016615,
+            "aiv_icache_miss_rate": 0.075,
+            "cube_utilization_percent": 0.0
+          },
+          "runtime_api": {
+            "LaunchKernelV2_us": 359.08,
+            "aclrtLaunchKernelWithHostArgs_us": 364.09,
+            "MemCopySync_total_us": 58.06,
+            "MemCopySync_count": 3,
+            "aclrtMemcpy_total_us": 65.26,
+            "aclrtMemcpy_count": 3,
+            "StreamSynchronize_us": 16.13,
+            "aclrtSynchronizeStream_us": 17.75,
+            "DevMalloc_total_us": 9.42,
+            "DevMalloc_count": 3,
+            "DevFree_total_us": 12.96,
+            "DevFree_count": 3
+          }
+        },
+        "derived_metrics": {
+          "input_elements": 2057,
+          "dtype_bytes": 4,
+          "blockdim": 1,
+          "tile_length": 256,
+          "tile_count": 9,
+          "full_tile_count": 8,
+          "tail_length": 9,
+          "tail_ratio": 0.03515625,
+          "tail_ratio_of_total_elements": 0.004375303840544483,
+          "tail_aligned_length": 16,
+          "aligned_tail_padding_elems": 7,
+          "time_per_element_us": 0.004171122994652407,
+          "time_per_element_ns": 4.171122994652406,
+          "normal_input_copy_elems_aligned": 2064,
+          "duplicate_tail_copy_elems": 16,
+          "duplicate_tail_copy_bytes": 64,
+          "tail_tile_duplicate_copy_expected_ratio": 1.0,
+          "duplicate_over_normal_input_copy_ratio": 0.007751937984496124,
+          "tail_tile_useful_work_vs_full_tile": 0.03515625,
+          "tail_tile_underfill_waste_ratio": 0.96484375,
+          "tile_fixed_overhead_share_by_tile_count": 0.1111111111111111,
+          "aiv_mte2_mte3_combined_time_us": 3.8169696969696973,
+          "aiv_mte2_mte3_combined_ratio": 0.47564383354731515,
+          "aiv_non_vector_ratio": 0.9148855826599199
+        },
+        "evidence_chain": [
+          "源码证据：APROF_FEATURE_00=1，MaybeFeaturePath 只在 curN < tileLength 的 tail tile 中触发。",
+          "路径证据：每个 tile 在 fast_gelu_kernel.asc:102 已完成输入 DataCopy；tail tile 随后在 fast_gelu_kernel.asc:104 -> 39-41 重复同一输入 DataCopy 并增加一次 PIPE_ALL barrier。",
+          "形状证据：2057/256 产生 8 个 full tile 和 1 个 9 元素 tail tile；tail tile 只有完整 tile 的 3.52% 有效工作，但承担一次完整 loop 的同步与搬运路径。",
+          "派生证据：tail copy 对齐到 16 个 float，重复 copy 额外读取 64B；相对该 tail tile 的输入 copy 是 100% 额外搬运。",
+          "硬件证据：msprof clean report 中 Task Duration=8.580us，AIV vector ratio=8.51%，MTE2+MTE3 ratio=47.56%，显示该小 shape kernel 的有效向量计算占比低，搬运/同步开销显著。",
+          "边界判断：runtime LaunchKernelV2/aclrtLaunchKernelWithHostArgs 约 359-364us，是 host 调度成本；最终 kernel 性能归因使用 device task 与 AIV PipeUtilization 字段，不把 host API 时间误判为 kernel 内部瓶颈。"
+        ],
+        "confidence": 0.84,
+        "diagnosis_mode": "msprof_assisted"
+      }
+    },
+    {
+      "case_id": "op_0003",
+      "ground_truth": {
+        "problem_family": "data_movement",
+        "problem_id": "redundant_copyin"
+      },
+      "normalized_diagnosis": "redundant_copyin",
+      "comparison_result": "exact",
+      "raw_output": {
+        "case_id": "op_0003",
+        "profiling_status": "hw_msprof 成功，第二次 profile 中应用正常完成，未使用 simulator fallback",
+        "msprof_command": "/usr/bin/flock /tmp/aprof_fast_gelu_msprof/msprof.lock env APROF_TMP_ROOT=/tmp/aprof_fast_gelu_msprof/op_0003 APROF_MSPROF_OUTPUT=/tmp/aprof_fast_gelu_msprof/op_0003/msprof_hw_output_7bYdC5_r2 ./run.sh profile",
+        "msprof_output_dir": "/tmp/aprof_fast_gelu_msprof/op_0003/msprof_hw_output_7bYdC5_r2/PROF_000001_20260709131622433_02390095RHMJEPCC",
+        "final_diagnosis": "主要问题是冗余 CopyIn：APROF_FEATURE_02 被开启后，kernel 在每个 tile 内对同一 inputGlobal[outOffset] 连续执行两次 DataCopy 到同一个 aLocal，中间没有任何计算使用第一次拷贝的数据，第二次拷贝只是覆盖同一缓冲。对 shape=2048、tile_length=256、blockdim=1，本应 8 次 copy-in，实际静态路径为 16 次，copy-in 次数和读入字节数均放大 2 倍。msprof r2 显示 fast_gelu_kernel task duration 为 8.919us，AIV MTE2 为 3.294us/39.5%，MTE3 为 1.206us/14.5%，MTE2+MTE3 合计 54.0%，而 VEC 仅 0.611us/7.3%；搬运 pipe 明显压过向量计算 pipe，支撑该冗余搬入是性能主因。",
+        "problem_code_locations": [
+          {
+            "file": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0003/op_kernel/aprof_variant_config.h",
+            "line": 6,
+            "code": "#define APROF_FEATURE_02 1",
+            "issue": "开启了重复 copy-in 分支"
+          },
+          {
+            "file": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0003/op_kernel/fast_gelu_kernel.asc",
+            "lines": "102-106",
+            "code": "DataCopy(aLocal, inputGlobal[outOffset], copyParams); ... #if APROF_FEATURE_02 DataCopy(aLocal, inputGlobal[outOffset], copyParams);",
+            "issue": "同一 tile、同一 GM offset、同一 LocalTensor 连续搬入两次，第二次无有效复用价值"
+          },
+          {
+            "file": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0003/op_host/main.asc",
+            "lines": "14-17, 40-44",
+            "issue": "host tiling 给出 outputElements=2048、blockdim=1、tileLength=256，因此 tileNum=ceil(2048/256)=8"
+          }
+        ],
+        "raw_msprof_metrics": {
+          "source_files": {
+            "op_summary": "/tmp/aprof_fast_gelu_msprof/op_0003/msprof_hw_output_7bYdC5_r2/PROF_000001_20260709131622433_02390095RHMJEPCC/mindstudio_profiler_output/op_summary_20260709131626.csv",
+            "task_time": "/tmp/aprof_fast_gelu_msprof/op_0003/msprof_hw_output_7bYdC5_r2/PROF_000001_20260709131622433_02390095RHMJEPCC/mindstudio_profiler_output/task_time_20260709131626.csv",
+            "op_statistic": "/tmp/aprof_fast_gelu_msprof/op_0003/msprof_hw_output_7bYdC5_r2/PROF_000001_20260709131622433_02390095RHMJEPCC/mindstudio_profiler_output/op_statistic_20260709131626.csv",
+            "api_statistic": "/tmp/aprof_fast_gelu_msprof/op_0003/msprof_hw_output_7bYdC5_r2/PROF_000001_20260709131622433_02390095RHMJEPCC/mindstudio_profiler_output/api_statistic_20260709131626.csv"
+          },
+          "kernel_task": {
+            "Op Name": "fast_gelu_kernel",
+            "Task Type": "AI_VECTOR_CORE",
+            "Task Duration(us)": 8.919,
+            "Block Num": 1,
+            "aicore_time(us)": 0.0,
+            "aiv_time(us)": 8.337,
+            "aiv_total_cycles": 13756,
+            "aiv_vec_time(us)": 0.611,
+            "aiv_vec_ratio": 0.073,
+            "aiv_scalar_time(us)": 2.768,
+            "aiv_scalar_ratio": 0.332,
+            "aiv_mte2_time(us)": 3.294,
+            "aiv_mte2_ratio": 0.395,
+            "aiv_mte3_time(us)": 1.206,
+            "aiv_mte3_ratio": 0.145,
+            "aiv_icache_miss_rate": 0.067
+          },
+          "op_statistic": {
+            "Count": 1,
+            "Total Time(us)": 8.92,
+            "Avg Time(us)": 8.92,
+            "Ratio(%)": 100
+          },
+          "runtime_api": {
+            "LaunchKernelV2(us)": 365.25,
+            "aclrtLaunchKernelWithHostArgs(us)": 370.68,
+            "MemCopySync_total_us": 59.01,
+            "MemCopySync_count": 3,
+            "aclrtMemcpy_total_us": 66.27,
+            "aclrtMemcpy_count": 3,
+            "StreamSynchronize(us)": 17.31,
+            "aclrtSynchronizeStream(us)": 18.76
+          },
+          "missing_not_in_report": [
+            "Memory.csv",
+            "L2Cache.csv",
+            "ResourceConflictRatio.csv",
+            "独立 PipeUtilization.csv；pipe 字段来自 op_summary.csv"
+          ]
+        },
+        "derived_metrics": {
+          "shape_elements": 2048,
+          "dtype_bytes": 4,
+          "blockdim": 1,
+          "tile_length": 256,
+          "tile_num": 8,
+          "expected_copyin_count": 8,
+          "actual_static_copyin_count": 16,
+          "copyin_ratio": 2.0,
+          "expected_copyin_bytes": 8192,
+          "actual_static_copyin_bytes": 16384,
+          "extra_copyin_bytes": 8192,
+          "copyout_count": 8,
+          "copyout_bytes": 8192,
+          "time_per_element": {
+            "task_time_per_element_us": 0.00435498046875,
+            "task_time_per_element_ns": 4.35498046875,
+            "aiv_time_per_element_us": 0.00407080078125,
+            "aiv_time_per_element_ns": 4.07080078125
+          },
+          "mte_pipe_support": {
+            "aiv_mte2_plus_mte3_time_us": 4.5,
+            "aiv_mte2_plus_mte3_ratio": 0.54,
+            "aiv_mte2_time_to_vec_time": 5.391162029459902,
+            "aiv_mte2_ratio_to_vec_ratio": 5.41095890410959
+          }
+        },
+        "evidence_chain": [
+          "源码阶段：main.asc 的 tiling 参数给出 2048 个 float32 元素、tile_length=256、blockdim=1，所以实际处理 tile_num=8。",
+          "源码阶段：fast_gelu_kernel.asc 第 102 行已有必要 DataCopy(aLocal, inputGlobal[outOffset], copyParams)，第 104-106 行在 APROF_FEATURE_02 下又对完全相同的 aLocal/inputGlobal[outOffset]/copyParams 再搬一次。",
+          "配置阶段：aprof_variant_config.h 第 6 行 APROF_FEATURE_02=1，因此重复搬入分支实际编译生效；APROF_FEATURE_00=0，tail-only MaybeFeaturePath 不是本 case 主因。",
+          "派生 metric：期望 copy-in 为 8 次，实际静态 copy-in 为 16 次，copyin_ratio=2.0，额外读入 8192 bytes。",
+          "msprof 硬件 metric：fast_gelu_kernel task duration=8.919us，AIV MTE2=3.294us/39.5%，MTE3=1.206us/14.5%，MTE2+MTE3=54.0%，VEC=0.611us/7.3%。搬运 pipe 明显高于向量计算 pipe，符合重复 copy-in 放大搬运成本的表现。",
+          "限制说明：本次 hw msprof 未导出 Memory.csv/L2Cache.csv/ResourceConflictRatio.csv，因此未声称真实读流量、L2 命中率或 MTE wait；copy-in 次数来自源码和 tiling 的静态派生，msprof pipe 时间作为硬件侧支撑。"
+        ],
+        "confidence": 0.93,
+        "diagnosis_mode": "msprof_assisted"
+      }
+    },
+    {
+      "case_id": "op_0004",
+      "ground_truth": {
+        "problem_family": "data_movement",
+        "problem_id": "extra_copyout"
+      },
+      "normalized_diagnosis": "extra_copyout",
+      "comparison_result": "exact",
+      "raw_output": {
+        "case_id": "op_0004",
+        "profiling_status": {
+          "status": "hw_msprof_success",
+          "copied_work_dir": "/tmp/aprof_fast_gelu_msprof/work/op_0004_l42CnN",
+          "fallback_used": false,
+          "note": "硬件 msprof 第二次采集干净完成，未执行 simulator fallback。"
+        },
+        "msprof_command": "/usr/bin/flock /tmp/aprof_fast_gelu_msprof/msprof.lock env APROF_TMP_ROOT=/tmp/aprof_fast_gelu_msprof/op_0004_l42CnN APROF_MSPROF_OUTPUT=/tmp/aprof_fast_gelu_msprof/op_0004_l42CnN/msprof_hw_output_l42CnN_r2 ./run.sh profile",
+        "msprof_output_dir": "/tmp/aprof_fast_gelu_msprof/op_0004_l42CnN/msprof_hw_output_l42CnN_r2/PROF_000001_20260709131609982_02389584HODNMIHH",
+        "final_diagnosis": "主要性能问题是 APROF_FEATURE_03 打开后，每个 tile 对同一 outputGlobal[outOffset] 执行了两次写回 DataCopy。第一次写回在 #if APROF_FEATURE_03 分支内，随后无条件再次写回同一 outLocal 到同一 GM 地址，结果值不变但 GM store/copyout 工作量翻倍，导致 MTE3/store 管线占比偏高。",
+        "problem_code_locations": [
+          {
+            "file": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0004/op_kernel/aprof_variant_config.h",
+            "lines": "7",
+            "problem": "APROF_FEATURE_03 被置为 1，启用额外写回路径。"
+          },
+          {
+            "file": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0004/op_kernel/fast_gelu_kernel.asc",
+            "lines": "116-120",
+            "problem": "第 117 行条件写回和第 120 行无条件写回目标相同，形成每 tile 双 copyout。"
+          }
+        ],
+        "raw_msprof_metrics": {
+          "report_files": {
+            "op_summary": "mindstudio_profiler_output/op_summary_20260709131616.csv",
+            "op_statistic": "mindstudio_profiler_output/op_statistic_20260709131616.csv",
+            "task_time": "mindstudio_profiler_output/task_time_20260709131616.csv",
+            "api_statistic": "mindstudio_profiler_output/api_statistic_20260709131616.csv"
+          },
+          "kernel": {
+            "op_name": "fast_gelu_kernel",
+            "task_type": "AI_VECTOR_CORE",
+            "block_num": 1,
+            "task_duration_us_op_summary": 8.84,
+            "task_time_us_task_time_csv": 8.839,
+            "op_statistic_count": 1,
+            "op_statistic_avg_time_us": 8.84
+          },
+          "pipe_utilization_fields": {
+            "aicore_time_us": 0.0,
+            "aiv_time_us": 8.248,
+            "aiv_total_cycles": 13610,
+            "aiv_vec_time_us": 0.611,
+            "aiv_vec_ratio": 0.074,
+            "aiv_scalar_time_us": 2.665,
+            "aiv_scalar_ratio": 0.323,
+            "aiv_mte2_time_us": 2.138,
+            "aiv_mte2_ratio": 0.259,
+            "aiv_mte3_time_us": 2.245,
+            "aiv_mte3_ratio": 0.272,
+            "aiv_icache_miss_rate": 0.065,
+            "cube_utilization_percent": 0.0
+          },
+          "runtime_api_us": {
+            "LaunchKernelV2": {
+              "time": 341.48,
+              "count": 1,
+              "avg": 341.48
+            },
+            "aclrtLaunchKernelWithHostArgs": {
+              "time": 348.37,
+              "count": 1,
+              "avg": 348.37
+            },
+            "MemCopySync": {
+              "time": 60.34,
+              "count": 3,
+              "avg": 20.113
+            },
+            "aclrtMemcpy": {
+              "time": 66.6,
+              "count": 3,
+              "avg": 22.2
+            },
+            "StreamSynchronize": {
+              "time": 17.61,
+              "count": 1,
+              "avg": 17.61
+            },
+            "aclrtSynchronizeStream": {
+              "time": 19.56,
+              "count": 1,
+              "avg": 19.56
+            }
+          }
+        },
+        "derived_metrics": {
+          "output_elements": 2048,
+          "tile_length": 256,
+          "tile_num": 8,
+          "expected_copyout_count": 8,
+          "actual_static_copyout_count": 16,
+          "extra_copyout_count": 8,
+          "copyout_ratio": 2.0,
+          "expected_copyout_bytes": 8192,
+          "actual_static_copyout_bytes": 16384,
+          "extra_copyout_bytes": 8192,
+          "time_per_element_us": 0.004316406,
+          "time_per_element_ns": 4.316406,
+          "mte3_task_ratio": 0.253959,
+          "mte3_aiv_ratio_from_report": 0.272,
+          "mte2_mte3_aiv_ratio": 0.531402,
+          "mte3_vs_vec_time_ratio": 3.674304
+        },
+        "evidence_chain": [
+          "tiling 来源显示 shape=2048、blockdim=1、tile_length=256，因此 tile_num=ceil(2048/256)=8。",
+          "正常 FastGELU 每个 tile 只需要一次 output copyout，所以 expected_copyout_count=8。",
+          "源码第 116-120 行在 APROF_FEATURE_03=1 时每个 tile 写回两次同一 outputGlobal[outOffset]，actual_static_copyout_count=16，copyout_ratio=2.0。",
+          "硬件 msprof 显示 fast_gelu_kernel 单次 AI_VECTOR_CORE task_duration=8.840us，aiv_time=8.248us。",
+          "PipeUtilization 实际字段显示 aiv_mte3_time=2.245us、aiv_mte3_ratio=0.272，store 管线约占 AIV 时间 27.2%；MTE2+MTE3 合计约占 AIV 时间 53.1%，且 MTE3 时间为 vec_time 的 3.67 倍，支持额外 copyout 造成 store 压力的判断。",
+          "runtime API 显示仅 1 次 kernel launch，3 次 aclrtMemcpy/MemCopySync 属于 host 侧输入、tiling、输出搬运；设备端问题应归因到 kernel 内 GM 写回路径。"
+        ],
+        "confidence": 0.94,
+        "diagnosis_mode": "msprof_assisted"
+      }
+    },
+    {
+      "case_id": "op_0005",
+      "ground_truth": {
+        "problem_family": "pipeline_parallel",
+        "problem_id": "serial_copy_compute_copyout"
+      },
+      "normalized_diagnosis": "serial_copy_compute_copyout",
+      "comparison_result": "exact",
+      "raw_output": {
+        "case_id": "op_0005",
+        "profiling_status": {
+          "status": "hw_msprof_success",
+          "说明": "硬件 msprof 已成功导出报告；第一次在 copied case 中 profile 因复制来的 build/CMakeCache.txt 仍指向原 benchmark 路径而失败，清理本次唯一副本的 build 目录后重跑成功。msprof 日志中应用尾部写 output/output.bin 失败，但 kernel task、op_summary、task_time、api_statistic 均已导出。",
+          "simulator_fallback": "未执行，因为硬件 profile 已成功"
+        },
+        "msprof_command": "/usr/bin/flock /tmp/aprof_fast_gelu_msprof/msprof.lock env APROF_TMP_ROOT=/tmp/aprof_fast_gelu_msprof/op_0005_20260709_codex_a APROF_MSPROF_OUTPUT=/tmp/aprof_fast_gelu_msprof/op_0005_20260709_codex_a/msprof_hw_output_20260709_codex_a ./run.sh profile",
+        "msprof_output_dir": "/tmp/aprof_fast_gelu_msprof/op_0005_20260709_codex_a/msprof_hw_output_20260709_codex_a/PROF_000001_20260709131702325_02391332NCJKBOIM",
+        "final_diagnosis": "主要问题是单缓冲、强同步的 copy-in -> compute -> copy-out 串行化；APROF_FEATURE_04 打开的多余 PIPE_ALL 是额外放大的问题，但不是唯一问题。源码每个 tile 都先 DataCopy 输入，再 PIPE_ALL 等待，随后执行 Muls/Exp/Adds/Div，中间用 PIPE_V 串起来，最后又用 PIPE_ALL 后才 DataCopy 输出，没有 double buffer/queue 让 MTE2、Vector、MTE3 跨 tile 重叠。msprof 的 PipeUtilization 旁证是 AIV 总时间 8.98 us 内 vec 仅 0.611 us / 6.8%，MTE2 2.199 us / 24.5%，MTE3 1.246 us / 13.9%，导出 pipe ratio 合计约 81.8%，存在约 18.2% 未归入这些活跃 pipe 的时间；结合源码中的全 pipe barrier，判断为 pipeline 被 barrier 串行化而非单纯计算指令本身慢。",
+        "problem_code_locations": [
+          {
+            "file": "/tmp/aprof_fast_gelu_msprof/work/op_0005_20260709_codex_a/operators/op_0005/op_kernel/aprof_variant_config.h",
+            "lines": "8",
+            "code": "#define APROF_FEATURE_04 1",
+            "diagnosis": "启用了 feature04，引入每 tile 2 个额外 PIPE_ALL。"
+          },
+          {
+            "file": "/tmp/aprof_fast_gelu_msprof/work/op_0005_20260709_codex_a/operators/op_0005/op_kernel/fast_gelu_kernel.asc",
+            "lines": "102-106",
+            "code": "PipeBarrier<PIPE_ALL>(); DataCopy(aLocal, inputGlobal[outOffset], copyParams); PipeBarrier<PIPE_ALL>();",
+            "diagnosis": "line 103 是 feature04 额外 barrier，会在新 tile 开始前等待前序 pipe；line 106 强制 copy-in 完成后才进入 compute，是 copy-in -> compute 串行化点。"
+          },
+          {
+            "file": "/tmp/aprof_fast_gelu_msprof/work/op_0005_20260709_codex_a/operators/op_0005/op_kernel/fast_gelu_kernel.asc",
+            "lines": "110-116",
+            "code": "Muls -> PipeBarrier<PIPE_V> -> Exp -> PipeBarrier<PIPE_V> -> Adds -> PipeBarrier<PIPE_V> -> Div",
+            "diagnosis": "vector 计算链自身被 PIPE_V 串行化；这部分是计算依赖链的一部分，但配合前后 PIPE_ALL 使 tile 级流水难以展开。"
+          },
+          {
+            "file": "/tmp/aprof_fast_gelu_msprof/work/op_0005_20260709_codex_a/operators/op_0005/op_kernel/fast_gelu_kernel.asc",
+            "lines": "117-122",
+            "code": "PipeBarrier<PIPE_ALL>(); PipeBarrier<PIPE_ALL>(); DataCopy(outputGlobal[outOffset], outLocal, copyParams);",
+            "diagnosis": "line 118 是 feature04 额外 PIPE_ALL，line 121 又紧跟一个 PIPE_ALL，形成重复全 pipe 等待；随后才 copy-out，是 compute -> copy-out 串行化点。"
+          }
+        ],
+        "raw_msprof_metrics": {
+          "kernel_task": {
+            "kernel_name": "fast_gelu_kernel",
+            "kernel_type": "AI_VECTOR_CORE",
+            "task_time_us": 9.48
+          },
+          "op_summary": {
+            "task_duration_us": 9.48,
+            "block_num": 1,
+            "aiv_time_us": 8.98,
+            "aiv_vec_time_us": 0.611,
+            "aiv_vec_ratio": 0.068,
+            "aiv_scalar_time_us": 3.287,
+            "aiv_scalar_ratio": 0.366,
+            "aiv_mte2_time_us": 2.199,
+            "aiv_mte2_ratio": 0.245,
+            "aiv_mte3_time_us": 1.246,
+            "aiv_mte3_ratio": 0.139,
+            "aiv_icache_miss_rate": 0.062
+          },
+          "runtime_api": {
+            "LaunchKernelV2_us": 368.38,
+            "aclrtLaunchKernelWithHostArgs_us": 373.37,
+            "MemCopySync_total_us": 54.09,
+            "aclrtMemcpy_total_us": 59.54,
+            "StreamSynchronize_us": 12.01,
+            "DeviceReset_us": 476845.23
+          }
+        },
+        "derived_metrics": {
+          "tile_count": 8,
+          "time_per_tile_us": 1.185,
+          "aiv_time_per_tile_us": 1.1225,
+          "barriers_per_tile": {
+            "PIPE_ALL": 4,
+            "PIPE_V": 3,
+            "total": 7
+          },
+          "total_barriers_per_kernel": 56,
+          "feature04_extra_PIPE_ALL_per_kernel": 16,
+          "pipe_active_sum_ratio_approx": 0.818,
+          "pipe_unaccounted_or_idle_ratio_approx": 0.182,
+          "copy_pipe_ratio_MTE2_plus_MTE3": 0.384,
+          "vector_compute_ratio": 0.068
+        },
+        "evidence_chain": [
+          "APROF_FEATURE_04=1，导致 fast_gelu_kernel.asc:103 和 118 的额外 PIPE_ALL 实际编译进入 kernel；每 tile 额外 2 个 PIPE_ALL，共 16 个。",
+          "copy-compute-copyout 串行化来自 fast_gelu_kernel.asc:105-122 的顺序结构：DataCopy 输入后 line 106 PIPE_ALL，计算链后 line 121 PIPE_ALL，再 DataCopy 输出；没有双缓冲、队列或跨 tile overlap。",
+          "msprof 硬件数据支持该判断：kernel task duration=9.480 us，AIV time=8.98 us；AIV vec ratio 仅 6.8%，MTE2+MTE3 copy pipe ratio 为 38.4%，pipe ratio 合计约 81.8%，未体现出 copy 与 compute 的充分重叠。"
+        ],
+        "confidence": {
+          "score": 0.88,
+          "level": "高",
+          "reason": "有真实硬件 msprof task/op_summary/api_statistic 数据，源码 barrier 位置和 feature 开关清晰；限制是 msprof 未导出逐条 PipeBarrier stall 字段，所以 barrier stall 量化为源码计数加 PipeUtilization 旁证。"
+        },
+        "diagnosis_mode": "msprof_assisted"
+      }
+    },
+    {
+      "case_id": "op_0006",
+      "ground_truth": {
+        "problem_family": "pipeline_parallel",
+        "problem_id": "excessive_pipe_barrier"
+      },
+      "normalized_diagnosis": "excessive_pipe_barrier",
+      "comparison_result": "exact",
+      "raw_output": {
+        "case_id": "op_0006",
+        "profiling_status": "硬件 msprof 成功；最终采用第二次干净采集 hw3，应用正常完成；未使用 simulator fallback。首次复制后的 build cache 指向原 benchmark 源目录，已仅清理 /tmp unique copy 的 build/build_sim 后重跑。",
+        "msprof_command": "/usr/bin/flock /tmp/aprof_fast_gelu_msprof/msprof.lock env APROF_TMP_ROOT=/tmp/aprof_fast_gelu_msprof/op_0006 APROF_MSPROF_OUTPUT=/tmp/aprof_fast_gelu_msprof/op_0006/msprof_hw_output_UKudtd_hw3 ./run.sh profile",
+        "msprof_output_dir": "/tmp/aprof_fast_gelu_msprof/op_0006/msprof_hw_output_UKudtd_hw3/PROF_000001_20260709131645254_02390741MRHORQQD",
+        "final_diagnosis": "主要问题是 APROF_FEATURE_05 打开的每 tile 两个冗余 PipeBarrier<PIPE_ALL>()。该 kernel 只有 2048 个 float32 元素、8 个 tile，每 tile 开头额外全流水同步会强制打断 MTE/V/MTE3 流水，导致真实 msprof 中 AIV vec 占比仅约 6.72%，scalar/control 与未归类等待占比较高。建议删除 fast_gelu_kernel.asc:95-98 的 FEATURE_05 额外 barrier，保留数据依赖必需的拷入后、V 指令间和写回前 barrier。",
+        "problem_code_locations": [
+          {
+            "path": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0006/op_kernel/aprof_variant_config.h",
+            "lines": "9",
+            "evidence": "APROF_FEATURE_05 被置为 1，启用可疑路径。"
+          },
+          {
+            "path": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0006/op_kernel/fast_gelu_kernel.asc",
+            "lines": "95-98",
+            "evidence": "每个有效 tile 进入计算前无条件执行两次 PipeBarrier<PIPE_ALL>()。"
+          },
+          {
+            "path": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0006/op_kernel/fast_gelu_kernel.asc",
+            "lines": "86-121",
+            "evidence": "主循环按 tile 执行；shape=2048、tile_length=256 时共 8 个 tile，因此额外 barrier 被放大为 16 次。"
+          }
+        ],
+        "raw_msprof_metrics": {
+          "kernel_task": {
+            "op_name": "fast_gelu_kernel",
+            "task_type": "AI_VECTOR_CORE",
+            "block_num": 1,
+            "task_duration_us": 9.58,
+            "op_statistic_avg_us": 9.58
+          },
+          "ai_core_and_pipe_utilization": {
+            "aiv_time_us": 9.086060606060606,
+            "aiv_total_cycles": 14992,
+            "aiv_vec_time_us": 0.610909090909091,
+            "aiv_vec_ratio": 0.0672358591248666,
+            "aiv_scalar_time_us": 3.1721212121212123,
+            "aiv_scalar_ratio": 0.349119530416222,
+            "aiv_mte2_time_us": 2.296969696969697,
+            "aiv_mte2_ratio": 0.25280149413020275,
+            "aiv_mte3_time_us": 1.126060606060606,
+            "aiv_mte3_ratio": 0.12393276414087513,
+            "aiv_icache_miss_rate": 0.06477732793522267
+          },
+          "runtime_api_time_us": {
+            "LaunchKernelV2": 398.45,
+            "aclrtLaunchKernelWithHostArgs": 404.47,
+            "node_launch": 667.47
+          },
+          "missing_raw_fields": "本次 report 未发现显式命名为 stall/idle/barrier_count 的原生字段；只使用已存在的 PipeUtilization aiv_* time/ratio 字段做派生判断。"
+        },
+        "derived_metrics": {
+          "tile_count": 8,
+          "time_per_tile_us": 1.1975,
+          "aiv_time_per_tile_us": 1.1357575757575757,
+          "extra_barrier_count": 16,
+          "barriers_per_tile": {
+            "total_pipe_barriers": 7,
+            "pipe_all_barriers": 4,
+            "extra_pipe_all_barriers": 2
+          },
+          "extra_barrier_density_per_us": 1.6701461377870563,
+          "pipeline_stall_idle_related_metric": {
+            "name": "derived_unattributed_aiv_ratio",
+            "formula": "1 - (aiv_vec_ratio + aiv_scalar_ratio + aiv_mte2_ratio + aiv_mte3_ratio)",
+            "ratio": 0.2069103521878335,
+            "time_us": 1.88,
+            "note": "这是派生 metric，不是 msprof 原生 stall/idle 字段。"
+          }
+        },
+        "evidence_chain": [
+          "源码证据：aprof_variant_config.h:9 令 APROF_FEATURE_05=1，fast_gelu_kernel.asc:95-98 在每个 tile 开头插入两次无条件 PipeBarrier<PIPE_ALL>()。",
+          "规模证据：operator_context 为 shape=[2048]、tile_length=256、blockdim=1，对应 8 个有效 tile，因此额外全流水 barrier 数为 2*8=16。",
+          "真实 msprof 证据：fast_gelu_kernel 的 AI_VECTOR_CORE task_duration 为 9.58us，aiv_time 为 9.086us，vec pipe 时间仅 0.611us/6.72%。",
+          "PipeUtilization 证据：aiv_scalar_ratio=34.91%，aiv_mte2_ratio=25.28%，aiv_mte3_ratio=12.39%，派生未归类/等待相关比例约 20.69%，符合过多全流水同步造成流水断续的表现。"
+        ],
+        "confidence": {
+          "level": "高",
+          "score": 0.87,
+          "reason": "有明确源码开关和具体行号，且硬件 msprof 的 task/pipe metrics 与冗余全流水 barrier 假设一致；扣分点是 report 未提供原生 barrier stall 计数，只能用 PipeUtilization 和派生 idle/unattributed metric 辅助归因。"
+        },
+        "diagnosis_mode": "msprof_assisted"
+      }
+    },
+    {
+      "case_id": "op_0007",
+      "ground_truth": {
+        "problem_family": "onchip_memory",
+        "problem_id": "ub_temp_overallocated"
+      },
+      "normalized_diagnosis": "ub_temp_overallocated",
+      "comparison_result": "exact",
+      "raw_output": {
+        "case_id": "op_0007",
+        "profiling_status": {
+          "status": "hw_msprof_success",
+          "artifacts_ready": true,
+          "notes": "首次在复制目录运行时因拷贝了源目录旧 build/CMakeCache 失败；仅清理自己创建的 /tmp unique build 后重跑。随后为避免 output/output.bin 目录缺失造成 post-kernel 写文件失败，在复制目录创建 build/output，最终 hw msprof 完整成功；未执行 simulator fallback。"
+        },
+        "msprof_command": "/usr/bin/flock /tmp/aprof_fast_gelu_msprof/msprof.lock env APROF_TMP_ROOT=/tmp/aprof_fast_gelu_msprof/op_0007 APROF_MSPROF_OUTPUT=/tmp/aprof_fast_gelu_msprof/op_0007/msprof_hw_output_IlxEDs_clean ./run.sh profile",
+        "msprof_output_dir": "/tmp/aprof_fast_gelu_msprof/op_0007/msprof_hw_output_IlxEDs_clean/PROF_000001_20260709132352706_02400655MILOCKJH",
+        "final_diagnosis": "主要问题是 FastGELU kernel 分配了不参与计算和搬运的数据缓存，造成 UB/on-chip memory footprint 膨胀。APROF_FEATURE_06 打开后 spareBuf 被 InitBuffer，但后续没有 Get/读写；同时 bBuf/bLocal 也只初始化和 Get，未参与 DataCopy、Muls、Exp、Adds、Div 或输出。对 dtype=float32、tile_length_aligned=256 的本 case，每个 TBuf 为 1024 bytes，当前 5 个 TBuf 共 5120 bytes，其中 2 个、2048 bytes 为无效 UB，占 40%。msprof 显示 kernel 是单个 AI_VECTOR_CORE task，Task Duration=7.499 us，Block Num=1；PipeUtilization 相关字段中 aiv_vec_ratio 仅 0.088，而 aiv_scalar_ratio/aiv_mte2_ratio/aiv_mte3_ratio 合计约 0.841，说明运行时间主要花在标量/搬运管线和同步路径上，没有证据表明额外 UB buffer 带来计算收益。最终判断为：冗余 UB buffer 分配导致片上资源占用过高，降低资源余量和潜在并发/occupancy 空间；在本次 blockdim=1 的测量里，msprof 不能证明它进一步降低了 Block Num，但源码和派生 UB metric 已足够支持该问题归因。",
+        "problem_code_locations": [
+          {
+            "path": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0007/op_kernel/aprof_variant_config.h",
+            "lines": "10",
+            "issue": "APROF_FEATURE_06=1，打开 spareBuf 分配路径。"
+          },
+          {
+            "path": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0007/op_kernel/fast_gelu_kernel.asc",
+            "lines": "71-79",
+            "issue": "spareBuf 被声明并 InitBuffer，后续无 Get/读写/计算使用。"
+          },
+          {
+            "path": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0007/op_kernel/fast_gelu_kernel.asc",
+            "lines": "68,75,83",
+            "issue": "bBuf 被声明、InitBuffer，bLocal 被 Get，但后续无任何使用。"
+          }
+        ],
+        "raw_msprof_metrics": {
+          "kernel_task": {
+            "Op Name": "fast_gelu_kernel",
+            "Task Type": "AI_VECTOR_CORE",
+            "Task Duration(us)": 7.499,
+            "task_time(us)": 7.499,
+            "Block Num": 1,
+            "op_statistic_count": 1
+          },
+          "ai_core_and_pipe_utilization_fields": {
+            "aiv_time(us)": 6.949,
+            "aiv_total_cycles": 11466,
+            "aiv_vec_time(us)": 0.612,
+            "aiv_vec_ratio": 0.088,
+            "aiv_scalar_time(us)": 2.667,
+            "aiv_scalar_ratio": 0.384,
+            "aiv_mte2_time(us)": 2.15,
+            "aiv_mte2_ratio": 0.309,
+            "aiv_mte3_time(us)": 1.027,
+            "aiv_mte3_ratio": 0.148,
+            "aiv_icache_miss_rate": 0.078
+          },
+          "correctness_check": {
+            "verify_result": "checked=2048 bad=0 max_err=4.76837158203125e-07"
+          }
+        },
+        "derived_metrics": {
+          "tiling": {
+            "dtype_bytes": 4,
+            "shape_elements": 2048,
+            "blockdim": 1,
+            "elems_per_core": 2048,
+            "tile_length": 256,
+            "tile_length_aligned": 256,
+            "tile_num": 8
+          },
+          "ub_buffers": {
+            "bytes_per_buffer": 1024,
+            "allocated_buffer_count": 5,
+            "allocated_ub_bytes": 5120,
+            "used_buffer_count": 3,
+            "used_ub_bytes": 3072,
+            "unused_buffer_count": 2,
+            "unused_buffer_names": [
+              "bBuf/bLocal",
+              "spareBuf"
+            ],
+            "unused_ub_bytes": 2048,
+            "unused_buffer_ratio": 0.4,
+            "footprint_multiplier_vs_used_buffers": 1.6667
+          }
+        },
+        "evidence_chain": [
+          "源码配置 APROF_FEATURE_06=1，使 fast_gelu_kernel.asc:71-79 的 spareBuf 分配路径生效。",
+          "rg 源码引用显示 bBuf/bLocal 只出现在声明、InitBuffer、Get 三处；spareBuf 只出现在声明和 InitBuffer；二者均不参与 108-122 行的输入搬运、FastGELU 计算或输出搬运。",
+          "派生 UB metric 显示当前 5 个 TBuf 中仅 aLocal/tmpLocal/outLocal 有效，bBuf 与 spareBuf 合计浪费 2048 bytes，占 allocated UB 的 40%。",
+          "hw msprof clean run 显示 fast_gelu_kernel 为单个 AI_VECTOR_CORE task，Task Duration=7.499 us，aiv_time=6.949 us，Block Num=1。"
+        ],
+        "confidence": {
+          "level": "高",
+          "score": 0.88,
+          "reason": "源码死 buffer 证据直接，UB 字节数由 tiling 和 dtype 可确定，hw msprof 真实采集支持 task/pipe/runtime 指标；保留少量不确定性是因为 msprof 报告未给出直接的 UB resident/occupancy counter。"
+        },
+        "diagnosis_mode": "msprof_assisted"
+      }
+    },
+    {
+      "case_id": "op_0008",
+      "ground_truth": {
+        "problem_family": "onchip_memory",
+        "problem_id": "gm_spill_intermediate"
+      },
+      "normalized_diagnosis": "extra_output_gm_store",
+      "comparison_result": "mismatch",
+      "raw_output": {
+        "case_id": "op_0008",
+        "profiling_status": "hw_msprof_success；第二次硬件采集应用正常结束，未使用 simulator fallback",
+        "msprof_command": "/usr/bin/flock /tmp/aprof_fast_gelu_msprof/msprof.lock env APROF_TMP_ROOT=/tmp/aprof_fast_gelu_msprof/op_0008_LMpUC8 APROF_MSPROF_OUTPUT=/tmp/aprof_fast_gelu_msprof/op_0008_LMpUC8/msprof_hw_output_LMpUC8_r2 ./run.sh profile",
+        "msprof_output_dir": "/tmp/aprof_fast_gelu_msprof/op_0008_LMpUC8/msprof_hw_output_LMpUC8_r2/PROF_000001_20260709132306219_02398588PGPAPLFH",
+        "final_diagnosis": "主要性能问题是 APROF_FEATURE_07 打开后，kernel 对同一 outputGlobal[outOffset] 每个 tile 连续执行两次 GM 输出写。它不是中间结果落 GM 的 spill，也不是 on-chip memory 容量不足导致的临时张量外溢；tmpLocal/outLocal 都停留在片上 local buffer，额外流量来自最终结果重复 copy-out。msprof 显示该 AI_VECTOR_CORE kernel task 为 8.900 us，其中 AIV MTE3 为 2.197 us，占 AIV 时间 26.43%，MTE2+MTE3 合计占 53.89%，说明写回/搬运管线对总时长有明显贡献；源码推导显示 output store 从应有 8192 B 放大到 16384 B，额外 GM store 为 8192 B。",
+        "problem_code_locations": [
+          {
+            "file": "/tmp/aprof_fast_gelu_msprof/work/op_0008_LMpUC8/op_kernel/aprof_variant_config.h",
+            "line": 11,
+            "code": "#define APROF_FEATURE_07 1",
+            "issue": "打开重复输出写路径"
+          },
+          {
+            "file": "/tmp/aprof_fast_gelu_msprof/work/op_0008_LMpUC8/op_kernel/fast_gelu_kernel.asc",
+            "line": 117,
+            "code": "DataCopy(outputGlobal[outOffset], outLocal, copyParams);",
+            "issue": "APROF_FEATURE_07 条件块内的额外 GM store"
+          },
+          {
+            "file": "/tmp/aprof_fast_gelu_msprof/work/op_0008_LMpUC8/op_kernel/fast_gelu_kernel.asc",
+            "line": 120,
+            "code": "DataCopy(outputGlobal[outOffset], outLocal, copyParams);",
+            "issue": "正常输出写；与第 117 行组成同地址重复写"
+          }
+        ],
+        "raw_msprof_metrics": {
+          "kernel_task": {
+            "op_name": "fast_gelu_kernel",
+            "task_type": "AI_VECTOR_CORE",
+            "block_num": 1,
+            "task_duration_us": 8.9,
+            "task_wait_time_us": 0.0,
+            "count": 1
+          },
+          "ai_core_pipe_utilization_fields": {
+            "aiv_time_us": 8.312727272727273,
+            "aiv_total_cycles": 13716,
+            "aiv_vec_time_us": 0.6109090909090908,
+            "aiv_vec_ratio": 0.07349081364829396,
+            "aiv_scalar_time_us": 2.7606060606060607,
+            "aiv_scalar_ratio": 0.3320939049285506,
+            "aiv_mte2_time_us": 2.283030303030303,
+            "aiv_mte2_ratio": 0.2746427529892097,
+            "aiv_mte3_time_us": 2.196969696969697,
+            "aiv_mte3_ratio": 0.2642898804316127,
+            "aiv_icache_miss_rate": 0.06967213114754098
+          }
+        },
+        "derived_metrics": {
+          "elements": 2048,
+          "dtype_bytes": 4,
+          "tile_length": 256,
+          "tile_count": 8,
+          "expected_output_gm_store_bytes_without_issue": 8192,
+          "actual_output_gm_store_bytes_from_source": 16384,
+          "extra_output_gm_store_bytes": 8192,
+          "output_store_amplification": 2.0,
+          "copyout_ratio_aiv_mte3_over_aiv_time": 0.2642898804316127,
+          "mte2_plus_mte3_over_aiv_time": 0.5389326334208224,
+          "mte3_to_vector_time_ratio": 3.5962301587301586,
+          "gm_intermediate_or_spill_judgement": "未发现中间结果 GM spill；额外 GM 流量是最终 output store 重复写，不是 tmpLocal/outLocal 溢出到 GM。"
+        },
+        "evidence_chain": [
+          "源码证据：APROF_FEATURE_07=1；fast_gelu_kernel.asc 第 117 行先写 outputGlobal[outOffset]，第 120 行又对同一 outOffset 写一次。",
+          "派生 GM 证据：shape 2048、float32、tile 256 共 8 个 tile；正常 output store 为 2048*4=8192 B，当前路径写两次为 16384 B，额外 8192 B。",
+          "msprof 证据：kernel task duration 8.900 us；AIV MTE3 2.197 us，占 AIV time 26.43%；MTE2+MTE3 占 53.89%，写回/搬运成本显著高于 vector 计算时间 0.611 us。",
+          "归因判断：没有将 tmpLocal/outLocal 中间结果写入 GM 再读回的代码路径，op_counter/report 也未提供 GM byte counter；因此结论是额外 GM store/copy-out 放大，而非 on-chip memory spill。"
+        ],
+        "confidence": 0.9,
+        "diagnosis_mode": "msprof_assisted"
+      }
+    },
+    {
+      "case_id": "op_0009",
+      "ground_truth": {
+        "problem_family": "ai_core_utilization",
+        "problem_id": "underused_blockdim"
+      },
+      "normalized_diagnosis": "underused_blockdim",
+      "comparison_result": "exact",
+      "raw_output": {
+        "case_id": "op_0009",
+        "profiling_status": {
+          "status": "硬件 msprof 成功",
+          "说明": "最终采用第二次硬件 msprof report；第一次因复制目录内旧 build/CMakeCache 指向源目录而失败，已仅清理本次 unique 目录下的 build 后重跑成功。未使用 simulator fallback。",
+          "结果校验": "checked=8192 bad=0 max_err=4.76837158203125e-07"
+        },
+        "msprof_command": "flock /tmp/aprof_fast_gelu_msprof/msprof.lock env APROF_TMP_ROOT=/tmp/aprof_fast_gelu_msprof/work/op_0009_pcHZbY/aprof_tmp APROF_MSPROF_OUTPUT=/tmp/aprof_fast_gelu_msprof/work/op_0009_pcHZbY/msprof_hw_output_pcHZbY_rerun1 ./run.sh profile",
+        "msprof_output_dir": "/tmp/aprof_fast_gelu_msprof/work/op_0009_pcHZbY/msprof_hw_output_pcHZbY_rerun1/PROF_000001_20260709132329857_02399880HDKDOPJF",
+        "final_diagnosis": {
+          "问题类型": "underused_blockdim",
+          "结论": "该 case 的主要性能问题是 blockdim 固定为 1，导致真实硬件上 fast_gelu_kernel 只启动 1 个 AI_VECTOR_CORE block，而设备有 40 个 AIV。8192 个 float32 元素被单个 block 串行处理 32 个 tile，实际 AIV 并行度只有 2.5%。",
+          "影响": "kernel task duration 为 16.780 us，aiv_time 为 16.232 us；并不是所有 AIV 同时工作，而是单个 block 承担全部元素和 tile 循环。runtime launch 相关开销也明显大于 kernel 本体，但根因仍是算子内核并行粒度不足。",
+          "建议": "将 blockdim/tiling 按输出元素数、tile_length 和设备 aiv_num 计算，例如接近 min(aiv_num, ceil(8192 / 256)) 或直接充分利用 40 个 AIV，并同步调整 elemsPerCore/tileNum，使多个 block 分摊元素。"
+        },
+        "problem_code_locations": [
+          {
+            "file": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0009/op_host/main.asc",
+            "lines": "14-16",
+            "evidence": "kTotalElements=8192，kBlockDim=1，kTileLength=256；blockdim 在 host 侧被常量固定为 1。"
+          },
+          {
+            "file": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0009/op_host/main.asc",
+            "lines": "40-44",
+            "evidence": "elemsPerCore=(8192+1-1)/1=8192，tileNum=ceil(8192/256)=32；单个 core/block 获得全部元素并循环 32 个 tile。"
+          },
+          {
+            "file": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0009/op_host/main.asc",
+            "lines": "73",
+            "evidence": "fast_gelu_kernel<<<kBlockDim,...>>> 使用 kBlockDim 启动 kernel，实际只 launch 1 个 block。"
+          }
+        ],
+        "raw_msprof_metrics": {
+          "device": {
+            "device_id": 0,
+            "aiv_num": 40,
+            "ai_core_num": 20,
+            "aiv_frequency_mhz": 1650,
+            "aic_frequency_mhz": 1650
+          },
+          "kernel_task": {
+            "kernel_name": "fast_gelu_kernel",
+            "kernel_type": "AI_VECTOR_CORE",
+            "task_time_us": 16.78,
+            "task_duration_us": 16.78,
+            "task_wait_time_us": 0,
+            "block_num": 1,
+            "mix_block_num": 0
+          },
+          "pipe_utilization_fields": {
+            "aiv_vec_time_us": 2.385,
+            "aiv_vec_ratio": 0.147,
+            "aiv_scalar_time_us": 3.094,
+            "aiv_scalar_ratio": 0.191,
+            "aiv_mte2_time_us": 8.82,
+            "aiv_mte2_ratio": 0.543,
+            "aiv_mte3_time_us": 4.735,
+            "aiv_mte3_ratio": 0.292,
+            "aiv_icache_miss_rate": 0.034
+          }
+        },
+        "derived_metrics": {
+          "blockdim_utilization": {
+            "value": 0.025,
+            "percent": 2.5,
+            "formula": "Block Num / device aiv_num = 1 / 40"
+          },
+          "unused_aiv_num": {
+            "value": 39,
+            "formula": "device aiv_num - Block Num = 40 - 1"
+          },
+          "elements_per_core": {
+            "value": 8192,
+            "formula": "ceil(output_elements / blockdim) = ceil(8192 / 1)"
+          },
+          "tile_count": {
+            "value": 32,
+            "formula": "ceil(elements_per_core / tile_length) = ceil(8192 / 256)"
+          },
+          "time_per_element_us": {
+            "value": 0.00204834,
+            "formula": "task_duration_us / output_elements = 16.780 / 8192"
+          }
+        },
+        "evidence_chain": [
+          "源码中 kBlockDim 固定为 1，BuildTiling 由此计算 elemsPerCore=8192、tileNum=32，kernel launch 也直接使用 kBlockDim。",
+          "msprof op_summary 显示 fast_gelu_kernel 的 Block Num=1；device_0/info.json.0 显示设备 aiv_num=40，因此真实硬件只用了 1/40 个 AIV，blockdim_utilization=2.5%。",
+          "msprof task_time/op_summary 显示 kernel task duration=16.780 us、aiv_time=16.232 us；单个 block 内部循环 32 个 tile，派生 time_per_tile=0.524375 us。"
+        ],
+        "confidence": 0.93,
+        "diagnosis_mode": "msprof_assisted"
+      }
+    },
+    {
+      "case_id": "op_0010",
+      "ground_truth": {
+        "problem_family": "ai_core_utilization",
+        "problem_id": "overlaunched_empty_cores"
+      },
+      "normalized_diagnosis": "overlaunched_underfilled_cores",
+      "comparison_result": "partial",
+      "raw_output": {
+        "case_id": "op_0010",
+        "profiling_status": {
+          "status": "hw_msprof_success",
+          "fallback_used": false,
+          "note": "第一次硬件 profile 生成了报告但应用写 output/output.bin 失败；在 unique 拷贝内补建 build/output 后重采 r2，应用运行完成。随后 verify_result 显示 52/128 mismatch，最大误差 5.470837，作为同一根因的正确性副作用记录。"
+        },
+        "msprof_command": "/usr/bin/flock /tmp/aprof_fast_gelu_msprof/msprof.lock env APROF_TMP_ROOT=/tmp/aprof_fast_gelu_msprof/op_0010_5DTCvtL7 APROF_MSPROF_OUTPUT=/tmp/aprof_fast_gelu_msprof/op_0010_5DTCvtL7/msprof_hw_output_5DTCvtL7_r2 ./run.sh profile",
+        "msprof_output_dir": "/tmp/aprof_fast_gelu_msprof/op_0010_5DTCvtL7/msprof_hw_output_5DTCvtL7_r2/PROF_000001_20260709132317702_02399099KCNQHPLC",
+        "final_diagnosis": {
+          "label": "overlaunched_empty_cores / underfilled_cores",
+          "summary": "最终判断为 blockDim 过大导致的 over-launched underfilled cores。严格按源码派生，本 case 的 empty_cores=0，但 32 个 launched blocks 全部 underfilled：每核只处理 4 个 float，低于 FP32 对齐搬运粒度 8。msprof 真实数据中 Block Num=32，Task Duration=11.599us，AIV vec ratio 仅 0.011，LaunchKernelV2 390.55us 是 kernel task 的 33.67 倍，说明极小 per-core workload 无法摊薄 launch/调度/标量开销。"
+        },
+        "problem_code_locations": [
+          {
+            "file": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0010/op_host/main.asc",
+            "lines": "14-17",
+            "issue": "固定 kTotalElements=128、kBlockDim=32、kTileLength=256，导致小 shape 使用过多 block。"
+          },
+          {
+            "file": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0010/op_host/main.asc",
+            "lines": "40-44",
+            "issue": "elemsPerCore=ceil(128/32)=4，tileLength=256，tileNum=1；每个 block 的有效工作量只有 4 个元素。"
+          },
+          {
+            "file": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0010/op_kernel/fast_gelu_kernel.asc",
+            "lines": "92-116",
+            "issue": "curN=4 但 curAligned=8，DataCopy 按 8 个 float 搬运/写回；coreStart 步长为 4，导致相邻 core 的 aligned 写回区间重叠，并造成低 vector lane 利用率。"
+          }
+        ],
+        "raw_msprof_metrics": {
+          "kernel": {
+            "op_name": "fast_gelu_kernel",
+            "task_type": "AI_VECTOR_CORE",
+            "task_duration_us": 11.599,
+            "task_wait_time_us": 0,
+            "block_num": 32,
+            "mix_block_num": 0,
+            "aiv_time_us": 8.322,
+            "aiv_total_cycles": 439383
+          },
+          "pipe_utilization_fields_present": {
+            "aiv_vec_time_us": 0.092,
+            "aiv_vec_ratio": 0.011,
+            "aiv_scalar_time_us": 4.069,
+            "aiv_scalar_ratio": 0.489,
+            "aiv_mte2_time_us": 0.166,
+            "aiv_mte2_ratio": 0.02,
+            "aiv_mte3_time_us": 0.297,
+            "aiv_mte3_ratio": 0.036,
+            "aiv_icache_miss_rate": 0.186
+          },
+          "runtime_api_us": {
+            "LaunchKernelV2": 390.55,
+            "StreamSynchronize": 18.67
+          },
+          "acl_api_us": {
+            "aclrtLaunchKernelWithHostArgs": 398.32,
+            "aclrtSynchronizeStream": 22.32
+          }
+        },
+        "derived_metrics": {
+          "elements_per_core": {
+            "value": 4,
+            "formula": "ceil(128 / 32)"
+          },
+          "active_cores": 32,
+          "empty_cores": 0,
+          "underfilled_cores_lt_8_fp32": 32,
+          "vector_lane_utilization_proxy": {
+            "value": 0.5,
+            "percent": 50.0,
+            "formula": "valid_elems_per_core 4 / align_up(4, 8)"
+          },
+          "tile_fill_ratio": {
+            "value": 0.015625,
+            "percent": 1.5625,
+            "formula": "4 / tile_length 256"
+          },
+          "time_per_element_us": 0.090617,
+          "launch_kernel_v2_to_task_duration_ratio": 33.671,
+          "aiv_vec_ratio_percent": 1.1,
+          "aiv_scalar_ratio_percent": 48.9
+        },
+        "evidence_chain": [
+          "源码固定 blockDim=32；msprof op_summary 同步观测到 Block Num=32。",
+          "源码 tiling 得到 elemsPerCore=4；kernel 中 coreStart=blockIdx*elemsPerCore，因此 32 个 block 都非空但全部低于 8-float 对齐粒度。",
+          "msprof PipeUtilization 导出字段显示 aiv_vec_ratio=0.011，而 aiv_scalar_ratio=0.489；vector 实际计算占比很低，符合 per-core workload 过小的特征。",
+          "runtime LaunchKernelV2=390.55us，而 kernel task_duration=11.599us，launch 开销是 task 的 33.67 倍，说明过细 launch/tiling 粒度不可摊薄。",
+          "DataCopy 使用 curAligned=8，但相邻 core 的 outOffset 只相差 4；verify_result 的 52/128 mismatch 支持 aligned 写回重叠这一源码推导。"
+        ],
+        "confidence": {
+          "level": "高",
+          "score": 0.91,
+          "caveat": "真实 empty_cores 为 0；更精确表述是 overlaunched_underfilled_cores，若分类只能选 overlaunched_empty_cores，则该 case 属于该类的 underfilled 子型。"
+        },
+        "diagnosis_mode": "msprof_assisted"
+      }
+    },
+    {
+      "case_id": "op_0011",
+      "ground_truth": {
+        "problem_family": "api_algorithm",
+        "problem_id": "scalar_loop_redundant"
+      },
+      "normalized_diagnosis": "scalar_loop_redundant",
+      "comparison_result": "exact",
+      "raw_output": {
+        "case_id": "op_0011",
+        "profiling_status": {
+          "status": "success",
+          "mode": "hw-msprof",
+          "note": "第二次 clean 硬件 profile 成功，应用输出 op_0011 run completed；副本 verify 通过 checked=2048 bad=0 max_err=4.76837158203125e-07。simulator fallback 未执行。"
+        },
+        "msprof_command": "/usr/bin/flock /tmp/aprof_fast_gelu_msprof/msprof.lock env APROF_TMP_ROOT=/tmp/aprof_fast_gelu_msprof/op_0011_sJ3bBU APROF_MSPROF_OUTPUT=/tmp/aprof_fast_gelu_msprof/op_0011_sJ3bBU/msprof_hw_output_sJ3bBU_clean ./run.sh profile",
+        "msprof_output_dir": "/tmp/aprof_fast_gelu_msprof/op_0011_sJ3bBU/msprof_hw_output_sJ3bBU_clean/PROF_000001_20260709132242038_02397558QDOGIHKJ",
+        "final_diagnosis": "最终判断为 scalar_loop_redundant。APROF_FEATURE_08 打开后，kernel 在每个有效 tile 内执行 64 次与 FastGELU 数值计算无关的标量累加 localToken += k + tileIdx，结果只用于实际 case 下不会触发的保护分支。shape=2048、tile_length=256、blockdim=1 对应 8 个 tile，因此实际产生 512 次冗余标量循环。msprof 显示 fast_gelu_kernel task duration 为 7.760us，AIV time 为 7.193us，其中 aiv_scalar_time 为 2.751us，占 38.2455%，而 aiv_vec_time 只有 0.611us，占 8.4944%；标量耗时约为向量耗时的 4.50 倍。对于主要由 Muls/Exp/Adds/Div 组成的 FastGELU 向量算子，这个 scalar 占比异常高，和源码中的冗余标量循环直接对应。",
+        "problem_code_locations": [
+          {
+            "file": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0011/op_kernel/aprof_variant_config.h",
+            "lines": "12",
+            "evidence": "#define APROF_FEATURE_08 1 启用问题路径"
+          },
+          {
+            "file": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0011/op_kernel/fast_gelu_kernel.asc",
+            "lines": "95-103",
+            "evidence": "每个 tile 内执行 64 次 localToken 标量累加，且只服务于无实际收益的条件分支"
+          }
+        ],
+        "raw_msprof_metrics": {
+          "task_time_csv": {
+            "kernel_name": "fast_gelu_kernel",
+            "kernel_type": "AI_VECTOR_CORE",
+            "task_time_us": 7.76
+          },
+          "op_summary_csv": {
+            "task_duration_us": 7.76,
+            "block_num": 1,
+            "aiv_time_us": 7.193,
+            "aiv_vec_time_us": 0.611,
+            "aiv_vec_ratio": 0.085,
+            "aiv_scalar_time_us": 2.751,
+            "aiv_scalar_ratio": 0.382,
+            "aiv_mte2_time_us": 2.252,
+            "aiv_mte2_ratio": 0.313,
+            "aiv_mte3_time_us": 1.033,
+            "aiv_mte3_ratio": 0.144
+          }
+        },
+        "derived_metrics": {
+          "tile_num": 8,
+          "scalar_loop_iterations": 512,
+          "loop_iterations_per_tile": 64,
+          "scalar_time_ratio": 0.382455,
+          "time_per_tile_us": 0.97,
+          "aiv_time_per_tile_us": 0.899125,
+          "scalar_time_per_tile_us": 0.343875,
+          "scalar_vs_vector_time_ratio": 4.502455,
+          "tail_length": 0
+        },
+        "evidence_chain": [
+          "源码配置 APROF_FEATURE_08=1，问题路径实际编译启用。",
+          "fast_gelu_kernel.asc:95-103 在每个 tile 里执行 64 次标量循环；op_host/main.asc 推导本 case tileNum=8，因此 scalar_loop_iterations=512。",
+          "msprof task_time.csv 记录 fast_gelu_kernel 的真实硬件 task_time 为 7.760us，op_summary.csv 记录 AIV time 为 7.193us。",
+          "PipeUtilization 字段显示 aiv_scalar_time=2.751us、aiv_scalar_ratio=0.382，而 aiv_vec_time=0.611us、aiv_vec_ratio=0.085；派生得到 scalar/vector 时间比为 4.50。"
+        ],
+        "confidence": {
+          "level": "高",
+          "score": 0.93,
+          "reason": "源码问题位置明确，硬件 msprof clean 采集成功，真实 scalar/vector PipeUtilization 与 512 次派生标量迭代一致。"
+        },
+        "diagnosis_mode": "msprof_assisted"
+      }
+    },
+    {
+      "case_id": "op_0012",
+      "ground_truth": {
+        "problem_family": "api_algorithm",
+        "problem_id": "redundant_cast_or_vector_copy"
+      },
+      "normalized_diagnosis": "redundant_cast_or_vector_copy",
+      "comparison_result": "exact",
+      "raw_output": {
+        "case_id": "op_0012",
+        "profiling_status": {
+          "mode": "hw-msprof",
+          "status": "success",
+          "app_completed": true,
+          "verify_result": "checked=2048 bad=0 max_err=4.76837158203125e-07",
+          "fallback": "not_used"
+        },
+        "msprof_command": "/usr/bin/flock /tmp/aprof_fast_gelu_msprof/msprof.lock env APROF_TMP_ROOT=/tmp/aprof_fast_gelu_msprof/op_0012_20260709132456795605318 APROF_MSPROF_OUTPUT=/tmp/aprof_fast_gelu_msprof/op_0012_20260709132456795605318/msprof_hw_output_clean_20260709132456795605318 ./run.sh profile",
+        "msprof_output_dir": "/tmp/aprof_fast_gelu_msprof/op_0012_20260709132456795605318/msprof_hw_output_clean_20260709132456795605318/PROF_000001_20260709132853106_02402470MGGJQDHD",
+        "final_diagnosis": "主要问题是 redundant_cast_or_vector_copy 类型的冗余向量计算：APROF_FEATURE_09 打开后，每个 tile 执行 Adds(bLocal, aLocal, 0.0f, curN)，等价于一次无收益的 vector identity copy/add-zero，写入的 bLocal 后续完全未被读取；紧随其后的 PipeBarrier<PIPE_V>() 也随之成为额外同步。硬件 msprof 显示该 op 是单个 AI_VECTOR_CORE task，Task Duration 为 7.680 us，AIV time 为 7.127 us，其中 aiv_vec_time 为 0.718 us、aiv_vec_ratio 为 0.101，说明确有可观 vector pipe 时间；结合源码可确定其中包含 8 次冗余 Adds 和 8 次额外 vector barrier。",
+        "problem_code_locations": [
+          {
+            "path": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0012/op_kernel/aprof_variant_config.h",
+            "lines": "13",
+            "evidence": "#define APROF_FEATURE_09 1 启用问题路径"
+          },
+          {
+            "path": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0012/op_kernel/fast_gelu_kernel.asc",
+            "lines": "105-108",
+            "evidence": "Adds(bLocal, aLocal, 0.0f, curN) 后接 PipeBarrier<PIPE_V>()，结果未参与后续计算"
+          },
+          {
+            "path": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0012/op_kernel/fast_gelu_kernel.asc",
+            "lines": "111-117",
+            "evidence": "真正 FastGELU 路径只使用 aLocal、tmpLocal、outLocal，不使用 bLocal"
+          }
+        ],
+        "raw_msprof_metrics": {
+          "op_summary": {
+            "Op Name": "fast_gelu_kernel",
+            "Task Type": "AI_VECTOR_CORE",
+            "Task Duration(us)": 7.68,
+            "Block Num": 1,
+            "aiv_time(us)": 7.127,
+            "aiv_total_cycles": 11759,
+            "aiv_vec_time(us)": 0.718,
+            "aiv_vec_ratio": 0.101,
+            "aiv_scalar_time(us)": 2.786,
+            "aiv_scalar_ratio": 0.391,
+            "aiv_mte2_time(us)": 2.124,
+            "aiv_mte2_ratio": 0.298,
+            "aiv_mte3_time(us)": 1.009,
+            "aiv_mte3_ratio": 0.142,
+            "aiv_icache_miss_rate": 0.07
+          },
+          "task_time": {
+            "kernel_name": "fast_gelu_kernel",
+            "kernel_type": "AI_VECTOR_CORE",
+            "task_time(us)": 7.68
+          },
+          "runtime_api_us": {
+            "LaunchKernelV2": 342.88,
+            "StreamSynchronize": 16.52,
+            "MemCopySync_total": 52.76,
+            "DevMalloc_total": 9.67
+          }
+        },
+        "derived_metrics": {
+          "tile_num": 8,
+          "redundant_vector_op_count": 8,
+          "dead_bLocal_use": true,
+          "extra_vector_barrier_count": 8,
+          "vec_time_ratio": 0.10074365090500911,
+          "time_per_tile_us": 0.96,
+          "aiv_time_per_tile_us": 0.890875,
+          "redundant_elements_processed": 2048,
+          "redundant_vector_op_fraction_by_source": 0.2
+        },
+        "evidence_chain": [
+          "配置 APROF_FEATURE_09=1，使 fast_gelu_kernel.asc:105-108 的额外 Adds 和 PipeBarrier 编译进 kernel。",
+          "bLocal 只在 fast_gelu_kernel.asc:77 创建、在 106 行被写入，后续 FastGELU 计算在 111-117 行完全不读取 bLocal，因此该 Adds 是 dead write。",
+          "host tiling 给出 2048 个 float32 元素、tile_length=256、blockdim=1，所以 tile_num=8；冗余 Adds 和额外 PIPE_V barrier 各执行 8 次。",
+          "msprof 硬件数据确认 fast_gelu_kernel 为单个 AI_VECTOR_CORE task，Task Duration=7.680 us，AIV time=7.127 us，aiv_vec_time=0.718 us，aiv_vec_ratio=0.101；这些实际 vector/PipeUtilization 字段支撑冗余 vector 工作会反映到 AIV vector pipe 时间中。"
+        ],
+        "confidence": 0.93,
+        "diagnosis_mode": "msprof_assisted"
+      }
+    }
+  ]
+}

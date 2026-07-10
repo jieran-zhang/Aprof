@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "op_name": "fast_gelu",
+  "cases": [
+    {
+      "variant": "baseline",
+      "pass": true,
+      "missing": [],
+      "injected_label": "baseline",
+      "quality_status": "active",
+      "warnings": []
+    },
+    {
+      "variant": "inject_blockdim",
+      "pass": true,
+      "missing": [],
+      "injected_label": "blockdim_too_small",
+      "quality_status": "deprecated_or_weak",
+      "warnings": [
+        "blockdim equals baseline; sim-only blockdim signal is weak"
+      ]
+    },
+    {
+      "variant": "inject_dynshape",
+      "pass": true,
+      "missing": [],
+      "injected_label": "fixed_tiling_dynamic_shape",
+      "quality_status": "weak",
+      "warnings": [
+        "dynshape should be validated with multi-shape or scaffold_project host tiling"
+      ]
+    },
+    {
+      "variant": "inject_tail",
+      "pass": true,
+      "missing": [],
+      "injected_label": "tail_inefficient",
+      "quality_status": "active",
+      "warnings": []
+    },
+    {
+      "variant": "inject_tilelen_large",
+      "pass": true,
+      "missing": [],
+      "injected_label": "tileLength_too_large",
+      "quality_status": "weak",
+      "warnings": []
+    },
+    {
+      "variant": "inject_tilelen_small",
+      "pass": true,
+      "missing": [],
+      "injected_label": "tileLength_too_small",
+      "quality_status": "active",
+      "warnings": []
+    },
+    {
+      "variant": "inject_tilenum",
+      "pass": true,
+      "missing": [],
+      "injected_label": "tileNum_unreasonable",
+      "quality_status": "weak",
+      "warnings": [
+        "tilenum changes tile_num_multiplier and tile_length; not a clean single-factor case"
+      ]
+    }
+  ],
+  "summary": {
+    "total": 7,
+    "passed": 7,
+    "failed": 0,
+    "weak": 4
+  }
+}

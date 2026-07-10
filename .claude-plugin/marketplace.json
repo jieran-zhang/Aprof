@@ -1,0 +1,54 @@
+{
+  "name": "aprof",
+  "owner": {
+    "name": "AProf",
+    "url": "https://gitcode.com/cann/Aprof"
+  },
+  "plugins": [
+    {
+      "name": "aprof-skills",
+      "description": "AProf Ascend C 性能诊断 Skills。包含源码诊断、metric 采集规划、远程 msprof 采集和 msprof simulator 支持。",
+      "source": "./skills/aprof",
+      "strict": false,
+      "version": "0.1.0",
+      "author": {
+        "name": "AProf"
+      },
+      "keywords": [
+        "aprof",
+        "ascendc",
+        "msprof",
+        "profiling",
+        "diagnosis"
+      ],
+      "category": "skills",
+      "skills": [
+        "./diagnosis",
+        "./profiling",
+        "./remote-kernel-deploy",
+        "./benchmark/ascendc-kernel-direct-invoke"
+      ]
+    },
+    {
+      "name": "aprof-performance-workflow",
+      "source": "./plugins/aprof-performance-workflow",
+      "description": "AProf 性能诊断 Team。输入 Ascend C kernel 源码，编排 diagnosis、profiling 和 remote deploy 三个 Agent，输出性能问题诊断和硬件 metric 数据支撑。",
+      "version": "0.1.0",
+      "author": {
+        "name": "AProf"
+      },
+      "keywords": [
+        "aprof",
+        "ascendc",
+        "msprof",
+        "workflow",
+        "agent"
+      ],
+      "category": "development",
+      "dependencies": [
+        "aprof-skills",
+        "ops-direct-invoke-skills"
+      ]
+    }
+  ]
+}

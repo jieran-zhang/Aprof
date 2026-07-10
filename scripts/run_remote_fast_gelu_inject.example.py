@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Upload fast_gelu inject cases to remote host, build, msprof sim, download artifacts.
 
-Copy to run_remote_fast_gelu_inject.py (gitignored) and set:
-  APROF_REMOTE_HOST, APROF_REMOTE_PORT (optional, default 22),
-  APROF_REMOTE_USER, APROF_REMOTE_PASS, APROF_REMOTE_ROOT (optional)
+Fill scripts/server_config.json (see server_config.example.json).
+APROF_REMOTE_* env vars override the JSON file when set.
 """
 from __future__ import annotations
 
@@ -14,16 +13,15 @@ import sys
 
 import paramiko
 
-HOST = os.environ["APROF_REMOTE_HOST"]
-PORT = int(os.environ.get("APROF_REMOTE_PORT", "22"))
-USER = os.environ["APROF_REMOTE_USER"]
-PASS = os.environ["APROF_REMOTE_PASS"]
-ENV = os.environ.get(
-    "APROF_REMOTE_ENV",
-    "source /usr/local/Ascend/ascend-toolkit/latest/set_env.sh",
-)
-REMOTE_ROOT = os.environ.get("APROF_REMOTE_ROOT", f"/home/{USER}/aprof_fast_gelu_inject")
-ASC_ARCH = os.environ.get("ASC_ARCH", "dav-3510")
+sys.path.insert(0, os.path.dirname(__file__))
+from remote_server_config import connect_ssh, load_server_config, require_server_config
+
+_CFG = load_server_config()
+require_server_config(_CFG)
+
+ENV = str(_CFG["env"])
+REMOTE_ROOT = str(_CFG["remote_root"])
+ASC_ARCH = str(_CFG["asc_arch"])
 CASES = ["baseline", "inject_blockdim", "inject_tail", "inject_tilelen_small"]
 TEXT_EXT = {".sh", ".asc", ".h", ".py", ".md", ".json"}
 
@@ -80,10 +78,7 @@ def run(ssh: paramiko.SSHClient, cmd: str, timeout: int = 3600) -> tuple[int, st
 
 
 def main() -> int:
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    print(f"connecting {HOST}:{PORT}")
-    ssh.connect(HOST, port=PORT, username=USER, password=PASS, timeout=60)
+    ssh = connect_ssh(_CFG)
     sftp = ssh.open_sftp()
 
     run(ssh, f"mkdir -p {REMOTE_ROOT}")
@@ -159,15 +154,20 @@ def main() -> int:
             (f"cat {case_remote}/metadata.json", "metadata.json"),
         ]:
             _, out = run(ssh, pattern_cmd, timeout=60)
+            if suffix == "metadata.json":
+                content = out.strip()
+                if not content or content.startswith("cat:"):
+                    continue
+                local_path = os.path.join(LOCAL_OUT, f"{case}_metadata.json")
+                with open(local_path, "w", encoding="utf-8") as f:
+                    json.dump(json.loads(content), f, indent=2, ensure_ascii=False)
+                    f.write("\n")
+                print(f"saved {local_path}")
+                continue
             line = out.strip().splitlines()[-1] if out.strip() else ""
             if not line or line.startswith("find:"):
                 continue
-            if suffix == "metadata.json":
-                local_path = os.path.join(LOCAL_OUT, f"{case}_metadata.json")
-                with open(local_path, "w", encoding="utf-8") as f:
-                    f.write(line + "\n")
-                print(f"saved {local_path}")
-            elif line.startswith(case_remote):
+            if line.startswith(case_remote):
                 rel = os.path.relpath(line, case_remote).replace("\\", "/")
                 local_path = os.path.join(LOCAL_OUT, case, rel.replace("/", os.sep))
                 try:

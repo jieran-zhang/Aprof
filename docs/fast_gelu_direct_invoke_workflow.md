@@ -3,7 +3,7 @@
 本文记录如何在 **AProf** 仓库中，基于 CANNBot `ops-direct-invoke` / `ops-profiling` skills，将 [ops-nn FastGelu](https://gitcode.com/cann/ops-nn/tree/master/activation/fast_gelu) 落地为可编译、可验证、可采集性能的直调 benchmark。
 
 > 工程路径：`benchmarks/reference_ops/fast_gelu/`  
-> 验证平台：支持 Ascend950 (`dav-3510`) 与 Ascend910B (`dav-2201`)；按需通过 `-DCMAKE_ASC_ARCHITECTURES=...`（或远程脚本的 `ASC_ARCH`）切换，CANN 需通过 `source scripts/setup_env.sh` 激活。
+> 验证平台：支持 Ascend910/910B 类环境使用 `dav-2201`，Ascend950 类环境使用 `dav-3510`；按需通过 `-DCMAKE_ASC_ARCHITECTURES=...` 或 `ASC_ARCH` 切换，CANN 需通过 `source scripts/setup_env.sh` 激活。
 
 ---
 
@@ -14,7 +14,7 @@
 | 获取 kernel | 从 ops-nn 拿到 `fast_gelu_apt.cpp` | — |
 | 搭直调框架 | `op_host` + `op_kernel` + CMake + run.sh | `ascendc-direct-invoke-template`（ops-direct-invoke 插件白名单） |
 | 编译运行 | 精度对齐 golden | `run.sh` |
-| 性能采集 | simulator / 真机 msprof | `ops-profiling` + `ascendc-msprof-simulator` |
+| 性能采集 | simulator / 真机 msprof | `ops-profiling` + `ascendc-kernel-direct-invoke` |
 
 **不在本文范围**（后续计划）：`ascendc-aprof-inject-problems` 注入性能问题 + msprof signing 闭环。
 
@@ -59,7 +59,7 @@ fast_gelu/
 ├── op_kernel/fast_gelu_kernel.asc    # __vector__ 入口 fast_gelu_kernel
 ├── op_host/fast_gelu.asc             # ACL 初始化 + <<<>>> launch
 ├── op_host/data_utils.h
-├── CMakeLists.txt                    # target: fast_gelu, --npu-arch=dav-3510
+├── CMakeLists.txt                    # target: fast_gelu, --npu-arch 由 ASC_ARCH/CMake 参数指定
 └── run.sh                            # build → gen_data → run → verify
 ```
 
@@ -118,7 +118,7 @@ bash run.sh 8 2048 fp32 1
 
 ### 5.1 Simulator（无 NPU，推荐）
 
-遵循 `ascendc-msprof-simulator` skill 与 `reduce_sum/docs/direct_invoke_msprof_sop.md`：
+遵循 `ascendc-kernel-direct-invoke` skill 与 `reduce_sum/docs/direct_invoke_msprof_sop.md`：
 
 ```bash
 cd benchmarks/reference_ops/fast_gelu
@@ -129,7 +129,7 @@ bash scripts/profile_sim.sh 8 2048 1 10
 
 1. `scripts/build_kernel_o.sh` — `bisheng --aicore-only` + `ld.lld` → `build_sim/fast_gelu_kernel.o`
 2. `scripts/gen_msprof_bins.py` — `input.bin` + `tiling.bin`
-3. `msprof op simulator --config=build_sim/op_config.json --output=msprof_sim_output`
+3. `msprof op simulator --config=build_sim/op_config.json --output=<repo>/tmp/aprof/...`
 
 报告位置：
 
