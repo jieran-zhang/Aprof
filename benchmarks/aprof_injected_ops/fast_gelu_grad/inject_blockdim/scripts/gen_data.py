@@ -26,7 +26,7 @@ if __name__ == "__main__":
         variant_name="inject_blockdim",
         injected_label="blockdim_too_small",
         injected_problem="blockDim=1 强制单核承载全部反向梯度计算，多核并行缺失。",
-        default_output_elements=2048,
+        default_output_elements=16384,
         default_tile_length=256,
         default_blockdim=1,
         default_tile_num_mul=1,

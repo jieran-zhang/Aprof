@@ -26,7 +26,7 @@ if __name__ == "__main__":
         variant_name="baseline",
         injected_label="baseline",
         injected_problem="baseline: 反向梯度单次计算 exp，公式紧凑，无重复计算。",
-        default_output_elements=2048,
+        default_output_elements=16384,
         default_tile_length=256,
         default_blockdim=4,
         default_tile_num_mul=1,

@@ -1,0 +1,17 @@
+{
+  "op_name": "gelu_mul",
+  "variant": "inject_excessive_barrier",
+  "injected_label": "excessive_pipe_barrier",
+  "injected_problem": "tile 循环内插入冗余 PipeBarrier<PIPE_ALL>，增加 pipe drain 和同步等待。",
+  "output_elements": 2048,
+  "input_stride": 2048,
+  "output_stride": 2048,
+  "blockdim": 4,
+  "tile_length": 256,
+  "tile_num": 2,
+  "tail_length": 0,
+  "tile_num_multiplier": 1,
+  "variant_flags": 0,
+  "problem_family": "pipeline_parallel",
+  "problem_id": "excessive_pipe_barrier"
+}

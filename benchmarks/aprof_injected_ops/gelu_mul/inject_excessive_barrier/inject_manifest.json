@@ -1,0 +1,73 @@
+{
+  "schema_version": 2,
+  "op_name": "gelu_mul",
+  "variant": "inject_excessive_barrier",
+  "source_mode": "existing_aprof_baseline",
+  "source_path": "D:\\Code\\Aprof\\benchmarks\\aprof_injected_ops\\gelu_mul\\baseline",
+  "case_dir": "D:\\Code\\Aprof\\benchmarks\\aprof_injected_ops\\gelu_mul\\inject_excessive_barrier",
+  "profile_mode": "sim",
+  "ground_truth": {
+    "injected_label": "excessive_pipe_barrier",
+    "problem_family": "pipeline_parallel",
+    "problem_id": "excessive_pipe_barrier",
+    "expected_diagnosis_family": "pipeline_parallel"
+  },
+  "applicability": {
+    "status": "applied",
+    "source_modes": [
+      "existing_aprof_baseline",
+      "scaffold_project"
+    ],
+    "patch_results": [
+      {
+        "patch_id": "excessive_barrier",
+        "applied": true,
+        "reason": "applied"
+      }
+    ]
+  },
+  "knobs_changed": [
+    {
+      "field": "APROF_INJECT_EXCESSIVE_BARRIER",
+      "injected": 1,
+      "reason": "trace should expose repeated barriers"
+    }
+  ],
+  "kernel_flags": {
+    "APROF_INJECT_DYNSHAPE": 0,
+    "APROF_INJECT_EXCESSIVE_BARRIER": 1,
+    "APROF_INJECT_EXTRA_COPYOUT": 0,
+    "APROF_INJECT_REDUNDANT_COPYIN": 0,
+    "APROF_INJECT_REDUNDANT_VECTOR": 0,
+    "APROF_INJECT_SCALAR_LOOP": 0,
+    "APROF_INJECT_TAIL": 0,
+    "APROF_INJECT_UB_OVERALLOC": 0
+  },
+  "allowed_files_changed": [
+    "metadata.json",
+    "op_kernel/aprof_variant_config.h",
+    "op_kernel/gelu_mul_kernel.asc"
+  ],
+  "quality": {
+    "single_factor": true,
+    "preserve_math": true,
+    "confidence": "pending_validation",
+    "status": "unverified",
+    "notes": [
+      "trace should expose repeated barriers"
+    ]
+  },
+  "artifacts": {
+    "metadata": "metadata.json",
+    "profiling_plan": "profiling_plan.json"
+  },
+  "metadata_snapshot": {
+    "output_elements": 2048,
+    "blockdim": 4,
+    "tile_length": 256,
+    "tile_num": 2,
+    "tail_length": 0,
+    "tile_num_multiplier": 1,
+    "variant_flags": 0
+  }
+}

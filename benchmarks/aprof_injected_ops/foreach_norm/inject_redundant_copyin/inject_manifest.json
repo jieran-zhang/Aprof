@@ -1,0 +1,61 @@
+{
+  "schema_version": 2,
+  "op_name": "foreach_norm",
+  "variant": "inject_redundant_copyin",
+  "source_mode": "existing_aprof_baseline",
+  "source_path": "d:\\Code\\Aprof\\benchmarks\\aprof_injected_ops\\foreach_norm\\baseline",
+  "case_dir": "d:\\Code\\Aprof\\benchmarks\\aprof_injected_ops\\foreach_norm\\inject_redundant_copyin",
+  "profile_mode": "sim",
+  "ground_truth": {
+    "injected_label": "redundant_copyin",
+    "problem_family": "data_movement",
+    "problem_id": "redundant_copyin",
+    "expected_diagnosis_family": "data_movement"
+  },
+  "applicability": {
+    "status": "applied",
+    "source_modes": [
+      "existing_aprof_baseline"
+    ],
+    "patch_results": []
+  },
+  "knobs_changed": [],
+  "kernel_flags": {
+    "APROF_INJECT_DATA_MOVE": 1,
+    "APROF_INJECT_DYNSHAPE": 0,
+    "APROF_INJECT_EXCESSIVE_BARRIER": 0,
+    "APROF_INJECT_EXTRA_COPYOUT": 0,
+    "APROF_INJECT_PIPE_BREAK": 0,
+    "APROF_INJECT_API_RECOMPUTE": 0,
+    "APROF_INJECT_REDUNDANT_COPYIN": 0,
+    "APROF_INJECT_REDUNDANT_VECTOR": 0,
+    "APROF_INJECT_SCALAR_LOOP": 0,
+    "APROF_INJECT_TAIL": 0,
+    "APROF_INJECT_UB_OVERALLOC": 0
+  },
+  "allowed_files_changed": [
+    "metadata.json",
+    "op_kernel/aprof_variant_config.h",
+    "scripts/gen_data.py"
+  ],
+  "quality": {
+    "single_factor": true,
+    "preserve_math": true,
+    "confidence": "pending_validation",
+    "status": "unverified",
+    "notes": [
+      "spurious GM->UB reload doubles MTE2 bandwidth per tile"
+    ]
+  },
+  "artifacts": {
+    "metadata": "metadata.json"
+  },
+  "metadata_snapshot": {
+    "num_tensors": 32,
+    "tensor_length": 256,
+    "tile_length": 128,
+    "tensors_per_core": 8,
+    "blockdim": 4,
+    "variant_flags": 1
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "schema_version": 2,
+  "op_name": "mish",
+  "variant": "inject_tilenum",
+  "source_mode": "existing_aprof_baseline",
+  "source_path": "d:\\Code\\Aprof\\benchmarks\\aprof_injected_ops\\mish\\baseline",
+  "case_dir": "d:\\Code\\Aprof\\benchmarks\\aprof_injected_ops\\mish\\inject_tilenum",
+  "profile_mode": "sim",
+  "ground_truth": {
+    "injected_label": "tileNum_unreasonable",
+    "problem_family": "tiling",
+    "problem_id": "tile_num_unreasonable",
+    "expected_diagnosis_family": "tiling"
+  },
+  "applicability": {
+    "status": "applied",
+    "source_modes": [
+      "existing_aprof_baseline"
+    ],
+    "patch_results": []
+  },
+  "knobs_changed": [
+    {
+      "field": "output_elements",
+      "injected": 2048,
+      "reason": "legacy retrofit"
+    },
+    {
+      "field": "input_stride",
+      "injected": 2048,
+      "reason": "legacy retrofit"
+    },
+    {
+      "field": "output_stride",
+      "injected": 2048,
+      "reason": "legacy retrofit"
+    },
+    {
+      "field": "blockdim",
+      "injected": 1,
+      "reason": "legacy retrofit"
+    },
+    {
+      "field": "tile_length",
+      "injected": 128,
+      "reason": "legacy retrofit"
+    },
+    {
+      "field": "tile_num",
+      "injected": 64,
+      "reason": "legacy retrofit"
+    },
+    {
+      "field": "tail_length",
+      "injected": 0,
+      "reason": "legacy retrofit"
+    },
+    {
+      "field": "tile_num_multiplier",
+      "injected": 4,
+      "reason": "legacy retrofit"
+    },
+    {
+      "field": "variant_flags",
+      "injected": 0,
+      "reason": "legacy retrofit"
+    }
+  ],
+  "kernel_flags": {
+    "APROF_INJECT_DYNSHAPE": 0,
+    "APROF_INJECT_EXCESSIVE_BARRIER": 0,
+    "APROF_INJECT_EXTRA_COPYOUT": 0,
+    "APROF_INJECT_REDUNDANT_COPYIN": 0,
+    "APROF_INJECT_REDUNDANT_VECTOR": 0,
+    "APROF_INJECT_SCALAR_LOOP": 0,
+    "APROF_INJECT_TAIL": 0,
+    "APROF_INJECT_UB_OVERALLOC": 0
+  },
+  "allowed_files_changed": [
+    "metadata.json",
+    "op_kernel/aprof_variant_config.h",
+    "scripts/gen_data.py"
+  ],
+  "quality": {
+    "single_factor": true,
+    "preserve_math": true,
+    "confidence": "pending_validation",
+    "status": "unverified",
+    "notes": [
+      "legacy retrofit from PR #1 structure"
+    ]
+  },
+  "artifacts": {
+    "metadata": "metadata.json"
+  },
+  "metadata_snapshot": {
+    "output_elements": 2048,
+    "blockdim": 1,
+    "tile_length": 128,
+    "tile_num": 64,
+    "tail_length": 0,
+    "tile_num_multiplier": 4,
+    "variant_flags": 0
+  }
+}

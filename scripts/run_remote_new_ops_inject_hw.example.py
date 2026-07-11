@@ -36,15 +36,35 @@ ASC_ARCH_HW = os.environ.get("ASC_ARCH_HW", "dav-2201")
 OPS: dict[str, tuple[str, list[str]]] = {
     "gelu_mul": (
         "gelu_mul_kernel",
-        ["baseline", "inject_blockdim", "inject_pipe_break", "inject_tilelen_small"],
+        ["baseline", "inject_blockdim", "inject_excessive_barrier", "inject_tilelen_small"],
     ),
     "fast_gelu_grad": (
         "fast_gelu_grad_kernel",
-        ["baseline", "inject_blockdim", "inject_api_inefficient", "inject_dynshape"],
+        ["baseline", "inject_blockdim", "inject_scalar_loop", "inject_dynshape"],
     ),
     "foreach_norm": (
         "foreach_norm_kernel",
-        ["baseline", "inject_tiling_unreasonable", "inject_data_move_bottleneck", "inject_blockdim"],
+        ["baseline", "inject_blockdim", "inject_tilelen_small", "inject_redundant_copyin"],
+    ),
+    "matmul": (
+        "matmul_kernel",
+        ["baseline", "inject_blockdim", "inject_tilelen_small", "inject_excessive_barrier", "inject_ub_temp_overalloc"],
+    ),
+    "conv2d": (
+        "conv2d_kernel",
+        ["baseline", "inject_blockdim", "inject_tilelen_small", "inject_redundant_copyin"],
+    ),
+    "layer_norm": (
+        "layer_norm_kernel",
+        ["baseline", "inject_blockdim", "inject_tilelen_small", "inject_excessive_barrier"],
+    ),
+    "topk": (
+        "topk_kernel",
+        ["baseline", "inject_blockdim", "inject_redundant_copyin"],
+    ),
+    "max_pool": (
+        "max_pool_kernel",
+        ["baseline", "inject_blockdim", "inject_tilelen_small"],
     ),
 }
 
