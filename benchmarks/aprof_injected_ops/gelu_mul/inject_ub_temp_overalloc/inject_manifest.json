@@ -1,0 +1,73 @@
+{
+  "schema_version": 2,
+  "op_name": "gelu_mul",
+  "variant": "inject_ub_temp_overalloc",
+  "source_mode": "existing_aprof_baseline",
+  "source_path": "D:\\Code\\Aprof\\benchmarks\\aprof_injected_ops\\gelu_mul\\baseline",
+  "case_dir": "D:\\Code\\Aprof\\benchmarks\\aprof_injected_ops\\gelu_mul\\inject_ub_temp_overalloc",
+  "profile_mode": "sim",
+  "ground_truth": {
+    "injected_label": "ub_temp_overallocated",
+    "problem_family": "onchip_memory",
+    "problem_id": "ub_temp_overallocated",
+    "expected_diagnosis_family": "onchip_memory"
+  },
+  "applicability": {
+    "status": "applied",
+    "source_modes": [
+      "existing_aprof_baseline",
+      "scaffold_project"
+    ],
+    "patch_results": [
+      {
+        "patch_id": "ub_temp_overallocated",
+        "applied": true,
+        "reason": "applied"
+      }
+    ]
+  },
+  "knobs_changed": [
+    {
+      "field": "APROF_INJECT_UB_OVERALLOC",
+      "injected": 1,
+      "reason": "requires UB occupancy calculation from source/tiling"
+    }
+  ],
+  "kernel_flags": {
+    "APROF_INJECT_DYNSHAPE": 0,
+    "APROF_INJECT_EXCESSIVE_BARRIER": 0,
+    "APROF_INJECT_EXTRA_COPYOUT": 0,
+    "APROF_INJECT_REDUNDANT_COPYIN": 0,
+    "APROF_INJECT_REDUNDANT_VECTOR": 0,
+    "APROF_INJECT_SCALAR_LOOP": 0,
+    "APROF_INJECT_TAIL": 0,
+    "APROF_INJECT_UB_OVERALLOC": 1
+  },
+  "allowed_files_changed": [
+    "metadata.json",
+    "op_kernel/aprof_variant_config.h",
+    "op_kernel/gelu_mul_kernel.asc"
+  ],
+  "quality": {
+    "single_factor": true,
+    "preserve_math": true,
+    "confidence": "pending_validation",
+    "status": "unverified",
+    "notes": [
+      "requires UB occupancy calculation from source/tiling"
+    ]
+  },
+  "artifacts": {
+    "metadata": "metadata.json",
+    "profiling_plan": "profiling_plan.json"
+  },
+  "metadata_snapshot": {
+    "output_elements": 2048,
+    "blockdim": 4,
+    "tile_length": 256,
+    "tile_num": 2,
+    "tail_length": 0,
+    "tile_num_multiplier": 1,
+    "variant_flags": 0
+  }
+}

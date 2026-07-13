@@ -1,0 +1,59 @@
+{
+  "case_id": "case_matmul_inject_excessive_barrier",
+  "input_policy": {
+    "single_case_only": true,
+    "baseline_allowed": false,
+    "ground_truth_allowed": false,
+    "ground_truth_fields_redacted": true,
+    "ground_truth_files_redacted": true
+  },
+  "kernel": {
+    "source_files": [
+      {
+        "path": "op_kernel\\aprof_matmul_tiling.h",
+        "content": "#ifndef APROF_MATMUL_TILING_H\n#define APROF_MATMUL_TILING_H\n#include <cstdint>\nstruct AprofMatmulTilingData {\n    uint32_t m, n, k;\n    uint32_t tileM, tileN, tileMAligned, tileNAligned;\n    uint32_t rowsPerCore;\n    uint32_t inputStride, outputStride;\n    uint32_t blockdim, variantFlags;\n};\n#endif\n",
+        "truncated": false
+      },
+      {
+        "path": "op_kernel\\aprof_variant_config.h",
+        "content": "#ifndef APROF_VARIANT_CONFIG_H\n#define APROF_VARIANT_CONFIG_H\n#define APROF_FEATURE_FLAG 0\n#define APROF_FEATURE_FLAG 1\n#define APROF_FEATURE_FLAG 0\n#define APROF_FEATURE_FLAG 0\n#define APROF_FEATURE_FLAG 0\n#define APROF_FEATURE_FLAG 0\n#define APROF_FEATURE_FLAG 0\n#endif\n",
+        "truncated": false
+      },
+      {
+        "path": "op_kernel\\matmul_kernel.asc",
+        "content": "#include \"kernel_operator.h\"\n#include \"aprof_matmul_tiling.h\"\n#include \"aprof_variant_config.h\"\n\nusing namespace AscendC;\n\nnamespace {\nconstexpr uint32_t kFp32BlockElems = 8;\n\n__aicore__ inline uint32_t MinU32(uint32_t a, uint32_t b) { return a < b ? a : b; }\n\n__aicore__ inline uint32_t AlignUpU32(uint32_t value, uint32_t align)\n{\n    return ((value + align - 1) / align) * align;\n}\n\n__aicore__ inline void LoadTiling(__gm__ uint8_t* tilingGM, AprofMatmulTilingData& tiling)\n{\n    __gm__ AprofMatmulTilingData* ptr = reinterpret_cast<__gm__ AprofMatmulTilingData*>(tilingGM);\n    tiling.m = ptr->m;\n    tiling.n = ptr->n;\n    tiling.k = ptr->k;\n    tiling.tileM = ptr->tileM;\n    tiling.tileMAligned = ptr->tileMAligned;\n    tiling.tileN = ptr->tileN;\n    tiling.tileNAligned = ptr->tileNAligned;\n    tiling.rowsPerCore = ptr->rowsPerCore;\n    tiling.inputStride = ptr->inputStride;\n    tiling.outputStride = ptr->outputStride;\n    tiling.blockdim = ptr->blockdim;\n    tiling.variantFlags = ptr->variantFlags;\n}\n} // namespace\n\n// Simplified tiled GEMM (C[M,N] = A[M,K] * B[K,N]) using Vector Mul + Add (not Cube).\n// Input layout: inputGM = [A (m*k floats, row-major)] ++ [B (k*n floats, row-major)].\n// Output layout: outputGM = C (m*n floats, row-major).\n//\n// Each core handles rowsPerCore rows of C. The tile loop walks output tiles\n// [1 row x tileN cols] and contains the anchor patterns for skill auto-patch.\nextern \"C\" __global__ __vector__ void matmul_kernel(__gm__ uint8_t* inputGM, __gm__ uint8_t* outputGM,\n                                                     __gm__ uint8_t* tilingGM)\n{\n    AprofMatmulTilingData tiling;\n    LoadTiling(tilingGM, tiling);\n    if (tiling.m == 0 || tiling.n == 0 || tiling.k == 0 ||\n        tiling.tileN == 0 || tiling.tileNAligned == 0) {\n        return;\n    }\n\n    const uint32_t blockIdx = GetBlockIdx();\n    const uint32_t rowStart = blockIdx * tiling.rowsPerCore;\n    if (rowStart >= tiling.m) {\n        return;\n    }\n    const uint32_t coreRows = MinU32(tiling.rowsPerCore, tiling.m - rowStart);\n    const uint32_t coreStart = rowStart * tiling.n; // C element offset for this core's first row\n\n    TPipe pipe;\n    TBuf<> aBuf;\n    TBuf<> bBuf;\n    TBuf<> accBuf;\n    TBuf<> outBuf;\n    pipe.InitBuffer(aBuf, tiling.tileNAligned * sizeof(float));\n    pipe.InitBuffer(bBuf, tiling.tileNAligned * sizeof(float));\n    pipe.InitBuffer(accBuf, tiling.tileNAligned * sizeof(float));\n    pipe.InitBuffer(outBuf, tiling.tileNAligned * sizeof(float));\n\n    LocalTensor<float> aLocal = aBuf.Get<float>();\n    LocalTensor<float> bLocal = bBuf.Get<float>();\n    LocalTensor<float> accLocal = accBuf.Get<float>();\n    LocalTensor<float> outLocal = outBuf.Get<float>();\n\n    GlobalTensor<float> inputGlobal;\n    GlobalTensor<float> outputGlobal;\n    inputGlobal.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(inputGM), tiling.inputStride);\n    outputGlobal.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(outputGM), tiling.outputStride);\n\n    const uint32_t aElems = tiling.m * tiling.k;     // B region starts here in the input buffer\n    const uint32_t tilesPerRow = (tiling.n + tiling.tileN - 1) / tiling.tileN;\n    const uint32_t totalTiles = coreRows * tilesPerRow;\n\n    DataCopyParams copyParams;\n    copyParams.blockCount = 1;\n    copyParams.srcStride = 0;\n    copyParams.dstStride = 0;\n\n    for (uint32_t tileIdx = 0; tileIdx < totalTiles; ++tileIdx) {\n        const uint32_t rowInCore = tileIdx / tilesPerRow;\n        const uint32_t colTile = tileIdx % tilesPerRow;\n        const uint32_t row = rowStart + rowInCore;\n        const uint32_t colStart = colTile * tiling.tileN;\n        const uint32_t curN = MinU32(tiling.tileN, tiling.n - colStart);\n        const uint32_t curAligned = AlignUpU32(curN, kFp32BlockElems);\n        const uint32_t localOffset = rowInCore * tiling.n + colStart;\n        const uint32_t outOffset = coreStart + localOffset;\n#if APROF_FEATURE_FLAG\n        // APROF_PATCH_MARKER: force pipe drains around every tile.\n        PipeBarrier<PIPE_ALL>();\n        PipeBarrier<PIPE_ALL>();\n#endif\n\n        copyParams.blockLen = curAligned / kFp32BlockElems;\n\n        DataCopy(aLocal, inputGlobal[outOffset], copyParams);\n        PipeBarrier<PIPE_ALL>();\n\n        // Load B[row, colStart..colStart+curN] segment for the K-reduction step.\n        DataCopy(bLocal, inputGlobal[aElems + row * tiling.n + colStart], copyParams);\n        PipeBarrier<PIPE_ALL>();\n\n        // acc = 0\n        Duplicate<float>(outLocal, 0.0f, curAligned);\n        PipeBarrier<PIPE_V>();\n\n        // Simplified MAC: outLocal += aLocal * bLocal (Vector Mul + Add, not Cube).\n        Mul(accLocal, aLocal, bLocal, curN);\n        PipeBarrier<PIPE_V>();\n        Add(outLocal, outLocal, accLocal, curN);\n        PipeBarrier<PIPE_V>();\n\n        DataCopy(outputGlobal[outOffset], outLocal, copyParams);\n    }\n}\n",
+        "truncated": false
+      }
+    ],
+    "metadata": {
+      "blockdim": 4,
+      "input_stride": 16384,
+      "op_name": "matmul",
+      "output_stride": 16384
+    }
+  },
+  "profiling_artifacts": {
+    "trace_summaries": []
+  },
+  "hardware_context": {
+    "status": "missing",
+    "required_params": [
+      "soc_version",
+      "aiv_core_num",
+      "aic_core_num",
+      "ub_bytes_per_core",
+      "frequency_hz",
+      "vector_peak_flops",
+      "cube_peak_flops",
+      "gm_bandwidth_bytes_per_s"
+    ],
+    "note": "Provide this via --hardware-context-json for direct roofline; otherwise diagnosis must use estimated/proxy evidence."
+  },
+  "required_output_contract": "skills/aprof/references/contracts.md#single_case_diagnosisjson",
+  "diagnosis_requirements": [
+    "Diagnose this kernel independently; do not compare with baseline.",
+    "For each diagnosis item, provide at least two supporting metrics.",
+    "Use roofline-single-case.md and mark evidence as direct, estimated, or trace-proxy.",
+    "Do not infer or mention injected labels, variants, or ground truth."
+  ]
+}

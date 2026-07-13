@@ -1,0 +1,73 @@
+{
+  "schema_version": 2,
+  "op_name": "conv2d",
+  "variant": "inject_redundant_vector",
+  "source_mode": "existing_aprof_baseline",
+  "source_path": "D:\\Code\\Aprof\\benchmarks\\aprof_injected_ops\\conv2d\\baseline",
+  "case_dir": "D:\\Code\\Aprof\\benchmarks\\aprof_injected_ops\\conv2d\\inject_redundant_vector",
+  "profile_mode": "sim",
+  "ground_truth": {
+    "injected_label": "redundant_cast_or_vector_copy",
+    "problem_family": "api_algorithm",
+    "problem_id": "redundant_cast_or_vector_copy",
+    "expected_diagnosis_family": "api_algorithm"
+  },
+  "applicability": {
+    "status": "applied",
+    "source_modes": [
+      "existing_aprof_baseline",
+      "scaffold_project"
+    ],
+    "patch_results": [
+      {
+        "patch_id": "redundant_vector",
+        "applied": true,
+        "reason": "applied"
+      }
+    ]
+  },
+  "knobs_changed": [
+    {
+      "field": "APROF_INJECT_REDUNDANT_VECTOR",
+      "injected": 1,
+      "reason": "uses Adds(+0) as a safe redundant vector API proxy"
+    }
+  ],
+  "kernel_flags": {
+    "APROF_INJECT_DYNSHAPE": 0,
+    "APROF_INJECT_EXCESSIVE_BARRIER": 0,
+    "APROF_INJECT_EXTRA_COPYOUT": 0,
+    "APROF_INJECT_REDUNDANT_COPYIN": 0,
+    "APROF_INJECT_REDUNDANT_VECTOR": 1,
+    "APROF_INJECT_SCALAR_LOOP": 0,
+    "APROF_INJECT_TAIL": 0,
+    "APROF_INJECT_UB_OVERALLOC": 0
+  },
+  "allowed_files_changed": [
+    "metadata.json",
+    "op_kernel/aprof_variant_config.h",
+    "op_kernel/conv2d_kernel.asc"
+  ],
+  "quality": {
+    "single_factor": true,
+    "preserve_math": true,
+    "confidence": "pending_validation",
+    "status": "unverified",
+    "notes": [
+      "uses Adds(+0) as a safe redundant vector API proxy"
+    ]
+  },
+  "artifacts": {
+    "metadata": "metadata.json",
+    "profiling_plan": "profiling_plan.json"
+  },
+  "metadata_snapshot": {
+    "output_elements": 4096,
+    "blockdim": 4,
+    "tile_length": 256,
+    "tile_num": 4,
+    "tail_length": 0,
+    "tile_num_multiplier": null,
+    "variant_flags": 0
+  }
+}

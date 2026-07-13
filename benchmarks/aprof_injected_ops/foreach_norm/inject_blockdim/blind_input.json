@@ -1,0 +1,60 @@
+{
+  "case_id": "case_foreach_norm_inject_blockdim",
+  "input_policy": {
+    "single_case_only": true,
+    "baseline_allowed": false,
+    "ground_truth_allowed": false,
+    "ground_truth_fields_redacted": true,
+    "ground_truth_files_redacted": true
+  },
+  "kernel": {
+    "source_files": [
+      {
+        "path": "op_kernel\\aprof_foreach_tiling.h",
+        "content": "#ifndef APROF_FOREACH_TILING_H\n#define APROF_FOREACH_TILING_H\n\n#include <cstdint>\n\n// 9 uint32 fields = 36 bytes (matches anonymous_variant.py main_foreach_norm).\nstruct AprofForeachTilingData {\n    uint32_t numTensors;       // total tensors in the input list\n    uint32_t tensorLength;     // elements per tensor\n    uint32_t tileLength;       // inner reduction tile\n    uint32_t tileLengthAligned;\n    uint32_t tensorsPerCore;   // tensors assigned to this core\n    uint32_t inputStride;      // N * tensorLength (aligned)\n    uint32_t outputStride;     // N (aligned)\n    uint32_t blockdim;         // launch blockdim\n    uint32_t variantFlags;\n};\n\n#endif // APROF_FOREACH_TILING_H\n",
+        "truncated": false
+      },
+      {
+        "path": "op_kernel\\aprof_variant_config.h",
+        "content": "#ifndef APROF_VARIANT_CONFIG_H\n#define APROF_VARIANT_CONFIG_H\n\n#define APROF_FEATURE_FLAG 0\n\n#endif // APROF_VARIANT_CONFIG_H\n",
+        "truncated": false
+      },
+      {
+        "path": "op_kernel\\foreach_norm_kernel.asc",
+        "content": "#include \"kernel_operator.h\"\n#include \"aprof_foreach_tiling.h\"\n#include \"aprof_variant_config.h\"\n\nusing namespace AscendC;\n\nnamespace {\nconstexpr uint32_t kFp32BlockElems = 8;\n\n__aicore__ inline uint32_t MinU32(uint32_t a, uint32_t b) { return a < b ? a : b; }\n\n__aicore__ inline uint32_t AlignUpU32(uint32_t value, uint32_t align)\n{\n    return ((value + align - 1) / align) * align;\n}\n\n__aicore__ inline void LoadTiling(__gm__ uint8_t* tilingGM, AprofForeachTilingData& tiling)\n{\n    __gm__ AprofForeachTilingData* ptr = reinterpret_cast<__gm__ AprofForeachTilingData*>(tilingGM);\n    tiling.numTensors = ptr->numTensors;\n    tiling.tensorLength = ptr->tensorLength;\n    tiling.tileLength = ptr->tileLength;\n    tiling.tileLengthAligned = ptr->tileLengthAligned;\n    tiling.tensorsPerCore = ptr->tensorsPerCore;\n    tiling.inputStride = ptr->inputStride;\n    tiling.outputStride = ptr->outputStride;\n    tiling.blockdim = ptr->blockdim;\n    tiling.variantFlags = ptr->variantFlags;\n}\n} // namespace\n\n// foreach_norm: for each tensor in the input list, compute L2 norm.\n//   out[i] = sqrt(sum_j x[i*tensorLength + j]^2)\n//\n// Inject macros:\n//   APROF_FEATURE_FLAG: between processing each tensor, reload its first tile\n//                           from GM a second time into a throwaway buffer, doubling\n//                           GM->UB traffic (data move bottleneck).\nextern \"C\" __global__ __vector__ void foreach_norm_kernel(__gm__ uint8_t* inputGM, __gm__ uint8_t* outputGM,\n                                                          __gm__ uint8_t* tilingGM)\n{\n    AprofForeachTilingData tiling;\n    LoadTiling(tilingGM, tiling);\n    if (tiling.numTensors == 0 || tiling.tensorLength == 0 || tiling.tileLength == 0 ||\n        tiling.tileLengthAligned == 0) {\n        return;\n    }\n\n    const uint32_t blockIdx = GetBlockIdx();\n    const uint32_t tensorStart = blockIdx * tiling.tensorsPerCore;\n    if (tensorStart >= tiling.numTensors) {\n        return;\n    }\n    const uint32_t coreTensors = MinU32(tiling.tensorsPerCore, tiling.numTensors - tensorStart);\n\n    TPipe pipe;\n    TBuf<> aBuf;\n    TBuf<> tmpBuf;\n    TBuf<> workBuf;\n    TBuf<> sumBuf;\n    TBuf<> accBuf;\n    TBuf<> trashBuf;\n    pipe.InitBuffer(aBuf, tiling.tileLengthAligned * sizeof(float));\n    pipe.InitBuffer(tmpBuf, tiling.tileLengthAligned * sizeof(float));\n    pipe.InitBuffer(workBuf, tiling.tileLengthAligned * sizeof(float));\n    pipe.InitBuffer(sumBuf, kFp32BlockElems * sizeof(float));\n    pipe.InitBuffer(accBuf, kFp32BlockElems * sizeof(float));\n    pipe.InitBuffer(trashBuf, tiling.tileLengthAligned * sizeof(float));\n\n    LocalTensor<float> aLocal = aBuf.Get<float>();\n    LocalTensor<float> tmpLocal = tmpBuf.Get<float>();\n    LocalTensor<float> workLocal = workBuf.Get<float>();\n    LocalTensor<float> sumLocal = sumBuf.Get<float>();\n    LocalTensor<float> accLocal = accBuf.Get<float>();\n    LocalTensor<float> trashLocal = trashBuf.Get<float>();\n\n    GlobalTensor<float> inputGlobal;\n    GlobalTensor<float> outputGlobal;\n    inputGlobal.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(inputGM), tiling.inputStride);\n    outputGlobal.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(outputGM), tiling.outputStride);\n\n    DataCopyParams copyParams;\n    copyParams.blockCount = 1;\n    copyParams.srcStride = 0;\n    copyParams.dstStride = 0;\n\n    for (uint32_t t = 0; t < coreTensors; ++t) {\n        const uint32_t tensorIdx = tensorStart + t;\n        const uint32_t inBase = tensorIdx * tiling.tensorLength;\n        const uint32_t numTiles = (tiling.tensorLength + tiling.tileLength - 1) / tiling.tileLength;\n\n        Duplicate<float>(accLocal, 0.0f, kFp32BlockElems);\n        PipeBarrier<PIPE_V>();\n\n        for (uint32_t tileIdx = 0; tileIdx < numTiles; ++tileIdx) {\n            const uint32_t localOffset = tileIdx * tiling.tileLength;\n            const uint32_t curN = MinU32(tiling.tileLength, tiling.tensorLength - localOffset);\n            const uint32_t curAligned = AlignUpU32(curN, kFp32BlockElems);\n            copyParams.blockLen = curAligned / kFp32BlockElems;\n\n            DataCopy(aLocal, inputGlobal[inBase + localOffset], copyParams);\n            PipeBarrier<PIPE_ALL>();\n\n#if APROF_FEATURE_FLAG\n            // Spurious reload of the same tile into a throwaway buffer: doubles GM->UB\n            // traffic per tile and competes for MTE2 bandwidth.\n            DataCopy(trashLocal, inputGlobal[inBase + localOffset], copyParams);\n            PipeBarrier<PIPE_ALL>();\n#endif\n\n            // tmp = a * a\n            Mul(tmpLocal, aLocal, aLocal, curN);\n            PipeBarrier<PIPE_V>();\n\n            // tileSum = sum(tmp)\n            ReduceSum<float>(sumLocal, tmpLocal, workLocal, curN);\n            PipeBarrier<PIPE_V>();\n\n            // acc += tileSum\n            Add(accLocal, accLocal, sumLocal, kFp32BlockElems);\n            PipeBarrier<PIPE_V>();\n        }\n\n        // out = sqrt(acc)\n        Sqrt(accLocal, accLocal, kFp32BlockElems);\n        PipeBarrier<PIPE_V>();\n        DataCopyParams outParams;\n        outParams.blockCount = 1;\n        outParams.blockLen = 1;\n        outParams.srcStride = 0;\n        outParams.dstStride = 0;\n        DataCopy(outputGlobal[tensorIdx], accLocal, outParams);\n        PipeBarrier<PIPE_ALL>();\n    }\n}\n",
+        "truncated": false
+      }
+    ],
+    "metadata": {
+      "output_stride": 32,
+      "op_name": "foreach_norm",
+      "blockdim": 1,
+      "input_stride": 8192,
+      "tile_length": 128
+    }
+  },
+  "profiling_artifacts": {
+    "trace_summaries": []
+  },
+  "hardware_context": {
+    "status": "missing",
+    "required_params": [
+      "soc_version",
+      "aiv_core_num",
+      "aic_core_num",
+      "ub_bytes_per_core",
+      "frequency_hz",
+      "vector_peak_flops",
+      "cube_peak_flops",
+      "gm_bandwidth_bytes_per_s"
+    ],
+    "note": "Provide this via --hardware-context-json for direct roofline; otherwise diagnosis must use estimated/proxy evidence."
+  },
+  "required_output_contract": "skills/aprof/references/contracts.md#single_case_diagnosisjson",
+  "diagnosis_requirements": [
+    "Diagnose this kernel independently; do not compare with baseline.",
+    "For each diagnosis item, provide at least two supporting metrics.",
+    "Use roofline-single-case.md and mark evidence as direct, estimated, or trace-proxy.",
+    "Do not infer or mention injected labels, variants, or ground truth."
+  ]
+}

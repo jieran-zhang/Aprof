@@ -25,7 +25,7 @@ if __name__ == "__main__":
         op_name="fast_gelu_grad",
         variant_name="inject_scalar_loop",
         injected_label="scalar_loop_redundant",
-        injected_problem="在每个 tile 插入 64 次冗余标量循环，制造 scalar-control 压力，API 与算法实现低效。",
+        injected_problem="redundant scalar loop + vector no-op for API pressure",
         default_output_elements=16384,
         default_tile_length=256,
         default_blockdim=4,

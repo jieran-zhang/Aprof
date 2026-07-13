@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "op_name": "topk",
+  "cases": [
+    {
+      "variant": "baseline",
+      "ground_truth_label": "baseline",
+      "problem_family": "baseline",
+      "problem_id": "baseline",
+      "applicability_status": "applied",
+      "predicted_label": null,
+      "status": "pending",
+      "quality_status": "active",
+      "reason": "no diagnosis prediction provided",
+      "evidence": [
+        "metadata.tile_length=256",
+        "metadata.tile_num=4",
+        "metadata.tail_length=0",
+        "metadata.variant_flags=0",
+        "metadata.problem_family=None",
+        "metadata.problem_id=None"
+      ]
+    },
+    {
+      "variant": "inject_blockdim",
+      "ground_truth_label": "blockdim_too_small",
+      "problem_family": "tiling",
+      "problem_id": "blockdim_too_small",
+      "applicability_status": "applied",
+      "predicted_label": "tiling",
+      "status": "fail",
+      "quality_status": "active",
+      "reason": "predicted_label=tiling",
+      "evidence": [
+        "metadata.tile_length=256",
+        "metadata.tile_num=16",
+        "metadata.tail_length=0",
+        "metadata.variant_flags=0",
+        "metadata.problem_family=None",
+        "metadata.problem_id=None"
+      ]
+    },
+    {
+      "variant": "inject_excessive_barrier",
+      "ground_truth_label": "excessive_pipe_barrier",
+      "problem_family": "pipeline_parallel",
+      "problem_id": "excessive_pipe_barrier",
+      "applicability_status": "applied",
+      "predicted_label": null,
+      "status": "skipped",
+      "quality_status": "unverified",
+      "reason": "quality_status=unverified",
+      "evidence": [
+        "metadata.tile_length=256",
+        "metadata.tile_num=4",
+        "metadata.tail_length=0",
+        "metadata.variant_flags=0",
+        "metadata.problem_family=pipeline_parallel",
+        "metadata.problem_id=excessive_pipe_barrier"
+      ]
+    },
+    {
+      "variant": "inject_redundant_copyin",
+      "ground_truth_label": "redundant_copyin",
+      "problem_family": "data_movement",
+      "problem_id": "redundant_copyin",
+      "applicability_status": "applied",
+      "predicted_label": "data_movement",
+      "status": "fail",
+      "quality_status": "active",
+      "reason": "predicted_label=data_movement",
+      "evidence": [
+        "metadata.tile_length=256",
+        "metadata.tile_num=4",
+        "metadata.tail_length=0",
+        "metadata.variant_flags=0",
+        "metadata.problem_family=None",
+        "metadata.problem_id=None"
+      ]
+    }
+  ],
+  "summary": {
+    "total": 4,
+    "passed": 0,
+    "failed": 2,
+    "pending": 1,
+    "skipped": 1
+  }
+}

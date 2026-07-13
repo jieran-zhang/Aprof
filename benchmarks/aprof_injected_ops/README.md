@@ -1,6 +1,6 @@
 # AProf 注入 Benchmark 总览
 
-> 维护者：jieran-zhang
+> 维护者：yihan-long
 > 最后更新：2026-07-11
 > Skill 管线：`skills/aprof/benchmark/ascendc-aprof-inject-problems/`（PR #2 引入 schema v2 + 工具链）
 
@@ -139,24 +139,14 @@ benchmarks/aprof_injected_ops/
 | mish | activation | baseline–inject_dynshape (7 case) | tiling | various | — | — | unverified (retrofit) |
 | swi_glu | activation | baseline–inject_dynshape (7 case) | tiling | various | — | — | unverified (retrofit) |
 
-### 3.2 待 retrofit（缺 inject_manifest.json）
+### 3.2 mish / swi_glu（已 retrofit manifest，hw 采集待修复）
 
-| 算子 | 类别 | variant | label | 状态 |
-|------|------|---------|-------|------|
-| mish | activation | baseline | baseline | 缺 manifest |
-| mish | activation | inject_blockdim | blockdim_too_small | 缺 manifest |
-| mish | activation | inject_tail | tail_inefficient | 缺 manifest |
-| mish | activation | inject_tilelen_small | tileLength_too_small | 缺 manifest |
-| mish | activation | inject_tilelen_large | tileLength_too_large | 缺 manifest |
-| mish | activation | inject_tilenum | tileNum_unreasonable | 缺 manifest |
-| mish | activation | inject_dynshape | fixed_tiling_dynamic_shape | 缺 manifest |
-| swi_glu | activation | baseline | baseline | 缺 manifest |
-| swi_glu | activation | inject_blockdim | blockdim_too_small | 缺 manifest |
-| swi_glu | activation | inject_tail | tail_inefficient | 缺 manifest |
-| swi_glu | activation | inject_tilelen_small | tileLength_too_small | 缺 manifest |
-| swi_glu | activation | inject_tilelen_large | tileLength_too_large | 缺 manifest |
-| swi_glu | activation | inject_tilenum | tileNum_unreasonable | 缺 manifest |
-| swi_glu | activation | inject_dynshape | fixed_tiling_dynamic_shape | 缺 manifest |
+> **hw 采集失败原因**：mish / swi_glu 的 `gen_data.py` 仍使用 PR #1 时代的 `import numpy as np` 格式，远程 910B 机器无 numpy → `gen_data.py` 执行失败 → 无 tiling/op_config → 编译跳过 → `task_duration_us = null`。**这不是多卡集群问题**，单卡即可运行，只需将 gen_data.py 重构为 `main_with_config` 模式（stdlib-only，与 fast_gelu/new ops 一致）。修复后可直接采集。
+
+| 算子 | 类别 | case 数 | manifest | hw μs | 阻塞原因 |
+|------|------|---------|----------|-------|---------|
+| mish | activation | 7 | ✅ schema v2 | ❌ null | `gen_data.py` 用 numpy（远程无） |
+| swi_glu | activation | 7 | ✅ schema v2 | ❌ null | 同上 |
 
 ---
 
@@ -187,17 +177,30 @@ benchmarks/aprof_injected_ops/
 
 | 优先级 | 算子 | 类别 | 推荐注入问题（按效果排序） | 状态 | case 数 |
 |--------|------|------|---------------------------|------|---------|
-| **P0** | matmul | matmul | Tiling不合理 > 流水并行不足 > 片上内存不足 | ✅ 已完成 | 5 |
-| **P0** | fast_gelu | activation | API低效 > AI Core利用率低 > 数据搬运瓶颈 | ✅ 已完成 | 7 |
-| **P1** | conv2d | conv | Tiling不合理 > 数据搬运瓶颈 > 片上内存不足 | ✅ 已完成 | 4 |
-| **P1** | foreach_norm | foreach | 数据搬运瓶颈 > AI Core利用率低 > Tiling不合理 | ✅ 已完成 | 4 |
-| **P2** | layer_norm | norm | 片上内存不足 > API低效 > 流水并行不足 | ✅ 已完成 | 4 |
-| **P2** | gelu_mul | activation | 流水并行不足 > AI Core利用率低 > API低效 | ✅ 已完成 | 4 |
-| **P3** | topk | index | AI Core利用率低 > 数据搬运瓶颈 | ✅ 已完成 | 3 |
-| **P3** | max_pool | pooling | AI Core利用率低 > API低效 | ✅ 已完成 | 3 |
-| — | fast_gelu_grad | activation | API低效 > Tiling不合理 | ✅ 已完成 | 4 |
-| — | mish | activation | Tiling不合理（全 tiling 家族） | ✅ 已 retrofit | 7 |
-| — | swi_glu | activation | Tiling不合理（全 tiling 家族） | ✅ 已 retrofit | 7 |
+| **P0** | matmul | matmul | Tiling > 流水 > 片上内存 > AI Core | ✅ 已完成 | 6 |
+| **P0** | fast_gelu | activation | Tiling（6 variant） | ✅ 已完成 | 7 |
+| **P1** | conv2d | conv | Tiling > 搬运 > 流水 > 片上 > AI Core > API | ✅ 已完成 | 8 |
+| **P1** | foreach_norm | foreach | Tiling > 搬运 | ✅ 已完成 | 4 |
+| **P2** | layer_norm | norm | Tiling > 流水 > 搬运 > 片上 > AI Core > API | ✅ 已完成 | 8 |
+| **P2** | gelu_mul | activation | Tiling > 流水 > 搬运 > 片上 > API | ✅ 已完成 | 7 |
+| **P3** | topk | index | Tiling > 搬运 > 流水 | ✅ 已完成 | 4 |
+| **P3** | max_pool | pooling | Tiling > 搬运 > 流水 > AI Core | ✅ 已完成 | 6 |
+| — | fast_gelu_grad | activation | Tiling > API | ✅ 已完成 | 4 |
+| — | mish | activation | Tiling（6 variant） | ✅ 已 retrofit | 7 |
+| — | swi_glu | activation | Tiling（6 variant） | ✅ 已 retrofit | 7 |
+
+### 5.1 六大问题家族覆盖率与命中率（v3）
+
+| 问题家族 | case 数 | 有信号(>1.2×) | 最强倍率 | 诊断准确率 | 评价 |
+|---------|---------|--------------|---------|-----------|------|
+| **tiling** | 21 | 16/21 | **8.10×** | 95% | ✅ 最可靠 |
+| **ai_core_utilization** | 4 | 4/4 | **5.32×** | — | ✅ 新增，全命中 |
+| **pipeline_parallel** | 6 | 6/6 | 1.38× | 100% | ⚠️ 信号弱但全部可见 |
+| **data_movement** | 6 | 4/6 | 1.29× | 100% | ⚠️ 2/6 低于 1.2× |
+| **onchip_memory** | 4 | 0/4 | 1.05× | 100% | ❌ 无信号，需更大 workload |
+| **api_algorithm** | 4 | 0/4 | 1.05× | 100% | ❌ 无信号，Adds(+0) 被编译器消除 |
+
+**诊断闭环**：23 个 active case 盲诊准确率 **87%**（20/23），使用 `build_blind_diagnosis_input.py` 剥离 ground truth + 源码模式路由自动预测。
 
 ### 5.1 P0–P3 详细注入策略
 
