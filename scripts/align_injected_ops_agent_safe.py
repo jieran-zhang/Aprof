@@ -167,7 +167,11 @@ def align_op(op_dir: Path) -> None:
         kernel = json.loads(meta0.read_text(encoding="utf-8")).get("kernel", kernel)
 
     for case_dir in case_dirs:
-        target = f"{op_name}_{case_dir.name}"
+        # CMake targets stay as {op}_baseline / {op}_op_XXXX (folder rename must not change TARGET_NAME)
+        if case_dir.name == "direct_invoke_baseline":
+            target = f"{op_name}_baseline"
+        else:
+            target = f"{op_name}_{case_dir.name}"
         write_text(case_dir / "run.sh", run_sh_for(target, kernel))
         neutralize_waste_buf(case_dir)
         # Ensure case_metadata has no answer fields

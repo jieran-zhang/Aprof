@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-TARGET_NAME="matmul_direct_invoke_baseline"
+TARGET_NAME="matmul_baseline"
 KERNEL_NAME="matmul_kernel"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -f "$SCRIPT_DIR/../common/run_direct_invoke.sh" ]; then

@@ -418,6 +418,53 @@
         "default_case": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0001",
         "hw_optional": "demo/upload_case_for_hw.example.sh"
       }
+    },
+    {
+      "id": "QA-015",
+      "timestamp": "2026-07-17T16:15:00+08:00",
+      "category": "diagnosis",
+      "question": "希望问题诊断模块用 GLM-5.2 调用 skills 里的 skill。不清楚 skill 是什么？有两个 skill：一个做六类问题注入（后来结合新 skill 优化），一个是取反的问题诊断 skill（diagnosis 相关）。另外测试主要测什么？请记入 qa.json。",
+      "answer_summary": "Skill=给 Agent 的可复用操作说明书（SKILL.md+references+tools），不是可执行二进制。一对互为取反：ascendc-aprof-inject-problems（造题：六类问题注入+GT）与 ascendc-aprof-diagnosis（解题：盲诊归因）。六类家族共享：tiling/data_movement/pipeline_parallel/onchip_memory/ai_core_utilization/api_algorithm。GLM-5.2 调用 skill=把 SKILL.md 与相关 references 装进 system/user 上下文（或 Cursor @agent）；当前 demo 已注入精简诊断规则，完整版应按路由加载对应 diagnosis 矩阵。测试分四层：①单元测试（rules/registry）②注入结构/泄漏扫描③910B 编译+精度+Task Duration④盲诊准确率（预测 vs .ground_truth，禁止把答案喂给模型）。",
+      "related_ops": [
+        "fast_gelu",
+        "gelu_mul",
+        "mish",
+        "swi_glu",
+        "matmul",
+        "conv2d",
+        "layer_norm",
+        "topk",
+        "max_pool",
+        "fast_gelu_grad",
+        "foreach_norm"
+      ],
+      "related_files": [
+        "skills/aprof/benchmark/ascendc-aprof-inject-problems/SKILL.md",
+        "skills/aprof/diagnosis/SKILL.md",
+        "skills/aprof/diagnosis/references/",
+        "plugins/aprof-performance-workflow/demo/run_glm_diagnosis_demo.py",
+        "tests/unit/test_diagnosis_rules.py",
+        "tests/qa_log.json"
+      ],
+      "msprof_evidence": {
+        "six_families": [
+          "tiling",
+          "data_movement",
+          "pipeline_parallel",
+          "onchip_memory",
+          "ai_core_utilization",
+          "api_algorithm"
+        ],
+        "inject_skill": "ascendc-aprof-inject-problems",
+        "diagnosis_skill": "ascendc-aprof-diagnosis",
+        "test_layers": [
+          "unit",
+          "structure_leak_scan",
+          "remote_compile_verify_hw",
+          "blind_diagnosis_alignment"
+        ],
+        "latest_hw": "68/68 compile+hw, 61/68 verify"
+      }
     }
   ]
 }

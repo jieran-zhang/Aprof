@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-TARGET_NAME="swi_glu_direct_invoke_baseline"
+TARGET_NAME="swi_glu_baseline"
 KERNEL_NAME="swi_glu_kernel"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -f "$SCRIPT_DIR/../common/run_direct_invoke.sh" ]; then

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-TARGET_NAME="max_pool_direct_invoke_baseline"
+TARGET_NAME="max_pool_baseline"
 KERNEL_NAME="max_pool_kernel"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -f "$SCRIPT_DIR/../common/run_direct_invoke.sh" ]; then
