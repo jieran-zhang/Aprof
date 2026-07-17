@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "op_name": "foreach_norm",
+  "cases": [
+    {
+      "variant": "baseline",
+      "ground_truth_label": "baseline",
+      "problem_family": "baseline",
+      "problem_id": "baseline",
+      "applicability_status": "applied",
+      "predicted_label": null,
+      "status": "pending",
+      "quality_status": "active",
+      "reason": "no diagnosis prediction provided",
+      "evidence": [
+        "metadata.tile_length=128",
+        "metadata.tile_num=None",
+        "metadata.tail_length=None",
+        "metadata.variant_flags=0",
+        "metadata.problem_family=None",
+        "metadata.problem_id=None"
+      ]
+    },
+    {
+      "variant": "inject_blockdim",
+      "ground_truth_label": "blockdim_too_small",
+      "problem_family": "tiling",
+      "problem_id": "blockdim_too_small",
+      "applicability_status": "applied",
+      "predicted_label": "tiling",
+      "status": "fail",
+      "quality_status": "active",
+      "reason": "predicted_label=tiling",
+      "evidence": [
+        "metadata.tile_length=128",
+        "metadata.tile_num=None",
+        "metadata.tail_length=None",
+        "metadata.variant_flags=0",
+        "metadata.problem_family=None",
+        "metadata.problem_id=None"
+      ]
+    },
+    {
+      "variant": "inject_redundant_copyin",
+      "ground_truth_label": "redundant_copyin",
+      "problem_family": "data_movement",
+      "problem_id": "redundant_copyin",
+      "applicability_status": "applied",
+      "predicted_label": null,
+      "status": "skipped",
+      "quality_status": "unverified",
+      "reason": "quality_status=unverified",
+      "evidence": [
+        "metadata.tile_length=128",
+        "metadata.tile_num=None",
+        "metadata.tail_length=None",
+        "metadata.variant_flags=1",
+        "metadata.problem_family=None",
+        "metadata.problem_id=None"
+      ]
+    },
+    {
+      "variant": "inject_tilelen_small",
+      "ground_truth_label": "tileLength_too_small",
+      "problem_family": "tiling",
+      "problem_id": "tile_length_too_small",
+      "applicability_status": "applied",
+      "predicted_label": null,
+      "status": "skipped",
+      "quality_status": "unverified",
+      "reason": "quality_status=unverified",
+      "evidence": [
+        "metadata.tile_length=8",
+        "metadata.tile_num=None",
+        "metadata.tail_length=None",
+        "metadata.variant_flags=0",
+        "metadata.problem_family=None",
+        "metadata.problem_id=None"
+      ]
+    }
+  ],
+  "summary": {
+    "total": 4,
+    "passed": 0,
+    "failed": 1,
+    "pending": 1,
+    "skipped": 2
+  }
+}

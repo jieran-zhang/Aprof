@@ -25,6 +25,12 @@ kernel_path: <path/to/kernel.asc>
 op_dir: <path/to/direct-invoke-op>
 ```
 
+推荐 demo 路径（完整可编译工程，无答案泄漏）：
+
+```text
+op_dir: benchmarks/aprof_benchmark/fast_gelu/operators/op_0001
+```
+
 若只想生成计划，不执行 msprof：
 
 ```text
@@ -39,6 +45,18 @@ run_cmd: ./<binary> <args>
 gen_data_cmd: python3 scripts/gen_data.py ...
 profiling_output_dir: profiling_out
 ```
+
+## GLM-5.2 API 盲诊 Demo（不依赖 Cursor）
+
+配置 `configs/secrets/glm.env` 后：
+
+```bash
+python plugins/aprof-performance-workflow/demo/run_glm_diagnosis_demo.py
+```
+
+说明见 [demo/README.md](demo/README.md)。默认用 `aprof_benchmark/fast_gelu/operators/op_0001`，输出 `demo/out/single_case_diagnosis.json`。
+
+910B 真机采集为可选项：参考 `demo/upload_case_for_hw.example.sh`，或先本机 `bash run.sh hw` 再把 CSV 摘要并入盲诊输入。
 
 ## 产物
 
@@ -55,3 +73,4 @@ profiling_output_dir: profiling_out
 - 源码诊断阶段只产生假设，不直接确认瓶颈。
 - `sim` 只提供 trace / 指令 / 热点 proxy，不产出 msopprof 8 CSV。
 - 真实硬件 metric 优先通过 `hw-op` 或 `hw-msprof` 获取。
+- 注入评测场景禁止读取 `.ground_truth/`、`injected_label`、`inject_manifest.json` 等答案文件。

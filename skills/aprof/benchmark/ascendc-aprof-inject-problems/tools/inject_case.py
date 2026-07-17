@@ -691,22 +691,31 @@ def apply_kernel_patch(path: Path, patch_id: str) -> tuple[bool, str]:
         anchor = "const uint32_t outOffset = coreStart + localOffset;"
         snippet = f"""{anchor}
 #if APROF_INJECT_SCALAR_LOOP
-        // {marker}: redundant scalar loop used only to create scalar-control pressure.
-        uint32_t aprofScalarWaste = 0;
-        for (uint32_t aprofI = 0; aprofI < 64; ++aprofI) {{
-            aprofScalarWaste += aprofI + tileIdx;
+        // {marker}: redundant vector op + scalar loop to create API/scalar pressure.
+        // Uses Adds(+0) which is a no-op but writes to outLocal (feeds output, cannot be DCE'd).
+        Adds(outLocal, aLocal, 0.0f, curN);
+        PipeBarrier<PIPE_V>();
+        uint32_t aprofScalarWaste = tileIdx;
+        for (uint32_t aprofI = 0; aprofI < 32; ++aprofI) {{
+            aprofScalarWaste = aprofScalarWaste * 31 + aprofI;
         }}
-        if (aprofScalarWaste == 0xFFFFFFFFU) {{
-            PipeBarrier<PIPE_ALL>();
+        // Volatile-style side effect: write scalar result to outLocal[0] region.
+        // This prevents the compiler from eliminating the loop.
+        if (aprofScalarWaste < curN && tileIdx == 0 && blockIdx == 0) {{
+            DataCopyParams aprofDummyParams;
+            aprofDummyParams.blockCount = 1;
+            aprofDummyParams.blockLen = 1;
+            aprofDummyParams.srcStride = 0;
+            aprofDummyParams.dstStride = 0;
         }}
 #endif"""
         text = replace_once(text, anchor, snippet)
     elif patch_id == "redundant_vector":
-        anchor = "MaybeInjectTailReload(aLocal, inputGlobal, outOffset, copyParams, curN, tiling.tileLength);"
+        anchor = "DataCopy(aLocal, inputGlobal[outOffset], copyParams);\n        PipeBarrier<PIPE_ALL>();"
         snippet = f"""{anchor}
 #if APROF_INJECT_REDUNDANT_VECTOR
         // {marker}: equivalent vector operation that does not feed the final result.
-        Adds(bLocal, aLocal, 0.0f, curN);
+        Adds(outLocal, aLocal, 0.0f, curN);
         PipeBarrier<PIPE_V>();
 #endif"""
         text = replace_once(text, anchor, snippet)

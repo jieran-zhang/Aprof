@@ -37,6 +37,17 @@ python scripts/run_remote_fast_gelu_inject.py
 # 单 case 重跑 sim（调 ulimit / 架构后）
 $env:INJECT_CASE="inject_blockdim"
 python scripts/run_remote_fast_gelu_inject_sim.py
+
+# 910B 真机：dav-2201 编译 + msprof op --config（mode=onboard）
+# 复制 scripts/run_remote_fast_gelu_inject_hw.example.py 为本地 gitignore 副本后执行
+python scripts/run_remote_fast_gelu_inject_hw.py
+```
+
+各 variant 本地也可直接：
+
+```bash
+export ASC_ARCH_HW=dav-2201
+bash run.sh all_hw    # gen + build(dav-2201) + msprof op --config
 ```
 
 远程路径：`/home/u2300013210/aprof_fast_gelu_inject/<variant>/`

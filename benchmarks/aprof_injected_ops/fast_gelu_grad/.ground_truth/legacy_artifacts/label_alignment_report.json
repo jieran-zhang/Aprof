@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "op_name": "fast_gelu_grad",
+  "cases": [
+    {
+      "variant": "baseline",
+      "ground_truth_label": "baseline",
+      "problem_family": "baseline",
+      "problem_id": "baseline",
+      "applicability_status": "applied",
+      "predicted_label": null,
+      "status": "pending",
+      "quality_status": "active",
+      "reason": "no diagnosis prediction provided",
+      "evidence": [
+        "metadata.tile_length=256",
+        "metadata.tile_num=2",
+        "metadata.tail_length=0",
+        "metadata.variant_flags=0",
+        "metadata.problem_family=None",
+        "metadata.problem_id=None"
+      ]
+    },
+    {
+      "variant": "inject_blockdim",
+      "ground_truth_label": "blockdim_too_small",
+      "problem_family": "tiling",
+      "problem_id": "blockdim_too_small",
+      "applicability_status": "applied",
+      "predicted_label": "tiling",
+      "status": "fail",
+      "quality_status": "active",
+      "reason": "predicted_label=tiling",
+      "evidence": [
+        "metadata.tile_length=256",
+        "metadata.tile_num=8",
+        "metadata.tail_length=0",
+        "metadata.variant_flags=0",
+        "metadata.problem_family=None",
+        "metadata.problem_id=None"
+      ]
+    },
+    {
+      "variant": "inject_dynshape",
+      "ground_truth_label": "fixed_tiling_dynamic_shape",
+      "problem_family": "tiling",
+      "problem_id": "fixed_tiling_dynamic_shape",
+      "applicability_status": "applied",
+      "predicted_label": "tiling",
+      "status": "fail",
+      "quality_status": "active",
+      "reason": "predicted_label=tiling",
+      "evidence": [
+        "metadata.tile_length=640",
+        "metadata.tile_num=1",
+        "metadata.tail_length=0",
+        "metadata.variant_flags=2",
+        "metadata.problem_family=None",
+        "metadata.problem_id=None"
+      ]
+    },
+    {
+      "variant": "inject_scalar_loop",
+      "ground_truth_label": "scalar_loop_redundant",
+      "problem_family": "api_algorithm",
+      "problem_id": "scalar_loop_redundant",
+      "applicability_status": "applied",
+      "predicted_label": "api_algorithm",
+      "status": "fail",
+      "quality_status": "active",
+      "reason": "predicted_label=api_algorithm",
+      "evidence": [
+        "metadata.tile_length=256",
+        "metadata.tile_num=2",
+        "metadata.tail_length=0",
+        "metadata.variant_flags=0",
+        "metadata.problem_family=api_algorithm",
+        "metadata.problem_id=scalar_loop_redundant"
+      ]
+    }
+  ],
+  "summary": {
+    "total": 4,
+    "passed": 0,
+    "failed": 3,
+    "pending": 1,
+    "skipped": 0
+  }
+}

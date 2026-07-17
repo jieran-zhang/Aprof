@@ -1,0 +1,470 @@
+{
+  "schema_version": 1,
+  "description": "用户问答记录：收集非代码请求的诊断问题、代码位置查询、msprof 数据支撑问答。每条记录包含问题、回答摘要、分类、关联文件和算子。",
+  "entries": [
+    {
+      "id": "QA-001",
+      "timestamp": "2026-07-13T15:23:00+08:00",
+      "category": "diagnosis",
+      "question": "这个报告里的信号是指什么？",
+      "answer_summary": "信号 = 注入的性能问题是否导致了可测量的性能退化。注入一个问题（如 tile 过小、blockdim=1）后，在 910B 上测 Task Duration，与 baseline 对比。倍率 > 1.2× = 有信号（问题确实拖慢了性能，可作为诊断 ground-truth）；倍率 ≤ 1.2× = 无信号（编译器消除了开销，或 workload 太小被掩盖）。1.2× 是实际阈值：低于 1.2× 可能是测量噪声，高于 1.2× 才是可靠退化。无信号有两种原因：①编译器消除（如 Adds(+0) 被 bisheng -O2 判定为 no-op 直接消除）；②workload 太小（如 UB overalloc 在当前 tensor 规模下不产生 UB 压力）。",
+      "related_ops": [
+        "gelu_mul",
+        "matmul",
+        "conv2d",
+        "layer_norm",
+        "topk",
+        "max_pool",
+        "fast_gelu_grad",
+        "foreach_norm"
+      ],
+      "related_files": [
+        "benchmarks/aprof_injected_ops/README.md"
+      ],
+      "msprof_evidence": {
+        "metric": "Task Duration(us)",
+        "source": "OpBasicInfo.csv",
+        "threshold": "inject_us / baseline_us > 1.2",
+        "examples": [
+          {
+            "op": "gelu_mul",
+            "variant": "inject_tilelen_small",
+            "baseline_us": 7.54,
+            "inject_us": 61.04,
+            "ratio": 8.1,
+            "has_signal": true
+          },
+          {
+            "op": "matmul",
+            "variant": "inject_ub_temp_overalloc",
+            "baseline_us": 38.4,
+            "inject_us": 37.92,
+            "ratio": 0.99,
+            "has_signal": false
+          },
+          {
+            "op": "fast_gelu_grad",
+            "variant": "inject_scalar_loop",
+            "baseline_us": 8.44,
+            "inject_us": 8.4,
+            "ratio": 1.0,
+            "has_signal": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "QA-002",
+      "timestamp": "2026-07-13T15:53:00+08:00",
+      "category": "msprof_data",
+      "question": "我们之前的测试环境是什么样的？就是那个用 remote，ssh 连接 xeon6.pku-dasys.cn 的",
+      "answer_summary": "远程真机环境：主机 xeon6.pku-dasys.cn:2222，用户 u2300013210，远程目录 /home/u2300013210/aprof_new_ops_inject/。NPU 硬件 Ascend910（2 chip，HBM 65536 MB/chip），CANN 9.0.0，npu-smi 25.5.2。编译器 bisheng + profiler msprof 均在 /usr/local/Ascend/cann-9.0.0/bin/。kernel 用 --npu-arch=dav-2201 编译，采集模式 msprof op --config（mode=onboard，device .o + op_config.json），warmup 3 次，launch 1 次，aic-metrics=PipeUtilization。环境初始化 source /usr/local/Ascend/ascend-toolkit/latest/set_env.sh。远程 Python3 无 numpy 无 pip（所以 mish/swi_glu 的 numpy gen_data.py 跑不了）。连接方式 paramiko SSH，凭据在 gitignored 的 run_remote_new_ops_inject_hw.py。单卡即可运行所有 case，不涉及多卡/集群。",
+      "related_ops": [],
+      "related_files": [
+        "scripts/run_remote_new_ops_inject_hw.py",
+        "scripts/run_remote_new_ops_inject_hw.example.py",
+        "benchmarks/aprof_injected_ops/common/inject_run.sh"
+      ],
+      "msprof_evidence": {
+        "hardware": "Ascend910, 2 chip, HBM 65536 MB/chip",
+        "cann_version": "9.0.0",
+        "npu_arch": "dav-2201",
+        "profile_command": "msprof op --config=./op_config.json --warm-up=3 --launch-count=1 --aic-metrics=PipeUtilization --output=../msprof_hw_output",
+        "key_artifact": "OpBasicInfo.csv (Task Duration(us), Block Dim, Op Type)"
+      }
+    },
+    {
+      "id": "QA-003",
+      "timestamp": "2026-07-13T15:38:00+08:00",
+      "category": "diagnosis",
+      "question": "跑不通的算子是因为 bug 还是因为什么？是因为那两个问题需要多卡集群才能跑吗？",
+      "answer_summary": "mish/swi_glu 跑不通不是多卡集群问题，单卡即可运行。失败原因是 gen_data.py 仍用 PR #1 时代的 import numpy as np 格式，远程 910B 机器无 numpy → gen_data.py 执行失败 → 无 tiling/op_config → 编译跳过 → task_duration_us = null。修复方法：将 gen_data.py 重构为 main_with_config 模式（stdlib-only，与其他算子一致）。onchip_memory（4 case 全 0 信号）和 api_algorithm（4 case 全 0 信号）不是编译失败——它们编译和采集都成功，只是注入的反模式在当前 workload 规模下被编译器优化或流水掩盖，未产生可测量的性能差异。",
+      "related_ops": [
+        "mish",
+        "swi_glu",
+        "matmul",
+        "conv2d",
+        "layer_norm",
+        "gelu_mul",
+        "fast_gelu_grad"
+      ],
+      "related_files": [
+        "benchmarks/aprof_injected_ops/mish/baseline/scripts/gen_data.py",
+        "benchmarks/aprof_injected_ops/swi_glu/baseline/scripts/gen_data.py",
+        "benchmarks/aprof_injected_ops/README.md"
+      ],
+      "msprof_evidence": {
+        "mish_swiglu_failure": "task_duration_us = null (gen_data.py numpy import failed on remote)",
+        "onchip_memory_no_signal": "0/4 cases > 1.2x (UB overalloc too small to cause pressure)",
+        "api_algorithm_no_signal": "0/4 cases > 1.2x (Adds(+0) eliminated by bisheng -O2 DCE)"
+      }
+    },
+    {
+      "id": "QA-004",
+      "timestamp": "2026-07-13T14:18:00+08:00",
+      "category": "diagnosis",
+      "question": "你有新开分支吗？",
+      "answer_summary": "当前在 feat/new-ops-benchmark-inject 分支上（之前从 main 新开的）。旧的 feat/fast-gelu-benchmark-inject 分支已被远程删除（PR #1 合并后清理），本地残留标记 [gone]。main 本地落后 20 个提交（远程 main 已有 PR #2 合并）。origin/feat/new-ops-benchmark-inject 远程存在，与本地同步。",
+      "related_ops": [],
+      "related_files": [],
+      "msprof_evidence": null
+    },
+    {
+      "id": "QA-005",
+      "timestamp": "2026-07-11T00:50:00+08:00",
+      "category": "diagnosis",
+      "question": "不要推送优化。现在告诉我你的新发现，最好把本地和远程也都合并好了",
+      "answer_summary": "PR #2 (feature/diagnosis-rules) 把 skill 从简单模板升级为完整管线：6 个问题家族 references、21 个 canonical recipes、7 个工具（inject_case.py / validate_inject_cases.py 等）、schema v2（inject_manifest.json）。用这个管线优化了三新算子注入工作：①两个弱信号 case 换用 canonical recipe（excessive_pipe_barrier 1.07→1.30×，scalar_loop 发现 DCE bug）；②全部 12 case 补 manifest，validate 全 pass；③workload 2048→16384 放大信号（tilelen_small 4.06→7.98×）。关键发现：scalar_loop_redundant recipe 存在 DCE bug（bisheng -O2 消除死代码标量循环）；excessive_pipe_barrier 受 baseline V 屏障限制仍弱。",
+      "related_ops": [
+        "gelu_mul",
+        "fast_gelu_grad",
+        "foreach_norm"
+      ],
+      "related_files": [
+        "skills/aprof/benchmark/ascendc-aprof-inject-problems/SKILL.md",
+        "skills/aprof/benchmark/ascendc-aprof-inject-problems/references/inject-problems-meta.md",
+        "skills/aprof/benchmark/ascendc-aprof-inject-problems/tools/inject_case.py",
+        "benchmarks/aprof_injected_ops/new_ops_inject_report.md"
+      ],
+      "msprof_evidence": {
+        "gelu_mul_tilelen_small_v1_to_v2": "4.06x -> 7.98x (workload 2048->16384 elem)",
+        "gelu_mul_excessive_barrier_v1_to_v2": "1.07x -> 1.30x (skill canonical recipe)",
+        "fast_gelu_grad_scalar_loop": "1.00x (DCE bug, bisheng -O2 eliminates dead scalar loop)"
+      }
+    },
+    {
+      "id": "QA-006",
+      "timestamp": "2026-07-07T00:27:00+08:00",
+      "category": "diagnosis",
+      "question": "按照 docs 文档下面关于给 fastGelu 注入问题的流程，做一下以下三种算子的实验（gelu_mul / fast_gelu_grad / foreach_norm），最后记得也给我看看性能数据",
+      "answer_summary": "按 fast_gelu 注入流程为三个算子创建注入 benchmark：gelu_mul（流水并行不足靶点）、fast_gelu_grad（API/算法低效靶点）、foreach_norm（Tiling/数据搬运靶点）。每个算子 baseline + 3 inject variants，用 skill 工具生成 kernel patch + manifest，远程 910B 采集 Task Duration。结果：tiling 类反模式最显著（gelu_mul 4.06×、foreach_norm 6.66×），blockdim=1 普遍 2.4–3.5× 退化。两个靶点 case 信号弱：inject_pipe_break 1.07×（baseline 已有 V 屏障）、inject_api_inefficient 1.08×（256-elem tile 下 vector op 太小被流水吸收）。",
+      "related_ops": [
+        "gelu_mul",
+        "fast_gelu_grad",
+        "foreach_norm"
+      ],
+      "related_files": [
+        "docs/fast_gelu_inject_workflow.md",
+        "docs/new_ops_inject_workflow.md",
+        "benchmarks/aprof_injected_ops/new_ops_inject_report.md"
+      ],
+      "msprof_evidence": {
+        "gelu_mul_baseline_us": 2.22,
+        "gelu_mul_tilelen_small_us": 9.02,
+        "gelu_mul_tilelen_small_ratio": "4.06x",
+        "fast_gelu_grad_baseline_us": 2.36,
+        "fast_gelu_grad_blockdim_us": 6.02,
+        "fast_gelu_grad_blockdim_ratio": "2.55x",
+        "foreach_norm_baseline_us": 8.2,
+        "foreach_norm_tilelen_small_us": 54.6,
+        "foreach_norm_tilelen_small_ratio": "6.66x"
+      }
+    },
+    {
+      "id": "QA-007",
+      "timestamp": "2026-07-14T00:30:00+08:00",
+      "category": "environment",
+      "question": "前面为什么远程没办法安装 numpy 啊",
+      "answer_summary": "远程 xeon6.pku-dasys.cn 上 pip3 install --user numpy 报错 (from versions: none)，表示 pip 能运行但从 index 拉不到任何包版本，不是 Python/架构不匹配。最可能是 lab 集群无出网 PyPI 或未配置可用内网镜像。验证：ModuleNotFoundError: No module named numpy。替代方案：①配置内网 pip 源；②本地下载 wheel scp 离线安装；③改用 stdlib-only gen_data（已采用，mish/swi_glu 修复后 910B 采集成功）。",
+      "related_ops": [
+        "mish",
+        "swi_glu"
+      ],
+      "related_files": [
+        "benchmarks/aprof_injected_ops/mish/baseline/scripts/gen_data.py",
+        "benchmarks/aprof_injected_ops/swi_glu/baseline/scripts/gen_data.py",
+        "scripts/run_remote_new_ops_inject_hw.py"
+      ],
+      "msprof_evidence": {
+        "remote_host": "xeon6.pku-dasys.cn:2222",
+        "pip_error": "Could not find a version that satisfies the requirement numpy (from versions: none)",
+        "numpy_check": "ModuleNotFoundError: No module named numpy",
+        "fix_outcome": "stdlib-only main_with_config gen_data.py; mish/swi_glu all 7 cases profiled on 910B"
+      }
+    },
+    {
+      "id": "QA-008",
+      "timestamp": "2026-07-14T00:35:00+08:00",
+      "category": "diagnosis",
+      "question": "前面的六个问题里信号不明显的都是为什么？",
+      "answer_summary": "六大问题家族中信号不足分四类原因：①onchip_memory（0/4 >1.2×）：UB 额外分配规模相对总 UB 太小，未触发 spill/排队，matmul/gelu_mul 约 0.98–0.99×；②api_algorithm（0/4 >1.2×）：Adds(+0) 和标量循环被 bisheng -O2 DCE 消除，或冗余 vector 不进入关键路径（fast_gelu_grad scalar_loop 1.00×）；③pipeline_parallel（6/6 可见但弱，最强 1.38×）：额外 PipeBarrier 开销相对 tile 计算量小，且 baseline 已有 V 同步，增量被流水吸收；④data_movement（2/6 <1.2×）：冗余 CopyIn 数据量小、与正常 CopyIn 重叠，topk/layer_norm 仅 1.17–1.19×。Tiling 家族整体最可靠（16/21 >1.2×），但 swi_glu/mish 部分 variant 在小 workload 下出现反向变快（blockdim=1 调度开销反而更低，0.31–0.48×），dynshape/tilelen_large 同理。改进方向：放大 tensor 规模、加大 UB 浪费比例、scalar loop 写真实 side-effect 防 DCE、换更强冗余搬运锚点。",
+      "related_ops": [
+        "matmul",
+        "conv2d",
+        "layer_norm",
+        "gelu_mul",
+        "fast_gelu_grad",
+        "topk",
+        "mish",
+        "swi_glu",
+        "fast_gelu"
+      ],
+      "related_files": [
+        "benchmarks/aprof_injected_ops/README.md",
+        "skills/aprof/benchmark/ascendc-aprof-inject-problems/tools/inject_case.py",
+        "benchmarks/aprof_injected_ops/new_ops_inject_results.json"
+      ],
+      "msprof_evidence": {
+        "threshold": "inject_us / baseline_us > 1.2",
+        "family_hit_rate": {
+          "tiling": "16/21 >1.2x (max 8.10x)",
+          "ai_core_utilization": "4/4 >1.2x (max 5.32x)",
+          "pipeline_parallel": "6/6 visible but weak (max 1.38x)",
+          "data_movement": "4/6 >1.2x (2 below: topk 1.19x, layer_norm 1.17x)",
+          "onchip_memory": "0/4 >1.2x (matmul 0.99x, gelu_mul 0.98x)",
+          "api_algorithm": "0/4 >1.2x (fast_gelu_grad scalar_loop 1.00x)"
+        },
+        "reverse_speedup_examples": [
+          {
+            "op": "swi_glu",
+            "variant": "inject_blockdim",
+            "ratio": 0.31
+          },
+          {
+            "op": "mish",
+            "variant": "inject_dynshape",
+            "ratio": 0.44
+          },
+          {
+            "op": "fast_gelu",
+            "variant": "inject_dynshape",
+            "ratio": 0.53
+          }
+        ]
+      }
+    },
+    {
+      "id": "QA-009",
+      "timestamp": "2026-07-14T01:02:00+08:00",
+      "category": "diagnosis",
+      "question": "关于 numpy 问题，如果用 stdlib-only 重构对性能有造成影响吗？",
+      "answer_summary": "不影响 NPU 真机 profiling 测到的 Task Duration。gen_data.py 只在编译/采集前于 CPU 上运行，生成 input.bin / golden.bin / tiling.bin / op_config.json；msprof 度量的是 kernel .o 在 910B 上的执行时间，不执行 gen_data。stdlib-only 与 numpy 版若 output_elements、tile_length、blockdim、seed 等参数一致，则写入的二进制与 tiling 旋钮相同，kernel 行为一致，性能应相同。差异仅在于：①主机侧生成数据稍慢（纯 Python 算 golden，秒级，可忽略）；②golden 浮点精度可能有 1e-6 量级差异，只影响精度对比，不影响 kernel 耗时；③若旧 numpy 版默认参数不同，则 workload 不同会导致 μs 数值变化，但这是配置差异而非 stdlib 本身拖慢 NPU。mish/swi_glu 重构前后对比：重构前 task_duration_us=null（数据未生成）；重构后正常采集（如 mish tilelen_small 6.5→44.4μs）。",
+      "related_ops": [
+        "mish",
+        "swi_glu",
+        "gelu_mul",
+        "fast_gelu"
+      ],
+      "related_files": [
+        "benchmarks/aprof_injected_ops/common/inject_gen_data.py",
+        "benchmarks/aprof_injected_ops/mish/baseline/scripts/gen_data.py",
+        "benchmarks/aprof_injected_ops/common/inject_run.sh"
+      ],
+      "msprof_evidence": {
+        "measured_metric": "Task Duration(us) from OpBasicInfo.csv",
+        "gen_data_role": "pre-build CPU script only, not profiled on NPU",
+        "mish_tilelen_small_after_stdlib": {
+          "baseline_us": 6.5,
+          "inject_us": 44.36,
+          "ratio": 6.82
+        },
+        "before_stdlib": "task_duration_us = null (gen_data failed, no kernel run)"
+      }
+    },
+    {
+      "id": "QA-010",
+      "timestamp": "2026-07-14T08:15:00+08:00",
+      "category": "diagnosis",
+      "question": "这个信号强度的比例是怎么算的？按照时间来吗？",
+      "answer_summary": "是的，按时间算。信号强度倍率 = inject_us / baseline_us，其中 us 来自 msprof 真机 OpBasicInfo.csv 的 Task Duration(us)。同一算子下，inject variant 的 Task Duration 除以该算子 baseline 的 Task Duration。判定：>1.2× 有强信号；1.05–1.2× 弱信号；<1.05× 或 <1×（反向变快）视为无可靠信号。不是按百分比变慢、也不是用 sim duration 或 aic metrics 算；当前报告一律用真机 Task Duration 比值。示例：gelu_mul inject_tilelen_small 61.04/7.54 = 8.10×。",
+      "related_ops": [
+        "gelu_mul",
+        "mish",
+        "matmul",
+        "fast_gelu_grad"
+      ],
+      "related_files": [
+        "benchmarks/aprof_injected_ops/common/parse_hw_op_summary.py",
+        "benchmarks/aprof_injected_ops/README.md",
+        "benchmarks/aprof_injected_ops/new_ops_inject_results.json"
+      ],
+      "msprof_evidence": {
+        "formula": "ratio = inject.task_duration_us / baseline.task_duration_us",
+        "metric_source": "OpBasicInfo.csv → Task Duration(us)",
+        "parser": "common/parse_hw_op_summary.py",
+        "threshold_strong": "> 1.2",
+        "example": {
+          "op": "gelu_mul",
+          "baseline_us": 7.54,
+          "inject_variant": "inject_tilelen_small",
+          "inject_us": 61.04,
+          "ratio": 8.1
+        }
+      }
+    },
+    {
+      "id": "QA-011",
+      "timestamp": "2026-07-16T18:48:00+08:00",
+      "category": "benchmark_structure",
+      "question": "【定 plan 时指出的错误】最严重的问题就是生成的问题代码好像都没有 op_host，也没有 CMakeLists，给出的 benchmark 不是一个完整的可编译的子问题，而且也会有类似 inject_manifest.json 文件在里边，相当于把答案直接给 agent 了。可以参考 benchmarks/aprof_benchmark，fast_gelu/direct_invoke_baseline 是调用 ascendc-kernel-direct-invoke 先把单 kernel 变成完整可编译文件夹，然后后续问题注入是在完整框架中注入问题。（随后确认：不需要迁移到新文件夹，请直接修改原来的 aprof_injected_ops）",
+      "answer_summary": "用户在 plan 阶段指出两大致命缺陷：①aprof_injected_ops 的 case 只有 kernel+bisheng/msprof，缺 CMakeLists/op_host，不是完整可编译直调工程；②inject_manifest.json、inject_* 目录名、APROF_INJECT_* 宏把 ground truth 直接暴露给诊断 agent。金标准是 aprof_benchmark/fast_gelu：ascendc-kernel-direct-invoke 脚手架 → 完整工程内注入 → 匿名 op_XXXX + .ground_truth 隔离答案。按用户要求原地改造 aprof_injected_ops（不迁目录）：补齐 CMake/op_host/verify、inject_*→op_XXXX、答案迁到 <op>/.ground_truth/case_problem_map.json、宏改为 APROF_FEATURE_XX；11 算子共 68 个完整 case。诊断禁止读 .ground_truth。",
+      "related_ops": [
+        "gelu_mul",
+        "mish",
+        "swi_glu",
+        "fast_gelu",
+        "fast_gelu_grad",
+        "foreach_norm",
+        "matmul",
+        "conv2d",
+        "layer_norm",
+        "topk",
+        "max_pool"
+      ],
+      "related_files": [
+        "benchmarks/aprof_injected_ops/README.md",
+        "benchmarks/aprof_injected_ops/common/run_direct_invoke.sh",
+        "benchmarks/aprof_benchmark/fast_gelu/direct_invoke_baseline/",
+        "benchmarks/aprof_benchmark/fast_gelu/.ground_truth/case_problem_map.json",
+        "skills/aprof/benchmark/ascendc-kernel-direct-invoke/SKILL.md",
+        "scripts/upgrade_injected_ops_direct_invoke.py",
+        "scripts/upgrade_special_ops_direct_invoke.py"
+      ],
+      "msprof_evidence": {
+        "defects_called_out": [
+          "missing op_host/ and CMakeLists.txt — not a complete compilable direct-invoke project",
+          "inject_manifest.json / inject_* dir names / APROF_INJECT_* leak ground truth to diagnosis agents"
+        ],
+        "reference_gold": "benchmarks/aprof_benchmark/fast_gelu/direct_invoke_baseline",
+        "pipeline": "kernel → ascendc-kernel-direct-invoke scaffold → inject inside full project → anonymous op_XXXX + .ground_truth",
+        "user_decision": "modify aprof_injected_ops in place; do not migrate to a new folder",
+        "complete_cases_count": 68
+      }
+    },
+    {
+      "id": "QA-012",
+      "timestamp": "2026-07-16T19:23:00+08:00",
+      "category": "benchmark_structure",
+      "question": "前面那次定 plan 的对话（指出缺 op_host/CMakeLists、inject_manifest 泄露答案）请记入 qa.json；并参考之前 README 与 remote python 脚本，在 910B 上完善所有 benchmark。",
+      "answer_summary": "QA-011 已记录 plan 阶段的两大致命缺陷与原地改造决策。随后适配 run_remote_new_ops_inject_hw.py：上传完整 direct-invoke case，执行 bash run.sh all（cmake+精度）与 bash run.sh hw（msprof op onboard），支持断线重连与断点续跑。910B 结果：11 算子 68/68 采到 Task Duration；61/68 verify 通过。剩余 7 个 verify 失败为 tail/scalar 注入副作用或 foreach_norm golden 偏差。汇总写入 results_hw_direct_invoke.json，README 已更新。",
+      "related_ops": [
+        "gelu_mul",
+        "mish",
+        "swi_glu",
+        "fast_gelu",
+        "fast_gelu_grad",
+        "foreach_norm",
+        "matmul",
+        "conv2d",
+        "layer_norm",
+        "topk",
+        "max_pool"
+      ],
+      "related_files": [
+        "tests/qa_log.json",
+        "scripts/run_remote_new_ops_inject_hw.py",
+        "benchmarks/aprof_injected_ops/README.md",
+        "benchmarks/aprof_injected_ops/results_hw_direct_invoke.json",
+        "benchmarks/aprof_injected_ops/common/run_direct_invoke.sh"
+      ],
+      "msprof_evidence": {
+        "hw_coverage": "68/68",
+        "verify_pass": "61/68",
+        "strongest_signal": "mish/op_0005 tile_length_too_small 6.72x",
+        "remote_host": "xeon6.pku-dasys.cn:2222",
+        "commands": "bash run.sh all; bash run.sh hw"
+      }
+    },
+    {
+      "id": "QA-013",
+      "timestamp": "2026-07-16T21:20:00+08:00",
+      "category": "benchmark_structure",
+      "question": "这些 benchmark 最后是需要让 agent 看的，所以需要像参考文件夹一样对齐 aprof_benchmark；fast_gelu/direct_invoke_baseline 是调用 ascendc-kernel-direct-invoke 先把单 kernel 变成完整可编译文件夹，然后后续问题注入是在完整框架中注入问题。注意不要直接让 agent 看到答案，模仿那个文件夹的格式。",
+      "answer_summary": "原地将 aprof_injected_ops 对齐 aprof_benchmark/fast_gelu 的 agent 可见面：baseline→direct_invoke_baseline，op_XXXX→operators/op_XXXX，每算子增加 benchmark_manifest.json 与 common/；带标签的 HW 结果与旧 inject_* 报告迁入 .ground_truth/ 或 .maintainer_artifacts/；公开面泄漏扫描 0 hit。答案仅在 .ground_truth/case_problem_map.json。remote runner 已适配新路径，结果写回 .ground_truth/remote_di_out 与 .maintainer_artifacts/。",
+      "related_ops": [
+        "gelu_mul",
+        "mish",
+        "swi_glu",
+        "fast_gelu",
+        "fast_gelu_grad",
+        "foreach_norm",
+        "matmul",
+        "conv2d",
+        "layer_norm",
+        "topk",
+        "max_pool"
+      ],
+      "related_files": [
+        "benchmarks/aprof_injected_ops/README.md",
+        "benchmarks/aprof_benchmark/fast_gelu/",
+        "scripts/align_injected_ops_agent_safe.py",
+        "scripts/run_remote_new_ops_inject_hw.py",
+        "skills/aprof/benchmark/ascendc-kernel-direct-invoke/SKILL.md"
+      ],
+      "msprof_evidence": {
+        "layout": "direct_invoke_baseline + operators/op_XXXX + .ground_truth",
+        "agent_visible_leak_hits": 0,
+        "total_cases": 68,
+        "pipeline": "kernel → ascendc-kernel-direct-invoke → inject inside full project → anonymous op_XXXX"
+      }
+    },
+    {
+      "id": "QA-014",
+      "timestamp": "2026-07-17T10:30:00+08:00",
+      "category": "diagnosis",
+      "question": "更新相关文档和 README；用 agent 做问题诊断模块，按 aprof_benchmark/fast_gelu demo 优化；保存 GLM 5.2 API key；在 plugins 里跑通诊断 demo（输入给 API 大模型即可，910B 可选）。",
+      "answer_summary": "已更新根 README / aprof_benchmark README / injected_ops README / plugins quickstart / docs/glm_diagnosis_demo.md。API Key 存入 gitignored 的 configs/secrets/glm.env。新增 plugins/aprof-performance-workflow/demo：build_blind_input → GLM-5.2 → single_case_diagnosis.json，默认 case 为 aprof_benchmark/fast_gelu/operators/op_0001；910B 上传为可选 example 脚本。",
+      "related_ops": [
+        "fast_gelu"
+      ],
+      "related_files": [
+        "plugins/aprof-performance-workflow/demo/run_glm_diagnosis_demo.py",
+        "configs/secrets/glm.env.example",
+        "benchmarks/aprof_benchmark/README.md",
+        "docs/glm_diagnosis_demo.md"
+      ],
+      "msprof_evidence": {
+        "demo_mode": "source-hypothesis via GLM-5.2 API",
+        "default_case": "benchmarks/aprof_benchmark/fast_gelu/operators/op_0001",
+        "hw_optional": "demo/upload_case_for_hw.example.sh"
+      }
+    },
+    {
+      "id": "QA-015",
+      "timestamp": "2026-07-17T16:15:00+08:00",
+      "category": "diagnosis",
+      "question": "希望问题诊断模块用 GLM-5.2 调用 skills 里的 skill。不清楚 skill 是什么？有两个 skill：一个做六类问题注入（后来结合新 skill 优化），一个是取反的问题诊断 skill（diagnosis 相关）。另外测试主要测什么？请记入 qa.json。",
+      "answer_summary": "Skill=给 Agent 的可复用操作说明书（SKILL.md+references+tools），不是可执行二进制。一对互为取反：ascendc-aprof-inject-problems（造题：六类问题注入+GT）与 ascendc-aprof-diagnosis（解题：盲诊归因）。六类家族共享：tiling/data_movement/pipeline_parallel/onchip_memory/ai_core_utilization/api_algorithm。GLM-5.2 调用 skill=把 SKILL.md 与相关 references 装进 system/user 上下文（或 Cursor @agent）；当前 demo 已注入精简诊断规则，完整版应按路由加载对应 diagnosis 矩阵。测试分四层：①单元测试（rules/registry）②注入结构/泄漏扫描③910B 编译+精度+Task Duration④盲诊准确率（预测 vs .ground_truth，禁止把答案喂给模型）。",
+      "related_ops": [
+        "fast_gelu",
+        "gelu_mul",
+        "mish",
+        "swi_glu",
+        "matmul",
+        "conv2d",
+        "layer_norm",
+        "topk",
+        "max_pool",
+        "fast_gelu_grad",
+        "foreach_norm"
+      ],
+      "related_files": [
+        "skills/aprof/benchmark/ascendc-aprof-inject-problems/SKILL.md",
+        "skills/aprof/diagnosis/SKILL.md",
+        "skills/aprof/diagnosis/references/",
+        "plugins/aprof-performance-workflow/demo/run_glm_diagnosis_demo.py",
+        "tests/unit/test_diagnosis_rules.py",
+        "tests/qa_log.json"
+      ],
+      "msprof_evidence": {
+        "six_families": [
+          "tiling",
+          "data_movement",
+          "pipeline_parallel",
+          "onchip_memory",
+          "ai_core_utilization",
+          "api_algorithm"
+        ],
+        "inject_skill": "ascendc-aprof-inject-problems",
+        "diagnosis_skill": "ascendc-aprof-diagnosis",
+        "test_layers": [
+          "unit",
+          "structure_leak_scan",
+          "remote_compile_verify_hw",
+          "blind_diagnosis_alignment"
+        ],
+        "latest_hw": "68/68 compile+hw, 61/68 verify"
+      }
+    }
+  ]
+}
