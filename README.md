@@ -157,15 +157,36 @@ bash run.sh
 
 从单个 kernel 搭建直调工程，或继续采集 simulator 报告时，参考 skill：`skills/aprof/benchmark/ascendc-kernel-direct-invoke/SKILL.md`。
 
-### Injected case：可控性能问题库
+### Injected / 匿名注入 case
 
-`benchmarks/aprof_injected_ops/` 保存带 ground-truth label 的注入 case，例如：
+两套目录，**布局对齐**（agent 可见面不含答案）：
 
-- `swi_glu/inject_blockdim` → `blockdim_too_small`
-- `swi_glu/inject_tail` → `tail_inefficient`
-- `swi_glu/inject_tilelen_small` → `tileLength_too_small`
+| 目录 | 说明 |
+|------|------|
+| `benchmarks/aprof_benchmark/fast_gelu` | 金标准 demo：单 kernel → direct-invoke → 匿名 `operators/op_XXXX` |
+| `benchmarks/aprof_injected_ops/` | 多算子扩展集（同样：`direct_invoke_baseline` + `operators/op_XXXX` + `.ground_truth`） |
 
-如何构造新的 injected case，见：`skills/aprof/benchmark/ascendc-aprof-inject-problems/SKILL.md`。
+```text
+<op>/
+├── direct_invoke_baseline/   # 完整可编译直调工程
+├── operators/op_XXXX/        # 匿名注入 case（完整工程）
+├── benchmark_manifest.json   # 无 problem 标签
+└── .ground_truth/            # 维护者专用；诊断禁止读
+```
+
+构造新注入 case：`skills/aprof/benchmark/ascendc-aprof-inject-problems/SKILL.md`。  
+盲诊约定：`benchmarks/aprof_injected_ops/README.md`、`benchmarks/aprof_benchmark/README.md`。
+
+### GLM 诊断 demo（plugins）
+
+用 `aprof_benchmark/fast_gelu/operators/op_0001` 走通「盲诊输入 → 智谱 GLM-5.2 → JSON」：
+
+```bash
+# 配置 configs/secrets/glm.env（见 configs/secrets/glm.env.example）
+python plugins/aprof-performance-workflow/demo/run_glm_diagnosis_demo.py
+```
+
+Cursor 内完整编排：`@aprof-performance-workflow`（见 `plugins/aprof-performance-workflow/quickstart.md`）。
 
 ### 闭环 label 对齐
 
@@ -173,7 +194,7 @@ bash run.sh
 python scripts/run_closed_loop.py
 ```
 
-该脚本会对 SwiGlu 的 3 个 inject case 做规则诊断，并检查预测标签是否与 `metadata.json.injected_label` 一致。
+维护者用 `.ground_truth/case_problem_map.json` 做离线对齐；**不要**把该文件交给诊断 agent。
 
 ## Agent Skills 怎么用
 
@@ -202,9 +223,11 @@ CANNBot 官方 skills（如 `ops-profiling`、`npu-arch`、`ascendc-direct-invok
 src/aprof/                 # Python 包
 third_party/cannbot-skills # CANNBot 官方 skills（git submodule）
 configs/architectures/     # 硬件架构与 metric 契约
-benchmarks/                # reference / injected / cannbench manifest
+configs/secrets/           # API Key 模板（真实 key 本地 gitignore）
+benchmarks/                # aprof_benchmark / aprof_injected_ops / reference
 skills/aprof/              # AProf 本地 Agent skills 与 references
-scripts/                   # 环境脚本与闭环 runner
+plugins/                   # Cursor/Claude plugin（含 GLM 诊断 demo）
+scripts/                   # 环境脚本与闭环 / 远程 runner
 tests/unit/                # 离线单元测试
 docs/                      # 架构与 benchmark 文档
 ```
@@ -222,3 +245,6 @@ docs/                      # 架构与 benchmark 文档
 - [仓库布局说明](docs/inventory.md)
 - [添加 msprof benchmark](docs/adding_msprof_benchmark.md)
 - [msprof simulator 环境说明](docs/msprof_simulator_setup.md)
+- [GLM 盲诊 Demo](docs/glm_diagnosis_demo.md)
+- [注入 ops agent 可见面](benchmarks/aprof_injected_ops/README.md)
+- [aprof_benchmark 金标准布局](benchmarks/aprof_benchmark/README.md)

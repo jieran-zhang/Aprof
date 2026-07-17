@@ -138,11 +138,31 @@ def collect_sources(case_dir: Path, max_source_bytes: int) -> list[dict[str, Any
 
 
 def collect_safe_metadata(case_dir: Path) -> dict[str, Any]:
-    metadata_path = case_dir / "metadata.json"
-    if not metadata_path.is_file():
-        return {}
-    raw = json.loads(metadata_path.read_text(encoding="utf-8"))
-    return {key: raw[key] for key in SAFE_METADATA_KEYS if key in raw}
+    """Prefer neutral case_metadata.json (aprof_benchmark layout); fall back to metadata.json."""
+    out: dict[str, Any] = {}
+    for name in ("case_metadata.json", "metadata.json"):
+        metadata_path = case_dir / name
+        if not metadata_path.is_file():
+            continue
+        raw = json.loads(metadata_path.read_text(encoding="utf-8"))
+        for key in SAFE_METADATA_KEYS:
+            if key in raw:
+                out[key] = raw[key]
+        # Map common aprof_benchmark fields into the safe schema
+        if "dtype" in raw:
+            out["dtype"] = raw["dtype"]
+        if "blockdim" in raw:
+            out["blockdim"] = raw["blockdim"]
+        if "tile_length" in raw:
+            out["tile_length"] = raw["tile_length"]
+        if "shape" in raw and isinstance(raw["shape"], list) and raw["shape"]:
+            # elementwise ops often store [N]
+            if "output_elements" not in out and len(raw["shape"]) == 1:
+                out["output_elements"] = raw["shape"][0]
+                out["input_elements"] = raw["shape"][0]
+        if out:
+            break
+    return out
 
 
 def load_hardware_context(path_text: str) -> dict[str, Any]:

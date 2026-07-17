@@ -1,5 +1,10 @@
 # 三算子问题注入与 msprof 采集流程
 
+> **2026-07 布局更新**：`benchmarks/aprof_injected_ops` 已对齐 `aprof_benchmark/fast_gelu`：
+> `direct_invoke_baseline` + `operators/op_XXXX` + `.ground_truth/`。
+> Agent 可见面说明见 `benchmarks/aprof_injected_ops/README.md`。
+> 下文仍保留早期 `inject_*` / bisheng 直跑设计记录，新开发请以新布局与 `common/run_direct_invoke.sh` 为准。
+
 本文记录在 `fast_gelu` 注入流程（见 `docs/fast_gelu_inject_workflow.md`）之上，对以下三个算子复用同一注入模板（`benchmarks/aprof_injected_ops/common/`）落地的设计、变体矩阵与远程真机采集入口。
 
 | 算子 | 核心逻辑 | 注入"靶点" | 适合注入的问题类型 |
