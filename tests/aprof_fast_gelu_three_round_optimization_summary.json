@@ -1,0 +1,375 @@
+{
+  "schema_version": 1,
+  "benchmark": {
+    "suite": "aprof_benchmark",
+    "name": "fast_gelu",
+    "case": "direct_invoke_baseline"
+  },
+  "created_from": "three plugins/aprof-performance-workflow optimization explorations on fast_gelu/direct_invoke_baseline",
+  "constraints": {
+    "shell_login": false,
+    "workdir_policy": "copy the benchmark or current best_op to an isolated tmp directory before optimization",
+    "original_source_modified": false,
+    "npu_environment": "outside sandbox"
+  },
+  "metric_contract": {
+    "primary_metric": "Task Duration(us)",
+    "source": "msprof op_summary.csv for fast_gelu_kernel",
+    "statistic": "median over five measured samples",
+    "correctness_gate": "accuracy check must pass with checked=16777216 and bad=0",
+    "minimum_effect_threshold_pct": 3.0,
+    "acceptance_rule": "accept a candidate only when it is correct and improves median latency by at least the minimum effect threshold, unless the round explicitly reports a stricter reason"
+  },
+  "overall_result": {
+    "status": "accepted",
+    "original_baseline": {
+      "median_us": 23548.65,
+      "blockdim": 1,
+      "tile_length": 256
+    },
+    "final_best": {
+      "median_us": 91.178,
+      "blockdim": 32,
+      "tile_length": 15360,
+      "output_path": "/workspace/tmp/Aprof/tmp/aprof_fast_gelu_reopt3.fF2cVW/current_best_baseline/aprof_opt/best_op"
+    },
+    "combined_speedup_vs_original": 258.2711838382066,
+    "combined_latency_reduction_pct": 99.61281007616148,
+    "final_correctness": {
+      "checked": 16777216,
+      "bad": 0,
+      "max_err": 2.384185791015625e-07
+    }
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "label": "launch_tiling_multicore",
+      "source_path": "benchmarks/aprof_benchmark/fast_gelu/direct_invoke_baseline",
+      "tmp_workdir": "/workspace/tmp/Aprof/tmp/aprof_fast_gelu_opt.CjRfKt/direct_invoke_baseline",
+      "exploration_thinking": [
+        "The first profile showed a blockdim=1 launch, so the whole 16777216-element tensor was handled by one AI_VECTOR_CORE block.",
+        "The kernel math was already simple, so the largest bottleneck was under-utilization of available vector cores rather than arithmetic instruction choice.",
+        "The safe optimization was to split the tensor across 32 blocks while keeping per-core element counts aligned to the 8-float DataCopy granularity."
+      ],
+      "baseline": {
+        "config": {
+          "blockdim": 1,
+          "tile_length": 256
+        },
+        "samples_us": [
+          23476.111,
+          23548.65,
+          23505.39,
+          23564.269,
+          23646.107
+        ],
+        "median_us": 23548.65,
+        "cv": 0.002466969713185809,
+        "block_num": 1,
+        "correctness": {
+          "checked": 16777216,
+          "bad": 0,
+          "max_err": 2.384185791015625e-07
+        }
+      },
+      "selected_candidate": {
+        "id": "candidate_001",
+        "strategy": "host launch and tiling multicore",
+        "config": {
+          "blockdim": 32,
+          "tile_length": 256
+        },
+        "code_changes": [
+          "op_host/main.asc: change blockdim from 1 to 32",
+          "scripts/gen_data.py: update generated tiling metadata for blockdim=32",
+          "case_metadata.json: record blockdim=32",
+          "kernel math unchanged"
+        ],
+        "safety_notes": [
+          "16777216 elements / 32 blocks = 524288 elements per core",
+          "524288 is divisible by the 8-float DataCopy granularity",
+          "no inter-core padding spill was introduced"
+        ],
+        "samples_us": [
+          755.604,
+          758.505,
+          760.245,
+          756.865,
+          763.265
+        ],
+        "median_us": 758.505,
+        "cv": 0.003536898573967735,
+        "block_num": 32,
+        "speedup_vs_round_baseline": 31.046136808590585,
+        "latency_reduction_pct": 96.77898733048391,
+        "correctness": {
+          "checked": 16777216,
+          "bad": 0,
+          "max_err": 2.384185791015625e-07
+        },
+        "accepted": true
+      },
+      "rejected_candidates": [
+        {
+          "id": "candidate_1",
+          "config": {
+            "blockdim": 40
+          },
+          "reason": "accuracy failed because elemsPerCore=419431 is not divisible by 8, so aligned copy-out corrupted inter-core boundaries",
+          "correctness": {
+            "checked": 16777216,
+            "bad": 39,
+            "max_err": 2.9273531436920166
+          }
+        }
+      ],
+      "round_output_path": "/workspace/tmp/Aprof/tmp/aprof_fast_gelu_opt.CjRfKt/direct_invoke_baseline/aprof_opt/best_op"
+    },
+    {
+      "round": 2,
+      "label": "tile_length_data_movement",
+      "source_path": "/workspace/tmp/Aprof/tmp/aprof_fast_gelu_opt.CjRfKt/direct_invoke_baseline/aprof_opt/best_op",
+      "tmp_workdir": "/workspace/tmp/Aprof/tmp/aprof_fast_gelu_reopt.0ljkaT/best_op_baseline",
+      "exploration_thinking": [
+        "After blockdim was fixed, all 32 blocks were active and the remaining dominant issue was the tiny tile_length=256.",
+        "Each core processed 524288 elements as 2048 tiny tiles, which amplified DataCopy, queue, and barrier overhead.",
+        "The exploration increased tile_length while preserving alignment and UB capacity, then selected the fastest stable candidate."
+      ],
+      "baseline": {
+        "config": {
+          "blockdim": 32,
+          "tile_length": 256
+        },
+        "samples_us": [
+          754.505,
+          759.145,
+          761.525,
+          762.205,
+          758.605
+        ],
+        "median_us": 759.145,
+        "cv": 0.003575154876619275,
+        "block_num": 32,
+        "correctness": {
+          "checked": 16777216,
+          "bad": 0,
+          "max_err": 2.384185791015625e-07
+        }
+      },
+      "candidates": [
+        {
+          "id": "candidate_001",
+          "config": {
+            "tile_length": 4096
+          },
+          "samples_us": [
+            121.158,
+            121.238,
+            117.677,
+            117.598,
+            118.118
+          ],
+          "median_us": 118.118,
+          "cv": 0.014060414490347005,
+          "speedup_vs_round_baseline": 6.427005198191639,
+          "accepted": false,
+          "reason": "valid but superseded by larger-tile candidates"
+        },
+        {
+          "id": "candidate_003",
+          "config": {
+            "tile_length": 8192
+          },
+          "samples_us": [
+            103.258,
+            103.498,
+            99.958,
+            101.338,
+            99.578
+          ],
+          "median_us": 101.338,
+          "cv": 0.01599007898834026,
+          "speedup_vs_round_baseline": 7.491217509719948,
+          "accepted": false,
+          "reason": "valid but superseded by tile_length=10240"
+        },
+        {
+          "id": "candidate_004",
+          "config": {
+            "tile_length": 10240
+          },
+          "samples_us": [
+            95.138,
+            95.158,
+            99.058,
+            99.018,
+            95.398
+          ],
+          "median_us": 95.398,
+          "cv": 0.019298062048777688,
+          "speedup_vs_round_baseline": 7.957661586196775,
+          "latency_reduction_pct": 87.43349425998986,
+          "accepted": true,
+          "reason": "best valid median latency in the second exploration"
+        }
+      ],
+      "selected_candidate": {
+        "id": "candidate_004",
+        "strategy": "increase tile_length to reduce per-core tile count and amortize DataCopy/barrier overhead",
+        "config": {
+          "blockdim": 32,
+          "tile_length": 10240
+        },
+        "safety_notes": [
+          "elemsPerCore=524288",
+          "tileLength=10240 gives 52 tiles per core with final tail 2048",
+          "tile and tail are both divisible by 8",
+          "estimated UB footprint is 4 buffers * 10240 floats * 4 bytes = 163840 bytes per core"
+        ],
+        "correctness": {
+          "checked": 16777216,
+          "bad": 0,
+          "max_err": 2.384185791015625e-07
+        }
+      },
+      "round_output_path": "/workspace/tmp/Aprof/tmp/aprof_fast_gelu_reopt.0ljkaT/best_op_baseline/aprof_opt/best_op",
+      "combined_speedup_vs_original": 246.8463699448626,
+      "combined_latency_reduction_pct": 99.5948897282859
+    },
+    {
+      "round": 3,
+      "label": "onchip_memory_reclaim_dead_buffer_for_larger_tile",
+      "source_path": "/workspace/tmp/Aprof/tmp/aprof_fast_gelu_reopt.0ljkaT/best_op_baseline/aprof_opt/best_op",
+      "tmp_workdir": "/workspace/tmp/Aprof/tmp/aprof_fast_gelu_reopt3.fF2cVW/current_best_baseline",
+      "exploration_thinking": [
+        "The second-round best was already close to the main memory-movement optimum, so the third round searched for smaller residual gains.",
+        "A simple tile_length increase to 12288 improved latency, but only by 1.77%, below the 3% minimum effect threshold.",
+        "Removing an unused bBuf/bLocal buffer reclaimed UB space, which allowed a larger tile_length=15360 while keeping alignment and correctness."
+      ],
+      "baseline": {
+        "config": {
+          "blockdim": 32,
+          "tile_length": 10240
+        },
+        "samples_us": [
+          94.918,
+          99.738,
+          99.459,
+          96.218,
+          95.238
+        ],
+        "median_us": 96.218,
+        "cv": 0.02136703584371749,
+        "block_num": 32,
+        "correctness": {
+          "checked": 16777216,
+          "bad": 0,
+          "max_err": 2.384185791015625e-07
+        }
+      },
+      "candidates": [
+        {
+          "id": "candidate_001",
+          "strategy": "increase tileLength to 12288",
+          "config": {
+            "tile_length": 12288
+          },
+          "samples_us": [
+            92.838,
+            94.518,
+            96.798,
+            95.918,
+            92.958
+          ],
+          "median_us": 94.518,
+          "cv": 0.01662956361434631,
+          "speedup_vs_round_baseline": 1.0179859920861636,
+          "latency_reduction_pct": 1.766821176910768,
+          "accepted": false,
+          "reason": "correct but below the 3% minimum effect threshold"
+        },
+        {
+          "id": "candidate_002",
+          "strategy": "remove unused bBuf/bLocal only",
+          "samples_us": [
+            96.019,
+            96.518,
+            95.938,
+            99.758,
+            99.978
+          ],
+          "median_us": 96.518,
+          "cv": 0.018736843740510826,
+          "speedup_vs_round_baseline": 0.9968917714830394,
+          "accepted": false,
+          "reason": "median latency regressed"
+        },
+        {
+          "id": "candidate_004",
+          "strategy": "remove unused bBuf/bLocal and increase tileLength to 15360",
+          "config": {
+            "tile_length": 15360
+          },
+          "samples_us": [
+            94.018,
+            91.578,
+            91.058,
+            91.178,
+            90.958
+          ],
+          "median_us": 91.178,
+          "cv": 0.012527185017437594,
+          "speedup_vs_round_baseline": 1.0552753909901501,
+          "latency_reduction_pct": 5.238104096947559,
+          "accepted": true,
+          "reason": "best correct candidate and above the 3% minimum effect threshold"
+        }
+      ],
+      "selected_candidate": {
+        "id": "candidate_004",
+        "strategy": "onchip_memory_reclaim_dead_buffer_for_larger_tile",
+        "config": {
+          "blockdim": 32,
+          "tile_length": 15360
+        },
+        "code_changes": [
+          "op_kernel/fast_gelu_kernel.asc: remove unused TBuf<> bBuf",
+          "op_kernel/fast_gelu_kernel.asc: remove pipe.InitBuffer(bBuf, ...)",
+          "op_kernel/fast_gelu_kernel.asc: remove LocalTensor<float> bLocal = bBuf.Get<float>()",
+          "op_host/main.asc: change kTileLength from 10240 to 15360",
+          "scripts/gen_data.py: update tile_length to 15360",
+          "case_metadata.json: update tile_length to 15360"
+        ],
+        "safety_notes": [
+          "elemsPerCore=524288",
+          "tileLength=15360 gives tileNum=35 with final per-core tail 2048",
+          "tile and tail are both divisible by 8",
+          "estimated UB footprint after removing the dead buffer is 3 buffers * 15360 floats * 4 bytes = 184320 bytes per core"
+        ],
+        "correctness": {
+          "checked": 16777216,
+          "bad": 0,
+          "max_err": 2.384185791015625e-07
+        }
+      },
+      "round_output_path": "/workspace/tmp/Aprof/tmp/aprof_fast_gelu_reopt3.fF2cVW/current_best_baseline/aprof_opt/best_op",
+      "contract_files": [
+        "/workspace/tmp/Aprof/tmp/aprof_fast_gelu_reopt3.fF2cVW/current_best_baseline/aprof_opt/final_optimization_report.md",
+        "/workspace/tmp/Aprof/tmp/aprof_fast_gelu_reopt3.fF2cVW/current_best_baseline/aprof_opt/candidates/candidate_004/candidate_result.json",
+        "/workspace/tmp/Aprof/tmp/aprof_fast_gelu_reopt3.fF2cVW/current_best_baseline/aprof_opt/optimization_plan.json"
+      ],
+      "subagent_review": "no blocking issues",
+      "combined_speedup_vs_original": 258.2711838382066,
+      "combined_latency_reduction_pct": 99.61281007616148
+    }
+  ],
+  "final_output": {
+    "path": "/workspace/tmp/Aprof/tmp/aprof_fast_gelu_reopt3.fF2cVW/current_best_baseline/aprof_opt/best_op",
+    "config": {
+      "blockdim": 32,
+      "tile_length": 15360
+    },
+    "summary": "Final kernel keeps the multicore split from round 1, the larger tile strategy from round 2, and the UB buffer cleanup plus tileLength=15360 from round 3."
+  }
+}
