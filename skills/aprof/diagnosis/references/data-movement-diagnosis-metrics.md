@@ -120,6 +120,36 @@
 - 大 D 场景必须使用 streaming UB，避免常驻 `m × D` buffer。
 - V1/V2 chunk loop 不对称或跨 loop 自读自写 slot 错误，CSV 可能只表现为 MTE 异常或性能波动，需 trace/精度对比确认。
 
+## 深层搬运判别补充
+
+### 1. 真 / 假 MTE Bound
+
+| 类型 | 判据 | 常见根因 | 缺失证据 |
+| --- | --- | --- | --- |
+| 真带宽 bound | MTE ratio 高，active bandwidth 接近平台分母，单次搬运粒度大且连续 | 算法读写量大、数据复用空间有限 | 平台理论/实测带宽、`Memory.csv` |
+| 假 MTE 小块 bound | MTE ratio 高但带宽不高；单次搬运 <4KB 或 <16KB；MTE 指令密度高 | tileLength 过小、tail 小块、scale/bias/LUT 小块密集 | `ai*_mte*_instructions`、copy 粒度 |
+| stride / 非连续 bound | 带宽低、L2 hit 低、`srcStride/dstStride` 或切外轴 | Broadcast/Transpose/Gather/Scatter 路径 | 源码 DataCopy 参数、L2Cache |
+| GM 往返放大 | 读/写流量明显高于理论下限，Vector 链中间结果落 GM | 未 UB 融合、workspace 生命周期差 | 理论最小流量、`Memory.csv` |
+| 未重叠搬运 | MTE 和 VEC/CUBE 串行，MTE wait 或 trace gap 明显 | DB 未生效、同步过强、queue 顺序阻塞 | trace/timeline |
+
+只有 “MTE2 高 + 带宽高 + 流量接近理论必要量” 才写成真 memory bound；其它都要继续定位小块、
+局部性、融合或流水问题。
+
+### 2. DataCopyPad / 对齐诊断锚点
+
+- 源码中 `DataCopy` 处理非 32B 对齐、tail 或未知对齐时，优先标记为 `api_algorithm` 风险，同时采集搬运粒度和正确性证据。
+- `DataCopyPad` 也可能低效：`blockCount` 过多、`blockLen` 很小、UB 起始地址非 32B 对齐、padding 值会被 ReduceMax/方差等后续计算消费。
+- 对逐行处理类算子，必须区分 `rLength` 和 `rLengthAlign`：API count / blockLen 用有效长度，UB offset / buffer 分配用对齐长度。
+- 非连续列提取不要只看总 bytes；需要看 `blockLen + srcStride/dstStride` 是否把无效列也搬入 UB。
+
+### 3. L2 复用与 Cache 反证
+
+低 L2 hit 只有在数据本应复用时才是问题：
+
+- Broadcast/Reduction/MatMul/FA 中同一输入跨核或跨 tile 重复读，低 hit + 读流量放大支持 CacheMode/切分局部性问题。
+- 一次性线性流式读写低 hit 不足以证明 L2 问题，应转向带宽和粒度判断。
+- 若 L2 hit 高但 MTE2 仍高，优先看真带宽 bound、重复 GM 往返或 MTE/Compute 未重叠。
+
 ## 快速排查顺序
 
 1. 看 `PipeUtilization.csv`：确认是否 MTE2/MTE3/MTE1 主导。

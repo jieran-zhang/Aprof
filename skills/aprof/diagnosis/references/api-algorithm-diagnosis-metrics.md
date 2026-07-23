@@ -4,7 +4,7 @@
 
 使用时应交叉参考：
 
-- `/ascendc-api-best-practices`：API 选型、参数约束、黑名单、流水线和 Buffer 用法。
+- [cannbot-knowledge-index.md](cannbot-knowledge-index.md)：只有 API 参数或算子族机制不确定时，点读单个具体 CANNBot reference。
 - [AI Core 利用率低诊断矩阵](ai-core-utilization-diagnosis-metrics.md)：Vector / Cube 利用率、Scalar 占比、AIC/AIV 配比。
 - [数据搬运瓶颈诊断矩阵](data-movement-diagnosis-metrics.md)：融合不足导致的 GM 往返。
 - [流水并行不足诊断矩阵](pipeline-parallel-diagnosis-metrics.md)：API 顺序、同步、queue 对性能的影响。
@@ -95,7 +95,8 @@
 
 ### MatMul / GMM
 
-- A2/A3 通用 MatMul / GMM 优先参考 `/ascendc-api-best-practices` 的 Matmul/GMM 高阶 API。
+- A2/A3 通用 MatMul / GMM 的高阶 API 只在平台和实现路线明确时作为候选假设；不确定时先通过
+  [cannbot-knowledge-index.md](cannbot-knowledge-index.md) 点读具体 API reference。
 - 950 路径不要直接套 A2/A3 MatmulImpl 经验，需按平台 skill 选择实现。
 - 后处理尽量与 Fixpipe / UB epilogue 融合，避免 C 矩阵 GM 往返。
 
@@ -104,6 +105,45 @@
 - FA 是算法结构主导的多 stage 算子，不能把 Reduction/MatMul/Elementwise 模式简单拼接。
 - Softmax、P·V、V2 累积的 API 顺序和 workspace 设计会同时影响性能与正确性。
 - MX 类格式和量化路径必须遵守 reduction 轴量化约束，不可只按连续维直觉实现。
+
+## 深层 API / 算法判别补充
+
+### 1. Scalar 反模式源码锚点
+
+Scalar 高时按下表定位，不要只输出“存在标量开销”：
+
+| 反模式 | 源码锚点 | Metric / 反证 |
+| --- | --- | --- |
+| 结构体数组动态下标 | 类成员数组 `eventIds_[pingPong]`，同结构体还有热字段 | Scalar LoadStore / ICache 高；小函数内局部标量可作为对比 |
+| 热循环主尾分支混杂 | hot loop 内 `if first/last/mod/tail` | 循环次数大时 Scalar 周期性窗口；循环很短时可能不值得改 |
+| 隐式状态机循环 | `while(Iterate())`、多级 `Next()` | ICache miss、Scalar 分支多；显式 for 可作为假设 |
+| 成员变量热访问 | `this->ctx.xxx` 在内层反复读取 | 编译器别名导致 reload；需源码审查或指令 trace |
+| 大结构体 / 多级指针 | >64B 聚合体、指针链、hot loop 取地址 | LoadStore 密集但算法标量少 |
+| hot loop 构造对象 | 循环内临时类/Local helper 构造析构 | Scalar Store/初始化密集 |
+| `constexpr` 缺失 | 图静态参数仍通过 TilingData runtime load | 仅 demo/静态图可常量化；框架动态 tiling 不可强行改 |
+
+这些属于 `code_quality_risk` 或 `source-hypothesis`，最终仍需 profiling 或编译/trace 证据。
+
+### 2. Vector API 深层锚点
+
+- **Counter mode 候选**：每条 API 前手算 repeat/mask/tail，Scalar 高；但只有 API 支持 Counter mode 且能恢复 mask 时才成立。
+- **UB 融合链缺失**：多步 Vector 每步 `CopyOut` 到 GM 后下一步 `CopyIn`；同时读写流量放大，路由到 `data_movement`。
+- **低延迟 Reduce 候选**：单条高延迟 WholeReduce 路径主导；但必须检查 blockSize 对齐和 UB tmp。
+- **repeatTime 风险**：`repeatTime` 可能超过 255、溢出或退化成大量小循环；需要 API 原型或 docs 点读确认。
+- **Cast 密集**：FP16/BF16 输入多次 FP32 往返；同时看 UB buffer 占用和精度要求，禁止为了性能随意降精度。
+
+### 3. API 黑名单与例外
+
+- `GlobalTensor::GetValue/SetValue` 在生产代码中通常是低效 API 风险；但 Sort/TopK/NonZero 稀疏输出可能存在标量写出的算法约束，必须结合合格率、输出模式和硬件行为判断。
+- `std::`、动态内存、Host/Kernel 头文件混用首先是编译/合法性问题；只有 build 可过且 profiling 指向 Scalar/ICache 时才作为性能根因。
+- `DataCopyPad` 不是越多越好：padding 值被后续 ReduceMax、方差、Softmax 等消费时，会先变成正确性风险。
+
+### 4. 平台与 API 适用边界
+
+- MatMul/GMM 高阶 API 的平台范围必须确认；不要把 A2/A3 经验直接套到 DAV_3510 / 950 路径。
+- RegBase / SIMT / Blaze 等路径只在源码和平台明确时作为诊断假设，不作为默认建议。
+- API overload、Cast mode、repeat/mask、pipeline event 不确定时，只按
+  [cannbot-knowledge-index.md](cannbot-knowledge-index.md) 点读单个具体文档。
 
 ## 快速排查顺序
 

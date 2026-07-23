@@ -68,6 +68,7 @@ Use this skill to convert an existing AscendC kernel into a direct-invoke projec
    ```
 
    By default, `profile` writes large profiler results under `tmp/aprof/...` at the repository root. Override with `APROF_TMP_ROOT` or `APROF_MSPROF_OUTPUT`.
+   Profiling uses `APROF_WARMUP=10` and `APROF_REPEAT=5` by default. Legacy `msprof --application` is repeated into independent `legacy_run_N` directories; set `APROF_PROFILE_MODE=hw-op` to use `msprof op --warm-up --launch-count` when supported.
 
 6. Optionally build device-side simulator object and run `msprof op simulator`.
 
@@ -119,6 +120,6 @@ Reference helper scripts and config templates remain under `references/` for man
 - `bash run.sh build` produces `build/<op_name>`.
 - `bash run.sh gen` produces `data/*.bin` and `build_sim/op_config.json`.
 - `bash run.sh run` exits 0 on a host with NPU or supported simulator runtime.
-- `bash run.sh profile` produces `tmp/aprof/**/PROF_*` on a host with NPU and ordinary `msprof` support.
+- `bash run.sh profile` produces repeated hardware report directories under `tmp/aprof/**/msprof_hw_output/**` on a host with NPU and ordinary `msprof` support.
 - `bash run.sh sim-build` produces `build_sim/<op_name>_kernel.o`.
 - `bash run.sh sim` produces `tmp/aprof/**/msprof_sim_output/OPPROF_*` with `trace.json` or `*_instr_exe_*.csv`.

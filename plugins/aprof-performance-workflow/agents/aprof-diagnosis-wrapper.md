@@ -31,4 +31,7 @@ permission:
 
 - 透传源码、上下文和 report 路径，不内联改写诊断规则。
 - 确保最多 3 个 hypothesis 和最多 3 个 metric。
+- 最终归因前必须构造 `workload_model` 与 `attainable_utilization`；低 UB/AI Core 利用率必须相对 workload 可达上限解释。
+- 对 tiny/small workload，除非有额外 GM 流量、pipe bound、bank conflict、tail 慢路径或 pipeline stall 证据，否则输出 `workload_limited`，不要输出 naive bottleneck。
+- repeat 缺失或 profiling CV 不稳定时输出 `measurement_limited`。
 - 若 report 缺失，停止在源码假设阶段并交给 profiling wrapper 生成采集计划。

@@ -19,12 +19,22 @@ description: Ascend C 算子性能诊断 Skill。用于从 kernel 源码提出�
 
 1. 若输入是源码，先读取 [references/source-hypothesis-routing.md](references/source-hypothesis-routing.md)，把代码模式映射到问题族。
 2. 按问题族加载本 Skill 的 reference 文档，提出最多 3 个性能问题假设。
-3. 从这些假设中挑选最多 3 个最相关硬件 metric，输出契约见 [../references/contracts.md](../references/contracts.md) 的 `diagnosis_hypotheses.json`。
-4. 若还没有采集数据，把 `metrics[]` 交给 `/ascendc-aprof-profiling` 设计采集任务和 metric 清单。
-5. 若已有 profiling 数据，再用 `/ops-profiling` 读取采集方式、CSV 字段和瓶颈判定方法。
-6. 再用 `/npu-arch` 获取核数、UB/L1/L0/L2/BT 容量、频率、理论带宽和理论算力等分母参数。
-7. 若是单 kernel 独立诊断，读取 [references/roofline-single-case.md](references/roofline-single-case.md)，构造 roofline / proxy roofline。
-8. 交叉判断“直接证据、派生证据、Trace/对比证据”，输出诊断结论、关键 metric、证据等级和下一步验证方法。
+3. 若源码或 profiling 已呈现 Scalar / Memory / Vec / CUBE / no-bound 现象，再读取 [references/bound-deep-routing.md](references/bound-deep-routing.md) 做二级根因分流。
+4. 从这些假设中挑选最多 3 个最相关硬件 metric，输出契约见 [../references/contracts.md](../references/contracts.md) 的 `diagnosis_hypotheses.json`。
+5. 若还没有采集数据，把 `metrics[]` 交给 `/ascendc-aprof-profiling` 设计采集任务和 metric 清单。
+6. 若已有 profiling 数据，再用 `/ops-profiling` 读取采集方式、CSV 字段和瓶颈判定方法。
+7. 再用 `/npu-arch` 获取核数、UB/L1/L0/L2/BT 容量、频率、理论带宽和理论算力等分母参数。
+8. 读取 [references/workload-aware-diagnosis.md](references/workload-aware-diagnosis.md)，先构造 workload model 与 attainable utilization。
+9. 若是单 kernel 独立诊断，读取 [references/roofline-single-case.md](references/roofline-single-case.md)，构造 roofline / proxy roofline。
+10. 交叉判断“直接证据、派生证据、Trace/对比证据”，输出诊断结论、关键 metric、证据等级和下一步验证方法。
+
+## Context-safe deep diagnosis
+
+- 默认只读取本 Skill 的本地 reference。不要把大型外部 Skill 加入 diagnosis agent 默认上下文。
+- 源码静态诊断的默认读取集是：`source-hypothesis-routing.md`、1-3 个相关问题族 reference、必要时 `bound-deep-routing.md`。
+- 证据归因阶段再按需读取 `workload-aware-diagnosis.md`、`roofline-single-case.md`、`ops-profiling` 和 `npu-arch`。
+- 只有 API overload、repeat limit、DataCopyPad 参数、MatMul/FA/Sort/Softmax 机制等本地 reference 无法确认时，才读取 [references/cannbot-knowledge-index.md](references/cannbot-knowledge-index.md)，并只点读其中一个具体 reference 文件。
+- 禁止把外部优化策略直接写成诊断结论。外部知识只能用于形成源码锚点、metric 需求、反证规则和 `missing_evidence`。
 
 ## 源码静态诊断约束
 
@@ -39,7 +49,9 @@ description: Ascend C 算子性能诊断 Skill。用于从 kernel 源码提出�
 - 默认不依赖 baseline。baseline 只能作为可选附录，不能作为主判断依据。
 - 每个诊断问题必须输出独立 `metrics[]`，至少 2 个，推荐源码 metric、tiling/shape metric、report/trace metric 各 1 个。
 - 必须说明硬件分母来源：`/npu-arch`、`PlatformAscendC`、msprof 字段或用户提供参数。
+- 必须先输出 `workload_model` 与 `attainable_utilization`。小 workload 的低 UB/AI Core 利用率默认是 `workload_limited`，不能直接当作 `true_bottleneck`。
 - 缺少真实 `Memory.csv` / `ArithmeticUtilization.csv` 时，只能输出 `roofline-estimated` 或 `trace-proxy`，不能声称真实硬件利用率。
+- 缺少 warmup/repeat 或测量波动超过阈值时，输出 `measurement_limited`，不能给确定性性能归因。
 - 注入评估场景禁止读取 ground-truth 泄露项：`injected_label`、`injected_problem`、variant 名、`inject_manifest.json`、`inject_audit_report.json`、`label_alignment_report.json`。
 
 ## 当前内置诊断
@@ -51,7 +63,10 @@ description: Ascend C 算子性能诊断 Skill。用于从 kernel 源码提出�
 - AI Core 利用率低诊断矩阵：[references/ai-core-utilization-diagnosis-metrics.md](references/ai-core-utilization-diagnosis-metrics.md)
 - API 与算法实现低效诊断矩阵：[references/api-algorithm-diagnosis-metrics.md](references/api-algorithm-diagnosis-metrics.md)
 - 源码模式到问题族路由：[references/source-hypothesis-routing.md](references/source-hypothesis-routing.md)
+- Bound 二级深层路由：[references/bound-deep-routing.md](references/bound-deep-routing.md)
+- Workload-aware 可达上限诊断：[references/workload-aware-diagnosis.md](references/workload-aware-diagnosis.md)
 - 单 kernel roofline 诊断：[references/roofline-single-case.md](references/roofline-single-case.md)
+- Optional deep lookup 索引：[references/cannbot-knowledge-index.md](references/cannbot-knowledge-index.md)
 - Agent 阶段契约：[../references/contracts.md](../references/contracts.md)
 
 ## 扩展新诊断矩阵
