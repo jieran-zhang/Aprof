@@ -30,6 +30,9 @@ permission:
 ## 规则
 
 - 按 metric 选择 `hw-op`、`hw-msprof` 或 `sim`。
+- 真实硬件默认 `warm_up=10`、`repeat=5`、`statistic=median`、`stability_cv_threshold=0.05`。
+- `hw-op` 优先使用 `msprof op --warm-up=<warm_up> --launch-count=<repeat>`；legacy `msprof --application` 必须显式 warmup 并外层 repeat 到独立 run 目录。
 - 保留 `linked_hypotheses`，不要丢失诊断追溯关系。
 - 若缺 `run_cmd` 或用户未授权执行，仍输出计划并标注需要用户补充。
-- 执行后必须检查 required artifacts，并按 `parser_plan` 输出 metric 值、来源文件和缺失项。
+- 执行后必须检查 required artifacts，并按 `parser_plan` 输出 metric 值、样本、统计、来源文件和缺失项。
+- 样本不足、CV 超阈值或策略不一致时设置 `measurement_status=measurement_limited` 或 `unstable`，不得交付为确定性 final evidence。

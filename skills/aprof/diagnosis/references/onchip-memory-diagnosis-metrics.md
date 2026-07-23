@@ -4,6 +4,7 @@
 
 使用时应交叉参考：
 
+- [workload-aware 诊断](workload-aware-diagnosis.md)：先判断数据量是否足以让 UB/L1/L0 有高占用。
 - [tiling 诊断矩阵](tiling-diagnosis-metrics.md)：UB 切分、Buffer 规划、L1/L0 容量、workspace slot。
 - [数据搬运瓶颈诊断矩阵](data-movement-diagnosis-metrics.md)：GM 访问频繁、读写流量放大、L2 hit、CopyIn/CopyOut。
 - [流水并行不足诊断矩阵](pipeline-parallel-diagnosis-metrics.md)：queue depth、stage 份数、workspace 轮转。
@@ -48,6 +49,12 @@
 | MTE conflict | `aiv_vec_mte_cflt_ratio` | `ResourceConflictRatio.csv` | 片上搬运与计算争资源，常伴随流水编排不合理 | 直接 |
 
 ## 问题矩阵
+
+UB 利用率解释禁忌：
+
+- UB 占用低不是问题本身。对总元素数很小的 elementwise workload，理论有效数据远小于单核 UB，低占用应优先归为 `workload_limited`。
+- 只有当低 UB 占用与 tile 过小、重复 GM 往返、DataCopy 粒度异常、bank conflict 或 pipeline 无法重叠绑定时，才可归入 `onchip_memory` 真瓶颈。
+- 不要为了提高 UB 占用而加入无用 padding、硬编码大 tile 或牺牲动态 shape 泛化性。
 
 | 问题 | 常见触发 | 适用算子族 | 诊断 Metric | 归因与处理 | 证据 |
 | ------ | ---------- | ------------ | ------------- | ------------ | ------ |
@@ -97,6 +104,40 @@
 - 大 D 场景禁止常驻 `m × D` UB buffer，必须使用 streaming UB。
 - GM workspace 用于跨 stage handshake 和 self-ref 状态时，要按运行时 Sk / D / task 数精确分配。
 - slot 语义混用可能同时导致 workspace 膨胀、片上复用失败和精度漂移。
+
+## 深层片上内存判别补充
+
+### 1. UB Resident / Zone Reuse
+
+| 模式 | 源码锚点 | 支持证据 | 反证 |
+| --- | --- | --- | --- |
+| 小参数重复搬入 | weight/gamma/scale/LUT 每 tile/loop `DataCopyPad` | MTE2 指令密集，参数 bytes 小但循环次数多 | 常驻后主 tile/DB 超 UB |
+| 分时复用缺失 | 串行阶段各自 `InitBuffer`，生命周期互斥但空间相加 | UB 占用高导致 tileLength 过小 | 阶段有真实 overlap，不能复用 |
+| Softmax state 每轮分配 | S2 loop 内反复 `InitBuffer` max/sum/exp 状态 | PipeBarrier 多，UB 碎片/头开销 | 状态大小超 UB 或跨 task 需 GM |
+| workspace slot 语义混用 | handshake/self-ref/task-state 共用取模或 slot 常量 | 多 s2/task 下性能波动或精度漂移 | trace/精度未能证明 slot 相关 |
+
+### 2. UB Bank Conflict 诊断
+
+Bank conflict 不要只靠猜。至少需要以下两类证据：
+
+- 直接证据：`ResourceConflictRatio.csv` 中 vector conflict / bank / bankgroup 子项高。
+- 源码证据：多个 LocalTensor 连续分配且大小接近 bank size 整数倍；多操作数 Vector API 同时读写；`blk_stride` 导致 DataBlock 回卷到同一 bank/group。
+
+常见源码锚点：
+
+| 锚点 | 诊断解释 |
+| --- | --- |
+| `Add(dst, src0, src1)` 的三个 buffer 起始地址周期性对齐 | 可能读读/读写冲突 |
+| `blk_stride=8/16` 等周期 stride | 单操作数内多个 DataBlock 落同 bank/group |
+| 为解决 conflict 加 padding 后 UB 超预算 | bank 修复与 tileLength/DB 冲突，需要同时路由 `tiling` |
+
+缺少平台 bank 结构或 ResourceConflictRatio 时，只能输出 `source-hypothesis`，并建议采集冲突指标或做 padding A/B 对比。
+
+### 3. MatMul / FA 片上层级
+
+- MatMul pingpong 的 L1 预算要按 A/B/scale 的双槽总和计算；不能只看单 buffer。
+- FullLoad 只有在小侧能驻 L1、另一侧循环次数足够、且是真 MTE2 bound 时才成立；CUBE bound 或 StreamK 已启用时不要建议 full load。
+- FA/online softmax 中 O_acc、running max/sum、P/V 中间状态应按 D、S2 tile、preLoadNum 建立 UB/GM workspace 模型；不要把低 UB 利用率本身当作问题。
 
 ## 快速排查顺序
 

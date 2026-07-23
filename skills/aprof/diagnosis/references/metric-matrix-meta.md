@@ -9,7 +9,7 @@
 | 输入 | 内容 | 来源 |
 | ------ | ------ | ------ |
 | 问题族 | 例如 Tiling、搬运、同步、Cache、Bank Conflict、MatMul 后处理、Workspace 等 | 用户问题、代码审查、profiling 现象 |
-| 算子分类 | Elementwise、Broadcast、Reduction、Sort/TopK、Conversion、MatMul、FlashAttention 等 | `/ascendc-tiling-design` 或对应设计 Skill |
+| 算子分类 | Elementwise、Broadcast、Reduction、Sort/TopK、Conversion、MatMul、FlashAttention 等 | AProf 本地 source routing；必要时通过 `cannbot-knowledge-index.md` 点读具体设计 reference |
 | 可观测字段 | `OpBasicInfo.csv`、`PipeUtilization.csv`、`Memory.csv`、`L2Cache.csv`、`ResourceConflictRatio.csv` 等字段 | `/ops-profiling` |
 | 架构分母 | AIC/AIV 核数、UB/L1/L0/L2/BT 容量、频率、理论带宽、理论算力 | `/npu-arch`、运行时 `PlatformAscendC` |
 | 上下文 | shape、dtype、TilingData、workspace size、blockDim、tile 参数、buffer 公式 | 算子代码、Host Tiling、日志 |

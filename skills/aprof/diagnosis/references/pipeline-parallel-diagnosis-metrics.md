@@ -106,6 +106,37 @@
 - 跨 stage handshake、跨 loop 自读自写、跨 task 状态 slot 必须语义分离。
 - V1/V2 chunk loop 不对称、workspace slot 混用、cross-core sync 过强，往往需要 trace 和精度 case 一起确认。
 
+## 深层流水判别补充
+
+### 1. “配置了 DB” 不等于 DB 生效
+
+| 可疑模式 | 源码锚点 | 证据 |
+| --- | --- | --- |
+| 只改 `InitBuffer(..., 2)` | 循环仍是 `CopyIn(i); Compute(i); CopyOut(i)` | trace 中 MTE2/VEC/MTE3 串行 |
+| TQue depth 与 bufferNum 混淆 | 模板 depth 写 2，但 `InitBuffer` num 仍 1，或反过来 | queue 阻塞、无 overlap |
+| 预取/稳态/收尾缺失 | 没有 prolog preload、steady `CopyIn(i+1)`、drain `CopyOut(i-1)` | 首尾 tile gap 大 |
+| `FreeTensor` 太晚 | queue 满导致 `AllocTensor` 阻塞 | MTE2 wait 或 timeline 空洞 |
+| 强同步压住流水 | 每轮 `SyncAll`、`PipeBarrier<PIPE_ALL>`、`SetFlag` 后紧跟 `WaitFlag` | wait 占比高，pipe 都不满 |
+
+输出时写明 DB 是 `not_configured`、`configured_but_serial`、`blocked_by_sync`、
+`blocked_by_dependency` 还是 `blocked_by_ub_budget`。
+
+### 2. No-Bound / Gap 诊断
+
+各 pipe busy 都不高时按 gap 类型归因：
+
+- **MTE2_PING/PONG gap**：MatMul pingpong 已启用，但 PING 与 PONG 发射间存在确定性空窗；若 `kL1TileNum >= 2`，记录为 MTE2 preload 候选证据。
+- **UnitFlag 紧耦合**：`SetFlag<MTE2_MTE1>` 后立即 `WaitFlag<MTE2_MTE1>`，或 `SetFlag<MTE1_M>` 后立即等待，说明事件存在但没有解耦发射。
+- **Barrier drain**：`PipeBarrier<PIPE_ALL>` 在 hot loop 中反复清空多个 pipe；优先要求 trace 统计 barrier/wait duration。
+- **stage 节拍不均**：CopyIn、Compute、CopyOut 单段明显长；这不是 no-bound，应转回最长 stage 的问题族。
+
+### 3. 小 workload 反证
+
+若 tileNum 很少、loop trip count < 2 或 UB 可一次装下全部数据，DB 可能没有收益。此时：
+
+- Scalar/头开销高时优先输出 `workload_limited` 或 `optimization_not_recommended`。
+- 不建议为了制造 overlap 人为拆小 tile；若拆小后 MTE 指令密度上升，应判为反优化风险。
+
 ## 快速排查顺序
 
 1. 先看 `PipeUtilization.csv`：判断是单 stage 主导，还是多个 pipe 都不满。

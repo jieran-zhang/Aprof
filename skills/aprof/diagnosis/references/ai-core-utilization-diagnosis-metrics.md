@@ -4,6 +4,7 @@
 
 使用时应交叉参考：
 
+- [workload-aware 诊断](workload-aware-diagnosis.md)：先判断任务规模、每核工作量和可达利用率。
 - [tiling 诊断矩阵](tiling-diagnosis-metrics.md)：`blockDim`、`totalTiles`、tail、动态 shape、AIC/AIV 配比。
 - [流水并行不足诊断矩阵](pipeline-parallel-diagnosis-metrics.md)：流水线气泡、AIC/AIV 节拍不匹配、wait ratio。
 - [数据搬运瓶颈诊断矩阵](data-movement-diagnosis-metrics.md)：MTE 主导导致计算单元闲置。
@@ -57,6 +58,12 @@
 
 ## 问题矩阵
 
+低利用率禁忌：
+
+- 不要用 `Block Dim / coreNum` 的低值直接判定 `blockDim` 问题。先看 `totalTasks/totalTiles`、`total_elements` 和 `elements_per_active_core`。
+- tiny/small workload 下，即使 `AIV 核利用率` 很低，也可能是 workload 可达上限；此时输出 `workload_limited`，除非有额外证据显示错误切分、额外 GM 流量、wait 或 tail 慢路径。
+- 增加 blockDim 的候选必须证明每核有效工作不会变成 tiny DataCopy；否则属于 `optimization_not_recommended` 或 benchmark-only 实验。
+
 | 问题 | 常见触发 | 适用算子族 | 诊断 Metric | 归因与处理 | 证据 |
 | ------ | ---------- | ------------ | ------------- | ------------ | ------ |
 | `blockDim` 过小 | Tiling 固定核数，任务数够但没有用满硬件 | 全部 | AIV/AIC 核利用率低；`Block Dim < coreNum`；Duration 高 | 动态使用 `min(coreNum, totalTasks)`，必要时减小 tile 增加任务数 | 直接/派生 |
@@ -106,6 +113,31 @@
 - 默认 task 维通常来自 batch、kvHead、Sq 分块、G 分块；s2 默认不进入 taskIdx。
 - decode 场景若任务数远小于 AIC 核数，应评估 split-KV reduce。
 - AIC/AIV wait 和 workspace slot 问题常同时影响性能与正确性，需 trace + 精度 case 共同确认。
+
+## 深层 AI Core 利用率判别补充
+
+### 1. 低核利用率分流
+
+| 现象 | 先问的问题 | 诊断类型 |
+| --- | --- | --- |
+| `Block Dim < coreNum` | `totalTasks/totalTiles` 是否足够？每核元素是否仍非 tiny？ | 足够则 `true_bottleneck`；不足则 `workload_limited` |
+| 开满核但 duration 不降 | 单核 copy 粒度是否过小、头开销是否上升？ | `optimization_not_recommended` 或 `tiling` |
+| 核间不均衡 | 不均来自 VEC/CUBE/MTE/Scalar 哪个 pipe？最慢核是否 tail/group？ | `tiling` + 对应 pipe family |
+| 少数核长时间工作 | 是 A/R 维并行度不足、GMM 大组拖尾、FA 单 task 长 S2 loop？ | 算子族专属路由 |
+
+### 2. MatMul / GMM / FA
+
+- **MN 欠并行**：`ceil(M/baseM) * ceil(N/baseN) < AIC`，同时 K 长，才考虑 K 维切分证据；否则可能是小 workload。
+- **MN 尾碎片**：末轮 M/N tile 不均、GMM group shape 差异大，表现为 per-core `aic_time` 分散；先诊断负载均衡，不要直接增核。
+- **长 K 单核串行**：CUBE/MTE1 时间集中在少数核，K loop 很长；需要 workspace reduce 证据才能提出 split-K/StreamK 假设。
+- **FA decode**：Sq=1、大 Sk、batch/head 少时 totalTasks 可能天然不足；split-KV 诊断必须同时列 partial workspace、cross-core combine 和数值稳定性风险。
+- **AIC/AIV 节拍**：AIC CUBE 快但 AIV 后处理慢，或反过来，低利用率应转入 `pipeline_parallel` / `api_algorithm`，不是单纯 blockDim 问题。
+
+### 3. Reduction / Sort 阶段性低活跃核
+
+- Reduction A 小 R 大：按 A 分核不足时，少数核长时间跑 R；Group Reduce 是候选假设，但必须把 partial workspace 写回和 Sync 成本列为反证。
+- Sort/TopK：归并后期 active core 下降可能是算法阶段特征。只有 SyncAll 等待和归并层级过多同时存在，才归为可优化瓶颈。
+- 稀疏输出类（TopK/NonZero/MaskedSelect）中标量写出可能是硬件/算法约束，不要把所有 `SetValue` 都当作可批量 DMA 的问题。
 
 ## 快速排查顺序
 

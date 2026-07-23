@@ -7,8 +7,9 @@
 1. 根据 `profiling_plan.json.execution_plan.output_dir` 或用户提供的 report 目录定位产物。
 2. 生成或读取 `profiling_results.json`，确认 `required_artifacts` 均已满足。
 3. 按 `profiling_plan.json.parser_plan` 逐项读取 CSV、trace 或 summary。
-4. 输出 metric 值时保留来源路径、字段名、公式和单位。
-5. 缺字段时不要猜值，记录到 `missing_required_artifacts` 或 `notes`。
+4. 对真实硬件 metric 汇总重复样本：记录 `samples`、`count`、`mean`、`median`、`min`、`max`、`std`、`cv` 和 `selected`。
+5. 输出 metric 值时保留来源路径、字段名、公式和单位。
+6. 缺字段时不要猜值，记录到 `missing_required_artifacts` 或 `notes`。
 
 ## hw-op CSV
 
@@ -30,6 +31,7 @@ profiling_out/msprof_hw_output/OPPROF_*/MemoryL0.csv
 - 使用 Python `csv.DictReader` 或 `pandas.read_csv`，字段名保持原样。
 - 保留目标 op 行和逐 `block_id` 行，不要只取均值。
 - 派生 metric 要同时输出公式和参与计算的原始字段值。
+- 若目录包含 `legacy_run_*`、`run_*` 或 `hw_op` 的多次 report，逐 run 解析同一 metric 后再做统计。
 
 常见派生：
 
@@ -57,6 +59,7 @@ profiling_out/hw_summary.txt
 - 优先读取 `hw_summary.txt` 获取主 bound、逐核摘要和 ops-profiling 归纳。
 - 如需结构化数值，再读取 `PROF_GROUP_*` 下对应 CSV。
 - `hw_summary.txt` 只能作为摘要证据，不能替代缺失的原始 CSV 字段。
+- 对外层 repeat 的多组 `PROF_GROUP_*`，每组先提取同名 metric，再按同一公式计算统计值。
 
 ## sim
 
@@ -83,5 +86,25 @@ profiling_out/msprof_sim_output/OPPROF_*/simulator/core0.veccore0/*_code_exe_*.c
 - 没找到则加入 `missing_required_artifacts[]`。
 - 只有缺失列表为空时，`ready_for_diagnosis = true`。
 - 按 `parser_plan[]` 解析得到的值加入 `metric_values[]`，并记录来源文件、字段、公式、单位。
+- `samples` 为空或样本数小于 `execution_plan.repeat` 时，设置 `measurement_status=single_run_exploration` 或 `measurement_limited`。
+- `cv > stability_cv_threshold` 时，设置 `measurement_status=unstable`，并在 `notes` 说明需要增加 repeat、隔离系统噪声或重新采集。
+- baseline/candidate 比较必须使用相同的 `selected` 统计值。默认使用 median；不要用单次最优值替代 median。
+
+## 统计规则
+
+```text
+mean = sum(samples) / count
+median = sorted(samples)[count // 2] 或偶数中位均值
+std = sample standard deviation when count > 1 else 0
+cv = std / abs(mean) when mean != 0 else null
+selected_value = statistics[statistic]
+```
+
+`measurement_status`：
+
+- `stable`：样本数满足 repeat，CV 不超过阈值，可作为 final metric evidence。
+- `unstable`：样本数满足 repeat，但 CV 超阈值。
+- `single_run_exploration`：只有单次样本，只能用于探索。
+- `measurement_limited`：缺失样本、缺失字段、baseline/candidate policy 不一致或提升小于噪声阈值。
 
 示例输出见 [../../references/contracts.md](../../references/contracts.md)。

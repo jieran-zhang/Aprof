@@ -1,79 +1,92 @@
 # AProf Performance Workflow
 
-目标：输入 Ascend C kernel 源码，输出性能问题诊断和相关硬件数据支撑。
+目标：输入 Ascend C kernel 源码或完整 `op_dir`，输出 workload-aware 性能诊断、带 warmup/repeat 的 profiling 证据，并在用户要求时生成默认 production-safe 的多算子族优化候选。
 
-## 状态机
+本文件只保留总编排。详细 gate、handoff、memory 和六类优化路由见：
 
-```mermaid
-flowchart TD
-  KernelInput["Kernel source or op_dir"] --> DiagnosisAgent["aprof-diagnosis-agent"]
-  DiagnosisAgent --> Hypotheses["diagnosis_hypotheses.json"]
-  Hypotheses --> ProfilingAgent["aprof-profiling-agent"]
-  ProfilingAgent --> ProfilingPlan["profiling_plan.json"]
-  ProfilingPlan --> ProfilingRun["msprof execution + report parsing"]
-  ProfilingRun --> ProfilingResults["profiling_results.json + CSV/trace/summary"]
-  ProfilingResults --> FinalDiagnosis["aprof-diagnosis-agent final diagnosis"]
+- [workflow-details.md](references/workflow-details.md)
+- [optimization-strategy-routing.md](../../../skills/aprof/optimization/references/optimization-strategy-routing.md)
+- [contracts.md](../../../skills/aprof/references/contracts.md)
+
+## Inputs
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `kernel_source` / `kernel_path` / `op_dir` | yes | kernel 文本、源码路径或完整 direct-invoke 工程 |
+| `operator_context` | no | op 名、shape、dtype、format、输入输出个数 |
+| `execution_context` | no | run/gen/profile/build/verify 命令、本机 NPU 或 simulator 环境、warmup/repeat/statistic |
+| `constraints` | no | dry-run、不执行 msprof、不执行优化、强制 sim 或上板、允许 benchmark-only |
+
+## Main Flow
+
+1. **Input normalization**
+   - 完整 `op_dir` 直接进入诊断。
+   - raw kernel 先交给 `ascendc-kernel-direct-invoke` scaffold。
+
+2. **Source audit**
+   - Agent: `aprof-diagnosis-agent`
+   - Output: `diagnosis_hypotheses.json`
+   - Problem families: `tiling`、`data_movement`、`pipeline_parallel`、`onchip_memory`、`ai_core_utilization`、`api_algorithm`
+
+3. **Workload model**
+   - Agent: `aprof-diagnosis-agent`
+   - Output: `workload_model` / `attainable_utilization`
+   - Low UB or AI Core utilization is interpreted relative to workload and hardware limits.
+
+4. **Profiling plan and repeated execution**
+   - Agent: `aprof-profiling-agent`
+   - Outputs: `profiling_plan.json`、`profiling_results.json`、CSV/trace/summary artifacts
+   - 未经用户授权，不执行 msprof；只生成 plan。
+   - Real hardware evidence defaults to `warm_up=10`、`repeat=5`、`statistic=median`。
+
+5. **Final diagnosis**
+   - Agent: `aprof-diagnosis-agent`
+   - Output: `final_diagnosis.md`
+   - 结论必须能追溯到 workload model、metric、report artifact 或源码证据。
+
+6. **Optional optimization**
+   - Agent: `aprof-optimization-agent`
+   - Only for complete `op_dir`
+   - Outputs: `aprof_opt/optimization_plan.json`、candidate dirs、`candidate_result.json`、`optimization_memory.jsonl`、`final_optimization_report.md`
+
+7. **Independent cross-check**
+   - Agent: sub-agent reviewer
+   - Review diagnosis type, metric evidence stability, and candidate acceptance.
+   - Main agent only reports conclusions that pass the evidence chain.
+
+## Optimization Summary
+
+- 路由顺序：diagnosis problem family first -> profiling bound second -> source scan fallback。
+- 每个 candidate 只应用一个 `strategy_id`。
+- 单个 `strategy_id` 可以包含必要的多行结构性改动，例如 loop 重排、buffer lifetime 调整、Host Tiling 更新或 workspace slot 改写。
+- baseline `op_dir` 只读；修改只允许发生在 `aprof_opt/candidates/candidate_N/op/`。
+- Gate 顺序：static review -> build -> accuracy -> repeated profile -> measurement stability -> correctness/generality acceptance -> metric compare。
+- 只有 accuracy 通过、metric 稳定改善、`semantic_status=preserved` 且 `scope_status=production_safe` 时，才允许生成或声明 `aprof_opt/best_op/`。
+- simulator-only 性能数据必须标注为 proxy。
+- 更快但 `benchmark_specialized` 的 candidate 必须单独列出，不得作为默认 final output。
+
+## Stop Points
+
+- 只诊断：输出 `diagnosis_hypotheses.json` 和 `profiling_plan.json`。
+- profiling 数据不足：输出缺失 artifact 和下一步采集建议。
+- 只生成优化计划：输出 `optimization_plan.json`，必要时准备 candidate dirs，但不声称性能已优化。
+
+## Invocation
+
+```text
+@aprof-performance-workflow
+请基于已有诊断和 profiling 结果优化这个 Ascend C 算子。
+op_dir: <op_dir>
+diagnosis: <diagnosis.json>
+profiling_results: <profiling_results.json>
+constraints: production_safe
 ```
 
-## Step 1：源码诊断
+## Final Report Contract
 
-调用 `aprof-diagnosis-agent`：
+最终回答必须包含：
 
-- 输入：kernel 源码、源码路径或工程路径。
-- 必读：`ascendc-aprof-diagnosis`、`source-hypothesis-routing.md`。
-- 输出：`diagnosis_hypotheses.json`。
-
-门禁：
-
-- `hypotheses.length <= 3`。
-- `metrics.length <= 3`。
-- 每个 metric 有字段来源、公式或 trace 来源。
-
-## Step 2：Metric 到采集计划
-
-调用 `aprof-profiling-agent`：
-
-- 输入：Step 1 的 `metrics[]` 和 `linked_hypotheses`。
-- 必读：`metric-bundles.md`、`metric-to-msprof.md`、`report-parsing.md`。
-- 输出：`profiling_plan.json`。
-
-门禁：
-
-- `profile_mode` 是 `sim`、`hw-msprof`、`hw-op` 之一。
-- `execution_plan.profile_mode` 与 `profile_mode` 一致。
-- 每个 metric 在 `parser_plan[]` 中有解析来源。
-
-## Step 3：执行 msprof 并解析 report
-
-继续由 `aprof-profiling-agent` 执行：
-
-- 输入：本地 `op_dir`、`profiling_plan.json`、`execution_context`。
-- 执行：`profiling_plan.json.msprof_command.preferred`，必要时使用 fallback。
-- 输出：`profiling_results.json`、CSV/trace/summary。
-
-门禁：
-
-- `profiling_results.json.has_artifacts == true`。
-- `profiling_results.json.ready_for_diagnosis == true` 时才进入强证据归因。
-- 若产物缺失，记录 `missing_required_artifacts[]`，不要猜测 metric 值。
-
-## Step 4：最终证据归因
-
-再次调用 `aprof-diagnosis-agent`：
-
-- 输入：源码、`diagnosis_hypotheses.json`、`profiling_plan.json`、`profiling_results.json`、report 目录。
-- 输出：`final_diagnosis.md`。
-
-最终报告必须包含：
-
-- 最可能问题和证据等级。
-- 每个关键 metric 的值、公式、来源文件。
-- 缺失数据和下一步采集建议。
-
-## 只生成计划模式
-
-如果用户未授权执行 msprof，workflow 在 Step 2 停止，并输出：
-
-- `diagnosis_hypotheses.json`。
-- `profiling_plan.json`。
-- 需要用户补充的 `run_cmd`、`gen_data_cmd`、输出目录或 NPU / simulator 环境信息。
+- `contract with metric evidence`：baseline/candidate 样本、统计值、CV、measurement_status、诊断类型和证据来源。
+- `final output`：production-safe best op 路径；若没有可接受候选，明确写 none。
+- `performance improvement`：只基于稳定重复采样的 selected statistic；单次或 sim-only 只能标为 proxy/exploratory。
+- `rejected faster candidates`：列出性能更好但因 benchmark specialization、语义风险、portability risk 或测量不稳定被拒绝的候选。

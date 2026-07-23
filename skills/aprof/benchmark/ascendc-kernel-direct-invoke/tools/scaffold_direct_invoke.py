@@ -425,6 +425,9 @@ APROF_TMP_ROOT="${{APROF_TMP_ROOT:-$APROF_REPO_ROOT/tmp/aprof}}"
 APROF_CASE_TMP="${{APROF_CASE_TMP:-$APROF_TMP_ROOT/direct_invoke/$(basename "$SCRIPT_DIR")}}"
 APROF_MSPROF_OUTPUT="${{APROF_MSPROF_OUTPUT:-$APROF_CASE_TMP/msprof_hw_output}}"
 APROF_MSPROF_SIM_OUTPUT="${{APROF_MSPROF_SIM_OUTPUT:-$APROF_CASE_TMP/msprof_sim_output}}"
+APROF_WARMUP="${{APROF_WARMUP:-10}}"
+APROF_REPEAT="${{APROF_REPEAT:-5}}"
+APROF_PROFILE_MODE="${{APROF_PROFILE_MODE:-legacy}}"
 
 case "$MODE" in
   gen)
@@ -469,10 +472,30 @@ case "$MODE" in
   profile)
     bash "$0" build
     bash "$0" gen "$@"
-    rm -rf "$APROF_MSPROF_OUTPUT"
-    mkdir -p "$APROF_MSPROF_OUTPUT"
-    (cd build && msprof --application="./{op_name}" --output="$APROF_MSPROF_OUTPUT" \\
-      --aic-metrics="${{APROF_AIC_METRICS:-PipeUtilization}}" --task-time=on --runtime-api=on)
+    APROF_PROFILE_RUN_ROOT="${{APROF_PROFILE_RUN_ROOT:-$APROF_MSPROF_OUTPUT/$(date +%Y%m%d_%H%M%S)}}"
+    mkdir -p "$APROF_PROFILE_RUN_ROOT"
+    if [ "$APROF_PROFILE_MODE" != "hw-op" ] && [ "$APROF_WARMUP" -gt 0 ]; then
+      warm_i=1
+      while [ "$warm_i" -le "$APROF_WARMUP" ]; do
+        (cd build && "./{op_name}" >/dev/null)
+        warm_i=$((warm_i + 1))
+      done
+    fi
+    if [ "$APROF_PROFILE_MODE" = "hw-op" ]; then
+      (cd build && msprof op --warm-up="$APROF_WARMUP" --launch-count="$APROF_REPEAT" \\
+        --output="$APROF_PROFILE_RUN_ROOT/hw_op" "./{op_name}")
+    else
+      i=1
+      while [ "$i" -le "$APROF_REPEAT" ]; do
+        run_dir="$APROF_PROFILE_RUN_ROOT/legacy_run_$i"
+        mkdir -p "$run_dir"
+        (cd build && msprof --application="./{op_name}" --output="$run_dir" \\
+          --aic-metrics="${{APROF_AIC_METRICS:-PipeUtilization}}" --task-time=on --runtime-api=on)
+        i=$((i + 1))
+      done
+      printf '{{"profile_mode":"legacy","warm_up":%s,"repeat":%s,"run_root":"%s","note":"legacy msprof --application has no launch-count; runs are repeated externally"}}\\n' \\
+        "$APROF_WARMUP" "$APROF_REPEAT" "$APROF_PROFILE_RUN_ROOT" > "$APROF_PROFILE_RUN_ROOT/profiling_summary.json"
+    fi
     ;;
   all)
     bash "$0" build

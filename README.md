@@ -1,224 +1,143 @@
 # AProf
 
-AProf 是一个面向 Ascend 算子的 agent-native 性能归因系统。它读取 `msprof op simulator` 产物，结合 NPU 架构模型做 roofline 归因，输出瓶颈分类、缺失证据和下一步 profiling 建议。
+AProf 是面向 Ascend C 算子的 agent-native 性能诊断与优化插件集合。当前仓库不再维护 Python `src/` 包和
+`tests/unit/` 单测入口，主入口是 `plugins/aprof-performance-workflow` 以及 `skills/aprof/` 下的本地 skills。
 
-本仓库包含四块核心能力：
+最新 workflow 做三件事：
 
-- **Diagnosis agent**：性能问题 → 硬件 metric 映射（`src/aprof/agents/diagnosis/`）
-- **Profiling agent**：profiling 规划与 tool router（`src/aprof/agents/profiling/`）
-- **Metric 接口**：架构与 metric 描述契约（`configs/architectures/`、`src/aprof/metrics/`）
-- **Benchmark 构建**：injected case 与 reference case（`benchmarks/`）
+- **Diagnosis**：从 kernel 源码或完整 `op_dir` 生成 `diagnosis_hypotheses.json`，按六类问题族定位源码假设和最多 3 个关键 metric。
+- **Profiling**：生成 warmup/repeat 的 `profiling_plan.json`，在用户授权后采集或解析 msprof/cannsim 产物，并输出 `profiling_results.json`。
+- **Optimization**：在完整 `op_dir` 上生成多算子族 optimization candidates，只修改隔离的 candidate 工程，默认只接受 production-safe 结果。
 
-## 环境要求
-
-- Python >= 3.9
-- 离线分析：只需 Python 依赖，可直接分析已有的 msprof 输出目录
-- 实机/仿真采集：需要 Linux + CANN + `msprof op simulator`（见 `scripts/env_cann.sh`）
-
-## 快速开始
-
-### 1. 获取代码并安装
-
-```bash
-git clone --recurse-submodules git@github.com:jieran-zhang/Aprof.git
-cd Aprof
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
-```
-
-如果已经 clone 过但还没拉 submodule：
-
-```bash
-git submodule update --init --recursive
-```
-
-安装后可用：
-
-```bash
-aprof --help
-python -m aprof skills
-```
-
-### 2. 初始化 CANNBot Skills（推荐）
-
-本仓库通过 git submodule 引入官方 CANNBot skills：
-
-- 路径：`third_party/cannbot-skills`
-- 上游：`https://gitcode.com/cann/cannbot-skills`
-
-查看可用 skills：
-
-```bash
-aprof cannbot-skills
-aprof cannbot-skills ops-profiling
-aprof cannbot-skills ops-profiling --show
-```
-
-在 Cursor 中直接调用这些 skills：
-
-```bash
-bash scripts/link_cannbot_skills.sh
-```
-
-该脚本会把 `third_party/cannbot-skills` 和本仓库 `skills/aprof/` 下的 skills 链接到 `.cursor/skills/`。
-
-Python 里也可以直接读取 skill：
-
-```python
-from aprof.integrations.cannbot import get_skill_markdown, resolve_skill
-
-skill = resolve_skill("ops-profiling")
-text = get_skill_markdown("ops-profiling")
-print(skill.path, len(text))
-```
-
-### 3. 跑通单元测试
-
-```bash
-python -m unittest discover -s tests/unit -v
-```
-
-### 4. 检查 msprof 环境（可选）
-
-```bash
-source scripts/env_cann.sh   # 按本机 CANN 路径调整
-aprof probe-env --soc-version Ascend910B1
-```
-
-如果当前机器没有 CANN/`msprof`，命令会返回缺失项，不会假装已经采集成功。
-
-## 常用命令
-
-### 分析已有 profiling 产物
-
-当你已经有一个 `msprof op simulator` 输出目录（含 `trace.json` 或 `OPPROF_*`）时：
-
-```bash
-aprof analyze \
-  --input /path/to/msprof_output \
-  --arch configs/architectures/ascend910b1.yaml \
-  --out reports/my_case
-```
-
-输出目录会生成：
-
-- `summary.json` / `summary.md`：归因结果
-- `time_windows.csv`：逐窗口 roofline 输入
-- `timeline_utilization.svg` 等可视化文件
-
-### 端到端诊断（可复用已有产物，也可触发采集）
-
-```bash
-aprof diagnose \
-  --input /path/to/msprof_output \
-  --arch configs/architectures/ascend910b1.yaml \
-  --out reports/my_case_diagnose
-```
-
-如果要在本机直接跑 simulator：
-
-```bash
-aprof diagnose \
-  --executable ./your_kernel_binary \
-  --source-root benchmarks/reference_ops/reduce_sum \
-  --arch configs/architectures/ascend910b1.yaml \
-  --out reports/my_case_diagnose \
-  --soc-version Ascend910B1 \
-  --run
-```
-
-### 对比优化前后
-
-```bash
-aprof compare \
-  --before /path/to/before_profile \
-  --after /path/to/after_profile \
-  --arch configs/architectures/ascend910b1.yaml \
-  --out reports/compare
-```
-
-### 查看内置 profiling skill 契约
-
-```bash
-aprof skills
-```
-
-## Benchmark 怎么用
-
-### Reference case：ReduceSum
-
-参考工程在 `benchmarks/reference_ops/reduce_sum/`，包含 AscendC 直调源码、数据生成脚本和 SOP 文档。
-
-```bash
-cd benchmarks/reference_ops/reduce_sum
-bash run.sh
-```
-
-从单个 kernel 搭建直调工程，或继续采集 simulator 报告时，参考 skill：`skills/aprof/benchmark/ascendc-kernel-direct-invoke/SKILL.md`。
-
-### Injected case：可控性能问题库
-
-`benchmarks/aprof_injected_ops/` 保存带 ground-truth label 的注入 case，例如：
-
-- `swi_glu/inject_blockdim` → `blockdim_too_small`
-- `swi_glu/inject_tail` → `tail_inefficient`
-- `swi_glu/inject_tilelen_small` → `tileLength_too_small`
-
-如何构造新的 injected case，见：`skills/aprof/benchmark/ascendc-aprof-inject-problems/SKILL.md`。
-
-### 闭环 label 对齐
-
-```bash
-python scripts/run_closed_loop.py
-```
-
-该脚本会对 SwiGlu 的 3 个 inject case 做规则诊断，并检查预测标签是否与 `metadata.json.injected_label` 一致。
-
-## Agent Skills 怎么用
-
-仓库内维护的 AProf skills 位于 `skills/aprof/`：
-
-| Skill | 路径 | 用途 |
-| --- | --- | --- |
-| `ascendc-aprof-diagnosis` | `skills/aprof/diagnosis/` | 性能问题 → metric 诊断矩阵 |
-| `ascendc-aprof-profiling` | `skills/aprof/profiling/` | 诊断前规划采集任务 |
-| `ascendc-aprof-inject-problems` | `skills/aprof/benchmark/ascendc-aprof-inject-problems/` | 构造 injected benchmark |
-| `ascendc-kernel-direct-invoke` | `skills/aprof/benchmark/ascendc-kernel-direct-invoke/` | kernel → direct-invoke 工程，可选 simulator 采集 |
-
-CANNBot 官方 skills（如 `ops-profiling`、`npu-arch`、`ascendc-direct-invoke-template`）位于 `third_party/cannbot-skills/`，可通过 `aprof cannbot-skills` 查看。
-
-在 Cursor / Agent 中，通常按这个顺序使用：
-
-1. 用 `ascendc-aprof-inject-problems` 或 reference case 准备 benchmark
-2. 用 `ascendc-kernel-direct-invoke` 搭直调工程并按需采集 simulator profiling 产物
-3. 用 `ascendc-aprof-profiling` 规划缺失 metric
-4. 用 `ascendc-aprof-diagnosis` 做归因与下一步建议
-5. 需要更完整的 Ascend/CANN 能力时，调用 `third_party/cannbot-skills` 中的技能，例如 `ops-profiling`、`npu-arch`、`ascendc-direct-invoke-template`
-
-## 目录结构
+## Repository Layout
 
 ```text
-src/aprof/                 # Python 包
-third_party/cannbot-skills # CANNBot 官方 skills（git submodule）
-configs/architectures/     # 硬件架构与 metric 契约
-benchmarks/                # reference / injected / cannbench manifest
-skills/aprof/              # AProf 本地 Agent skills 与 references
-scripts/                   # 环境脚本与闭环 runner
-tests/unit/                # 离线单元测试
-docs/                      # 架构与 benchmark 文档
+plugins/aprof-performance-workflow/  # AProf 总编排 plugin 和 wrapper agents
+skills/aprof/                        # AProf 本地 diagnosis / profiling / optimization / benchmark skills
+third_party/cannbot-skills/          # CANNBot 官方 skills（git submodule）
+benchmarks/                          # reference / injected / aprof benchmark 工程
+docs/                                # 设计记录和 benchmark 文档
+scripts/                             # 环境、远端部署和辅助脚本
 ```
 
-## 开发说明
+`src/` 和 `tests/unit/` 已从当前仓库形态中移除；不要再通过 `pip install -e .`、`aprof ...` CLI 或 unit test 作为默认使用方式。
 
-- 包入口：`python -m aprof` 或 `aprof`
-- 架构配置默认文件：`configs/architectures/ascend910b1.yaml`
-- 不建议把 profiling dump（`msprof_sim_output/`、`OPPROF_*`）提交进仓库；`.gitignore` 已忽略这类产物
-- 更细的模块说明见 [docs/aprof_architecture_and_msprof_flow.md](docs/aprof_architecture_and_msprof_flow.md)
+## Install Plugin
 
-## 文档
+先拉取 CANNBot submodule：
 
-- [架构与 msprof 数据流](docs/aprof_architecture_and_msprof_flow.md)
-- [仓库布局说明](docs/inventory.md)
-- [添加 msprof benchmark](docs/adding_msprof_benchmark.md)
-- [msprof simulator 环境说明](docs/msprof_simulator_setup.md)
+```bash
+git submodule update --init --recursive third_party/cannbot-skills
+```
+
+从仓库根目录安装 AProf workflow plugin 到当前项目的 `.cursor/` 配置：
+
+```bash
+bash plugins/aprof-performance-workflow/init.sh
+```
+
+安装脚本会链接：
+
+- AProf 本地 skills：diagnosis、profiling、optimization、direct-invoke scaffold。
+- AProf agents：workflow、diagnosis/profiling/optimization wrappers。
+- 必要 CANNBot skills：`ops-profiling`、`ops-simulator`、`npu-arch`、env/debug/API/code-review 等。
+
+注意：部分大型 CANNBot optimization/design/API skills 只是被安装为可用知识源，不会被 diagnosis 或 optimization agent 默认加载。运行时仍按 AProf 本地 reference 优先，只有 API、平台或算子机制不确定时才点读单个精确文档。
+
+## Use In Cursor
+
+安装后，在 Cursor 中调用：
+
+```text
+@aprof-performance-workflow
+请分析这个 Ascend C kernel 的潜在性能问题，并给出需要采集的硬件 metric。
+kernel_path: <path/to/kernel.asc>
+op_dir: <path/to/direct-invoke-op>
+```
+
+如果只有 raw kernel，workflow 会先交给 `ascendc-kernel-direct-invoke` 搭建 direct-invoke 工程。若已经有完整 `op_dir`，会直接进入诊断。
+
+只生成计划、不执行 msprof：
+
+```text
+@aprof-performance-workflow
+只生成 diagnosis_hypotheses.json 和 profiling_plan.json，不执行 msprof。
+op_dir: <path/to/direct-invoke-op>
+```
+
+允许 profiling 时，给出执行上下文：
+
+```text
+@aprof-performance-workflow
+请完成诊断并采集缺失 metric。
+op_dir: <path/to/direct-invoke-op>
+run_cmd: ./<binary> <args>
+gen_data_cmd: python3 scripts/gen_data.py
+profiling_output_dir: profiling_out
+warm_up: 10
+repeat: 5
+```
+
+请求优化时，需要完整 `op_dir` 和已有诊断/profiling 证据：
+
+```text
+@aprof-performance-workflow
+请基于已有诊断和 profiling 结果优化这个 Ascend C 算子。
+op_dir: <path/to/direct-invoke-op>
+diagnosis: <path/to/diagnosis_hypotheses.json>
+profiling_results: <path/to/profiling_results.json>
+constraints: production_safe
+```
+
+## Workflow Outputs
+
+常见输出包括：
+
+- `diagnosis_hypotheses.json`：源码阶段问题假设、六类 problem family 和最多 3 个 metric。
+- `profiling_plan.json`：msprof/cannsim 采集命令、warmup/repeat、artifact 需求和解析计划。
+- `profiling_results.json`：采集产物、metric 样本、统计值、缺失项和 measurement status。
+- `final_diagnosis.md`：能追溯到 workload model、metric/report 或源码证据的最终诊断。
+- `aprof_opt/optimization_plan.json`：候选优化策略列表、证据链接、容量模型、abort conditions 和 gate。
+- `aprof_opt/candidates/candidate_N/`：隔离复制的候选工程；baseline `op_dir` 不应被修改。
+- `aprof_opt/optimization_memory.jsonl`：成功/失败策略记忆。
+- `aprof_opt/final_optimization_report.md`：最终优化报告。
+- `aprof_opt/best_op/`：只有 production-safe、语义保持、测量稳定且性能改善时才会产生。
+
+## Problem Families
+
+Diagnosis 和 optimization 保持同一组六类入口：
+
+| Problem family | 用途 |
+| --- | --- |
+| `tiling` | task/tile/tail/MatMul-FA-Sort-Reduction 分块问题 |
+| `data_movement` | GM/UB/L2 流量、小块 MTE、DataCopyPad、冗余往返 |
+| `pipeline_parallel` | DB、pingpong、preload、SetFlag/WaitFlag、stage overlap |
+| `onchip_memory` | UB/L1/L0 resident、buffer lifetime、bank conflict、workspace slot |
+| `ai_core_utilization` | blockDim、任务数、tail imbalance、StreamK、split-KV、Group Reduce |
+| `api_algorithm` | Scalar/Vector/API 反模式、Cast/repeat、online softmax、MrgSort/Reduce API |
+
+Optimization 默认读取 AProf 本地小型 reference。复杂算子只额外加载一个 operator playbook：
+
+- MatMul / GMM：`skills/aprof/optimization/references/matmul-optimization-playbook.md`
+- Softmax / FA：`skills/aprof/optimization/references/softmax-fa-optimization-playbook.md`
+- Reduction / Sort / TopK：`skills/aprof/optimization/references/reduction-sort-optimization-playbook.md`
+- Vector / Scalar / Broadcast / Conversion：`skills/aprof/optimization/references/vector-scalar-pipeline-playbook.md`
+
+## Safety Rules
+
+- 未经用户确认，不执行 msprof 或远端命令；可以先生成计划。
+- 源码诊断只产生假设，最终结论必须经过 workload model 和 profiling/report 证据校验。
+- 真实硬件 final evidence 默认需要 warmup/repeat 和稳定性统计；单次或 simulator-only 只能作为 proxy/exploratory。
+- 优化候选不得覆盖 baseline `op_dir`，只能修改 `aprof_opt/candidates/candidate_N/op/`。
+- 每个 candidate 只应用一个 strategy，但该 strategy 可以包含必要的多行结构性改动。
+- 硬编码 shape/core/UB/tile、删除动态 tiling、降精度或缩小边界支持的 candidate 必须标为 benchmark-specialized，不能默认成为 `best_op`。
+
+## Useful Files
+
+- Plugin quickstart: [plugins/aprof-performance-workflow/quickstart.md](plugins/aprof-performance-workflow/quickstart.md)
+- Workflow agent: [plugins/aprof-performance-workflow/AGENTS.md](plugins/aprof-performance-workflow/AGENTS.md)
+- Workflow details: [plugins/aprof-performance-workflow/workflows/references/workflow-details.md](plugins/aprof-performance-workflow/workflows/references/workflow-details.md)
+- Contracts: [skills/aprof/references/contracts.md](skills/aprof/references/contracts.md)
+- Diagnosis skill: [skills/aprof/diagnosis/SKILL.md](skills/aprof/diagnosis/SKILL.md)
+- Profiling skill: [skills/aprof/profiling/SKILL.md](skills/aprof/profiling/SKILL.md)
+- Optimization skill: [skills/aprof/optimization/SKILL.md](skills/aprof/optimization/SKILL.md)

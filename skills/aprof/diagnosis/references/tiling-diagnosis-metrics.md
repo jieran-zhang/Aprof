@@ -189,6 +189,47 @@ Random、Convolution、NN 其它类当前没有展开专属 Tiling 模式。诊�
 - Convolution：可先借鉴 MatMul 的 L1/L0/UB 容量与核切分诊断，但具体 im2col/window 复用策略需另建模式。
 - NN 其它：按其核心子操作拆到 Reduction、Broadcast、Elementwise、MatMul 等已有族后诊断。
 
+## 深层 Tiling 判别补充
+
+### 1. 理论 Tiling 一致性门禁
+
+在下结论前先建立 Host Tiling 与 Kernel 循环的一致性模型：
+
+| 检查项 | 公式 / 锚点 | 失败时优先怀疑 |
+| --- | --- | --- |
+| 任务覆盖 | `totalTasks >= usedCoreNum`，`usedCoreNum <= coreNum` | 空核、过开核、blockDim 固定 |
+| 单核工作量 | `ceil(totalElements / usedCoreNum)` 与 tileLength / tileNum 对齐 | 小 shape 开核过多、tileLength 过小 |
+| tile 数 | `tileNum == ceil(elemsPerCore / tileLength)` 或等价分支 | tileNum 空转、动态 shape 未更新 |
+| tail 分布 | tail 是否只落最后一核 / 最后一 tile | tail 集中、尾块慢路径 |
+| UB 预算 | `sum(aligned buffer bytes * bufferNum/stageNum) <= UB` | tile 过大、stageNum 估错、tmp 漏计 |
+| L1/L0 预算 | MatMul/FA 的 L1 pingpong、L0A/B/C、scale/bias 区 | Cube 利用低、MTE1/MTE2 高、Fixpipe 异常 |
+
+若无法从源码或 TilingData 建立这些公式，把结论降级为 `source-hypothesis` 或
+`missing_evidence`，不要只凭 `Block Dim` 或低利用率定性。
+
+### 2. MatMul / GMM 深层路由
+
+MatMul 类不要只写 “CUBE 利用低”。先按以下机制分流：
+
+| 机制 | 诊断触发 | 反证 / 禁用条件 | 对应 family |
+| --- | --- | --- | --- |
+| pingpong 基线缺失或失效 | L1/L0 只有单槽；MTE2/MTE1/CUBE 串行；`SetFlag` 后紧跟 `WaitFlag` | trace 已有稳定 overlap | `pipeline_parallel` |
+| SWAT / MN 尾碎片 | `totalBlockCnt > aicNum` 但核间 `aic_time` 差异大，末轮 M/N tile 拖尾 | MN 任务本来不足 | `tiling` + `ai_core_utilization` |
+| StreamK 候选 | `totalBlockCnt < aicNum`，K 很长，baseM/baseN 已接近 Cube 粒度下限 | K 短或 workspace reduce 成本高于收益 | `ai_core_utilization` |
+| FullLoad 候选 | 一侧矩阵或 scale 小到可驻 L1，另一侧循环 `T >= 2`，且是真 MTE2 bound | CUBE bound、两侧都超 L1/2、已 StreamK | `onchip_memory` + `data_movement` |
+| scale coalescing | MTE2 busy 高但带宽低，scale/bias/LUT 每次 <20KB 小块密集 | 主数据大块已占满带宽 | `data_movement` |
+| MTE2 preload | pingpong 已开，各 pipe busy 都不高，trace 有确定性 PING/PONG gap | 未开 pingpong、`kL1TileNum < 2`、尾片预取越界风险 | `pipeline_parallel` |
+
+### 3. Dynamic Shape 反证
+
+动态 shape 下固定 tile 不一定是错，只有同时满足下列证据之一才上升为 `true_bottleneck`：
+
+- `Block Dim`、tileLength、workspace size 或 CacheMode 对不同 shape 完全不变，且 large shape 欠并行或 small shape 头开销高。
+- 不同 shape 下读写流量放大、L2 hit、MTE 指令密度或核间不均衡随 shape 明显恶化。
+- 源码中存在按最大 shape 静态预留、固定 tail 分支、固定 `usedCoreNum` 或固定 `tileNum`。
+
+若只有 tiny shape 低利用率且 observed 接近 attainable，输出 `workload_limited`。
+
 ## 快速排查顺序
 
 1. 看 `OpBasicInfo.csv`：`Task Duration`、`Block Dim`、`Current Freq` 是否正常。

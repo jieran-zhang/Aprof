@@ -34,8 +34,8 @@ description: 通过 SSH 将本地 Ascend C 算子工程同步到远程 CANN 主�
 | 模式 | 适用 | 远端核心命令 | 典型产物目录 | 解析脚本 |
 |------|------|-------------|-------------|----------|
 | **sim** | 无 NPU 或只要仿真 timeline | `msprof op simulator --config=./op_config.json` | `msprof_sim_output/OPPROF_*/simulator/` | 直接读 `trace.json`、`*_instr_exe_*.csv` |
-| **hw-msprof** | 上板深度瓶颈（PipeUtilization 等 7 组 + sample） | `msprof_profile_run.sh --warm-up=N --output=... -- ./binary args` | `msprof_hw_output/PROF_GROUP_*/` | `msprof_perf_summary.py $PROF_GROUP ops_dir` |
-| **hw-op** | 上板 msopprof 标准 8 CSV | `msprof op --warm-up=N --output=... ./binary args` | `msprof_hw_output/OPPROF_*/` | `perf_summary.py $OPPROF ops_dir` |
+| **hw-msprof** | 上板深度瓶颈（PipeUtilization 等 7 组 + sample） | repeat 外层循环 `msprof_profile_run.sh --warm-up=10 --output=run_N ...` | `msprof_hw_output/run_N/PROF_GROUP_*/` | `msprof_perf_summary.py $PROF_GROUP ops_dir` |
+| **hw-op** | 上板 msopprof 标准 8 CSV | `msprof op --warm-up=10 --launch-count=5 --output=... ./binary args` | `msprof_hw_output/OPPROF_*/` | `perf_summary.py $OPPROF ops_dir` |
 
 **环境探测**（SSH 登录后）：
 
@@ -98,6 +98,7 @@ python skills/aprof/remote-kernel-deploy/tools/remote_msprof_deploy.py \
   --profiling-plan <path/to/profiling_plan.json> \
   [--run-cmd "./<binary> <args>"] \
   [--gen-data-cmd "python3 scripts/gen_data.py ..."] \
+  [--warm-up 10] [--repeat 5] \
   [--summarize]
 ```
 
@@ -275,15 +276,15 @@ mkdir -p build/output msprof_hw_output
 
 cd build
 bash ../ops_profiling/scripts/msprof_profile_run.sh \
-  --warm-up=3 \
-  --output=../msprof_hw_output \
+  --warm-up=10 \
+  --output=../msprof_hw_output/run_1 \
   -- ./<binary> <run_args>
 ```
 
 解析摘要（可选，仍在远端跑完后拉回 `remote_hw_summary.txt`）：
 
 ```bash
-PROFILE_DIR=$(ls -d msprof_hw_output/PROF_GROUP_* | head -1)
+PROFILE_DIR=$(find msprof_hw_output -type d -name 'PROF_GROUP_*' | head -1)
 python3 ops_profiling/scripts/msprof_perf_summary.py "$PROFILE_DIR" . \
   > remote_hw_summary.txt 2>&1
 ```
@@ -291,8 +292,8 @@ python3 ops_profiling/scripts/msprof_perf_summary.py "$PROFILE_DIR" . \
 产物：
 
 ```text
-msprof_hw_output/PROF_GROUP_*/PROF_*/*.csv
-msprof_hw_output/PROF_GROUP_*/PROF_Sample/.../aicore.db
+msprof_hw_output/run_N/PROF_GROUP_*/PROF_*/*.csv
+msprof_hw_output/run_N/PROF_GROUP_*/PROF_Sample/.../aicore.db
 remote_hw_summary.txt   # 含逐核负载、主 Bound 线索
 ```
 
@@ -301,7 +302,7 @@ remote_hw_summary.txt   # 含逐核负载、主 Bound 线索
 ```bash
 source /usr/local/Ascend/ascend-toolkit/latest/set_env.sh
 cd $REMOTE_OP_DIR/build
-msprof op --warm-up=10 --launch-count=1 --output=../msprof_hw_output \
+msprof op --warm-up=10 --launch-count=5 --output=../msprof_hw_output \
   ./<binary> <run_args>
 ```
 
@@ -327,7 +328,7 @@ msprof_hw_output/OPPROF_*/...（共 8 份 CSV）
 ```bash
 # 对比：model.py vs model_new_ascendc.py
 bash ops_profiling/scripts/msprof_profile_run.sh \
-  --compare --output-dir=./compare_out --warm-up=3 --device=0
+  --compare --output-dir=./compare_out --warm-up=10 --device=0
 
 # 批量多算子
 bash ops_profiling/scripts/msprof_profile_run.sh \
@@ -388,6 +389,7 @@ python skills/aprof/remote-kernel-deploy/tools/remote_msprof_deploy.py \
   --profile-mode hw-msprof \
   --run-cmd "./fast_gelu 8 2048 fp32 1" \
   --gen-data-cmd "python3 scripts/gen_data.py 8 2048 fp32" \
+  --warm-up 10 --repeat 5 \
   --summarize
 
 # 上板 msprof op（8 CSV）
@@ -395,6 +397,7 @@ python skills/aprof/remote-kernel-deploy/tools/remote_msprof_deploy.py \
   --local-dir benchmarks/reference_ops/fast_gelu \
   --profile-mode hw-op \
   --run-cmd "./fast_gelu 8 2048 fp32 1" \
+  --warm-up 10 --repeat 5 \
   --profiling-plan remote_out/profiling_plan.json
 
 # 仅重跑采集 + 下载（源码已在远端）
@@ -402,6 +405,7 @@ python skills/aprof/remote-kernel-deploy/tools/remote_msprof_deploy.py \
   --local-dir benchmarks/reference_ops/fast_gelu \
   --profile-mode hw-msprof \
   --run-cmd "./fast_gelu 8 2048 fp32 1" \
+  --warm-up 10 --repeat 5 \
   --steps profile,download
 ```
 

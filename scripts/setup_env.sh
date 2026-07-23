@@ -2,7 +2,7 @@
 # Set up the local AProf / CodingAgent development environment.
 #
 # Recommended usage:
-#   source scripts/setup_env.sh --install
+#   source scripts/setup_env.sh
 #
 # Notes:
 # - Use `source`, not `bash`, if you want `conda activate cann` and PYTHONPATH
@@ -40,7 +40,6 @@ _aprof_setup_prepend_path() {
     esac
 }
 
-APROF_SETUP_INSTALL=0
 APROF_SETUP_CHECK_ONLY=0
 APROF_SETUP_CONDA_ENV="${APROF_SETUP_CONDA_ENV:-cann}"
 APROF_SETUP_CONDA_ROOT="${APROF_SETUP_CONDA_ROOT:-/rshome/jieran.zhang/anaconda3}"
@@ -48,7 +47,7 @@ APROF_SETUP_CONDA_ROOT="${APROF_SETUP_CONDA_ROOT:-/rshome/jieran.zhang/anaconda3
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --install)
-            APROF_SETUP_INSTALL=1
+            _aprof_setup_log "--install is deprecated; this repo no longer installs a local Python aprof package"
             shift
             ;;
         --check-only)
@@ -68,10 +67,10 @@ while [[ $# -gt 0 ]]; do
         -h|--help)
             cat >&2 <<'EOF'
 Usage:
-  source scripts/setup_env.sh [--install] [--check-only] [--conda-env cann] [--conda-root PATH]
+  source scripts/setup_env.sh [--check-only] [--conda-env cann] [--conda-root PATH]
 
 Options:
-  --install          Run `python -m pip install -e .` after activating conda env.
+  --install          Deprecated no-op; the repo is plugin/skills first and has no local Python package.
   --check-only       Only print diagnostics; do not install dependencies.
   --conda-env NAME   Conda env name. Default: cann.
   --conda-root PATH  Conda root. Default: /rshome/jieran.zhang/anaconda3.
@@ -118,8 +117,8 @@ _aprof_setup_log "python: $(command -v python)"
 
 cd "${APROF_REPO_ROOT}"
 
-export PYTHONPATH="${APROF_REPO_ROOT}:${APROF_REPO_ROOT}/agents:${PYTHONPATH:-}"
-_aprof_setup_log "PYTHONPATH includes repo root and agents/"
+export PYTHONPATH="${APROF_REPO_ROOT}:${PYTHONPATH:-}"
+_aprof_setup_log "PYTHONPATH includes repo root"
 
 export ASCEND_CANN_ROOT="${ASCEND_CANN_ROOT:-${CONDA_PREFIX}/Ascend/ascend-toolkit}"
 
@@ -164,11 +163,6 @@ else
     _aprof_setup_log "simulator lib not found: ${APROF_SETUP_SIM_LIB}"
 fi
 
-if [[ "${APROF_SETUP_INSTALL}" -eq 1 && "${APROF_SETUP_CHECK_ONLY}" -eq 0 ]]; then
-    _aprof_setup_log "installing project dependencies: python -m pip install -e ."
-    python -m pip install -e .
-fi
-
 python - <<'PY'
 import importlib.util
 import os
@@ -176,7 +170,6 @@ import sys
 
 checks = {
     "openai": importlib.util.find_spec("openai") is not None,
-    "aprof": importlib.util.find_spec("aprof") is not None,
     "CodingAgent": importlib.util.find_spec("CodingAgent") is not None,
 }
 

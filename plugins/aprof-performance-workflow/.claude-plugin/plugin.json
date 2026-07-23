@@ -1,6 +1,6 @@
 {
   "name": "aprof-performance-workflow",
-  "description": "AProf 性能诊断 Team。输入 Ascend C kernel 源码，编排 diagnosis 和 profiling 两个 Agent，输出性能问题诊断和硬件 metric 数据支撑。",
+  "description": "AProf 性能诊断与多算子族优化 Workflow。输入 Ascend C kernel 源码或完整 op_dir，编排 workload-aware diagnosis、repeated profiling 和 production-safe optimization。",
   "version": "0.1.0",
   "author": {
     "name": "AProf"
@@ -10,10 +10,13 @@
   "license": "CANN-2.0",
   "dependencies": [
     "aprof-skills",
-    "ops-direct-invoke-skills"
+    "ops-direct-invoke-skills",
+    "cannbot-ascendc-env-and-debug-skills",
+    "cannbot-ascendc-optimization-skills"
   ],
   "agents": [
     "./agents/aprof-diagnosis-wrapper.md",
-    "./agents/aprof-profiling-wrapper.md"
+    "./agents/aprof-profiling-wrapper.md",
+    "./agents/aprof-optimization-wrapper.md"
   ]
 }

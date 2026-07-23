@@ -176,6 +176,7 @@ def hw_msprof_profile_cmd(
     op_remote: str,
     run_cmd: str,
     warm_up: int,
+    repeat: int,
     gen_data_cmd: str,
 ) -> str:
     prefix = remote_env_prefix(cfg)
@@ -183,8 +184,11 @@ def hw_msprof_profile_cmd(
     return (
         f"{prefix} && cd {op_remote} && {gen}"
         "mkdir -p build/output msprof_hw_output && cd build && "
+        f"i=1; while [ \"$i\" -le {repeat} ]; do "
+        "run_dir=\"../msprof_hw_output/run_$i\"; mkdir -p \"$run_dir\"; "
         f"bash ../ops_profiling/scripts/msprof_profile_run.sh "
-        f"--warm-up={warm_up} --output=../msprof_hw_output -- {run_cmd} 2>&1"
+        f"--warm-up={warm_up} --output=\"$run_dir\" -- {run_cmd} || exit $?; "
+        "i=$((i + 1)); done 2>&1"
     )
 
 
@@ -193,6 +197,7 @@ def hw_op_profile_cmd(
     op_remote: str,
     run_cmd: str,
     warm_up: int,
+    repeat: int,
     gen_data_cmd: str,
 ) -> str:
     prefix = remote_env_prefix(cfg)
@@ -200,7 +205,7 @@ def hw_op_profile_cmd(
     return (
         f"{prefix} && cd {op_remote} && {gen}"
         "mkdir -p build/output msprof_hw_output && cd build && "
-        f"msprof op --warm-up={warm_up} --output=../msprof_hw_output {run_cmd} 2>&1"
+        f"msprof op --warm-up={warm_up} --launch-count={repeat} --output=../msprof_hw_output {run_cmd} 2>&1"
     )
 
 
@@ -209,14 +214,14 @@ def hw_summarize_cmd(cfg: dict, op_remote: str, profile_mode: str) -> str:
     if profile_mode == "hw-msprof":
         return (
             f"{prefix} && cd {op_remote} && "
-            "PROFILE_DIR=$(ls -d msprof_hw_output/PROF_GROUP_* 2>/dev/null | head -1); "
+            "PROFILE_DIR=$(find msprof_hw_output -type d -name 'PROF_GROUP_*' 2>/dev/null | head -1); "
             'if [ -n "$PROFILE_DIR" ]; then '
             'python3 ops_profiling/scripts/msprof_perf_summary.py "$PROFILE_DIR" . '
             "> remote_hw_summary.txt 2>&1; fi"
         )
     return (
         f"{prefix} && cd {op_remote} && "
-        "OPPROF_DIR=$(ls -td msprof_hw_output/OPPROF_* 2>/dev/null | head -1); "
+        "OPPROF_DIR=$(find msprof_hw_output -type d -name 'OPPROF_*' 2>/dev/null | head -1); "
         'if [ -n "$OPPROF_DIR" ]; then '
         'python3 ops_profiling/scripts/perf_summary.py "$OPPROF_DIR" . '
         "> remote_hw_summary.txt 2>&1; fi"
@@ -376,7 +381,8 @@ def main() -> int:
         default="",
         help="Optional command before profile on remote (e.g. python3 scripts/gen_data.py 8 2048 fp32)",
     )
-    parser.add_argument("--warm-up", type=int, default=3, help="Warm-up iterations for hw modes")
+    parser.add_argument("--warm-up", type=int, default=10, help="Warm-up iterations for hw modes")
+    parser.add_argument("--repeat", type=int, default=5, help="Repeated launches/runs for hw metric stability")
     parser.add_argument("--msprof-timeout", type=int, default=8, help="MSPROF_TIMEOUT minutes for sim mode")
     parser.add_argument("--summarize", action="store_true", help="Run msprof_perf_summary/perf_summary on remote")
     parser.add_argument(
@@ -402,6 +408,10 @@ def main() -> int:
 
     if args.profile_mode.startswith("hw") and not args.run_cmd:
         raise SystemExit("上板模式需要 --run-cmd，例如: './fast_gelu 8 2048 fp32 1'")
+    if args.profile_mode.startswith("hw") and args.repeat < 1:
+        raise SystemExit("上板模式 --repeat 必须 >= 1")
+    if args.profile_mode.startswith("hw") and args.warm_up < 0:
+        raise SystemExit("上板模式 --warm-up 必须 >= 0")
 
     remote_name = args.remote_name or os.path.basename(local_dir.rstrip(os.sep))
     local_out = os.path.abspath(args.local_out or os.path.join(local_dir, "remote_out"))
@@ -427,6 +437,12 @@ def main() -> int:
         "downloaded": [],
         "profiling_plan": os.path.abspath(args.profiling_plan) if args.profiling_plan else "",
         "inject_common_dir": os.path.abspath(args.inject_common_dir) if args.inject_common_dir else "",
+        "measurement_policy": {
+            "warm_up": args.warm_up,
+            "repeat": args.repeat,
+            "statistic": "median",
+            "stability_cv_threshold": 0.05,
+        },
     }
 
     ssh = connect_ssh(cfg)
@@ -455,10 +471,10 @@ def main() -> int:
             cmd = sim_profile_cmd(cfg, op_remote, args.msprof_timeout)
             timeout = 1800
         elif args.profile_mode == "hw-msprof":
-            cmd = hw_msprof_profile_cmd(cfg, op_remote, args.run_cmd, args.warm_up, args.gen_data_cmd)
+            cmd = hw_msprof_profile_cmd(cfg, op_remote, args.run_cmd, args.warm_up, args.repeat, args.gen_data_cmd)
             timeout = 3600
         else:
-            cmd = hw_op_profile_cmd(cfg, op_remote, args.run_cmd, args.warm_up, args.gen_data_cmd)
+            cmd = hw_op_profile_cmd(cfg, op_remote, args.run_cmd, args.warm_up, args.repeat, args.gen_data_cmd)
             timeout = 3600
         code, _ = run_remote(ssh, cmd, timeout=timeout)
         result["profile_exit"] = code

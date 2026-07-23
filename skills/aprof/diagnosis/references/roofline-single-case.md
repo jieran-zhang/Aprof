@@ -85,11 +85,12 @@ utilization = achieved_ops_per_s / roofline_bound
 
 ## 单 Case 诊断顺序
 
-1. **源码与 Tiling 门禁**：检查 `blockDim`、`tileLength`、`tileNum`、`tailLength`、buffer 公式、循环内 `DataCopy`、`PipeBarrier`。
-2. **Roofline 下限**：用 shape/dtype 和硬件参数估算最低流量、最低计算量、理论 bound。
-3. **真实 report 校正**：若有 `Memory.csv` / `ArithmeticUtilization.csv`，替换估算值。
-4. **Trace proxy**：若只有 `trace.json`，统计搬运类、同步类、Vector/Cube 类指令耗时/计数，并标注 proxy。
-5. **每问题输出 metric**：每个问题至少 2 个 metric，推荐源码 + tiling + report 各 1 个。
+1. **Workload 门禁**：读取 [workload-aware-diagnosis.md](workload-aware-diagnosis.md)，先判断规模、每核工作量、理论最低读写量和可达利用率。
+2. **源码与 Tiling 门禁**：检查 `blockDim`、`tileLength`、`tileNum`、`tailLength`、buffer 公式、循环内 `DataCopy`、`PipeBarrier`。
+3. **Roofline 下限**：用 shape/dtype 和硬件参数估算最低流量、最低计算量、理论 bound。
+4. **真实 report 校正**：若有 `Memory.csv` / `ArithmeticUtilization.csv`，替换估算值。
+5. **Trace proxy**：若只有 `trace.json`，统计搬运类、同步类、Vector/Cube 类指令耗时/计数，并标注 proxy。
+6. **每问题输出 metric**：每个问题至少 2 个 metric，推荐源码 + tiling + report 各 1 个。
 
 ## 输出要求
 
@@ -100,12 +101,14 @@ utilization = achieved_ops_per_s / roofline_bound
   "problem": "tileLength too small",
   "problem_family": "tiling/data_movement",
   "confidence": "medium",
+  "diagnosis_type": "true_bottleneck",
   "metrics": [
     {"name": "tile_num", "value": 128, "source": "tiling_context"},
     {"name": "estimated_copy_bytes_per_tile", "value": 64, "source": "shape/tiling"},
     {"name": "barrier_event_count", "value": 384, "source": "trace.json"}
   ],
   "roofline_interpretation": "trace proxy shows overhead dominated by copy/sync rather than compute",
+  "workload_interpretation": "workload is large enough for this metric to indicate a real bottleneck",
   "missing_evidence": ["Memory.csv", "PipeUtilization.csv"]
 }
 ```
@@ -116,3 +119,5 @@ utilization = achieved_ops_per_s / roofline_bound
 - 有 shape/tiling + 硬件分母，但无真实 CSV：只能做 `roofline-estimated`。
 - 只有 trace/timeline：只能做 `trace-proxy`。
 - 只有源码：只能做 `source-hypothesis`。
+- repeat 样本不稳定或缺少 measurement policy：输出 `measurement_limited`。
+- workload 太小且 observed utilization 接近可达上限：输出 `workload_limited`，不要写成硬件利用率瓶颈。
