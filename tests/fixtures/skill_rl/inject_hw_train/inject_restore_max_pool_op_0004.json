@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "fixture_id": "inject_restore_max_pool_op_0004",
+  "source": "910B_results_hw_with_labels",
+  "baseline_kind": "strong",
+  "benchmark": {
+    "suite": "aprof_injected_ops",
+    "name": "max_pool",
+    "case": "op_0004"
+  },
+  "workload_model": {
+    "workload_class": "normal",
+    "operator_family": "unknown",
+    "total_elements": null
+  },
+  "metric_contract": {
+    "primary_metric": "Task Duration(us)",
+    "minimum_effect_threshold_pct": 3.0,
+    "correctness_gate": "prefer verify_ok on baseline and inject"
+  },
+  "measurement_policy": {
+    "warm_up": 3,
+    "repeat": 1,
+    "statistic": "single_task_duration_from_OpBasicInfo",
+    "notes": "from prior remote_di_out; MSPROF_WARMUP default 3, LAUNCH_COUNT 1"
+  },
+  "overall_result": {
+    "status": "accepted",
+    "original_baseline": {
+      "median_us": 15.1,
+      "role": "injected_slow"
+    },
+    "final_production_best": {
+      "median_us": 3.16,
+      "role": "direct_invoke_baseline_restore",
+      "scope": "production_safe",
+      "speedup_vs_original": 4.7784810126582276
+    },
+    "final_correctness": {
+      "checked": 1,
+      "bad": 0
+    }
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "label": "restore_tile_length_too_small",
+      "diagnosis_type": "true_bottleneck",
+      "problem_family": "tiling",
+      "baseline": {
+        "config": {
+          "injected": true,
+          "problem_id": "tile_length_too_small"
+        },
+        "samples_us": [
+          15.1
+        ],
+        "median_us": 15.1,
+        "correctness": {
+          "checked": 1,
+          "bad": 0
+        }
+      },
+      "selected_candidate": {
+        "id": "restore_op_0004",
+        "strategy": "revert inject / apply tiling.increase_tile_length",
+        "strategy_id": "tiling.increase_tile_length",
+        "config": {
+          "target": "direct_invoke_baseline"
+        },
+        "code_changes": [
+          "restore max_pool/op_0004 knobs toward baseline for tile_length_too_small"
+        ],
+        "samples_us": [
+          3.16
+        ],
+        "median_us": 3.16,
+        "speedup_vs_round_baseline": 4.7784810126582276,
+        "scope": "production_safe",
+        "semantic_status": "preserved",
+        "correctness": {
+          "checked": 1,
+          "bad": 0
+        },
+        "accepted": true,
+        "reason": "910B inject/baseline ratio 4.778"
+      },
+      "rejected_candidates": [
+        {
+          "id": "single_run_no_warmup_claim",
+          "strategy_id": "tiling.increase_tile_length",
+          "accepted": false,
+          "reason": "single_run_duration_as_proof",
+          "scope": "production_safe",
+          "semantic_status": "preserved",
+          "median_us": 3.16,
+          "samples_us": [
+            3.16
+          ],
+          "correctness": {
+            "checked": 1,
+            "bad": 0
+          }
+        }
+      ]
+    }
+  ],
+  "ground_truth_offline": {
+    "problem_id": "tile_length_too_small",
+    "op": "max_pool",
+    "case": "op_0004"
+  }
+}

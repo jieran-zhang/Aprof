@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "fixture_id": "inject_restore_conv2d_op_0001",
+  "source": "910B_results_hw_with_labels",
+  "baseline_kind": "strong",
+  "benchmark": {
+    "suite": "aprof_injected_ops",
+    "name": "conv2d",
+    "case": "op_0001"
+  },
+  "workload_model": {
+    "workload_class": "normal",
+    "operator_family": "unknown",
+    "total_elements": null
+  },
+  "metric_contract": {
+    "primary_metric": "Task Duration(us)",
+    "minimum_effect_threshold_pct": 3.0,
+    "correctness_gate": "prefer verify_ok on baseline and inject"
+  },
+  "measurement_policy": {
+    "warm_up": 3,
+    "repeat": 1,
+    "statistic": "single_task_duration_from_OpBasicInfo",
+    "notes": "from prior remote_di_out; MSPROF_WARMUP default 3, LAUNCH_COUNT 1"
+  },
+  "overall_result": {
+    "status": "accepted",
+    "original_baseline": {
+      "median_us": 8.0,
+      "role": "injected_slow"
+    },
+    "final_production_best": {
+      "median_us": 2.74,
+      "role": "direct_invoke_baseline_restore",
+      "scope": "production_safe",
+      "speedup_vs_original": 2.9197080291970803
+    },
+    "final_correctness": {
+      "checked": 1,
+      "bad": 0
+    }
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "label": "restore_blockdim_too_small",
+      "diagnosis_type": "true_bottleneck",
+      "problem_family": "tiling",
+      "baseline": {
+        "config": {
+          "injected": true,
+          "problem_id": "blockdim_too_small"
+        },
+        "samples_us": [
+          8.0
+        ],
+        "median_us": 8.0,
+        "correctness": {
+          "checked": 1,
+          "bad": 0
+        }
+      },
+      "selected_candidate": {
+        "id": "restore_op_0001",
+        "strategy": "revert inject / apply tiling.increase_blockdim_when_underused",
+        "strategy_id": "tiling.increase_blockdim_when_underused",
+        "config": {
+          "target": "direct_invoke_baseline"
+        },
+        "code_changes": [
+          "restore conv2d/op_0001 knobs toward baseline for blockdim_too_small"
+        ],
+        "samples_us": [
+          2.74
+        ],
+        "median_us": 2.74,
+        "speedup_vs_round_baseline": 2.9197080291970803,
+        "scope": "production_safe",
+        "semantic_status": "preserved",
+        "correctness": {
+          "checked": 1,
+          "bad": 0
+        },
+        "accepted": true,
+        "reason": "910B inject/baseline ratio 2.920"
+      },
+      "rejected_candidates": [
+        {
+          "id": "single_run_no_warmup_claim",
+          "strategy_id": "tiling.increase_blockdim_when_underused",
+          "accepted": false,
+          "reason": "single_run_duration_as_proof",
+          "scope": "production_safe",
+          "semantic_status": "preserved",
+          "median_us": 2.74,
+          "samples_us": [
+            2.74
+          ],
+          "correctness": {
+            "checked": 1,
+            "bad": 0
+          }
+        }
+      ]
+    }
+  ],
+  "ground_truth_offline": {
+    "problem_id": "blockdim_too_small",
+    "op": "conv2d",
+    "case": "op_0001"
+  }
+}

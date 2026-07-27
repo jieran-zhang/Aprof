@@ -13,45 +13,45 @@
 
 契约：[skills/aprof/references/skill_rl_contracts.md](../skills/aprof/references/skill_rl_contracts.md)
 
-## 两组 episode（勿混谈）
+## Episode 来源
 
-| Fixture | 含义 | 数字 |
-| --- | --- | --- |
-| A | 大 shape 弱启动（main summary） | 23548.65 → 91.178 μs（~258×），测量稳定 |
-| B | 小 shape 强叙事（合作者轨迹合成） | 7.8 → 5.9 μs（~1.32×，blockDim=8）；专用化 ~5.8 仅附录 |
+| 集 | 含义 |
+| --- | --- |
+| Fixture A/B | 人工/合作者轨迹（大 shape 弱启动 vs 小 shape 强基线） |
+| **inject_hw_train** | 由既有 **910B** `results_hw_with_labels` 生成的 22 条 inject→baseline 恢复轨迹（`--min-ratio 1.5`） |
+
+构建：
+
+```bash
+python scripts/build_skill_rl_inject_hw_episodes.py --min-ratio 1.5
+python scripts/run_skill_rl_inject_eval.py
+```
+
+## 真机 / API 尝试（2026-07-28）
+
+| 项 | 结果 |
+| --- | --- |
+| SSH 910B 重采 | `xeon6.pku-dasys.cn:2222` **超时**；改用仓库内既有 HW 产物 |
+| GLM-5.2 盲诊 | 成功：`fast_gelu/op_0005`、`gelu_mul/op_0005`（tile 过小） |
+| Skill-RL 对比 | generic frozen → curated：primary **0.46→0.55**，actionability **0.67→0.91** |
+
+报告副本：`tests/fixtures/skill_rl/inject_eval_report.json`
 
 ## 模块
 
 ```text
-src/aprof/skill_rl/
-  models.py episode_adapter.py reward.py library.py
-  curator.py validation_gate.py sequential_rollout.py
-  splits.py trainer.py simple_yaml.py
-
-skills/aprof/skill_library/v0/   # 六族可执行 stub
-tests/fixtures/skill_rl/         # Fixture A/B
+src/aprof/skill_rl/          # models, adapter, reward, curator, gate, trainer, inject_hw
+skills/aprof/skill_library/v0/
+tests/fixtures/skill_rl/     # A/B + inject_hw_train/
+scripts/build_skill_rl_inject_hw_episodes.py
+scripts/run_skill_rl_inject_eval.py
 ```
 
 ## 跑单测
 
-```bash
-# Windows PowerShell
+```powershell
 $env:PYTHONPATH="src"
 python -m unittest discover -s tests/unit -p "test_skill_rl*.py" -v
 ```
 
-## 离线一轮 SAGE-lite
-
-```python
-from aprof.skill_rl import adapt_fixture_a, adapt_fixture_b, run_offline_round
-
-report = run_offline_round([adapt_fixture_a()], [adapt_fixture_b()], commit=False)
-print(report["metrics"]["primary"])
-print(report["metrics"]["specialized_appendix"])
-```
-
-`commit=True` 会在 `skills/aprof/skill_library/v1/` 写出新版本（建议在临时目录测）。
-
-## 与 main E2E 的关系
-
-main 上的 optimize candidate loop / memory / contracts 提供真实轨迹来源；本 MVP **消费**结构化 episode，不重跑 msprof。后续把 `optimization_memory.jsonl` 接到 `episode_adapter` 即可扩大 Train 集。
+当前 **16** 个 unittest 通过。
