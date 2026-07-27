@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "title": "Skill-RL 问题与交付记录",
+  "branch": "feat/skill-rl-mvp",
+  "updated_at": "2026-07-28T03:45:00+08:00",
+  "context": {
+    "goal": "为 ASPLOS'27（2026-09-09）准备 profiling-grounded skill library 自改进骨架，先做离线 SAGE-lite，不训 GRPO/torch。",
+    "motivation": "六类 skill 已有叙述结构，但真实优化中暴露：测量不稳、诊断泛泛、利用率脱离可达上限、过度专用化追性能。Skill-RL 必须用可执行 θ + 多目标指标打这些缺陷，而不是只刷 latency。"
+  },
+  "questions": [
+    {
+      "id": "Q1",
+      "question": "问题诊断模块接下来怎么摸索？要不要先搭 skill-RL？",
+      "answer": "要。诊断已有盲诊评测；阻塞论文主线的是可计量优化 episode → 可版本化 skill θ → Curator/RL。先搭离线 Skill-RL 骨架，再接 main 上的 E2E optimize loop。"
+    },
+    {
+      "id": "Q2",
+      "question": "合作者声称的端到端 + Feasibility Gate + fast_gelu 三次优化是否属实？",
+      "answer": "属实（在 origin/main）。WorkloadAndRooflineFeasibility / workload-aware-diagnosis 存在；optimization skill 六族存在。大 shape 轨迹：23548.65→91.178 μs（~258×）。另有小 shape 叙事：2048 fp32，blockDim→8，7.8→5.9 μs（~1.32×），专用化约 5.8 μs 只能作附录。"
+    },
+    {
+      "id": "Q3",
+      "question": "现有六类 skill 的实际缺陷是什么？是否要改优化方向与验证指标？",
+      "answer": "四类缺陷：D1 无 warmup/repeat；D2 诊断不可执行；D3 利用率脱离 workload/roofline；D4 牺牲通用性追性能。需要改：skill 必须可机读可执行；验证主表是多目标，不只看优化后代码更快。"
+    },
+    {
+      "id": "Q4",
+      "question": "生成式 inject benchmark 怎么用于 train/val？",
+      "answer": "对齐 SAGE：Train=生成式 inject 劣化→恢复；Dev=同分布 held-out；Test-A=未见 inject；Test-B=真实慢算子。本 MVP 先用双 fixture 模拟 Train/Dev，inject 全量分层后续接。"
+    },
+    {
+      "id": "Q5",
+      "question": "这一版 Skill-RL 做到哪一层？",
+      "answer": "离线 SAGE-lite：Episode / 多目标 Reward / Sequential Rollout / SkillLibrary / Curator(ADD·UPDATE·DEPRECATE) / Validation Gate。不做 torch/GRPO，不整仓 merge main。"
+    }
+  ],
+  "what_was_built": {
+    "summary": "在 feat/skill-rl-mvp 落地缺陷驱动的离线 Skill-RL 框架：把六类 skill 升级为可版本化外部参数 θ，用优化轨迹 episode 提案 skill edit，经 Dev gate 后对比 frozen vs curated。",
+    "framework": {
+      "style": "SAGE-lite offline",
+      "flow": [
+        "Fixture/优化轨迹 → episode_adapter → Episode",
+        "Episode → reward（Hard+Soft 多目标）",
+        "Train episodes → curator 提案 ADD/UPDATE/DEPRECATE",
+        "Dev → validation_gate（primary 不下降 + 必须可执行）",
+        "SkillLibrary commit vN（specialized 不进主库 best）",
+        "sequential_rollout：同 scenario 累积 skill ids",
+        "trainer.run_offline_round → frozen vs curated 报告"
+      ],
+      "modules": {
+        "src/aprof/skill_rl/models.py": "Episode/Round/Candidate/Skill/SkillEdit/RewardBreakdown",
+        "src/aprof/skill_rl/episode_adapter.py": "解析 Fixture A/B",
+        "src/aprof/skill_rl/reward.py": "D1–D4 多目标打分",
+        "src/aprof/skill_rl/library.py": "版本化 skill lib load/commit",
+        "src/aprof/skill_rl/curator.py": "从轨迹提案 edit",
+        "src/aprof/skill_rl/validation_gate.py": "Dev 门禁",
+        "src/aprof/skill_rl/sequential_rollout.py": "scenario 内 skill 累积",
+        "src/aprof/skill_rl/trainer.py": "一轮离线 SAGE-lite",
+        "src/aprof/skill_rl/splits.py": "Train/Dev/Test API",
+        "skills/aprof/skill_library/v0/": "六族可执行 YAML stub",
+        "skills/aprof/references/skill_rl_contracts.md": "契约与指标定义"
+      }
+    },
+    "defects_addressed": [
+      {
+        "id": "D1",
+        "name": "测量无 warmup/repeat",
+        "mechanism": "measurement_ok；不稳则 speedup 不计 primary"
+      },
+      {
+        "id": "D2",
+        "name": "诊断过于通用",
+        "mechanism": "强制 actionable_edits + expected_metric_delta；空话 UPDATE 被拒"
+      },
+      {
+        "id": "D3",
+        "name": "利用率脱离可达上限",
+        "mechanism": "workload_awareness；tiny/small 误报扣分"
+      },
+      {
+        "id": "D4",
+        "name": "牺牲算法/通用性追性能",
+        "mechanism": "benchmark_specialized 只进 appendix，不进 primary"
+      }
+    ]
+  },
+  "evaluation": {
+    "method": "离线 unittest + 双 fixture；不重跑 msprof",
+    "command": "$env:PYTHONPATH='src'; python -m unittest discover -s tests/unit -p 'test_skill_rl*.py' -v",
+    "fixtures": [
+      {
+        "id": "A",
+        "path": "tests/fixtures/skill_rl/aprof_fast_gelu_three_round_optimization_summary.json",
+        "role": "大 shape 弱启动；证明闭环与稳定测量",
+        "numbers": {
+          "original_median_us": 23548.65,
+          "final_median_us": 91.178,
+          "approx_speedup": 258.27,
+          "baseline_kind": "naive",
+          "measurement": "warm_up=10, repeat=5, median"
+        }
+      },
+      {
+        "id": "B",
+        "path": "tests/fixtures/skill_rl/fast_gelu_2048_strong_baseline_episode.json",
+        "role": "小 shape 强叙事；证明边际收益与 specialized 分轨；暴露无 warmup/repeat",
+        "numbers": {
+          "original_median_us": 7.8,
+          "production_best_us": 5.9,
+          "approx_speedup": 1.322,
+          "blockdim_best": 8,
+          "specialized_appendix_us": 5.8,
+          "baseline_kind": "strong",
+          "measurement": "warm_up=0, repeat=1 → measurement_ok=false"
+        }
+      }
+    ],
+    "metrics": {
+      "hard_gates": ["correctness", "semantics", "scope_production_safe", "measurement"],
+      "soft_scores": ["speedup_score", "actionability", "workload_awareness", "efficiency"],
+      "appendix": ["specialized_appendix_speedup"],
+      "main_comparison": "frozen skill_lib@v0 vs curated（run_offline_round metrics.primary）"
+    },
+    "unit_tests": {
+      "count": 14,
+      "status": "OK",
+      "files": [
+        "tests/unit/test_skill_rl_episode_adapter.py",
+        "tests/unit/test_skill_rl_reward.py",
+        "tests/unit/test_skill_rl_curator_gate.py",
+        "tests/unit/test_skill_rl_sequential_rollout.py",
+        "tests/unit/test_skill_rl_trainer.py"
+      ],
+      "key_assertions": [
+        "A 解析 23548.65→91.178，round1 speedup≈31",
+        "B 解析 7.8→5.9，blockDim=8，拒绝候选可解析",
+        "bad>0 → primary=0",
+        "无 warmup/repeat → measurement 失败且 speedup 不计 primary",
+        "specialized 不抬 primary",
+        "失败候选产生 DEPRECATE；空话 edit 被拒；commit 版本递增",
+        "sequential rollout 后轮可见前轮 skill id",
+        "trainer 报告含 primary 与 specialized_appendix"
+      ]
+    },
+    "smoke_trainer_result": {
+      "gate_accepted": true,
+      "frozen_mean_primary": 0.768,
+      "curated_mean_primary": 0.768,
+      "note": "v0 stub 已可执行，本轮 curated 主要沉淀禁忌/锚点；primary 持平不下降。后续用更多失败/成功轨迹才能拉开 actionability 差距。"
+    }
+  },
+  "effects_and_limits": {
+    "achieved": [
+      "可复现的 Skill-RL 骨架与契约",
+      "双 baseline 叙事（naive 258× vs strong ~1.32×）写进评测，避免只报弱启动夸张加速",
+      "用 reward 倒逼测量质量与 production_safe",
+      "与 SAGE 对齐的 Train→Gate→对比流程可离线跑"
+    ],
+    "not_yet": [
+      "未接真实 optimization_memory.jsonl / 910B 重跑",
+      "未做 GRPO / 可学习 Curator 策略",
+      "未整仓 merge origin/main 的 optimization skill 树",
+      "inject 全量 Train/Dev/Test 分层尚未自动化接入"
+    ]
+  },
+  "related_docs": [
+    "docs/skill_rl_mvp.md",
+    "docs/aprof_research_thinking.md",
+    "skills/aprof/references/skill_rl_contracts.md"
+  ]
+}

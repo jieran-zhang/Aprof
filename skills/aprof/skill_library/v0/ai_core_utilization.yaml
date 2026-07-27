@@ -1,0 +1,24 @@
+skills:
+  - id: ai_core_utilization.balance_blockdim
+    family: ai_core_utilization
+    version: 1
+    scope: production_safe
+    preconditions:
+      - "diagnosis_type == true_bottleneck"
+      - "workload_class in [normal, large] OR clear underused cores with aligned split"
+    actionable_edits:
+      - adjust: blockdim
+    expected_metric_delta:
+      primary: TaskDuration_median_us
+      direction: decrease
+      min_effect_pct: 3.0
+    measurement_policy:
+      warm_up: 10
+      repeat: 5
+      statistic: median
+      max_cv: 0.05
+    linked_hypotheses:
+      - underused_blockdim
+    contraindications:
+      - tiny_workload_fake_low_util
+      - single_run_duration_as_proof

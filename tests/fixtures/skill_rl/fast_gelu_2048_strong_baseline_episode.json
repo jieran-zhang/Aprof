@@ -1,0 +1,217 @@
+{
+  "schema_version": 1,
+  "fixture_id": "fast_gelu_2048_strong_baseline",
+  "source": "collaborator_report_synthetic",
+  "baseline_kind": "strong",
+  "benchmark": {
+    "suite": "aprof_benchmark",
+    "name": "fast_gelu",
+    "case": "official_small_shape_2048"
+  },
+  "workload_model": {
+    "total_elements": 2048,
+    "dtype_bytes": 4,
+    "workload_class": "small",
+    "block_dim": 1,
+    "operator_family": "elementwise"
+  },
+  "metric_contract": {
+    "primary_metric": "Task Duration(us)",
+    "statistic": "reported_point_or_median",
+    "minimum_effect_threshold_pct": 3.0,
+    "correctness_gate": "accuracy must pass"
+  },
+  "measurement_policy": {
+    "warm_up": 0,
+    "repeat": 1,
+    "statistic": "single_or_few",
+    "notes": "collaborator early runs lacked warmup/repeat; reward must mark measurement_limited"
+  },
+  "overall_result": {
+    "status": "accepted_production_then_specialized_appendix",
+    "original_baseline": {
+      "median_us": 7.8,
+      "blockdim": 1,
+      "tile_length": 256
+    },
+    "final_production_best": {
+      "median_us": 5.9,
+      "blockdim": 8,
+      "tile_length": 256,
+      "scope": "production_safe",
+      "speedup_vs_original": 1.3220338983050848
+    },
+    "specialized_appendix": {
+      "median_us": 5.8,
+      "scope": "benchmark_specialized",
+      "notes": "fixed shape/tiling specialization 2048/blockDim=8/256 elems per core"
+    },
+    "final_correctness": {
+      "checked": 2048,
+      "bad": 0
+    }
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "label": "blockdim_search_strong_baseline",
+      "diagnosis_type": "true_bottleneck",
+      "problem_family": "ai_core_utilization",
+      "exploration_thinking": [
+        "blockDim=1 runs 2048 fp32 on one AIV core with serial tile loop",
+        "candidates blockDim=4/8/16 measured on hardware; blockDim=8 best"
+      ],
+      "baseline": {
+        "config": {"blockdim": 1, "tile_length": 256},
+        "samples_us": [7.8],
+        "median_us": 7.8,
+        "correctness": {"checked": 2048, "bad": 0}
+      },
+      "candidates": [
+        {
+          "id": "candidate_blockdim_4",
+          "strategy": "host launch multicore",
+          "strategy_id": "tiling.increase_blockdim_when_underused",
+          "config": {"blockdim": 4},
+          "samples_us": [6.4],
+          "median_us": 6.4,
+          "scope": "production_safe",
+          "semantic_status": "preserved",
+          "accepted": false,
+          "reason": "valid but superseded by blockDim=8"
+        },
+        {
+          "id": "candidate_blockdim_8",
+          "strategy": "host launch multicore",
+          "strategy_id": "tiling.increase_blockdim_when_underused",
+          "config": {"blockdim": 8},
+          "samples_us": [5.9],
+          "median_us": 5.9,
+          "speedup_vs_round_baseline": 1.3220338983050848,
+          "scope": "production_safe",
+          "semantic_status": "preserved",
+          "correctness": {"checked": 2048, "bad": 0},
+          "accepted": true,
+          "reason": "best production-safe duration among 4/8/16"
+        },
+        {
+          "id": "candidate_blockdim_16",
+          "strategy": "host launch multicore",
+          "strategy_id": "tiling.increase_blockdim_when_underused",
+          "config": {"blockdim": 16},
+          "samples_us": [6.1],
+          "median_us": 6.1,
+          "scope": "production_safe",
+          "semantic_status": "preserved",
+          "accepted": false,
+          "reason": "slower than blockDim=8"
+        }
+      ],
+      "selected_candidate": {
+        "id": "candidate_blockdim_8",
+        "strategy": "host launch multicore",
+        "strategy_id": "tiling.increase_blockdim_when_underused",
+        "config": {"blockdim": 8, "tile_length": 256},
+        "code_changes": ["op_host/main.asc: set blockdim=8"],
+        "samples_us": [5.9],
+        "median_us": 5.9,
+        "speedup_vs_round_baseline": 1.3220338983050848,
+        "scope": "production_safe",
+        "semantic_status": "preserved",
+        "correctness": {"checked": 2048, "bad": 0},
+        "accepted": true
+      },
+      "rejected_candidates": []
+    },
+    {
+      "round": 2,
+      "label": "post_blockdim_residual_and_specialization",
+      "diagnosis_type": "true_bottleneck",
+      "problem_family": "api_algorithm",
+      "baseline": {
+        "config": {"blockdim": 8, "tile_length": 256},
+        "samples_us": [5.9],
+        "median_us": 5.9,
+        "correctness": {"checked": 2048, "bad": 0}
+      },
+      "candidates": [
+        {
+          "id": "candidate_reuse_tmpLocal",
+          "strategy": "reuse tmpLocal as Div output",
+          "strategy_id": "api_algorithm.reuse_tmp_buffer",
+          "samples_us": [6.78],
+          "median_us": 6.78,
+          "scope": "production_safe",
+          "semantic_status": "preserved",
+          "accepted": false,
+          "reason": "regressed; reject"
+        },
+        {
+          "id": "candidate_single_tile_fastpath",
+          "strategy": "single-tile fast path keep dynamic tiling",
+          "strategy_id": "tiling.single_tile_fastpath",
+          "samples_us": [6.28],
+          "median_us": 6.28,
+          "scope": "production_safe",
+          "semantic_status": "preserved",
+          "accepted": false,
+          "reason": "not better enough; reject"
+        },
+        {
+          "id": "candidate_remove_pipe_v_barrier",
+          "strategy": "remove intermediate PIPE_V barrier",
+          "strategy_id": "pipeline_parallel.remove_redundant_barrier",
+          "samples_us": [6.199, 6.56],
+          "median_us": 6.3795,
+          "scope": "production_safe",
+          "semantic_status": "preserved",
+          "accepted": false,
+          "reason": "not better enough; reject"
+        },
+        {
+          "id": "candidate_fixed_shape_specialization",
+          "strategy": "fixed shape/tiling specialization",
+          "strategy_id": "tiling.fixed_shape_specialization",
+          "config": {
+            "total_elements": 2048,
+            "blockdim": 8,
+            "elems_per_core": 256,
+            "copyBlocks": 32
+          },
+          "samples_us": [5.94, 5.86, 5.8],
+          "median_us": 5.86,
+          "scope": "benchmark_specialized",
+          "semantic_status": "preserved",
+          "accepted": true,
+          "reason": "faster but benchmark_specialized; appendix only"
+        }
+      ],
+      "selected_candidate": {
+        "id": "candidate_fixed_shape_specialization",
+        "strategy": "fixed shape/tiling specialization",
+        "strategy_id": "tiling.fixed_shape_specialization",
+        "samples_us": [5.94, 5.86, 5.8],
+        "median_us": 5.86,
+        "scope": "benchmark_specialized",
+        "semantic_status": "preserved",
+        "correctness": {"checked": 2048, "bad": 0},
+        "accepted": true,
+        "reason": "appendix only; not primary best"
+      },
+      "rejected_candidates": [
+        {
+          "id": "candidate_reuse_tmpLocal",
+          "strategy": "reuse tmpLocal as Div output",
+          "strategy_id": "api_algorithm.reuse_tmp_buffer",
+          "samples_us": [6.78],
+          "median_us": 6.78,
+          "accepted": false,
+          "reason": "regressed; reject",
+          "scope": "production_safe",
+          "semantic_status": "preserved",
+          "correctness": {"checked": 2048, "bad": 0}
+        }
+      ]
+    }
+  ]
+}

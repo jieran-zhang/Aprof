@@ -1,0 +1,71 @@
+skills:
+  - id: tiling.increase_blockdim_when_underused
+    family: tiling
+    version: 1
+    scope: production_safe
+    preconditions:
+      - "diagnosis_type == true_bottleneck"
+      - "active_cores << attainable_cores OR blockdim==1 with large/normal workload"
+    actionable_edits:
+      - adjust: blockdim
+        notes: "Split tensor across AIV cores; keep elems_per_core DataCopy-aligned"
+    expected_metric_delta:
+      primary: TaskDuration_median_us
+      direction: decrease
+      min_effect_pct: 3.0
+    measurement_policy:
+      warm_up: 10
+      repeat: 5
+      statistic: median
+      max_cv: 0.05
+    linked_hypotheses:
+      - ai_core_underused_single_blockdim
+    contraindications:
+      - elems_per_core_misaligned
+      - single_run_duration_as_proof
+      - tiny_workload_fake_low_util
+  - id: tiling.increase_tile_length
+    family: tiling
+    version: 1
+    scope: production_safe
+    preconditions:
+      - "tile_length too small relative to elems_per_core"
+      - "UB capacity allows larger tile"
+    actionable_edits:
+      - adjust: tile_length
+        notes: "Increase tileLength to amortize DataCopy/barrier overhead"
+    expected_metric_delta:
+      primary: TaskDuration_median_us
+      direction: decrease
+      min_effect_pct: 3.0
+    measurement_policy:
+      warm_up: 10
+      repeat: 5
+      statistic: median
+      max_cv: 0.05
+    linked_hypotheses:
+      - tile_length_too_small
+    contraindications:
+      - ub_overflow
+      - alignment_break
+  - id: tiling.fixed_shape_specialization
+    family: tiling
+    version: 1
+    scope: benchmark_specialized
+    preconditions:
+      - "benchmark_only hardcoded shape allowed by user"
+    actionable_edits:
+      - specialize: fixed_shape_tiling
+    expected_metric_delta:
+      primary: TaskDuration_median_us
+      direction: decrease
+      min_effect_pct: 3.0
+    measurement_policy:
+      warm_up: 10
+      repeat: 5
+      statistic: median
+      max_cv: 0.05
+    linked_hypotheses: []
+    contraindications:
+      - must_not_be_default_best
+    notes: "Appendix skill only; never primary best"

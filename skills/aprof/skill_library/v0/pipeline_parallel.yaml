@@ -1,0 +1,23 @@
+skills:
+  - id: pipeline_parallel.remove_redundant_barrier
+    family: pipeline_parallel
+    version: 1
+    scope: production_safe
+    preconditions:
+      - "redundant PipeBarrier or serial Copy/Compute"
+    actionable_edits:
+      - remove: redundant_pipe_barrier
+    expected_metric_delta:
+      primary: TaskDuration_median_us
+      direction: decrease
+      min_effect_pct: 3.0
+    measurement_policy:
+      warm_up: 10
+      repeat: 5
+      statistic: median
+      max_cv: 0.05
+    linked_hypotheses:
+      - excessive_pipe_barrier
+    contraindications:
+      - barrier_required_for_correctness
+      - single_run_duration_as_proof
