@@ -1,0 +1,5 @@
+# WeightQuantBatchMatmul design
+
+The direct executable launches three compiled device stages. A correctness-first one-block AIV kernel traverses all `K*N` weights and computes per-channel dequantization, explicitly rounding after offset addition and scale multiplication to FP16/BF16. The dequantized GM matrix then feeds an AIC `MatmulImpl` configured as ND `T × T -> FP32`; `MatmulApiTiling` supplies a dav-2201 Cube schedule. A final one-block AIV kernel traverses `M*N`, adds the broadcast bias in FP32, and rounds to `T`.
+
+The scalar AIV stages use no UB (`liveBytesPerElem=0`) and only GM scalar accesses. Cube L1/L0/UB buffers and splits are owned by the generated `MatmulImpl` tiling; K split is capped at 256. To protect MARE around cancellation results, the postprocess recomputes only Cube outputs with magnitude below 1 using a device-side compensated FP32 scalar accumulator before output conversion. Optional tensors are represented by explicit flags, never dereferenced when absent. Host responsibilities are limited to validation, file I/O, allocation, tiling generation, H2D/D2H, and kernel launch; there is no host output computation or ACLNN fallback.

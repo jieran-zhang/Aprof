@@ -1,0 +1,10 @@
+cmake_minimum_required(VERSION 3.16)
+find_package(ASC REQUIRED)
+project(arg_max_direct LANGUAGES ASC CXX)
+set(CMAKE_CXX_STANDARD 17)
+
+add_executable(arg_max op_host/arg_max.asc)
+target_include_directories(arg_max PRIVATE op_host op_kernel)
+target_link_libraries(arg_max PRIVATE tiling_api register platform unified_dlog dl m graph_base ascendcl ascendc_runtime)
+target_link_directories(arg_max PRIVATE "$ENV{ASCEND_HOME_PATH}/lib64" "$ENV{ASCEND_HOME_PATH}/aarch64-linux/lib64")
+target_compile_options(arg_max PRIVATE $<$<COMPILE_LANGUAGE:ASC>:--npu-arch=dav-2201>)

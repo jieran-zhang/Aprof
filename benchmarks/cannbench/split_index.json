@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "split_version": "v0001",
+  "frozen_at": "2026-08-12",
+  "membership_sha256": "4cae0d231f94d99aa039118b817393c3ba6253eee7e3dbc09f28092760195da3",
+  "catalog": {
+    "source": "third_party/cann-bench/tasks",
+    "operator_count": 53,
+    "cases_per_operator": 20,
+    "level_counts": {
+      "level1": 8,
+      "level2": 16,
+      "level3": 21,
+      "level4": 8
+    }
+  },
+  "inventory": {
+    "official_summary_path": "benchmarks/cannbench/benchmark_results.json",
+    "official_summary_completed": 46,
+    "filesystem_completed": 49,
+    "filesystem_completed_cases": 980,
+    "unregistered_but_complete": [
+      "grouped_matmul_swiglu_quant",
+      "gru",
+      "mha"
+    ],
+    "not_materialized": [
+      "lstm",
+      "mla",
+      "mla_prolog",
+      "sparse_flash_attention"
+    ]
+  },
+  "policy": {
+    "unit_of_split": "operator_task",
+    "split_cases": false,
+    "selection_used_performance_results": false,
+    "test_is_sealed": true,
+    "test_traces_may_update_skillgraph": false,
+    "validation_traces_may_select_checkpoints": true,
+    "train_traces_may_update_skillgraph": true,
+    "primary_generalization_claim": "held-out operators with mostly seen mechanism families",
+    "family_ood_claim": false,
+    "candidate_search_cases": "fixed sentinel subset only",
+    "acceptance_correctness_cases": 20,
+    "final_performance_cases": 20
+  },
+  "splits": {
+    "development_train": {
+      "manifest": "benchmarks/cannbench/train/manifest.json",
+      "active_count": 29,
+      "pending_count": 4,
+      "target_count": 33
+    },
+    "validation": {
+      "manifest": "benchmarks/cannbench/validation/manifest.json",
+      "active_count": 5,
+      "pending_count": 0,
+      "target_count": 5
+    },
+    "sealed_test": {
+      "manifest": "benchmarks/cannbench/test/manifest.json",
+      "active_count": 15,
+      "pending_count": 0,
+      "target_count": 15
+    }
+  },
+  "future_complete_state": {
+    "learning_pool_count": 38,
+    "sealed_test_count": 15,
+    "total_count": 53
+  }
+}

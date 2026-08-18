@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+import argparse,json
+from pathlib import Path
+import numpy as np,torch
+RAW={'float16':np.uint16,'bfloat16':np.uint16,'float32':np.uint32,'int8':np.uint8,'uint8':np.uint8,'int32':np.uint32,'int64':np.uint64}
+NUM={'float16':np.float16,'float32':np.float32,'int8':np.int8,'uint8':np.uint8,'int32':np.int32,'int64':np.int64}
+p=argparse.ArgumentParser();p.add_argument('--metadata',required=True);a=p.parse_args();mp=Path(a.metadata);m=json.loads(mp.read_text());raw=np.memmap(m['input'],dtype=RAW[m['dtype']],mode='r',shape=tuple(m['shape']));
+if m['dtype']=='bfloat16':x=torch.from_numpy(np.asarray(raw)).view(torch.bfloat16)
+else:x=torch.from_numpy(np.memmap(m['input'],dtype=NUM[m['dtype']],mode='r',shape=tuple(m['shape'])))
+gv,gi=torch.topk(x,k=m['k'],dim=m['dim'],largest=m['largest']);avraw=np.memmap(m['values'],dtype=RAW[m['dtype']],mode='r',shape=tuple(m['output_shape']));ai=torch.from_numpy(np.memmap(m['indices'],dtype=np.int64,mode='r',shape=tuple(m['output_shape'])));gvraw=gv.view({torch.float16:torch.uint16,torch.bfloat16:torch.uint16,torch.float32:torch.uint32,torch.int8:torch.uint8,torch.uint8:torch.uint8,torch.int32:torch.uint32,torch.int64:torch.uint64}[gv.dtype]).numpy();mismatch=int(np.count_nonzero(np.asarray(avraw)!=gvraw));valid=bool(torch.all((ai>=0)&(ai<m['shape'][m['normalized_dim']])));gather=x.gather(m['normalized_dim'],ai);graw=gather.view({torch.float16:torch.uint16,torch.bfloat16:torch.uint16,torch.float32:torch.uint32,torch.int8:torch.uint8,torch.uint8:torch.uint8,torch.int32:torch.uint32,torch.int64:torch.uint64}[gather.dtype]).numpy();gather_ok=valid and bool(np.array_equal(graw,np.asarray(avraw)));passed=mismatch==0 and gather_ok;r={'case_id':m['case_id'],'input_shape':m['shape'],'output_shape':m['output_shape'],'dtype':m['dtype'],'k':m['k'],'dim':m['dim'],'largest':m['largest'],'value_mismatch_count':mismatch,'indices_in_range':valid,'index_gather_match':gather_ok,'passed':passed};(mp.parent/'result.json').write_text(json.dumps(r,indent=2));print(json.dumps(r));raise SystemExit(0 if passed else 1)

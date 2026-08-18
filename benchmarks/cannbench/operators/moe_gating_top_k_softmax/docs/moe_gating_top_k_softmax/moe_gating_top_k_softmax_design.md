@@ -1,0 +1,5 @@
+# MoeGatingTopKSoftmax design
+
+Rows are independent and distributed in contiguous ranges over vector cores. One core processes one row at a time: scalar loads widen logits to FP32 in a 2048-element UB buffer, subtract the maximum, apply device `Exp`, and accumulate the FP32 denominator. Repeated max selection over the normalized logits emits `k` descending values and expert ids; the selected slot is replaced by `-1`. The optional finished byte only changes emitted expert ids to sentinel `E`. Row indices are generated directly from `(r,j)`.
+
+Peak live UB is 8 KiB for logits plus 4 KiB for FP32 TopK values plus 2 KiB for cast output (14 KiB). FP16/BF16 output is cast in UB and copied through `DataCopyPad`; FP32 uses direct device stores. All mathematical computation and index generation occur in the kernel; the host only parses shape metadata, performs H2D/D2H transfers, and launches the device function. This correctness-first implementation deliberately trades repeated `O(kE)` selection for simple bounded storage.

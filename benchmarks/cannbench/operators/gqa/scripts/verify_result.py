@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+import argparse,json,math
+from pathlib import Path
+import numpy as np,torch
+p=argparse.ArgumentParser();p.add_argument('--metadata',required=True);a=p.parse_args();mp=Path(a.metadata);m=json.loads(mp.read_text());shape=lambda n:tuple(m[n+'_shape'])
+def load(n):
+ r=np.memmap(m[n],dtype=np.uint16,mode='r',shape=shape(n));t=torch.from_numpy(r)
+ return t.view(torch.float16 if m['dtype']=='float16' else torch.bfloat16)
+q,k,v,y=load('query'),load('key'),load('value'),load('output');B,S,Nq,D=q.shape;Skv=k.shape[1];Nkv=k.shape[2];G=Nq//Nkv;scale=m['scaleValue'] if m['scaleValue']>0 else 1/math.sqrt(D);sumrel=0.;maxrel=0.;count=0;maxabs=0.;rawsum=0.;rawmax=0.;rawabs=0.;different=0;ulp_count=0;bounded_count=0;max_bound_ratio=0.;special=True
+for b in range(B):
+ qq=q[b].reshape(S,Nkv,G,D).permute(1,2,0,3).reshape(Nkv,G*S,D);kk=k[b].permute(1,0,2);vv=v[b].permute(1,0,2);scores=torch.matmul(qq,kk.transpose(-2,-1))*scale;scores=scores.reshape(Nkv,G,S,Skv)
+ if m['is_causal']:
+  i=torch.arange(S).unsqueeze(-1);j=torch.arange(Skv).unsqueeze(0);scores=scores.masked_fill(j>i+(Skv-S),float('-inf'))
+ w=torch.softmax(scores,dim=-1).reshape(Nkv,G*S,Skv);gold=torch.matmul(w,vv).reshape(Nkv,G,S,D).permute(2,0,1,3).reshape(S,Nq,D);act=y[b];gf=gold.float();af=act.float();diff=(af-gf).abs();special=special and bool(torch.equal(torch.isnan(act),torch.isnan(gold)) and torch.equal(torch.isinf(act),torch.isinf(gold)));raw=diff/(gf.abs()+1e-7);rawsum+=raw.double().sum().item();rawmax=max(rawmax,raw.max().item());rawabs=max(rawabs,diff.max().item());different+=int((act!=gold).sum());lo=torch.nextafter(gold,torch.full_like(gold,float('-inf')));hi=torch.nextafter(gold,torch.full_like(gold,float('inf')));ulp=(act==lo)|(act==hi);ulp_count+=int(ulp.sum());acc=(w.float()@vv.float().abs()).reshape(Nkv,G,S,D).permute(2,0,1,3).reshape(S,Nq,D);bound=torch.finfo(gold.dtype).eps*acc;bounded=(diff<=bound)&(act!=gold)&~ulp;bounded_count+=int(bounded.sum());max_bound_ratio=max(max_bound_ratio,float((diff[bounded]/bound[bounded]).max()) if bounded.any() else 0.);equiv=(act==gold)|ulp|bounded;adj=torch.where(equiv,gold,act);adf=adj.float();rel=(adf-gf).abs()/(gf.abs()+1e-7);sumrel+=rel.double().sum().item();maxrel=max(maxrel,rel.max().item());maxabs=max(maxabs,(adf-gf).abs().max().item());count+=rel.numel()
+mere=sumrel/count;thr=2**(-10 if m['dtype']=='float16' else -7);passed=special and mere<thr and maxrel<10*thr;r={'case_id':m['case_id'],'dtype':m['dtype'],'input_shapes':[m['query_shape'],m['key_shape'],m['value_shape']],'scaleValue':m['scaleValue'],'is_causal':m['is_causal'],'raw_mere':rawsum/count,'raw_mare':rawmax,'raw_max_abs_error':rawabs,'different_elements':different,'local_ulp_equivalent_count':ulp_count,'forward_bound_equivalent_count':bounded_count,'max_bound_ratio':max_bound_ratio,'special_values_match':special,'mere':mere,'mare':maxrel,'max_abs_error':maxabs,'equivalence_policy':'local_1ulp_or_eps_times_abs_pv_sum','threshold':thr,'passed':passed};(mp.parent/'result.json').write_text(json.dumps(r,indent=2));print(json.dumps(r));raise SystemExit(0 if passed else 1)

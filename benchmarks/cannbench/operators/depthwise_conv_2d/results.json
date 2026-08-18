@@ -1,0 +1,1051 @@
+{
+  "operator": "depthwise_conv_2d",
+  "soc_version": "Ascend910_9362",
+  "npu_arch": "dav-2201",
+  "total_cases": 20,
+  "passed_cases": 20,
+  "all_passed": true,
+  "performance_status": "not_collected_per_user",
+  "cases": [
+    {
+      "case_id": 1,
+      "shape": [
+        2,
+        64,
+        32,
+        32
+      ],
+      "weight_shape": [
+        64,
+        3,
+        3
+      ],
+      "output_shape": [
+        2,
+        64,
+        32,
+        32
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "kernelSize": [
+          3,
+          3
+        ],
+        "stride": [
+          1,
+          1
+        ],
+        "padding": [
+          1,
+          1
+        ],
+        "dilation": [
+          1,
+          1
+        ],
+        "groups": 64
+      },
+      "note": "S-float16-256K-\u5bf9\u9f50-3x3k-groups=64",
+      "numel": 131072,
+      "kernel_us": 1676.96,
+      "input_max_abs": 1.0,
+      "max_abs_error": 0.0009765625,
+      "absolute_error_floor": 0.001953125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "special_values_match": true,
+      "exact_match": false,
+      "passed": true
+    },
+    {
+      "case_id": 2,
+      "shape": [
+        4,
+        128,
+        64,
+        64
+      ],
+      "weight_shape": [
+        128,
+        3,
+        3
+      ],
+      "output_shape": [
+        4,
+        128,
+        64,
+        64
+      ],
+      "dtype": "float32",
+      "attrs": {
+        "kernelSize": [
+          3,
+          3
+        ],
+        "stride": [
+          1,
+          1
+        ],
+        "padding": [
+          1,
+          1
+        ],
+        "dilation": [
+          1,
+          1
+        ],
+        "groups": 128
+      },
+      "note": "S-float32-8M-\u5bf9\u9f50-3x3k-groups=128",
+      "numel": 2097152,
+      "kernel_us": 9720.16,
+      "input_max_abs": 1.9999996423721313,
+      "max_abs_error": 0.0,
+      "absolute_error_floor": 2e-06,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0001220703125,
+      "special_values_match": true,
+      "exact_match": true,
+      "passed": true
+    },
+    {
+      "case_id": 3,
+      "shape": [
+        2,
+        256,
+        128,
+        128
+      ],
+      "weight_shape": [
+        256,
+        5,
+        5
+      ],
+      "output_shape": [
+        2,
+        256,
+        128,
+        128
+      ],
+      "dtype": "bfloat16",
+      "attrs": {
+        "kernelSize": [
+          5,
+          5
+        ],
+        "stride": [
+          1,
+          1
+        ],
+        "padding": [
+          2,
+          2
+        ],
+        "dilation": [
+          1,
+          1
+        ],
+        "groups": 256
+      },
+      "note": "M-bfloat16-33M-\u5bf9\u9f50-5x5k-groups=256 | baseline_kernels: TransData\u00d74 + MemSet\u00d72 + Cast\u00d71 + Conv2D\u00d71",
+      "numel": 8388608,
+      "kernel_us": 131899.0,
+      "input_max_abs": 3.0,
+      "max_abs_error": 0.25,
+      "absolute_error_floor": 0.015625,
+      "mere": 1.298373883962256e-07,
+      "mare": 0.0078125,
+      "threshold": 0.0078125,
+      "special_values_match": true,
+      "exact_match": false,
+      "passed": true
+    },
+    {
+      "case_id": 4,
+      "shape": [
+        8,
+        512,
+        64,
+        64
+      ],
+      "weight_shape": [
+        512,
+        3,
+        3
+      ],
+      "output_shape": [
+        8,
+        512,
+        32,
+        32
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "kernelSize": [
+          3,
+          3
+        ],
+        "stride": [
+          2,
+          2
+        ],
+        "padding": [
+          1,
+          1
+        ],
+        "dilation": [
+          1,
+          1
+        ],
+        "groups": 512
+      },
+      "note": "M-float16-67M-\u5bf9\u9f50-stride=2-downsample",
+      "numel": 4194304,
+      "kernel_us": 40591.8,
+      "input_max_abs": 10.0,
+      "max_abs_error": 0.25,
+      "absolute_error_floor": 0.001953125,
+      "mere": 5.316885924588899e-08,
+      "mare": 0.0009756097570061684,
+      "threshold": 0.0009765625,
+      "special_values_match": true,
+      "exact_match": false,
+      "passed": true
+    },
+    {
+      "case_id": 5,
+      "shape": [
+        4,
+        1024,
+        32,
+        32
+      ],
+      "weight_shape": [
+        1024,
+        3,
+        3
+      ],
+      "output_shape": [
+        4,
+        1024,
+        32,
+        32
+      ],
+      "dtype": "float32",
+      "attrs": {
+        "kernelSize": [
+          3,
+          3
+        ],
+        "stride": [
+          1,
+          1
+        ],
+        "padding": [
+          2,
+          2
+        ],
+        "dilation": [
+          2,
+          2
+        ],
+        "groups": 1024
+      },
+      "note": "M-float32-134M-\u5bf9\u9f50-dilation=2",
+      "numel": 4194304,
+      "kernel_us": 18776.6,
+      "input_max_abs": 99.99998474121094,
+      "max_abs_error": 0.0,
+      "absolute_error_floor": 9.536741708870977e-05,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0001220703125,
+      "special_values_match": true,
+      "exact_match": true,
+      "passed": true
+    },
+    {
+      "case_id": 6,
+      "shape": [
+        2,
+        2048,
+        16,
+        16
+      ],
+      "weight_shape": [
+        2048,
+        1,
+        1
+      ],
+      "output_shape": [
+        2,
+        2048,
+        16,
+        16
+      ],
+      "dtype": "bfloat16",
+      "attrs": {
+        "kernelSize": [
+          1,
+          1
+        ],
+        "stride": [
+          1,
+          1
+        ],
+        "padding": [
+          0,
+          0
+        ],
+        "dilation": [
+          1,
+          1
+        ],
+        "groups": 2048
+      },
+      "note": "S-bfloat16-1G-\u5bf9\u9f50-1x1k-valid",
+      "numel": 1048576,
+      "kernel_us": 6701.61,
+      "input_max_abs": 1000.0,
+      "max_abs_error": 4096.0,
+      "absolute_error_floor": 0.015625,
+      "mere": 3.735271514315741e-06,
+      "mare": 0.0078125,
+      "threshold": 0.0078125,
+      "special_values_match": true,
+      "exact_match": false,
+      "passed": true
+    },
+    {
+      "case_id": 7,
+      "shape": [
+        3,
+        63,
+        31,
+        31
+      ],
+      "weight_shape": [
+        63,
+        3,
+        3
+      ],
+      "output_shape": [
+        3,
+        63,
+        31,
+        31
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "kernelSize": [
+          3,
+          3
+        ],
+        "stride": [
+          1,
+          1
+        ],
+        "padding": [
+          1,
+          1
+        ],
+        "dilation": [
+          1,
+          1
+        ],
+        "groups": 63
+      },
+      "note": "S-float16-200K-\u8d28\u6570\u975e\u5bf9\u9f50-\u5fae\u5c0f\u503c\u57df",
+      "numel": 181629,
+      "kernel_us": 2146.93,
+      "input_max_abs": 0.0999755859375,
+      "max_abs_error": 1.52587890625e-05,
+      "absolute_error_floor": 0.001953125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "special_values_match": true,
+      "exact_match": false,
+      "passed": true
+    },
+    {
+      "case_id": 8,
+      "shape": [
+        2,
+        127,
+        61,
+        61
+      ],
+      "weight_shape": [
+        127,
+        3,
+        3
+      ],
+      "output_shape": [
+        2,
+        127,
+        61,
+        61
+      ],
+      "dtype": "float32",
+      "attrs": {
+        "kernelSize": [
+          3,
+          3
+        ],
+        "stride": [
+          1,
+          1
+        ],
+        "padding": [
+          1,
+          1
+        ],
+        "dilation": [
+          1,
+          1
+        ],
+        "groups": 127
+      },
+      "note": "S-float32-2M-\u8d28\u6570\u975e\u5bf9\u9f50-\u975e\u5bf9\u79f0",
+      "numel": 945134,
+      "kernel_us": 4806.5,
+      "input_max_abs": 2.0,
+      "max_abs_error": 0.0,
+      "absolute_error_floor": 2e-06,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0001220703125,
+      "special_values_match": true,
+      "exact_match": true,
+      "passed": true
+    },
+    {
+      "case_id": 9,
+      "shape": [
+        3,
+        47,
+        23,
+        23
+      ],
+      "weight_shape": [
+        47,
+        5,
+        5
+      ],
+      "output_shape": [
+        3,
+        47,
+        12,
+        12
+      ],
+      "dtype": "bfloat16",
+      "attrs": {
+        "kernelSize": [
+          5,
+          5
+        ],
+        "stride": [
+          2,
+          2
+        ],
+        "padding": [
+          2,
+          2
+        ],
+        "dilation": [
+          1,
+          1
+        ],
+        "groups": 47
+      },
+      "note": "S-bfloat16-50K-\u8d28\u6570\u975e\u5bf9\u9f50-stride=2",
+      "numel": 20304,
+      "kernel_us": 791.121,
+      "input_max_abs": 10.0,
+      "max_abs_error": 2.0,
+      "absolute_error_floor": 0.015625,
+      "mere": 6.560325614118713e-07,
+      "mare": 0.004545454401522875,
+      "threshold": 0.0078125,
+      "special_values_match": true,
+      "exact_match": false,
+      "passed": true
+    },
+    {
+      "case_id": 10,
+      "shape": [
+        5,
+        97,
+        43,
+        43
+      ],
+      "weight_shape": [
+        97,
+        3,
+        3
+      ],
+      "output_shape": [
+        5,
+        97,
+        41,
+        41
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "kernelSize": [
+          3,
+          3
+        ],
+        "stride": [
+          1,
+          1
+        ],
+        "padding": [
+          1,
+          1
+        ],
+        "dilation": [
+          2,
+          2
+        ],
+        "groups": 97
+      },
+      "note": "S-float16-2M-\u8d28\u6570\u975e\u5bf9\u9f50-dilation=2",
+      "numel": 815285,
+      "kernel_us": 8026.4,
+      "input_max_abs": 100.0,
+      "max_abs_error": 16.0,
+      "absolute_error_floor": 0.001953125,
+      "mere": 9.411081749655796e-08,
+      "mare": 0.0009699321235530078,
+      "threshold": 0.0009765625,
+      "special_values_match": true,
+      "exact_match": false,
+      "passed": true
+    },
+    {
+      "case_id": 11,
+      "shape": [
+        2,
+        65,
+        33,
+        33
+      ],
+      "weight_shape": [
+        65,
+        3,
+        3
+      ],
+      "output_shape": [
+        2,
+        65,
+        33,
+        33
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "kernelSize": [
+          3,
+          3
+        ],
+        "stride": [
+          1,
+          1
+        ],
+        "padding": [
+          1,
+          1
+        ],
+        "dilation": [
+          1,
+          1
+        ],
+        "groups": 65
+      },
+      "note": "S-float16-500K-\u975e\u5bf9\u9f50-float16\u8fb9\u754c\u503c",
+      "numel": 141570,
+      "kernel_us": 1962.24,
+      "input_max_abs": 65504.0,
+      "max_abs_error": 0.0,
+      "absolute_error_floor": 0.001953125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "special_values_match": true,
+      "exact_match": true,
+      "passed": true
+    },
+    {
+      "case_id": 12,
+      "shape": [
+        3,
+        7,
+        13,
+        13
+      ],
+      "weight_shape": [
+        7,
+        3,
+        3
+      ],
+      "output_shape": [
+        3,
+        7,
+        13,
+        13
+      ],
+      "dtype": "float32",
+      "attrs": {
+        "kernelSize": [
+          3,
+          3
+        ],
+        "stride": [
+          1,
+          1
+        ],
+        "padding": [
+          1,
+          1
+        ],
+        "dilation": [
+          1,
+          1
+        ],
+        "groups": 7
+      },
+      "note": "S-float32-10K-\u8d28\u6570\u975e\u5bf9\u9f50-float32\u8fb9\u754c\u503c",
+      "numel": 3549,
+      "kernel_us": 572.542,
+      "input_max_abs": 87.97911834716797,
+      "max_abs_error": 0.0,
+      "absolute_error_floor": 8.390342554775998e-05,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0001220703125,
+      "special_values_match": true,
+      "exact_match": true,
+      "passed": true
+    },
+    {
+      "case_id": 13,
+      "shape": [
+        2,
+        63,
+        31,
+        31
+      ],
+      "weight_shape": [
+        63,
+        3,
+        3
+      ],
+      "output_shape": [
+        2,
+        63,
+        31,
+        31
+      ],
+      "dtype": "float32",
+      "attrs": {
+        "kernelSize": [
+          3,
+          3
+        ],
+        "stride": [
+          1,
+          1
+        ],
+        "padding": [
+          1,
+          1
+        ],
+        "dilation": [
+          1,
+          1
+        ],
+        "groups": 63
+      },
+      "note": "S-float32-200K-\u975e\u5bf9\u9f50-inf\u7279\u6b8a\u503c",
+      "numel": 121086,
+      "kernel_us": 1028.44,
+      "input_max_abs": 0.0,
+      "max_abs_error": 0.0,
+      "absolute_error_floor": 0.0,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0001220703125,
+      "special_values_match": true,
+      "exact_match": true,
+      "passed": true
+    },
+    {
+      "case_id": 14,
+      "shape": [
+        2,
+        11,
+        13,
+        17
+      ],
+      "weight_shape": [
+        11,
+        3,
+        3
+      ],
+      "output_shape": [
+        2,
+        11,
+        13,
+        17
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "kernelSize": [
+          3,
+          3
+        ],
+        "stride": [
+          1,
+          1
+        ],
+        "padding": [
+          1,
+          1
+        ],
+        "dilation": [
+          1,
+          1
+        ],
+        "groups": 11
+      },
+      "note": "S-float16-5K-\u8d28\u6570\u975e\u5bf9\u9f50-nan\u7279\u6b8a\u503c",
+      "numel": 4862,
+      "kernel_us": 539.59,
+      "input_max_abs": 0.0,
+      "max_abs_error": 0.0,
+      "absolute_error_floor": 0.0,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "special_values_match": true,
+      "exact_match": true,
+      "passed": true
+    },
+    {
+      "case_id": 15,
+      "shape": [
+        4,
+        63,
+        31,
+        31
+      ],
+      "weight_shape": [
+        63,
+        3,
+        3
+      ],
+      "output_shape": [
+        4,
+        63,
+        31,
+        31
+      ],
+      "dtype": "bfloat16",
+      "attrs": {
+        "kernelSize": [
+          3,
+          3
+        ],
+        "stride": [
+          1,
+          1
+        ],
+        "padding": [
+          1,
+          1
+        ],
+        "dilation": [
+          1,
+          1
+        ],
+        "groups": 63
+      },
+      "note": "S-bfloat16-400K-\u975e\u5bf9\u9f50-\u96f6\u503c",
+      "numel": 242172,
+      "kernel_us": 2075.93,
+      "input_max_abs": 0.0,
+      "max_abs_error": 0.0,
+      "absolute_error_floor": 0.015625,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0078125,
+      "special_values_match": true,
+      "exact_match": true,
+      "passed": true
+    },
+    {
+      "case_id": 16,
+      "shape": [
+        2,
+        64,
+        31,
+        31
+      ],
+      "weight_shape": [
+        64,
+        3,
+        3
+      ],
+      "output_shape": [
+        2,
+        64,
+        31,
+        31
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "kernelSize": [
+          3,
+          3
+        ],
+        "stride": [
+          1,
+          1
+        ],
+        "padding": [
+          1,
+          1
+        ],
+        "dilation": [
+          1,
+          1
+        ],
+        "groups": 64
+      },
+      "note": "S-float16-200K-\u6df7\u5408\u975e\u5bf9\u9f50-\u5fae\u5c0f\u503c\u57df",
+      "numel": 123008,
+      "kernel_us": 1646.43,
+      "input_max_abs": 0.5,
+      "max_abs_error": 0.0001220703125,
+      "absolute_error_floor": 0.001953125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "special_values_match": true,
+      "exact_match": false,
+      "passed": true
+    },
+    {
+      "case_id": 17,
+      "shape": [
+        3,
+        127,
+        63,
+        63
+      ],
+      "weight_shape": [
+        127,
+        5,
+        5
+      ],
+      "output_shape": [
+        3,
+        127,
+        32,
+        32
+      ],
+      "dtype": "float32",
+      "attrs": {
+        "kernelSize": [
+          5,
+          5
+        ],
+        "stride": [
+          2,
+          2
+        ],
+        "padding": [
+          2,
+          2
+        ],
+        "dilation": [
+          1,
+          1
+        ],
+        "groups": 127
+      },
+      "note": "S-float32-2M-\u975e\u5bf9\u9f50-stride=2-5x5k",
+      "numel": 390144,
+      "kernel_us": 4417.84,
+      "input_max_abs": 2.999993324279785,
+      "max_abs_error": 0.0,
+      "absolute_error_floor": 2.8610165827558376e-06,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0001220703125,
+      "special_values_match": true,
+      "exact_match": true,
+      "passed": true
+    },
+    {
+      "case_id": 18,
+      "shape": [
+        2,
+        255,
+        127,
+        127
+      ],
+      "weight_shape": [
+        255,
+        3,
+        3
+      ],
+      "output_shape": [
+        2,
+        255,
+        123,
+        123
+      ],
+      "dtype": "bfloat16",
+      "attrs": {
+        "kernelSize": [
+          3,
+          3
+        ],
+        "stride": [
+          1,
+          1
+        ],
+        "padding": [
+          1,
+          1
+        ],
+        "dilation": [
+          3,
+          3
+        ],
+        "groups": 255
+      },
+      "note": "M-bfloat16-16M-\u975e\u5bf9\u9f50-dilation=3-\u5927\u503c\u57df",
+      "numel": 7715790,
+      "kernel_us": 50345.3,
+      "input_max_abs": 1000.0,
+      "max_abs_error": 16384.0,
+      "absolute_error_floor": 0.015625,
+      "mere": 1.0122486508435066e-06,
+      "mare": 0.03448275476694107,
+      "threshold": 0.0078125,
+      "special_values_match": true,
+      "exact_match": false,
+      "passed": true
+    },
+    {
+      "case_id": 19,
+      "shape": [
+        4,
+        31,
+        31,
+        31
+      ],
+      "weight_shape": [
+        31,
+        3,
+        3
+      ],
+      "output_shape": [
+        4,
+        31,
+        31,
+        31
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "kernelSize": [
+          3,
+          3
+        ],
+        "stride": [
+          1,
+          1
+        ],
+        "padding": [
+          1,
+          1
+        ],
+        "dilation": [
+          1,
+          1
+        ],
+        "groups": 31
+      },
+      "note": "S-float16-100K-\u8d28\u6570\u975e\u5bf9\u9f50-\u5fae\u5c0f\u503c\u57df",
+      "numel": 119164,
+      "kernel_us": 1593.46,
+      "input_max_abs": 0.199951171875,
+      "max_abs_error": 6.103515625e-05,
+      "absolute_error_floor": 0.001953125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "special_values_match": true,
+      "exact_match": false,
+      "passed": true
+    },
+    {
+      "case_id": 20,
+      "shape": [
+        2,
+        127,
+        127,
+        127
+      ],
+      "weight_shape": [
+        127,
+        3,
+        3
+      ],
+      "output_shape": [
+        2,
+        127,
+        125,
+        125
+      ],
+      "dtype": "float32",
+      "attrs": {
+        "kernelSize": [
+          3,
+          3
+        ],
+        "stride": [
+          1,
+          1
+        ],
+        "padding": [
+          1,
+          1
+        ],
+        "dilation": [
+          2,
+          2
+        ],
+        "groups": 127
+      },
+      "note": "M-float32-4M-\u8d28\u6570\u975e\u5bf9\u9f50-dilation=2-\u975e\u5bf9\u79f0\u4e2d\u503c\u57df",
+      "numel": 3968750,
+      "kernel_us": 18656.2,
+      "input_max_abs": 6.0,
+      "max_abs_error": 0.0,
+      "absolute_error_floor": 5.7220458984375e-06,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0001220703125,
+      "special_values_match": true,
+      "exact_match": true,
+      "passed": true
+    }
+  ]
+}

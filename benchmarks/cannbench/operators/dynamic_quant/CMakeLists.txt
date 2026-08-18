@@ -1,0 +1,10 @@
+cmake_minimum_required(VERSION 3.16)
+find_package(ASC REQUIRED)
+project(dynamic_quant_direct LANGUAGES ASC CXX)
+set(CMAKE_CXX_STANDARD 17)
+
+add_executable(dynamic_quant op_host/dynamic_quant.asc)
+target_include_directories(dynamic_quant PRIVATE op_host op_kernel)
+target_link_libraries(dynamic_quant PRIVATE tiling_api register platform unified_dlog dl m graph_base ascendcl ascendc_runtime)
+target_link_directories(dynamic_quant PRIVATE "$ENV{ASCEND_HOME_PATH}/lib64" "$ENV{ASCEND_HOME_PATH}/aarch64-linux/lib64")
+target_compile_options(dynamic_quant PRIVATE $<$<COMPILE_LANGUAGE:ASC>:--npu-arch=dav-2201>)

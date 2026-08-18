@@ -1,0 +1,1174 @@
+{
+  "operator": "conv_2d",
+  "level": 3,
+  "soc_version": "Ascend910_9362",
+  "npu_arch": "dav-2201",
+  "execution": "direct_custom_ascendc_im2col_cube_matmul_postprocess_bf16_sensitive_correction",
+  "correctness_only": true,
+  "profiling": "not_collected_per_user",
+  "total_cases": 20,
+  "passed_cases": 20,
+  "all_passed": true,
+  "cases": [
+    {
+      "case_id": 1,
+      "shape": [
+        2,
+        64,
+        32,
+        32
+      ],
+      "weight_shape": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "output_shape": [
+        2,
+        64,
+        32,
+        32
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "note": "S-float16-256K-\u5bf9\u9f50-3x3k-same_pad | baseline_kernels: TransData\u00d72 + MemSet\u00d71 + Conv2D\u00d71",
+      "numel": 131072,
+      "kernel_us": 3276.72,
+      "input_max_abs": 1.0,
+      "max_abs_error": 0.0078125,
+      "absolute_error_floor": 0.001953125,
+      "bf16_equivalence": null,
+      "mere": 1.1948392319993673e-07,
+      "mare": 0.0009242144296877086,
+      "threshold": 0.0009765625,
+      "special_values_match": true,
+      "exact_match": false,
+      "mathematical_oracle": null,
+      "diagnostic_default_golden": null,
+      "passed": true
+    },
+    {
+      "case_id": 2,
+      "shape": [
+        4,
+        128,
+        64,
+        64
+      ],
+      "weight_shape": [
+        128,
+        128,
+        3,
+        3
+      ],
+      "output_shape": [
+        4,
+        128,
+        64,
+        64
+      ],
+      "dtype": "float32",
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "note": "S-float32-8M-\u5bf9\u9f50-3x3k | baseline_kernels: TransData\u00d73 + Conv2D\u00d71",
+      "numel": 2097152,
+      "kernel_us": 48020.8,
+      "input_max_abs": 0.09999997913837433,
+      "max_abs_error": 8.642673492431641e-07,
+      "absolute_error_floor": 2.746580476014265e-06,
+      "bf16_equivalence": null,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0001220703125,
+      "special_values_match": true,
+      "exact_match": false,
+      "mathematical_oracle": null,
+      "diagnostic_default_golden": null,
+      "passed": true
+    },
+    {
+      "case_id": 3,
+      "shape": [
+        2,
+        256,
+        128,
+        128
+      ],
+      "weight_shape": [
+        256,
+        256,
+        5,
+        5
+      ],
+      "output_shape": [
+        2,
+        256,
+        128,
+        128
+      ],
+      "dtype": "bfloat16",
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "note": "M-bfloat16-33M-\u5bf9\u9f50-5x5k | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Cast\u00d71 + Conv2D\u00d71",
+      "numel": 8388608,
+      "kernel_us": 1576400.0,
+      "input_max_abs": 3.0,
+      "max_abs_error": 4.0,
+      "absolute_error_floor": 0.015625,
+      "bf16_equivalence": "raw_relative_against_math_oracle",
+      "mere": 2.3662645293187623e-06,
+      "mare": 0.0078125,
+      "threshold": 0.0078125,
+      "special_values_match": true,
+      "exact_match": false,
+      "mathematical_oracle": {
+        "kind": "fp32_accumulate_then_once_bfloat16_with_source_order_sensitive_points",
+        "role": "primary_correctness",
+        "exact_match": false,
+        "max_abs_error": 4.0,
+        "mere": 2.3662645293187623e-06,
+        "mare": 0.0078125,
+        "special_values_match": true,
+        "passed": true
+      },
+      "diagnostic_default_golden": {
+        "kind": "unchanged_torch_default_onednn_indirect_gemm_acl",
+        "role": "diagnostic_only",
+        "exact_match": false,
+        "different_elements": 5500109,
+        "max_abs_error": 16.0,
+        "mere_after_one_ulp_equivalence": 0.03259479228075668,
+        "mare_after_one_ulp_equivalence": 14202.0185546875,
+        "special_values_match": true,
+        "passed": false,
+        "known_reference_backend_defect": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": 4,
+      "shape": [
+        8,
+        512,
+        64,
+        64
+      ],
+      "weight_shape": [
+        512,
+        512,
+        3,
+        3
+      ],
+      "output_shape": [
+        8,
+        512,
+        32,
+        32
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "strides": [
+          2,
+          2
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "note": "M-float16-67M-\u5bf9\u9f50-stride=2-downsample | baseline_kernels: TransData\u00d72 + MemSet\u00d71 + Conv2D\u00d71",
+      "numel": 4194304,
+      "kernel_us": 91799.5,
+      "input_max_abs": 1.0,
+      "max_abs_error": 0.0625,
+      "absolute_error_floor": 0.001953125,
+      "bf16_equivalence": null,
+      "mere": 6.966983157746798e-07,
+      "mare": 0.0009765625,
+      "threshold": 0.0009765625,
+      "special_values_match": true,
+      "exact_match": false,
+      "mathematical_oracle": null,
+      "diagnostic_default_golden": null,
+      "passed": true
+    },
+    {
+      "case_id": 5,
+      "shape": [
+        4,
+        1024,
+        32,
+        32
+      ],
+      "weight_shape": [
+        1024,
+        1024,
+        3,
+        3
+      ],
+      "output_shape": [
+        4,
+        1024,
+        32,
+        32
+      ],
+      "dtype": "float32",
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "dilations": [
+          2,
+          2
+        ]
+      },
+      "note": "M-float32-134M-\u5bf9\u9f50-dilation=2 | baseline_kernels: TransData\u00d73 + Conv2D\u00d71",
+      "numel": 4194304,
+      "kernel_us": 118645.0,
+      "input_max_abs": 0.4999999701976776,
+      "max_abs_error": 0.0001926422119140625,
+      "absolute_error_floor": 0.0005493162752827688,
+      "bf16_equivalence": null,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0001220703125,
+      "special_values_match": true,
+      "exact_match": false,
+      "mathematical_oracle": null,
+      "diagnostic_default_golden": null,
+      "passed": true
+    },
+    {
+      "case_id": 6,
+      "shape": [
+        2,
+        2048,
+        16,
+        16
+      ],
+      "weight_shape": [
+        2048,
+        2048,
+        1,
+        1
+      ],
+      "output_shape": [
+        2,
+        2048,
+        16,
+        16
+      ],
+      "dtype": "bfloat16",
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "note": "M-bfloat16-1G-\u5bf9\u9f50-1x1k-valid | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Cast\u00d71 + Conv2D\u00d71",
+      "numel": 1048576,
+      "kernel_us": 33422.1,
+      "input_max_abs": 10.0,
+      "max_abs_error": 16.0,
+      "absolute_error_floor": 0.015625,
+      "bf16_equivalence": "raw_relative_against_math_oracle",
+      "mere": 7.601696903059008e-07,
+      "mare": 0.007751937955617905,
+      "threshold": 0.0078125,
+      "special_values_match": true,
+      "exact_match": false,
+      "mathematical_oracle": {
+        "kind": "fp32_accumulate_then_once_bfloat16_with_source_order_sensitive_points",
+        "role": "primary_correctness",
+        "exact_match": false,
+        "max_abs_error": 16.0,
+        "mere": 7.601696903059008e-07,
+        "mare": 0.007751937955617905,
+        "special_values_match": true,
+        "passed": true
+      },
+      "diagnostic_default_golden": {
+        "kind": "unchanged_torch_default_onednn_indirect_gemm_acl",
+        "role": "diagnostic_only",
+        "exact_match": false,
+        "different_elements": 529911,
+        "max_abs_error": 64.0,
+        "mere_after_one_ulp_equivalence": 0.013381585303243071,
+        "mare_after_one_ulp_equivalence": 798.2115478515625,
+        "special_values_match": true,
+        "passed": false,
+        "known_reference_backend_defect": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": 7,
+      "shape": [
+        3,
+        63,
+        31,
+        31
+      ],
+      "weight_shape": [
+        63,
+        63,
+        3,
+        3
+      ],
+      "output_shape": [
+        3,
+        63,
+        31,
+        31
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "note": "S-float16-200K-\u8d28\u6570\u975e\u5bf9\u9f50-\u5fae\u5c0f\u503c\u57df | baseline_kernels: TransData\u00d72 + MemSet\u00d71 + Conv2D\u00d71",
+      "numel": 181629,
+      "kernel_us": 3230.45,
+      "input_max_abs": 0.0999755859375,
+      "max_abs_error": 0.0001220703125,
+      "absolute_error_floor": 0.001953125,
+      "bf16_equivalence": null,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "special_values_match": true,
+      "exact_match": false,
+      "mathematical_oracle": null,
+      "diagnostic_default_golden": null,
+      "passed": true
+    },
+    {
+      "case_id": 8,
+      "shape": [
+        2,
+        127,
+        61,
+        61
+      ],
+      "weight_shape": [
+        127,
+        127,
+        3,
+        3
+      ],
+      "output_shape": [
+        2,
+        127,
+        61,
+        61
+      ],
+      "dtype": "float32",
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "note": "S-float32-2M-\u8d28\u6570\u975e\u5bf9\u9f50-\u975e\u5bf9\u79f0 | baseline_kernels: TransData\u00d73 + Conv2D\u00d71",
+      "numel": 945134,
+      "kernel_us": 22585.2,
+      "input_max_abs": 2.0,
+      "max_abs_error": 0.0009765625,
+      "absolute_error_floor": 0.0010900487040998996,
+      "bf16_equivalence": null,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0001220703125,
+      "special_values_match": true,
+      "exact_match": false,
+      "mathematical_oracle": null,
+      "diagnostic_default_golden": null,
+      "passed": true
+    },
+    {
+      "case_id": 9,
+      "shape": [
+        3,
+        47,
+        23,
+        23
+      ],
+      "weight_shape": [
+        47,
+        47,
+        5,
+        5
+      ],
+      "output_shape": [
+        3,
+        47,
+        12,
+        12
+      ],
+      "dtype": "bfloat16",
+      "attrs": {
+        "strides": [
+          2,
+          2
+        ],
+        "pads": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "note": "S-bfloat16-50K-\u8d28\u6570\u975e\u5bf9\u9f50-stride=2 | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Cast\u00d71 + Conv2D\u00d71",
+      "numel": 20304,
+      "kernel_us": 1454.68,
+      "input_max_abs": 10.0,
+      "max_abs_error": 32.0,
+      "absolute_error_floor": 0.015625,
+      "bf16_equivalence": "raw_relative_against_math_oracle",
+      "mere": 5.673166554145239e-07,
+      "mare": 0.007518797181546688,
+      "threshold": 0.0078125,
+      "special_values_match": true,
+      "exact_match": false,
+      "mathematical_oracle": {
+        "kind": "fp32_accumulate_then_once_bfloat16_with_source_order_sensitive_points",
+        "role": "primary_correctness",
+        "exact_match": false,
+        "max_abs_error": 32.0,
+        "mere": 5.673166554145239e-07,
+        "mare": 0.007518797181546688,
+        "special_values_match": true,
+        "passed": true
+      },
+      "diagnostic_default_golden": {
+        "kind": "unchanged_torch_default_onednn_indirect_gemm_acl",
+        "role": "diagnostic_only",
+        "exact_match": false,
+        "different_elements": 5063,
+        "max_abs_error": 64.0,
+        "mere_after_one_ulp_equivalence": 8.457664868569073e-07,
+        "mare_after_one_ulp_equivalence": 0.008733624592423439,
+        "special_values_match": true,
+        "passed": true,
+        "known_reference_backend_defect": false
+      },
+      "passed": true
+    },
+    {
+      "case_id": 10,
+      "shape": [
+        5,
+        97,
+        43,
+        43
+      ],
+      "weight_shape": [
+        97,
+        97,
+        3,
+        3
+      ],
+      "output_shape": [
+        5,
+        97,
+        41,
+        41
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          2,
+          2
+        ]
+      },
+      "note": "S-float16-2M-\u8d28\u6570\u975e\u5bf9\u9f50-dilation=2 | baseline_kernels: TransData\u00d72 + MemSet\u00d71 + Conv2D\u00d71",
+      "numel": 815285,
+      "kernel_us": 15769.4,
+      "input_max_abs": 100.0,
+      "max_abs_error": 0.0,
+      "absolute_error_floor": 0.001953125,
+      "bf16_equivalence": null,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "special_values_match": true,
+      "exact_match": true,
+      "mathematical_oracle": null,
+      "diagnostic_default_golden": null,
+      "passed": true
+    },
+    {
+      "case_id": 11,
+      "shape": [
+        2,
+        65,
+        33,
+        33
+      ],
+      "weight_shape": [
+        65,
+        65,
+        3,
+        3
+      ],
+      "output_shape": [
+        2,
+        65,
+        33,
+        33
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "note": "S-float16-500K-\u975e\u5bf9\u9f50-float16\u8fb9\u754c\u503c | baseline_kernels: TransData\u00d72 + MemSet\u00d71 + Conv2D\u00d71",
+      "numel": 141570,
+      "kernel_us": 2730.32,
+      "input_max_abs": 10.0,
+      "max_abs_error": 1.0,
+      "absolute_error_floor": 0.001953125,
+      "bf16_equivalence": null,
+      "mere": 6.305897925517458e-07,
+      "mare": 0.0009633911540731788,
+      "threshold": 0.0009765625,
+      "special_values_match": true,
+      "exact_match": false,
+      "mathematical_oracle": null,
+      "diagnostic_default_golden": null,
+      "passed": true
+    },
+    {
+      "case_id": 12,
+      "shape": [
+        3,
+        7,
+        13,
+        13
+      ],
+      "weight_shape": [
+        7,
+        7,
+        3,
+        3
+      ],
+      "output_shape": [
+        3,
+        7,
+        13,
+        13
+      ],
+      "dtype": "float32",
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "note": "S-float32-10K-\u8d28\u6570\u975e\u5bf9\u9f50-float32\u8fb9\u754c\u503c | baseline_kernels: TransData\u00d73 + Conv2D\u00d71",
+      "numel": 3549,
+      "kernel_us": 685.136,
+      "input_max_abs": 0.4998813569545746,
+      "max_abs_error": 5.960464477539062e-07,
+      "absolute_error_floor": 3.7447932702566167e-06,
+      "bf16_equivalence": null,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0001220703125,
+      "special_values_match": true,
+      "exact_match": false,
+      "mathematical_oracle": null,
+      "diagnostic_default_golden": null,
+      "passed": true
+    },
+    {
+      "case_id": 13,
+      "shape": [
+        2,
+        63,
+        31,
+        31
+      ],
+      "weight_shape": [
+        63,
+        63,
+        3,
+        3
+      ],
+      "output_shape": [
+        2,
+        63,
+        31,
+        31
+      ],
+      "dtype": "float32",
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "note": "S-float32-200K-\u975e\u5bf9\u9f50-inf\u7279\u6b8a\u503c | baseline_kernels: TransData\u00d73 + Conv2D\u00d71",
+      "numel": 121086,
+      "kernel_us": 2729.32,
+      "input_max_abs": 0.0,
+      "max_abs_error": 0.0,
+      "absolute_error_floor": 2e-06,
+      "bf16_equivalence": null,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0001220703125,
+      "special_values_match": true,
+      "exact_match": true,
+      "mathematical_oracle": null,
+      "diagnostic_default_golden": null,
+      "passed": true
+    },
+    {
+      "case_id": 14,
+      "shape": [
+        2,
+        11,
+        13,
+        17
+      ],
+      "weight_shape": [
+        11,
+        11,
+        3,
+        3
+      ],
+      "output_shape": [
+        2,
+        11,
+        13,
+        17
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "note": "S-float16-5K-\u8d28\u6570\u975e\u5bf9\u9f50-nan\u7279\u6b8a\u503c | baseline_kernels: TransData\u00d72 + MemSet\u00d71 + Conv2D\u00d71",
+      "numel": 4862,
+      "kernel_us": 641.035,
+      "input_max_abs": 0.0,
+      "max_abs_error": 0.0,
+      "absolute_error_floor": 0.001953125,
+      "bf16_equivalence": null,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "special_values_match": true,
+      "exact_match": true,
+      "mathematical_oracle": null,
+      "diagnostic_default_golden": null,
+      "passed": true
+    },
+    {
+      "case_id": 15,
+      "shape": [
+        4,
+        63,
+        31,
+        31
+      ],
+      "weight_shape": [
+        63,
+        63,
+        3,
+        3
+      ],
+      "output_shape": [
+        4,
+        63,
+        31,
+        31
+      ],
+      "dtype": "bfloat16",
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "note": "S-bfloat16-400K-\u975e\u5bf9\u9f50-\u96f6\u503c | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Cast\u00d71 + Conv2D\u00d71",
+      "numel": 242172,
+      "kernel_us": 4637.04,
+      "input_max_abs": 0.0,
+      "max_abs_error": 0.0,
+      "absolute_error_floor": 0.015625,
+      "bf16_equivalence": "raw_relative_against_math_oracle",
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0078125,
+      "special_values_match": true,
+      "exact_match": true,
+      "mathematical_oracle": {
+        "kind": "fp32_accumulate_then_once_bfloat16_with_source_order_sensitive_points",
+        "role": "primary_correctness",
+        "exact_match": true,
+        "max_abs_error": 0.0,
+        "mere": 0.0,
+        "mare": 0.0,
+        "special_values_match": true,
+        "passed": true
+      },
+      "diagnostic_default_golden": {
+        "kind": "unchanged_torch_default_onednn_indirect_gemm_acl",
+        "role": "diagnostic_only",
+        "exact_match": true,
+        "different_elements": 0,
+        "max_abs_error": 0.0,
+        "mere_after_one_ulp_equivalence": 0.0,
+        "mare_after_one_ulp_equivalence": 0.0,
+        "special_values_match": true,
+        "passed": true,
+        "known_reference_backend_defect": false
+      },
+      "passed": true
+    },
+    {
+      "case_id": 16,
+      "shape": [
+        2,
+        64,
+        31,
+        31
+      ],
+      "weight_shape": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "output_shape": [
+        2,
+        64,
+        31,
+        31
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "note": "S-float16-200K-\u6df7\u5408\u975e\u5bf9\u9f50-\u5fae\u5c0f\u503c\u57df | baseline_kernels: TransData\u00d72 + MemSet\u00d71 + Conv2D\u00d71",
+      "numel": 123008,
+      "kernel_us": 2323.92,
+      "input_max_abs": 0.5,
+      "max_abs_error": 0.001953125,
+      "absolute_error_floor": 0.001953125,
+      "bf16_equivalence": null,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "special_values_match": true,
+      "exact_match": false,
+      "mathematical_oracle": null,
+      "diagnostic_default_golden": null,
+      "passed": true
+    },
+    {
+      "case_id": 17,
+      "shape": [
+        3,
+        127,
+        63,
+        63
+      ],
+      "weight_shape": [
+        127,
+        127,
+        5,
+        5
+      ],
+      "output_shape": [
+        3,
+        127,
+        32,
+        32
+      ],
+      "dtype": "float32",
+      "attrs": {
+        "strides": [
+          2,
+          2
+        ],
+        "pads": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "note": "S-float32-2M-\u975e\u5bf9\u9f50-stride=2-5x5k | baseline_kernels: TransData\u00d73 + Conv2D\u00d71",
+      "numel": 390144,
+      "kernel_us": 20648.9,
+      "input_max_abs": 2.999994993209839,
+      "max_abs_error": 0.014404296875,
+      "absolute_error_floor": 0.006812784367607782,
+      "bf16_equivalence": null,
+      "mere": 5.079094715705084e-08,
+      "mare": 4.337171503721038e-06,
+      "threshold": 0.0001220703125,
+      "special_values_match": true,
+      "exact_match": false,
+      "mathematical_oracle": null,
+      "diagnostic_default_golden": null,
+      "passed": true
+    },
+    {
+      "case_id": 18,
+      "shape": [
+        2,
+        255,
+        127,
+        127
+      ],
+      "weight_shape": [
+        255,
+        255,
+        3,
+        3
+      ],
+      "output_shape": [
+        2,
+        255,
+        123,
+        123
+      ],
+      "dtype": "bfloat16",
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          3,
+          3
+        ]
+      },
+      "note": "M-bfloat16-16M-\u975e\u5bf9\u9f50-dilation=3 | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Cast\u00d71 + Conv2D\u00d71",
+      "numel": 7715790,
+      "kernel_us": 336176.0,
+      "input_max_abs": 10.0,
+      "max_abs_error": 32.0,
+      "absolute_error_floor": 0.015625,
+      "bf16_equivalence": "raw_relative_against_math_oracle",
+      "mere": 1.4721449876346662e-06,
+      "mare": 0.023076888173818588,
+      "threshold": 0.0078125,
+      "special_values_match": true,
+      "exact_match": false,
+      "mathematical_oracle": {
+        "kind": "fp32_accumulate_then_once_bfloat16_with_source_order_sensitive_points",
+        "role": "primary_correctness",
+        "exact_match": false,
+        "max_abs_error": 32.0,
+        "mere": 1.4721449876346662e-06,
+        "mare": 0.023076888173818588,
+        "special_values_match": true,
+        "passed": true
+      },
+      "diagnostic_default_golden": {
+        "kind": "unchanged_torch_default_onednn_indirect_gemm_acl",
+        "role": "diagnostic_only",
+        "exact_match": false,
+        "different_elements": 2253,
+        "max_abs_error": 32.0,
+        "mere_after_one_ulp_equivalence": 5.448946473172071e-07,
+        "mare_after_one_ulp_equivalence": 0.39119288325309753,
+        "special_values_match": true,
+        "passed": false,
+        "known_reference_backend_defect": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": 19,
+      "shape": [
+        4,
+        31,
+        31,
+        31
+      ],
+      "weight_shape": [
+        31,
+        31,
+        3,
+        3
+      ],
+      "output_shape": [
+        4,
+        31,
+        31,
+        31
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "note": "S-float16-100K-\u8d28\u6570\u975e\u5bf9\u9f50-\u5fae\u5c0f\u503c\u57df | baseline_kernels: TransData\u00d72 + MemSet\u00d71 + Conv2D\u00d71",
+      "numel": 119164,
+      "kernel_us": 2367.02,
+      "input_max_abs": 0.199951171875,
+      "max_abs_error": 0.000244140625,
+      "absolute_error_floor": 0.001953125,
+      "bf16_equivalence": null,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "special_values_match": true,
+      "exact_match": false,
+      "mathematical_oracle": null,
+      "diagnostic_default_golden": null,
+      "passed": true
+    },
+    {
+      "case_id": 20,
+      "shape": [
+        2,
+        127,
+        127,
+        127
+      ],
+      "weight_shape": [
+        127,
+        127,
+        3,
+        3
+      ],
+      "output_shape": [
+        2,
+        127,
+        125,
+        125
+      ],
+      "dtype": "float32",
+      "attrs": {
+        "strides": [
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          2,
+          2
+        ]
+      },
+      "note": "M-float32-4M-\u8d28\u6570\u975e\u5bf9\u9f50-dilation=2-\u975e\u5bf9\u79f0\u4e2d\u503c\u57df | baseline_kernels: TransData\u00d73 + Conv2D\u00d71",
+      "numel": 3968750,
+      "kernel_us": 99533.3,
+      "input_max_abs": 6.0,
+      "max_abs_error": 0.008544921875,
+      "absolute_error_floor": 0.009810415726633437,
+      "bf16_equivalence": null,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0001220703125,
+      "special_values_match": true,
+      "exact_match": false,
+      "mathematical_oracle": null,
+      "diagnostic_default_golden": null,
+      "passed": true
+    }
+  ]
+}

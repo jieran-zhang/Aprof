@@ -1,0 +1,10 @@
+cmake_minimum_required(VERSION 3.16)
+find_package(ASC REQUIRED)
+project(grid_sampler_3d_direct LANGUAGES ASC CXX)
+set(CMAKE_CXX_STANDARD 17)
+
+add_executable(grid_sampler_3d op_host/grid_sampler_3d.asc)
+target_include_directories(grid_sampler_3d PRIVATE op_host op_kernel)
+target_link_libraries(grid_sampler_3d PRIVATE tiling_api register platform unified_dlog dl m graph_base ascendcl ascendc_runtime)
+target_link_directories(grid_sampler_3d PRIVATE "$ENV{ASCEND_HOME_PATH}/lib64" "$ENV{ASCEND_HOME_PATH}/aarch64-linux/lib64")
+target_compile_options(grid_sampler_3d PRIVATE $<$<COMPILE_LANGUAGE:ASC>:--npu-arch=dav-2201>)

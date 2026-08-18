@@ -1,0 +1,3 @@
+# Design
+
+The host validates shapes and cumulative boundaries, allocates device buffers, creates Cube tiling, and launches one AIC `MatmulImpl` per nonempty expert. The AIC path consumes ND int8 inputs and writes int32 accumulation to device global memory. A subsequent AIV launch owns each row, loads the expert's two per-channel scale halves into float UB buffers, applies token scale, vector `Exp` for sigmoid, SwiGLU, scalar row amax, ties-to-even quantization, and writes int8 plus float32 scale. UB live storage is two aligned `N/2` float arrays plus 32 bytes; at maximum N=10240 this is 40,992 bytes. Groups are serialized because direct MatmulImpl launches reuse tiling/runtime resources. Host never maps device outputs for computation and no ACLNN operation is used.
