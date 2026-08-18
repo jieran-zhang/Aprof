@@ -46,6 +46,7 @@ src/aprof_runtime/                   # validation, routing, gate, episode store,
 scripts/                             # registry sync and deterministic graph compiler
 tests/                               # executable contract/runtime/compiler tests
 docs/                                # architecture, decision-surface, and training plans
+benchmarks/cannbench/                 # source-only operator corpus and frozen split manifests
 ```
 
 Task-local runtime state belongs under `<op_dir>/.aprof/` and is not committed

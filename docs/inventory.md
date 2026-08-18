@@ -37,7 +37,8 @@ contracts that lack code are explicitly marked unimplemented.
 | `skills/aprof/benchmark/ascendc-kernel-direct-invoke/` | Core runnable-project scaffold |
 | `skills/aprof/remote-kernel-deploy/` | Optional remote execution adapter |
 | `skills/aprof/benchmark/ascendc-aprof-inject-problems/` | Independent benchmark/data-generation system |
-| `benchmarks/cannbench/` / `third_party/cann-bench/` | External benchmark worktree/submodule state |
+| `benchmarks/cannbench/` | Source-only operator projects, compact correctness summaries, and frozen train/validation/test manifests |
+| `third_party/cann-bench/` | Local standalone upstream checkout; not committed by this repository |
 
 Injection is distributed as `aprof-benchmark-tools` and is not a dependency of
 the production workflow.
@@ -48,6 +49,9 @@ the production workflow.
   `scripts/sync_aprof_registry.py`.
 - Task traces and raw artifacts live in `<op_dir>/.aprof/` and are ignored by
   Git.
+- CANNBench `build*`, binary `results/`, `docs/perf/`, msprof/MindStudio trees,
+  logs, and local tool symlinks are ignored; operator source and compact
+  validation summaries remain versioned.
 - Published graph snapshots are immutable; policy revisions are separate from
   graph source.
 

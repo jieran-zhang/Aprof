@@ -86,6 +86,11 @@ Injection recipe、隐藏 label 和 variant 名只允许离线 dataset adapter �
 - `D_validation`：选 checkpoint、调预算和停止，不进入当轮 policy 更新；
 - `D_test`：冻结 graph、policy、prompt、model、seed 和预算后一次性评测。
 
+仓库内的冻结清单位于 `benchmarks/cannbench/{train,validation,test}/`，用
+`python3 benchmarks/cannbench/validate_splits.py` 检查成员互斥、覆盖和摘要一致性。
+算子源码与小型 correctness summary 可以入库；build、case 二进制和 profiling
+树必须留在 Git 之外。
+
 语义近邻算子需要显式标注，不能把相同机制族的近邻误称为严格 OOD。
 
 ### 3.4 Episode 准入条件
