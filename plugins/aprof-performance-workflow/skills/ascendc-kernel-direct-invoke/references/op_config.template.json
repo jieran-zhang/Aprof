@@ -1,0 +1,40 @@
+{
+  "_comment_top_level": "顶层字段：kernel_name/kernel_path/blockdim/mode/device_id/magic。不要把这些放到 test_cases 里面去！",
+  "kernel_name": "<your_op>_kernel",
+  "kernel_path": "./<your_op>_kernel.o",
+  "blockdim": 1,
+  "mode": "ca",
+  "device_id": 0,
+  "magic": "RT_DEV_BINARY_MAGIC_ELF_AIVEC",
+
+  "_comment_magic": "Vector kernel -> RT_DEV_BINARY_MAGIC_ELF_AIVEC; Cube kernel -> RT_DEV_BINARY_MAGIC_ELF_AIC",
+
+  "test_cases": [
+    {
+      "case_name": "<your_op>_case0",
+      "param_desc": [
+        {
+          "_comment": "input 必填 type/shape/data_path/name",
+          "param_type": "input",
+          "type": "float32",
+          "shape": [1, 8],
+          "data_path": "./input.bin",
+          "name": "x"
+        },
+        {
+          "_comment": "output 不需要 data_path（仿真器自己产生）",
+          "param_type": "output",
+          "type": "float32",
+          "shape": [1],
+          "name": "y"
+        },
+        {
+          "_comment": "tiling 必填 tiling_data_size（字节）和 tiling_data_path",
+          "param_type": "tiling",
+          "tiling_data_size": 32,
+          "tiling_data_path": "./tiling.bin"
+        }
+      ]
+    }
+  ]
+}

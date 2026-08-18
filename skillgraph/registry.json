@@ -1,0 +1,183 @@
+{
+  "schema_version": 1,
+  "library": {
+    "name": "aprof-skills",
+    "version": "0.2.0",
+    "description": "AProf Ascend C trainable performance workflow skills. Core capabilities cover trace-producing workflow orchestration, diagnosis, profiling, bounded optimization, and direct-invoke scaffolding; remote deployment is an optional adapter."
+  },
+  "benchmark_package": {
+    "name": "aprof-benchmark-tools",
+    "version": "0.2.0",
+    "description": "Independent AProf benchmark-generation tools. Problem injection creates controlled benchmark cases and is not part of the AProf optimization workflow or its training authority."
+  },
+  "workflow_plugin": {
+    "name": "aprof-performance-workflow",
+    "version": "0.2.0",
+    "description": "AProf trace-producing Ascend C performance workflow. It orchestrates diagnosis, profiling, bounded optimization, machine-gated validation, and training-trace preservation.",
+    "dependencies": [
+      "aprof-skills"
+    ],
+    "agents": [
+      "plugins/aprof-performance-workflow/agents/aprof-diagnosis-wrapper.md",
+      "plugins/aprof-performance-workflow/agents/aprof-profiling-wrapper.md",
+      "plugins/aprof-performance-workflow/agents/aprof-optimization-wrapper.md"
+    ],
+    "codex": {
+      "marketplace_name": "aprof",
+      "marketplace_display_name": "AProf",
+      "display_name": "AProf Performance Workflow",
+      "short_description": "Trace-producing Ascend C performance optimization",
+      "long_description": "Route, diagnose, profile, and optimize Ascend C operators with immutable SkillGraph versions, machine-verified gates, bounded budgets, and reusable training traces.",
+      "developer_name": "AProf",
+      "category": "Productivity",
+      "capabilities": [
+        "Read",
+        "Write"
+      ],
+      "default_prompt": [
+        "Optimize this Ascend C operator with AProf and preserve a verified trace.",
+        "Run a plan-only AProf diagnosis and SkillGraph route.",
+        "Explain which AProf episodes are eligible for policy training."
+      ]
+    }
+  },
+  "capabilities": {
+    "core": [
+      {
+        "name": "ascendc-aprof-workflow",
+        "source": "skills/aprof/ascendc-aprof-workflow",
+        "purpose": "Stable user-facing entry for trace-producing AProf optimization sessions."
+      },
+      {
+        "name": "ascendc-aprof-diagnosis",
+        "source": "skills/aprof/diagnosis",
+        "purpose": "Source and profiling-evidence diagnosis.",
+        "legacy_names": [
+          "aprof-ascendc-diagnosis"
+        ]
+      },
+      {
+        "name": "ascendc-aprof-profiling",
+        "source": "skills/aprof/profiling",
+        "purpose": "Profiling plan, collection, and parsing.",
+        "legacy_names": [
+          "aprof-ascendc-profiling"
+        ]
+      },
+      {
+        "name": "ascendc-aprof-optimization",
+        "source": "skills/aprof/optimization",
+        "purpose": "Bounded candidate proposal and optimization.",
+        "legacy_names": [
+          "aprof-ascendc-optimization"
+        ]
+      },
+      {
+        "name": "ascendc-kernel-direct-invoke",
+        "source": "skills/aprof/benchmark/ascendc-kernel-direct-invoke",
+        "purpose": "Convert a kernel into a runnable direct-invoke project.",
+        "legacy_names": [
+          "aprof-ascendc-kernel-direct-invoke"
+        ]
+      }
+    ],
+    "optional_adapters": [
+      {
+        "name": "ascendc-remote-kernel-deploy",
+        "source": "skills/aprof/remote-kernel-deploy",
+        "purpose": "Optional SSH deployment and remote profiling adapter."
+      }
+    ],
+    "benchmark_only": [
+      {
+        "name": "ascendc-aprof-inject-problems",
+        "source": "skills/aprof/benchmark/ascendc-aprof-inject-problems",
+        "purpose": "Benchmark generation only; excluded from the core optimization workflow and training authority."
+      }
+    ]
+  },
+  "support_skills": [
+    {
+      "name": "ascendc-env-check",
+      "source": "third_party/cannbot-skills/ops/ascendc-env-check"
+    },
+    {
+      "name": "ascendc-perf-optimize",
+      "source": "third_party/cannbot-skills/ops/ascendc-perf-optimize"
+    },
+    {
+      "name": "ascendc-tiling-design",
+      "source": "third_party/cannbot-skills/ops/ascendc-tiling-design"
+    },
+    {
+      "name": "ascendc-performance-best-practices",
+      "source": "third_party/cannbot-skills/ops/ascendc-performance-best-practices"
+    },
+    {
+      "name": "ascendc-api-best-practices",
+      "source": "third_party/cannbot-skills/ops/ascendc-api-best-practices"
+    },
+    {
+      "name": "ascendc-docs-search",
+      "source": "third_party/cannbot-skills/ops/ascendc-docs-search"
+    },
+    {
+      "name": "ascendc-code-review",
+      "source": "third_party/cannbot-skills/ops/ascendc-code-review"
+    },
+    {
+      "name": "ascendc-precision-debug",
+      "source": "third_party/cannbot-skills/ops/ascendc-precision-debug"
+    },
+    {
+      "name": "ascendc-runtime-debug",
+      "source": "third_party/cannbot-skills/ops/ascendc-runtime-debug"
+    },
+    {
+      "name": "ascendc-crash-debug",
+      "source": "third_party/cannbot-skills/ops/ascendc-crash-debug"
+    },
+    {
+      "name": "ops-profiling",
+      "source": "third_party/cannbot-skills/ops/ops-profiling"
+    },
+    {
+      "name": "ops-simulator",
+      "source": "third_party/cannbot-skills/ops/ops-simulator"
+    },
+    {
+      "name": "npu-arch",
+      "source": "third_party/cannbot-skills/ops/npu-arch"
+    }
+  ],
+  "cursor_agents": [
+    {
+      "name": "aprof-performance-workflow",
+      "source": "plugins/aprof-performance-workflow/AGENTS.md"
+    },
+    {
+      "name": "aprof-diagnosis-agent",
+      "source": "skills/aprof/diagnosis/AGENTS.md"
+    },
+    {
+      "name": "aprof-profiling-agent",
+      "source": "skills/aprof/profiling/AGENTS.md"
+    },
+    {
+      "name": "aprof-optimization-agent",
+      "source": "skills/aprof/optimization/AGENTS.md"
+    },
+    {
+      "name": "aprof-diagnosis-wrapper",
+      "source": "plugins/aprof-performance-workflow/agents/aprof-diagnosis-wrapper.md"
+    },
+    {
+      "name": "aprof-profiling-wrapper",
+      "source": "plugins/aprof-performance-workflow/agents/aprof-profiling-wrapper.md"
+    },
+    {
+      "name": "aprof-optimization-wrapper",
+      "source": "plugins/aprof-performance-workflow/agents/aprof-optimization-wrapper.md"
+    }
+  ]
+}

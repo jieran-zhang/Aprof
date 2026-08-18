@@ -24,7 +24,7 @@ bash skills/aprof/remote-kernel-deploy/init.sh
 
 效果：
 
-- `.cursor/skills/aprof-ascendc-remote-kernel-deploy` → 本目录 SKILL
+- `.cursor/skills/ascendc-remote-kernel-deploy` → 本目录 SKILL
 - `.cursor/skills/ops-profiling` → CANNBot ops-profiling
 - `.cursor/agents/aprof-remote-kernel-deploy` → `AGENTS.md`
 - `.cursor/agents/aprof-remote-deployer` → `agents/aprof-remote-deployer.md`
