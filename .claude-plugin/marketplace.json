@@ -7,47 +7,68 @@
   "plugins": [
     {
       "name": "aprof-skills",
-      "description": "AProf Ascend C 性能诊断 Skills。包含源码诊断、metric 采集规划、远程 msprof 采集和 msprof simulator 支持。",
+      "description": "AProf Ascend C trainable performance workflow skills. Core capabilities cover trace-producing workflow orchestration, diagnosis, profiling, bounded optimization, and direct-invoke scaffolding; remote deployment is an optional adapter.",
       "source": "./skills/aprof",
       "strict": false,
-      "version": "0.1.0",
+      "version": "0.2.0",
       "author": {
         "name": "AProf"
       },
       "keywords": [
         "aprof",
         "ascendc",
-        "msprof",
+        "skillgraph",
         "profiling",
-        "diagnosis"
+        "optimization"
       ],
       "category": "skills",
       "skills": [
+        "./ascendc-aprof-workflow",
         "./diagnosis",
         "./profiling",
-        "./remote-kernel-deploy",
-        "./benchmark/ascendc-kernel-direct-invoke"
+        "./optimization",
+        "./benchmark/ascendc-kernel-direct-invoke",
+        "./remote-kernel-deploy"
+      ]
+    },
+    {
+      "name": "aprof-benchmark-tools",
+      "description": "Independent AProf benchmark-generation tools. Problem injection creates controlled benchmark cases and is not part of the AProf optimization workflow or its training authority.",
+      "source": "./skills/aprof",
+      "strict": false,
+      "version": "0.2.0",
+      "author": {
+        "name": "AProf"
+      },
+      "keywords": [
+        "aprof",
+        "ascendc",
+        "benchmark",
+        "injection"
+      ],
+      "category": "skills",
+      "skills": [
+        "./benchmark/ascendc-aprof-inject-problems"
       ]
     },
     {
       "name": "aprof-performance-workflow",
       "source": "./plugins/aprof-performance-workflow",
-      "description": "AProf 性能诊断 Team。输入 Ascend C kernel 源码，编排 diagnosis、profiling 和 remote deploy 三个 Agent，输出性能问题诊断和硬件 metric 数据支撑。",
-      "version": "0.1.0",
+      "description": "AProf trace-producing Ascend C performance workflow. It orchestrates diagnosis, profiling, bounded optimization, machine-gated validation, and training-trace preservation.",
+      "version": "0.2.0",
       "author": {
         "name": "AProf"
       },
       "keywords": [
         "aprof",
         "ascendc",
-        "msprof",
+        "skillgraph",
         "workflow",
         "agent"
       ],
       "category": "development",
       "dependencies": [
-        "aprof-skills",
-        "ops-direct-invoke-skills"
+        "aprof-skills"
       ]
     }
   ]
