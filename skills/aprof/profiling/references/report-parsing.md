@@ -1,6 +1,6 @@
 # Report Parsing Plan
 
-本文描述 msprof report 生成后如何整理并获取 metric 的具体值。短期以 CSV/trace 文件和 `ops-profiling` summary 为准；不要编造不存在的 parser。
+本文描述 msprof report 生成后如何整理并获取 metric 的具体值。以 raw CSV/trace 为证据，使用 `scripts/compress_msprof.py` 生成 AProf symptom draft；`ops-profiling` summary 只作人读交叉检查。
 
 ## 通用步骤
 
@@ -10,6 +10,8 @@
 4. 对真实硬件 metric 汇总重复样本：记录 `samples`、`count`、`mean`、`median`、`min`、`max`、`std`、`cv` 和 `selected`。
 5. 输出 metric 值时保留来源路径、字段名、公式和单位。
 6. 缺字段时不要猜值，记录到 `missing_required_artifacts` 或 `notes`。
+7. 运行 `compress_msprof.py --input <report-or-archive> --output <symptoms.json>`；如有平台核数和算法流量下界，显式传入 `--available-cores`、`--theoretical-gm-bytes`。
+8. 保留 compressor 输出的 artifact hash、extractor version、threshold profile、unknown predicate 和 candidate problem ambiguity set。
 
 ## hw-op CSV
 
@@ -89,6 +91,23 @@ profiling_out/msprof_sim_output/OPPROF_*/simulator/core0.veccore0/*_code_exe_*.c
 - `samples` 为空或样本数小于 `execution_plan.repeat` 时，设置 `measurement_status=single_run_exploration` 或 `measurement_limited`。
 - `cv > stability_cv_threshold` 时，设置 `measurement_status=unstable`，并在 `notes` 说明需要增加 repeat、隔离系统噪声或重新采集。
 - baseline/candidate 比较必须使用相同的 `selected` 统计值。默认使用 median；不要用单次最优值替代 median。
+
+## Structured symptom boundary
+
+`compress_msprof.py` currently implements conservative hardware-CSV drafts for:
+
+- core coverage and per-core imbalance;
+- scalar share;
+- MTE setup dominance when ratio, bandwidth usage, and bytes/instruction all exist;
+- UB/resource conflict;
+- GM traffic amplification when the task supplies a theoretical byte lower bound;
+- dominant pipe and a non-authoritative set of plausible mechanisms.
+
+Timeline overlap and vector granularity remain `unknown` unless a dedicated
+trace/instruction adapter is supplied. When `trace.json` exists, the installed
+`ops-simulator/scripts/trace_bubble_analyzer.py --json` may provide structured
+bubble evidence, but it must remain simulator/proxy-labelled until hardware
+evidence exists.
 
 ## 统计规则
 

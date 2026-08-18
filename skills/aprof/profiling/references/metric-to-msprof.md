@@ -18,7 +18,7 @@
 msprof op --warm-up=<warm_up> --launch-count=<repeat> --output=profiling_out/msprof_hw_output ./<binary> <args>
 ```
 
-默认 `<warm_up>=10`、`<repeat>=5`。执行前确认 `run_cmd` 可在当前 profiling 环境运行，输出目录建议使用 `profiling_out/msprof_hw_output`。`--launch-count` 产生同一 workload 的重复样本，解析时必须汇总 median/mean/std/CV。
+默认 `<warm_up>=10`、`<repeat>=5`。执行前确认 `run_cmd` 可在当前 profiling 环境运行，输出目录建议使用 `profiling_out/msprof_hw_output`。`--launch-count` 产生同一 workload 的重复 full-profile metric，解析时必须汇总 median/mean/std/CV。它不替代 production gain gate 所需的至少 30 个交错配对 cheap-timing samples。
 
 ### hw-msprof
 
