@@ -1,14 +1,14 @@
 # Source Hypothesis Routing
 
-本文用于 `aprof-diagnosis-agent` 在只有 kernel 源码时，把代码形态映射到性能问题族和优先硬件 metric。源码阶段只产生假设，最终结论必须由 profiling 数据验证。
+本文是 seed SkillGraph 的人读 expert-prior source。它帮助 `aprof-diagnosis-agent` 在只有 kernel 源码时，把代码形态映射到一个或多个 anchor facets、provisional mechanisms 和优先硬件 metric。源码阶段只产生证据，最终 route 必须由发布图和 runtime 记录。
 
 ## 路由原则
 
 - 先找最强源码证据：循环结构、DataCopy 粒度、buffer/queue 配置、同步、API 调用路径、blockDim/tile 参数。
-- 再映射到现有 6 个问题族：`tiling`、`data_movement`、`pipeline_parallel`、`onchip_memory`、`ai_core_utilization`、`api_algorithm`。
+- 再映射到现有 6 个非互斥 facets：`tiling`、`data_movement`、`pipeline_parallel`、`onchip_memory`、`ai_core_utilization`、`api_algorithm`；它们不是根因标签。
 - 最多保留 3 个假设，最多选择 3 个 metric。
 - 优先选择能区分多个假设的 metric，例如 `PipeUtilization.csv` 的 pipe 占比、`Memory.csv` 的搬运粒度、trace 的重叠率。
-- 涉及 `blockDim`、UB 占用或 AI Core 利用率时，先记录 shape/dtype/total elements；最终判断必须交给 workload-aware gate，不得仅凭低利用率下结论。
+- 涉及 `blockDim`、UB 占用或 AI Core 利用率时，先记录 shape/dtype/total elements；最终判断必须交给 workload-aware predicate 和 graph route，不得仅凭低利用率下结论。
 - 若源码或 profiling 已经呈现 Scalar / Memory / Vec / CUBE / no-bound 现象，读取
   [bound-deep-routing.md](bound-deep-routing.md) 做二级分流；仍然把输出落到六类 problem family。
 - 不直接打开 CANNBot 大型 `SKILL.md`。只有 AProf 本地 reference 明确需要 API 或算子族细节时，才按

@@ -13,7 +13,7 @@ permission:
 
 # AProf Diagnosis Wrapper
 
-在 workflow 中调用 `aprof-diagnosis-agent` 的轻量 wrapper。
+在 workflow 中调用 `aprof-diagnosis-agent` 的轻量 wrapper。只规范化输入输出；六类 family 是可重叠 facets，mechanism 可以多标签或 unresolved。
 
 ## 输入
 
@@ -35,3 +35,4 @@ permission:
 - 对 tiny/small workload，除非有额外 GM 流量、pipe bound、bank conflict、tail 慢路径或 pipeline stall 证据，否则输出 `workload_limited`，不要输出 naive bottleneck。
 - repeat 缺失或 profiling CV 不稳定时输出 `measurement_limited`。
 - 若 report 缺失，停止在源码假设阶段并交给 profiling wrapper 生成采集计划。
+- 输出始终是 draft evidence，进入 route 前使用 versioned schema 校验；不得直接选择 transformation。

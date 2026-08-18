@@ -1,9 +1,19 @@
 ---
 name: ascendc-aprof-diagnosis
-description: Ascend C 算子性能诊断 Skill。用于从 kernel 源码提出性能问题假设，挑选最相关的硬件 metric，并在拿到 aprof/msprof 数据后完成证据归因；适用于源码静态诊断、metric 选择、已有 profiling 数据解读、瓶颈定位和诊断矩阵复用。
+description: Build source, workload, and profile evidence for an Ascend C performance task. Use to activate auditable evidence predicates, produce non-exclusive anchor facets and provisional mechanism hypotheses, request missing metrics, or interpret existing profiling data before SkillGraph routing. Treat every Agent output as a draft for runtime validation.
 ---
 
 # AscendC AProf 性能诊断
+
+## Machine boundary
+
+- Treat the six historical families as non-exclusive expert facets, not as
+  mutually exclusive root-cause labels.
+- Preserve multiple mechanism hypotheses, refuting evidence, missing views, and
+  `unknown_unresolved`; do not force a classification to make routing easier.
+- Emit draft evidence only. Validate it with `aprofctl contract validate` before
+  it enters a route or episode. Do not assign policy reward or accept a
+  candidate in this skill.
 
 ## 使用场景
 
@@ -17,10 +27,10 @@ description: Ascend C 算子性能诊断 Skill。用于从 kernel 源码提出�
 
 ## 诊断流程
 
-1. 若输入是源码，先读取 [references/source-hypothesis-routing.md](references/source-hypothesis-routing.md)，把代码模式映射到问题族。
-2. 按问题族加载本 Skill 的 reference 文档，提出最多 3 个性能问题假设。
+1. 若输入是源码，先读取 [references/source-hypothesis-routing.md](references/source-hypothesis-routing.md)，把代码模式映射到一个或多个 anchor facets 和可检验机制假设。
+2. 按相关 facets 加载本 Skill 的 reference 文档，提出最多 3 个 provisional mechanism hypotheses，并保留支持、反驳和缺失证据。
 3. 若源码或 profiling 已呈现 Scalar / Memory / Vec / CUBE / no-bound 现象，再读取 [references/bound-deep-routing.md](references/bound-deep-routing.md) 做二级根因分流。
-4. 从这些假设中挑选最多 3 个最相关硬件 metric，输出契约见 [../references/contracts.md](../references/contracts.md) 的 `diagnosis_hypotheses.json`。
+4. 从这些假设中挑选最多 3 个最相关硬件 metric。输出是 draft；机器 schema 位于仓库 `schemas/`，旧格式映射说明见 [../references/contracts.md](../references/contracts.md)。
 5. 若还没有采集数据，把 `metrics[]` 交给 `/ascendc-aprof-profiling` 设计采集任务和 metric 清单。
 6. 若已有 profiling 数据，再用 `/ops-profiling` 读取采集方式、CSV 字段和瓶颈判定方法。
 7. 再用 `/npu-arch` 获取核数、UB/L1/L0/L2/BT 容量、频率、理论带宽和理论算力等分母参数。
