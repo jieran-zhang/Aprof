@@ -79,8 +79,8 @@ msprof_sim_output/OPPROF_<ts>_<id>/
 ## 诊断闭环（后续）
 
 ```bash
-python scripts/run_closed_loop.py   # 当前覆盖 swi_glu 三 case
-# fast_gelu 对齐函数：src/aprof/benchmarks/closed_loop.py::run_fast_gelu_alignment
+# 旧 closed-loop Python package 已移除；本文件仅保留历史 benchmark 记录。
+# 这些 case 不进入 SkillGraph seed 或 verified policy training。
 ```
 
 需将 `msprof_sim_output` 产物放回各 inject 目录后，可用 `/ascendc-aprof-diagnosis` 验证 `injected_label` 对齐。
