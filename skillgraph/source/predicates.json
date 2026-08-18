@@ -1,0 +1,203 @@
+{
+  "schema_version": "1.0.0",
+  "predicates": [
+    {
+      "id": "predicate.profile.gm_traffic_amplified",
+      "version": "1.0.0",
+      "view": "profile",
+      "returns": "true_false_unknown",
+      "evaluation": {"mode": "derived", "implementation_status": "unimplemented", "extractor_id": "gm_traffic_amplification", "threshold_ref": "algorithmic_traffic_model"},
+      "inputs": ["read_main_memory_datas", "write_main_memory_datas", "theoretical_minimum_gm_bytes"],
+      "rule": "observed GM bytes materially exceed the algorithmic traffic lower bound",
+      "unknown_when": "theoretical traffic or memory counters are unavailable",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md", "lines": "48-55"}]
+    },
+    {
+      "id": "predicate.profile.mte_setup_dominated",
+      "version": "1.0.0",
+      "view": "profile",
+      "returns": "true_false_unknown",
+      "evaluation": {"mode": "feature_rule", "implementation_status": "unimplemented", "extractor_id": "mte_setup_dominance", "threshold_ref": "hardware_calibration.mte_setup_dominance"},
+      "inputs": ["mte2_ratio", "memory_bandwidth_utilization", "useful_bytes_per_mte_instruction"],
+      "rule": "MTE ratio is high while achieved bandwidth and useful bytes per MTE instruction are low",
+      "unknown_when": "instruction count, bytes, or platform bandwidth is unavailable",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/bound-deep-routing.md", "lines": "42-51"}]
+    },
+    {
+      "id": "predicate.profile.overlap_low",
+      "version": "1.0.0",
+      "view": "profile",
+      "returns": "true_false_unknown",
+      "evaluation": {"mode": "derived", "implementation_status": "unimplemented", "extractor_id": "timeline_overlap", "threshold_ref": "hardware_calibration.minimum_stage_overlap"},
+      "inputs": ["timeline_copy_intervals", "timeline_compute_intervals", "pipe_wait_ratios"],
+      "rule": "copy and compute intervals are predominantly serialized or contain repeated gaps",
+      "unknown_when": "timeline or equivalent overlap counters are unavailable",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/bound-deep-routing.md", "lines": "83-87"}]
+    },
+    {
+      "id": "predicate.profile.per_core_time_imbalanced",
+      "version": "1.0.0",
+      "view": "profile",
+      "returns": "true_false_unknown",
+      "evaluation": {"mode": "derived", "implementation_status": "unimplemented", "extractor_id": "per_core_time_imbalance", "threshold_ref": "diagnosis.core_time_imbalance"},
+      "inputs": ["per_core_task_time"],
+      "rule": "(max(core_time)-min(core_time))/max(core_time) exceeds the calibrated imbalance threshold",
+      "unknown_when": "fewer than two valid per-core samples are available",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/ai-core-utilization-diagnosis-metrics.md", "lines": "30-37"}]
+    },
+    {
+      "id": "predicate.profile.scalar_hot",
+      "version": "1.0.0",
+      "view": "profile",
+      "returns": "true_false_unknown",
+      "evaluation": {"mode": "feature_rule", "implementation_status": "unimplemented", "extractor_id": "scalar_hotness", "threshold_ref": "hardware_calibration.scalar_materiality"},
+      "inputs": ["scalar_ratio", "scalar_time", "icache_miss_rate"],
+      "rule": "scalar ratio and absolute scalar time are material for a non-tiny workload",
+      "unknown_when": "scalar pipe counters or stable duration are unavailable",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md", "lines": "20-27"}]
+    },
+    {
+      "id": "predicate.profile.tasks_below_available_cores",
+      "version": "1.0.0",
+      "view": "profile",
+      "returns": "true_false_unknown",
+      "evaluation": {"mode": "derived", "implementation_status": "unimplemented", "extractor_id": "task_core_coverage"},
+      "inputs": ["total_tasks", "available_cores", "block_dim"],
+      "rule": "effective tasks or launched blocks are fewer than available cores",
+      "unknown_when": "task count or hardware core count is unavailable",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/ai-core-utilization-diagnosis-metrics.md", "lines": "20-28"}]
+    },
+    {
+      "id": "predicate.profile.ub_conflict_high",
+      "version": "1.0.0",
+      "view": "profile",
+      "returns": "true_false_unknown",
+      "evaluation": {"mode": "feature_rule", "implementation_status": "unimplemented", "extractor_id": "ub_conflict", "threshold_ref": "hardware_calibration.ub_conflict"},
+      "inputs": ["vector_total_conflict_ratio", "bank_conflict_ratio", "bank_group_conflict_ratio"],
+      "rule": "UB conflict counters exceed calibrated platform thresholds",
+      "unknown_when": "resource-conflict counters are unavailable",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md", "lines": "69-74"}]
+    },
+    {
+      "id": "predicate.profile.vector_granularity_low",
+      "version": "1.0.0",
+      "view": "profile",
+      "returns": "true_false_unknown",
+      "evaluation": {"mode": "feature_rule", "implementation_status": "unimplemented", "extractor_id": "vector_granularity", "threshold_ref": "hardware_calibration.vector_granularity"},
+      "inputs": ["vector_api_count", "vector_repeat_distribution", "vector_theoretical_utilization"],
+      "rule": "vector calls are numerous with small repeat/count and low theoretical utilization",
+      "unknown_when": "vector instruction or API-level evidence is unavailable",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/bound-deep-routing.md", "lines": "54-64"}]
+    },
+    {
+      "id": "predicate.source.fixed_or_undersubscribed_tasking",
+      "version": "1.0.0",
+      "view": "source",
+      "returns": "true_false_unknown",
+      "evaluation": {"mode": "source_match", "implementation_status": "unimplemented", "extractor_id": "fixed_or_undersubscribed_tasking"},
+      "inputs": ["host_tiling_source", "kernel_launch_source"],
+      "rule": "blockDim is fixed or task construction does not scale with shape and tile count",
+      "unknown_when": "host tiling or launch source is unavailable",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md", "lines": "19-23"}]
+    },
+    {
+      "id": "predicate.source.gm_intermediate_roundtrip",
+      "version": "1.0.0",
+      "view": "source",
+      "returns": "true_false_unknown",
+      "evaluation": {"mode": "source_match", "implementation_status": "unimplemented", "extractor_id": "gm_intermediate_dataflow"},
+      "inputs": ["kernel_source", "dataflow"],
+      "rule": "a multi-step compute chain copies an intermediate to GM and subsequently copies it back on chip",
+      "unknown_when": "intermediate dataflow cannot be resolved",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md", "lines": "33-36"}]
+    },
+    {
+      "id": "predicate.source.inner_loop_copy",
+      "version": "1.0.0",
+      "view": "source",
+      "returns": "true_false_unknown",
+      "evaluation": {"mode": "source_match", "implementation_status": "unimplemented", "extractor_id": "inner_loop_copy"},
+      "inputs": ["kernel_source", "loop_structure", "copy_sizes"],
+      "rule": "DataCopy is repeatedly issued in an inner loop with small contiguous payloads",
+      "unknown_when": "copy count or valid byte count cannot be derived",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md", "lines": "22-24"}]
+    },
+    {
+      "id": "predicate.source.scalar_element_loop",
+      "version": "1.0.0",
+      "view": "source",
+      "returns": "true_false_unknown",
+      "evaluation": {"mode": "source_match", "implementation_status": "unimplemented", "extractor_id": "scalar_element_loop"},
+      "inputs": ["kernel_source"],
+      "rule": "a hot loop performs per-element GetValue/SetValue or scalar arithmetic instead of a vector API",
+      "unknown_when": "hot-loop membership cannot be established",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md", "lines": "59-64"}]
+    },
+    {
+      "id": "predicate.source.serial_queue_or_event_order",
+      "version": "1.0.0",
+      "view": "source",
+      "returns": "true_false_unknown",
+      "evaluation": {"mode": "source_match", "implementation_status": "unimplemented", "extractor_id": "serial_queue_or_event_order"},
+      "inputs": ["kernel_source", "event_order"],
+      "rule": "single-buffer queue order or immediate SetFlag/WaitFlag prevents the next stage from being issued early",
+      "unknown_when": "queue depth or event ordering is unavailable",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md", "lines": "25-31"}]
+    },
+    {
+      "id": "predicate.source.sync_inside_tile_loop",
+      "version": "1.0.0",
+      "view": "source",
+      "returns": "true_false_unknown",
+      "evaluation": {"mode": "source_match", "implementation_status": "unimplemented", "extractor_id": "sync_inside_tile_loop"},
+      "inputs": ["kernel_source", "loop_structure"],
+      "rule": "SyncAll, PIPE_ALL barrier, or equivalently broad synchronization executes inside a repeated tile loop",
+      "unknown_when": "barrier scope or loop nesting cannot be resolved",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md", "lines": "25-27"}]
+    },
+    {
+      "id": "predicate.source.tail_concentrated",
+      "version": "1.0.0",
+      "view": "source",
+      "returns": "true_false_unknown",
+      "evaluation": {"mode": "derived", "implementation_status": "unimplemented", "extractor_id": "tail_assignment_analysis"},
+      "inputs": ["host_tiling_source", "kernel_source"],
+      "rule": "the final core receives a disproportionate tail or executes a substantially slower tail-only path",
+      "unknown_when": "per-core assignment or tail path is unavailable",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/ai-core-utilization-diagnosis-metrics.md", "lines": "69-75"}]
+    },
+    {
+      "id": "predicate.source.ub_live_bytes_near_capacity",
+      "version": "1.0.0",
+      "view": "source",
+      "returns": "true_false_unknown",
+      "evaluation": {"mode": "derived", "implementation_status": "unimplemented", "extractor_id": "onchip_live_range_analysis", "threshold_ref": "hardware_capacity.ub"},
+      "inputs": ["buffer_lifetimes", "ub_capacity_bytes", "alignment_bytes"],
+      "rule": "aligned peak live UB bytes approach capacity and constrain tile size or buffering depth",
+      "unknown_when": "buffer lifetimes or target UB capacity is unavailable",
+      "provenance": [{"path": "skills/aprof/optimization/references/onchip-memory-optimization-strategies.md", "lines": "18-25"}]
+    },
+    {
+      "id": "predicate.source.ub_stride_conflict_risk",
+      "version": "1.0.0",
+      "view": "source",
+      "returns": "true_false_unknown",
+      "evaluation": {"mode": "derived", "implementation_status": "unimplemented", "extractor_id": "ub_bank_mapping", "threshold_ref": "hardware_bank_geometry"},
+      "inputs": ["ub_offsets", "block_strides", "operand_layout", "hardware_bank_geometry"],
+      "rule": "operand offsets or periodic strides map concurrent accesses to the same UB bank or bank group",
+      "unknown_when": "layout or bank geometry is unavailable",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md", "lines": "27-32"}]
+    },
+    {
+      "id": "predicate.workload.tiny_or_overhead_limited",
+      "version": "1.0.0",
+      "view": "workload",
+      "returns": "true_false_unknown",
+      "evaluation": {"mode": "derived", "implementation_status": "unimplemented", "extractor_id": "workload_attainable_utilization", "threshold_ref": "workload_model.tiny_or_overhead_limited"},
+      "inputs": ["element_count", "effective_elements_per_core", "attainable_utilization"],
+      "rule": "work is too small to amortize launch, scalar, and transfer setup overhead",
+      "unknown_when": "shape, effective core count, or workload model is unavailable",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/workload-aware-diagnosis.md", "lines": "18-23"}]
+    }
+  ]
+}

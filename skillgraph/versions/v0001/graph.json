@@ -1,0 +1,2534 @@
+{
+  "anchors": [
+    {
+      "description": "Expert vocabulary facet for task parallelism, active-core coverage, and load balance.",
+      "id": "anchor.ai_core_utilization",
+      "kind": "facet",
+      "name": "AI Core utilization",
+      "provenance": [
+        {
+          "lines": "59-83",
+          "path": "skills/aprof/diagnosis/references/ai-core-utilization-diagnosis-metrics.md"
+        }
+      ],
+      "selectable": false,
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "description": "Expert vocabulary facet for scalar control, fragmented vector APIs, and algorithmic implementation choices.",
+      "id": "anchor.api_algorithm",
+      "kind": "facet",
+      "name": "API and algorithm",
+      "provenance": [
+        {
+          "lines": "57-74",
+          "path": "skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md"
+        }
+      ],
+      "selectable": false,
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "description": "Expert vocabulary facet for transfer granularity, traffic amplification, and locality.",
+      "id": "anchor.data_movement",
+      "kind": "facet",
+      "name": "Data movement",
+      "provenance": [
+        {
+          "lines": "6-13",
+          "path": "skills/aprof/optimization/references/data-movement-optimization-strategies.md"
+        }
+      ],
+      "selectable": false,
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "description": "Expert vocabulary facet for UB/L1/L0 capacity, lifetime, residency, and conflicts.",
+      "id": "anchor.onchip_memory",
+      "kind": "facet",
+      "name": "On-chip memory",
+      "provenance": [
+        {
+          "lines": "6-16",
+          "path": "skills/aprof/optimization/references/onchip-memory-optimization-strategies.md"
+        }
+      ],
+      "selectable": false,
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "description": "Expert vocabulary facet for copy/compute overlap, synchronization, and stage scheduling.",
+      "id": "anchor.pipeline_parallel",
+      "kind": "facet",
+      "name": "Pipeline parallelism",
+      "provenance": [
+        {
+          "lines": "6-15",
+          "path": "skills/aprof/optimization/references/pipeline-parallel-optimization-strategies.md"
+        }
+      ],
+      "selectable": false,
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "description": "Expert vocabulary facet for tile size, task decomposition, dynamic shapes, and tails.",
+      "id": "anchor.tiling",
+      "kind": "facet",
+      "name": "Tiling",
+      "provenance": [
+        {
+          "lines": "6-14",
+          "path": "skills/aprof/optimization/references/tiling-optimization-strategies.md"
+        }
+      ],
+      "selectable": false,
+      "trainable": false,
+      "version": "1.0.0"
+    }
+  ],
+  "created_from": {
+    "kind": "expert_seed",
+    "source_sha256": "2b8ba3a94fe40ec803a02d409c77abc983c4f2d520a3faa576c50f031f627bb5"
+  },
+  "edges": [
+    {
+      "edge_type": "facet_of",
+      "hard_preconditions": [],
+      "id": "edge.facet.capacity.onchip",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "8-16",
+          "path": "skills/aprof/optimization/references/onchip-memory-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.onchip_capacity_pressure",
+      "target": "anchor.onchip_memory",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "facet_of",
+      "hard_preconditions": [],
+      "id": "edge.facet.capacity.tiling",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "8-14",
+          "path": "skills/aprof/optimization/references/tiling-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.onchip_capacity_pressure",
+      "target": "anchor.tiling",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "facet_of",
+      "hard_preconditions": [],
+      "id": "edge.facet.pipeline.pipeline",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "8-15",
+          "path": "skills/aprof/optimization/references/pipeline-parallel-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.pipeline_serialization",
+      "target": "anchor.pipeline_parallel",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "facet_of",
+      "hard_preconditions": [],
+      "id": "edge.facet.roundtrip.api",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "33-34",
+          "path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md"
+        }
+      ],
+      "source": "mechanism.redundant_gm_round_trip",
+      "target": "anchor.api_algorithm",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "facet_of",
+      "hard_preconditions": [],
+      "id": "edge.facet.roundtrip.data",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "33-34",
+          "path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md"
+        }
+      ],
+      "source": "mechanism.redundant_gm_round_trip",
+      "target": "anchor.data_movement",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "facet_of",
+      "hard_preconditions": [],
+      "id": "edge.facet.roundtrip.onchip",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "33-34",
+          "path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md"
+        }
+      ],
+      "source": "mechanism.redundant_gm_round_trip",
+      "target": "anchor.onchip_memory",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "facet_of",
+      "hard_preconditions": [],
+      "id": "edge.facet.scalar.api",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "28-33",
+          "path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md"
+        }
+      ],
+      "source": "mechanism.scalar_control_hot_loop",
+      "target": "anchor.api_algorithm",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "facet_of",
+      "hard_preconditions": [],
+      "id": "edge.facet.sync.api",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "83-87",
+          "path": "skills/aprof/diagnosis/references/bound-deep-routing.md"
+        }
+      ],
+      "source": "mechanism.excessive_sync_scope",
+      "target": "anchor.api_algorithm",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "facet_of",
+      "hard_preconditions": [],
+      "id": "edge.facet.sync.pipeline",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "83-87",
+          "path": "skills/aprof/diagnosis/references/bound-deep-routing.md"
+        }
+      ],
+      "source": "mechanism.excessive_sync_scope",
+      "target": "anchor.pipeline_parallel",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "facet_of",
+      "hard_preconditions": [],
+      "id": "edge.facet.tail.tiling",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "69-75",
+          "path": "skills/aprof/diagnosis/references/ai-core-utilization-diagnosis-metrics.md"
+        }
+      ],
+      "source": "mechanism.core_tail_imbalance",
+      "target": "anchor.tiling",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "facet_of",
+      "hard_preconditions": [],
+      "id": "edge.facet.tail.utilization",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "69-75",
+          "path": "skills/aprof/diagnosis/references/ai-core-utilization-diagnosis-metrics.md"
+        }
+      ],
+      "source": "mechanism.core_tail_imbalance",
+      "target": "anchor.ai_core_utilization",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "facet_of",
+      "hard_preconditions": [],
+      "id": "edge.facet.tiny_copy.data",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "46-51",
+          "path": "skills/aprof/diagnosis/references/bound-deep-routing.md"
+        }
+      ],
+      "source": "mechanism.tiny_transfer_setup_amplification",
+      "target": "anchor.data_movement",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "facet_of",
+      "hard_preconditions": [],
+      "id": "edge.facet.tiny_copy.tiling",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "46-51",
+          "path": "skills/aprof/diagnosis/references/bound-deep-routing.md"
+        }
+      ],
+      "source": "mechanism.tiny_transfer_setup_amplification",
+      "target": "anchor.tiling",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "facet_of",
+      "hard_preconditions": [],
+      "id": "edge.facet.ub_conflict.api",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "69-74",
+          "path": "skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md"
+        }
+      ],
+      "source": "mechanism.ub_bank_conflict",
+      "target": "anchor.api_algorithm",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "facet_of",
+      "hard_preconditions": [],
+      "id": "edge.facet.ub_conflict.onchip",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "58-64",
+          "path": "skills/aprof/diagnosis/references/bound-deep-routing.md"
+        }
+      ],
+      "source": "mechanism.ub_bank_conflict",
+      "target": "anchor.onchip_memory",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "facet_of",
+      "hard_preconditions": [],
+      "id": "edge.facet.underused.tiling",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "19-23",
+          "path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md"
+        }
+      ],
+      "source": "mechanism.underused_task_parallelism",
+      "target": "anchor.tiling",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "facet_of",
+      "hard_preconditions": [],
+      "id": "edge.facet.underused.utilization",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "8-17",
+          "path": "skills/aprof/optimization/references/ai-core-utilization-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.underused_task_parallelism",
+      "target": "anchor.ai_core_utilization",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "facet_of",
+      "hard_preconditions": [],
+      "id": "edge.facet.vector.api",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "59-72",
+          "path": "skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md"
+        }
+      ],
+      "source": "mechanism.vector_api_fragmentation",
+      "target": "anchor.api_algorithm",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "facet_of",
+      "hard_preconditions": [],
+      "id": "edge.facet.vector.tiling",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "58-64",
+          "path": "skills/aprof/diagnosis/references/bound-deep-routing.md"
+        }
+      ],
+      "source": "mechanism.vector_api_fragmentation",
+      "target": "anchor.tiling",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [],
+      "id": "edge.prior.capacity.noop",
+      "prior_logit": -1.0,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "27-40",
+          "path": "skills/aprof/optimization/references/onchip-memory-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.onchip_capacity_pressure",
+      "target": "transformation.noop",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [
+        {
+          "predicate": "predicate.source.ub_live_bytes_near_capacity",
+          "state": true
+        }
+      ],
+      "id": "edge.prior.capacity.reuse",
+      "prior_logit": 2.4,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "8-16",
+          "path": "skills/aprof/optimization/references/onchip-memory-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.onchip_capacity_pressure",
+      "target": "transformation.reuse_disjoint_onchip_buffers",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [],
+      "id": "edge.prior.conflict.noop",
+      "prior_logit": -1.0,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "27-40",
+          "path": "skills/aprof/optimization/references/onchip-memory-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.ub_bank_conflict",
+      "target": "transformation.noop",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [
+        {
+          "predicate": "predicate.profile.ub_conflict_high",
+          "state": true
+        }
+      ],
+      "id": "edge.prior.conflict.pad",
+      "prior_logit": 2.8,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "8-16",
+          "path": "skills/aprof/optimization/references/onchip-memory-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.ub_bank_conflict",
+      "target": "transformation.pad_ub_layout",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [],
+      "id": "edge.prior.pipeline.noop",
+      "prior_logit": -1.0,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "32-43",
+          "path": "skills/aprof/optimization/references/pipeline-parallel-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.pipeline_serialization",
+      "target": "transformation.noop",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [
+        {
+          "predicate": "predicate.profile.overlap_low",
+          "state": true
+        }
+      ],
+      "id": "edge.prior.pipeline.software_pipeline",
+      "prior_logit": 2.7,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "8-30",
+          "path": "skills/aprof/optimization/references/pipeline-parallel-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.pipeline_serialization",
+      "target": "transformation.software_pipeline_stages",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [
+        {
+          "predicate": "predicate.source.gm_intermediate_roundtrip",
+          "state": true
+        },
+        {
+          "predicate": "predicate.profile.gm_traffic_amplified",
+          "state": true
+        }
+      ],
+      "id": "edge.prior.roundtrip.keep_onchip",
+      "prior_logit": 2.7,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "15-24",
+          "path": "skills/aprof/optimization/references/data-movement-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.redundant_gm_round_trip",
+      "target": "transformation.keep_intermediate_onchip",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [],
+      "id": "edge.prior.roundtrip.noop",
+      "prior_logit": -1.0,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "33-44",
+          "path": "skills/aprof/optimization/references/data-movement-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.redundant_gm_round_trip",
+      "target": "transformation.noop",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [],
+      "id": "edge.prior.scalar.noop",
+      "prior_logit": -1.0,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "40-51",
+          "path": "skills/aprof/optimization/references/api-algorithm-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.scalar_control_hot_loop",
+      "target": "transformation.noop",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [
+        {
+          "predicate": "predicate.profile.scalar_hot",
+          "state": true
+        }
+      ],
+      "id": "edge.prior.scalar.vectorize",
+      "prior_logit": 2.5,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "6-20",
+          "path": "skills/aprof/optimization/references/api-algorithm-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.scalar_control_hot_loop",
+      "target": "transformation.vectorize_scalar_loop",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [
+        {
+          "predicate": "predicate.source.sync_inside_tile_loop",
+          "state": true
+        }
+      ],
+      "id": "edge.prior.sync.narrow",
+      "prior_logit": 2.6,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "8-15",
+          "path": "skills/aprof/optimization/references/pipeline-parallel-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.excessive_sync_scope",
+      "target": "transformation.narrow_sync_scope",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [],
+      "id": "edge.prior.sync.noop",
+      "prior_logit": -0.8,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "32-43",
+          "path": "skills/aprof/optimization/references/pipeline-parallel-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.excessive_sync_scope",
+      "target": "transformation.noop",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [
+        {
+          "predicate": "predicate.profile.per_core_time_imbalanced",
+          "state": true
+        }
+      ],
+      "id": "edge.prior.tail.balance",
+      "prior_logit": 2.6,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "8-17",
+          "path": "skills/aprof/optimization/references/ai-core-utilization-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.core_tail_imbalance",
+      "target": "transformation.balance_tail_assignment",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [],
+      "id": "edge.prior.tail.noop",
+      "prior_logit": -1.0,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "27-39",
+          "path": "skills/aprof/optimization/references/ai-core-utilization-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.core_tail_imbalance",
+      "target": "transformation.noop",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [
+        {
+          "predicate": "predicate.profile.mte_setup_dominated",
+          "state": true
+        }
+      ],
+      "id": "edge.prior.tiny_copy.coalesce",
+      "prior_logit": 2.8,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "6-24",
+          "path": "skills/aprof/optimization/references/data-movement-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.tiny_transfer_setup_amplification",
+      "target": "transformation.coalesce_contiguous_transfers",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [],
+      "id": "edge.prior.tiny_copy.noop",
+      "prior_logit": -0.8,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "33-44",
+          "path": "skills/aprof/optimization/references/data-movement-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.tiny_transfer_setup_amplification",
+      "target": "transformation.noop",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [
+        {
+          "predicate": "predicate.profile.tasks_below_available_cores",
+          "state": true
+        },
+        {
+          "predicate": "predicate.workload.tiny_or_overhead_limited",
+          "state": false
+        }
+      ],
+      "id": "edge.prior.underused.dynamic_tasks",
+      "prior_logit": 2.8,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "8-25",
+          "path": "skills/aprof/optimization/references/ai-core-utilization-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.underused_task_parallelism",
+      "target": "transformation.decompose_tasks_dynamically",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [],
+      "id": "edge.prior.underused.noop",
+      "prior_logit": -0.7,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "27-39",
+          "path": "skills/aprof/optimization/references/ai-core-utilization-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.underused_task_parallelism",
+      "target": "transformation.noop",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [],
+      "id": "edge.prior.unknown.noop",
+      "prior_logit": 3.0,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "16-24",
+          "path": "skills/aprof/diagnosis/references/bound-deep-routing.md"
+        }
+      ],
+      "source": "mechanism.unknown_unresolved",
+      "target": "transformation.noop",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [
+        {
+          "predicate": "predicate.profile.vector_granularity_low",
+          "state": true
+        }
+      ],
+      "id": "edge.prior.vector.batch",
+      "prior_logit": 2.7,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "20-31",
+          "path": "skills/aprof/optimization/references/api-algorithm-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.vector_api_fragmentation",
+      "target": "transformation.batch_vector_api_calls",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [],
+      "id": "edge.prior.vector.noop",
+      "prior_logit": -1.0,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "40-51",
+          "path": "skills/aprof/optimization/references/api-algorithm-optimization-strategies.md"
+        }
+      ],
+      "source": "mechanism.vector_api_fragmentation",
+      "target": "transformation.noop",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [],
+      "id": "edge.prior.workload.noop",
+      "prior_logit": 3.0,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "18-43",
+          "path": "skills/aprof/diagnosis/references/workload-aware-diagnosis.md"
+        }
+      ],
+      "source": "mechanism.workload_limited",
+      "target": "transformation.noop",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "refutes",
+      "hard_preconditions": [],
+      "id": "edge.refute.tiny.underused",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "121-125",
+          "path": "skills/aprof/diagnosis/references/ai-core-utilization-diagnosis-metrics.md"
+        }
+      ],
+      "source": "predicate.workload.tiny_or_overhead_limited",
+      "target": "mechanism.underused_task_parallelism",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "supports",
+      "hard_preconditions": [],
+      "id": "edge.support.capacity.capacity",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "8-16",
+          "path": "skills/aprof/optimization/references/onchip-memory-optimization-strategies.md"
+        }
+      ],
+      "source": "predicate.source.ub_live_bytes_near_capacity",
+      "target": "mechanism.onchip_capacity_pressure",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "supports",
+      "hard_preconditions": [],
+      "id": "edge.support.conflict.profile",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "58-64",
+          "path": "skills/aprof/diagnosis/references/bound-deep-routing.md"
+        }
+      ],
+      "source": "predicate.profile.ub_conflict_high",
+      "target": "mechanism.ub_bank_conflict",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "supports",
+      "hard_preconditions": [],
+      "id": "edge.support.conflict.source",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "27-32",
+          "path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md"
+        }
+      ],
+      "source": "predicate.source.ub_stride_conflict_risk",
+      "target": "mechanism.ub_bank_conflict",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "supports",
+      "hard_preconditions": [],
+      "id": "edge.support.overlap.pipeline",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "83-87",
+          "path": "skills/aprof/diagnosis/references/bound-deep-routing.md"
+        }
+      ],
+      "source": "predicate.profile.overlap_low",
+      "target": "mechanism.pipeline_serialization",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "supports",
+      "hard_preconditions": [],
+      "id": "edge.support.roundtrip.profile",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "48-55",
+          "path": "skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md"
+        }
+      ],
+      "source": "predicate.profile.gm_traffic_amplified",
+      "target": "mechanism.redundant_gm_round_trip",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "supports",
+      "hard_preconditions": [],
+      "id": "edge.support.roundtrip.source",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "33-34",
+          "path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md"
+        }
+      ],
+      "source": "predicate.source.gm_intermediate_roundtrip",
+      "target": "mechanism.redundant_gm_round_trip",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "supports",
+      "hard_preconditions": [],
+      "id": "edge.support.scalar.profile",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "20-27",
+          "path": "skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md"
+        }
+      ],
+      "source": "predicate.profile.scalar_hot",
+      "target": "mechanism.scalar_control_hot_loop",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "supports",
+      "hard_preconditions": [],
+      "id": "edge.support.scalar.source",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "59-64",
+          "path": "skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md"
+        }
+      ],
+      "source": "predicate.source.scalar_element_loop",
+      "target": "mechanism.scalar_control_hot_loop",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "supports",
+      "hard_preconditions": [],
+      "id": "edge.support.serial.source",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "25-31",
+          "path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md"
+        }
+      ],
+      "source": "predicate.source.serial_queue_or_event_order",
+      "target": "mechanism.pipeline_serialization",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "supports",
+      "hard_preconditions": [],
+      "id": "edge.support.sync.source",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "25-27",
+          "path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md"
+        }
+      ],
+      "source": "predicate.source.sync_inside_tile_loop",
+      "target": "mechanism.excessive_sync_scope",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "supports",
+      "hard_preconditions": [],
+      "id": "edge.support.tail.profile",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "30-37",
+          "path": "skills/aprof/diagnosis/references/ai-core-utilization-diagnosis-metrics.md"
+        }
+      ],
+      "source": "predicate.profile.per_core_time_imbalanced",
+      "target": "mechanism.core_tail_imbalance",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "supports",
+      "hard_preconditions": [],
+      "id": "edge.support.tail.source",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "69-75",
+          "path": "skills/aprof/diagnosis/references/ai-core-utilization-diagnosis-metrics.md"
+        }
+      ],
+      "source": "predicate.source.tail_concentrated",
+      "target": "mechanism.core_tail_imbalance",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "supports",
+      "hard_preconditions": [],
+      "id": "edge.support.tasks.profile",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "20-28",
+          "path": "skills/aprof/diagnosis/references/ai-core-utilization-diagnosis-metrics.md"
+        }
+      ],
+      "source": "predicate.profile.tasks_below_available_cores",
+      "target": "mechanism.underused_task_parallelism",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "supports",
+      "hard_preconditions": [],
+      "id": "edge.support.tasks.source",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "19-23",
+          "path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md"
+        }
+      ],
+      "source": "predicate.source.fixed_or_undersubscribed_tasking",
+      "target": "mechanism.underused_task_parallelism",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "supports",
+      "hard_preconditions": [],
+      "id": "edge.support.tiny_copy.profile",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "46-51",
+          "path": "skills/aprof/diagnosis/references/bound-deep-routing.md"
+        }
+      ],
+      "source": "predicate.profile.mte_setup_dominated",
+      "target": "mechanism.tiny_transfer_setup_amplification",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "supports",
+      "hard_preconditions": [],
+      "id": "edge.support.tiny_copy.source",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "22-24",
+          "path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md"
+        }
+      ],
+      "source": "predicate.source.inner_loop_copy",
+      "target": "mechanism.tiny_transfer_setup_amplification",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "supports",
+      "hard_preconditions": [],
+      "id": "edge.support.vector.profile",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "58-64",
+          "path": "skills/aprof/diagnosis/references/bound-deep-routing.md"
+        }
+      ],
+      "source": "predicate.profile.vector_granularity_low",
+      "target": "mechanism.vector_api_fragmentation",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "supports",
+      "hard_preconditions": [],
+      "id": "edge.support.workload.tiny",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "18-23",
+          "path": "skills/aprof/diagnosis/references/workload-aware-diagnosis.md"
+        }
+      ],
+      "source": "predicate.workload.tiny_or_overhead_limited",
+      "target": "mechanism.workload_limited",
+      "trainable": false,
+      "version": "1.0.0"
+    }
+  ],
+  "graph_version": "v0001",
+  "mechanisms": [
+    {
+      "description": "A small set of cores, commonly the final core, receives disproportionate work or a slower tail path.",
+      "id": "mechanism.core_tail_imbalance",
+      "kind": "mechanism",
+      "name": "Concentrated tail or uneven core work",
+      "provenance": [
+        {
+          "lines": "69-75",
+          "path": "skills/aprof/diagnosis/references/ai-core-utilization-diagnosis-metrics.md"
+        }
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    },
+    {
+      "description": "Global or PIPE_ALL synchronization inside a repeated stage blocks otherwise independent work.",
+      "id": "mechanism.excessive_sync_scope",
+      "kind": "mechanism",
+      "name": "Synchronization is broader or more frequent than dependencies require",
+      "provenance": [
+        {
+          "lines": "83-87",
+          "path": "skills/aprof/diagnosis/references/bound-deep-routing.md"
+        }
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    },
+    {
+      "description": "Overlapping UB/L1/L0 live ranges consume enough capacity to force small tiles, spills, or single buffering.",
+      "id": "mechanism.onchip_capacity_pressure",
+      "kind": "mechanism",
+      "name": "On-chip live ranges constrain tile or pipeline depth",
+      "provenance": [
+        {
+          "lines": "8-16",
+          "path": "skills/aprof/optimization/references/onchip-memory-optimization-strategies.md"
+        }
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    },
+    {
+      "description": "Configured buffering does not produce a steady overlap because queue, event, or loop order serializes stages.",
+      "id": "mechanism.pipeline_serialization",
+      "kind": "mechanism",
+      "name": "Copy and compute stages are serialized",
+      "provenance": [
+        {
+          "lines": "6-15",
+          "path": "skills/aprof/optimization/references/pipeline-parallel-optimization-strategies.md"
+        }
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    },
+    {
+      "description": "An intermediate with a local producer and consumer is copied to GM and read back instead of remaining on chip.",
+      "id": "mechanism.redundant_gm_round_trip",
+      "kind": "mechanism",
+      "name": "Intermediate data makes avoidable GM round trips",
+      "provenance": [
+        {
+          "lines": "6-13",
+          "path": "skills/aprof/optimization/references/data-movement-optimization-strategies.md"
+        }
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    },
+    {
+      "description": "Per-element access, repeated branches, or object/state manipulation consumes material scalar time.",
+      "id": "mechanism.scalar_control_hot_loop",
+      "kind": "mechanism",
+      "name": "Scalar control or elementwise work dominates a hot loop",
+      "provenance": [
+        {
+          "lines": "109-123",
+          "path": "skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md"
+        }
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    },
+    {
+      "description": "Many small DataCopy operations create high MTE instruction density without approaching bandwidth limits.",
+      "id": "mechanism.tiny_transfer_setup_amplification",
+      "kind": "mechanism",
+      "name": "Small transfers amplify MTE setup cost",
+      "provenance": [
+        {
+          "lines": "46-51",
+          "path": "skills/aprof/diagnosis/references/bound-deep-routing.md"
+        }
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    },
+    {
+      "description": "Concurrent vector operands alias bank geometry through offsets, padding, or stride periodicity.",
+      "id": "mechanism.ub_bank_conflict",
+      "kind": "mechanism",
+      "name": "UB layout causes bank or bank-group conflict",
+      "provenance": [
+        {
+          "lines": "58-64",
+          "path": "skills/aprof/diagnosis/references/bound-deep-routing.md"
+        }
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    },
+    {
+      "description": "For a non-tiny workload, task construction or fixed blockDim leaves useful AI cores idle.",
+      "id": "mechanism.underused_task_parallelism",
+      "kind": "mechanism",
+      "name": "Available task parallelism is not exposed",
+      "provenance": [
+        {
+          "lines": "8-16",
+          "path": "skills/aprof/optimization/references/ai-core-utilization-optimization-strategies.md"
+        }
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    },
+    {
+      "description": "Required evidence is absent, contradictory, or outside the seeded mechanism vocabulary; this is a first-class non-claim.",
+      "id": "mechanism.unknown_unresolved",
+      "kind": "mechanism",
+      "name": "Evidence does not resolve a supported mechanism",
+      "provenance": [
+        {
+          "lines": "16-24",
+          "path": "skills/aprof/diagnosis/references/bound-deep-routing.md"
+        }
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    },
+    {
+      "description": "Small repeat/count, repeated masks, Cast chains, or missing repeat/stride features reduce useful vector work per call.",
+      "id": "mechanism.vector_api_fragmentation",
+      "kind": "mechanism",
+      "name": "Vector work is fragmented into inefficient API calls",
+      "provenance": [
+        {
+          "lines": "59-72",
+          "path": "skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md"
+        }
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    },
+    {
+      "description": "The attainable utilization for the shape is low enough that invasive optimization is not justified by current evidence.",
+      "id": "mechanism.workload_limited",
+      "kind": "mechanism",
+      "name": "Workload cannot amortize fixed overhead",
+      "provenance": [
+        {
+          "lines": "18-43",
+          "path": "skills/aprof/diagnosis/references/workload-aware-diagnosis.md"
+        }
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    }
+  ],
+  "predicates": [
+    {
+      "evaluation": {
+        "extractor_id": "gm_traffic_amplification",
+        "implementation_status": "unimplemented",
+        "mode": "derived",
+        "threshold_ref": "algorithmic_traffic_model"
+      },
+      "id": "predicate.profile.gm_traffic_amplified",
+      "inputs": [
+        "read_main_memory_datas",
+        "write_main_memory_datas",
+        "theoretical_minimum_gm_bytes"
+      ],
+      "provenance": [
+        {
+          "lines": "48-55",
+          "path": "skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md"
+        }
+      ],
+      "returns": "true_false_unknown",
+      "rule": "observed GM bytes materially exceed the algorithmic traffic lower bound",
+      "unknown_when": "theoretical traffic or memory counters are unavailable",
+      "version": "1.0.0",
+      "view": "profile"
+    },
+    {
+      "evaluation": {
+        "extractor_id": "mte_setup_dominance",
+        "implementation_status": "unimplemented",
+        "mode": "feature_rule",
+        "threshold_ref": "hardware_calibration.mte_setup_dominance"
+      },
+      "id": "predicate.profile.mte_setup_dominated",
+      "inputs": [
+        "mte2_ratio",
+        "memory_bandwidth_utilization",
+        "useful_bytes_per_mte_instruction"
+      ],
+      "provenance": [
+        {
+          "lines": "42-51",
+          "path": "skills/aprof/diagnosis/references/bound-deep-routing.md"
+        }
+      ],
+      "returns": "true_false_unknown",
+      "rule": "MTE ratio is high while achieved bandwidth and useful bytes per MTE instruction are low",
+      "unknown_when": "instruction count, bytes, or platform bandwidth is unavailable",
+      "version": "1.0.0",
+      "view": "profile"
+    },
+    {
+      "evaluation": {
+        "extractor_id": "timeline_overlap",
+        "implementation_status": "unimplemented",
+        "mode": "derived",
+        "threshold_ref": "hardware_calibration.minimum_stage_overlap"
+      },
+      "id": "predicate.profile.overlap_low",
+      "inputs": [
+        "timeline_copy_intervals",
+        "timeline_compute_intervals",
+        "pipe_wait_ratios"
+      ],
+      "provenance": [
+        {
+          "lines": "83-87",
+          "path": "skills/aprof/diagnosis/references/bound-deep-routing.md"
+        }
+      ],
+      "returns": "true_false_unknown",
+      "rule": "copy and compute intervals are predominantly serialized or contain repeated gaps",
+      "unknown_when": "timeline or equivalent overlap counters are unavailable",
+      "version": "1.0.0",
+      "view": "profile"
+    },
+    {
+      "evaluation": {
+        "extractor_id": "per_core_time_imbalance",
+        "implementation_status": "unimplemented",
+        "mode": "derived",
+        "threshold_ref": "diagnosis.core_time_imbalance"
+      },
+      "id": "predicate.profile.per_core_time_imbalanced",
+      "inputs": [
+        "per_core_task_time"
+      ],
+      "provenance": [
+        {
+          "lines": "30-37",
+          "path": "skills/aprof/diagnosis/references/ai-core-utilization-diagnosis-metrics.md"
+        }
+      ],
+      "returns": "true_false_unknown",
+      "rule": "(max(core_time)-min(core_time))/max(core_time) exceeds the calibrated imbalance threshold",
+      "unknown_when": "fewer than two valid per-core samples are available",
+      "version": "1.0.0",
+      "view": "profile"
+    },
+    {
+      "evaluation": {
+        "extractor_id": "scalar_hotness",
+        "implementation_status": "unimplemented",
+        "mode": "feature_rule",
+        "threshold_ref": "hardware_calibration.scalar_materiality"
+      },
+      "id": "predicate.profile.scalar_hot",
+      "inputs": [
+        "scalar_ratio",
+        "scalar_time",
+        "icache_miss_rate"
+      ],
+      "provenance": [
+        {
+          "lines": "20-27",
+          "path": "skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md"
+        }
+      ],
+      "returns": "true_false_unknown",
+      "rule": "scalar ratio and absolute scalar time are material for a non-tiny workload",
+      "unknown_when": "scalar pipe counters or stable duration are unavailable",
+      "version": "1.0.0",
+      "view": "profile"
+    },
+    {
+      "evaluation": {
+        "extractor_id": "task_core_coverage",
+        "implementation_status": "unimplemented",
+        "mode": "derived"
+      },
+      "id": "predicate.profile.tasks_below_available_cores",
+      "inputs": [
+        "total_tasks",
+        "available_cores",
+        "block_dim"
+      ],
+      "provenance": [
+        {
+          "lines": "20-28",
+          "path": "skills/aprof/diagnosis/references/ai-core-utilization-diagnosis-metrics.md"
+        }
+      ],
+      "returns": "true_false_unknown",
+      "rule": "effective tasks or launched blocks are fewer than available cores",
+      "unknown_when": "task count or hardware core count is unavailable",
+      "version": "1.0.0",
+      "view": "profile"
+    },
+    {
+      "evaluation": {
+        "extractor_id": "ub_conflict",
+        "implementation_status": "unimplemented",
+        "mode": "feature_rule",
+        "threshold_ref": "hardware_calibration.ub_conflict"
+      },
+      "id": "predicate.profile.ub_conflict_high",
+      "inputs": [
+        "vector_total_conflict_ratio",
+        "bank_conflict_ratio",
+        "bank_group_conflict_ratio"
+      ],
+      "provenance": [
+        {
+          "lines": "69-74",
+          "path": "skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md"
+        }
+      ],
+      "returns": "true_false_unknown",
+      "rule": "UB conflict counters exceed calibrated platform thresholds",
+      "unknown_when": "resource-conflict counters are unavailable",
+      "version": "1.0.0",
+      "view": "profile"
+    },
+    {
+      "evaluation": {
+        "extractor_id": "vector_granularity",
+        "implementation_status": "unimplemented",
+        "mode": "feature_rule",
+        "threshold_ref": "hardware_calibration.vector_granularity"
+      },
+      "id": "predicate.profile.vector_granularity_low",
+      "inputs": [
+        "vector_api_count",
+        "vector_repeat_distribution",
+        "vector_theoretical_utilization"
+      ],
+      "provenance": [
+        {
+          "lines": "54-64",
+          "path": "skills/aprof/diagnosis/references/bound-deep-routing.md"
+        }
+      ],
+      "returns": "true_false_unknown",
+      "rule": "vector calls are numerous with small repeat/count and low theoretical utilization",
+      "unknown_when": "vector instruction or API-level evidence is unavailable",
+      "version": "1.0.0",
+      "view": "profile"
+    },
+    {
+      "evaluation": {
+        "extractor_id": "fixed_or_undersubscribed_tasking",
+        "implementation_status": "unimplemented",
+        "mode": "source_match"
+      },
+      "id": "predicate.source.fixed_or_undersubscribed_tasking",
+      "inputs": [
+        "host_tiling_source",
+        "kernel_launch_source"
+      ],
+      "provenance": [
+        {
+          "lines": "19-23",
+          "path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md"
+        }
+      ],
+      "returns": "true_false_unknown",
+      "rule": "blockDim is fixed or task construction does not scale with shape and tile count",
+      "unknown_when": "host tiling or launch source is unavailable",
+      "version": "1.0.0",
+      "view": "source"
+    },
+    {
+      "evaluation": {
+        "extractor_id": "gm_intermediate_dataflow",
+        "implementation_status": "unimplemented",
+        "mode": "source_match"
+      },
+      "id": "predicate.source.gm_intermediate_roundtrip",
+      "inputs": [
+        "kernel_source",
+        "dataflow"
+      ],
+      "provenance": [
+        {
+          "lines": "33-36",
+          "path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md"
+        }
+      ],
+      "returns": "true_false_unknown",
+      "rule": "a multi-step compute chain copies an intermediate to GM and subsequently copies it back on chip",
+      "unknown_when": "intermediate dataflow cannot be resolved",
+      "version": "1.0.0",
+      "view": "source"
+    },
+    {
+      "evaluation": {
+        "extractor_id": "inner_loop_copy",
+        "implementation_status": "unimplemented",
+        "mode": "source_match"
+      },
+      "id": "predicate.source.inner_loop_copy",
+      "inputs": [
+        "kernel_source",
+        "loop_structure",
+        "copy_sizes"
+      ],
+      "provenance": [
+        {
+          "lines": "22-24",
+          "path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md"
+        }
+      ],
+      "returns": "true_false_unknown",
+      "rule": "DataCopy is repeatedly issued in an inner loop with small contiguous payloads",
+      "unknown_when": "copy count or valid byte count cannot be derived",
+      "version": "1.0.0",
+      "view": "source"
+    },
+    {
+      "evaluation": {
+        "extractor_id": "scalar_element_loop",
+        "implementation_status": "unimplemented",
+        "mode": "source_match"
+      },
+      "id": "predicate.source.scalar_element_loop",
+      "inputs": [
+        "kernel_source"
+      ],
+      "provenance": [
+        {
+          "lines": "59-64",
+          "path": "skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md"
+        }
+      ],
+      "returns": "true_false_unknown",
+      "rule": "a hot loop performs per-element GetValue/SetValue or scalar arithmetic instead of a vector API",
+      "unknown_when": "hot-loop membership cannot be established",
+      "version": "1.0.0",
+      "view": "source"
+    },
+    {
+      "evaluation": {
+        "extractor_id": "serial_queue_or_event_order",
+        "implementation_status": "unimplemented",
+        "mode": "source_match"
+      },
+      "id": "predicate.source.serial_queue_or_event_order",
+      "inputs": [
+        "kernel_source",
+        "event_order"
+      ],
+      "provenance": [
+        {
+          "lines": "25-31",
+          "path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md"
+        }
+      ],
+      "returns": "true_false_unknown",
+      "rule": "single-buffer queue order or immediate SetFlag/WaitFlag prevents the next stage from being issued early",
+      "unknown_when": "queue depth or event ordering is unavailable",
+      "version": "1.0.0",
+      "view": "source"
+    },
+    {
+      "evaluation": {
+        "extractor_id": "sync_inside_tile_loop",
+        "implementation_status": "unimplemented",
+        "mode": "source_match"
+      },
+      "id": "predicate.source.sync_inside_tile_loop",
+      "inputs": [
+        "kernel_source",
+        "loop_structure"
+      ],
+      "provenance": [
+        {
+          "lines": "25-27",
+          "path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md"
+        }
+      ],
+      "returns": "true_false_unknown",
+      "rule": "SyncAll, PIPE_ALL barrier, or equivalently broad synchronization executes inside a repeated tile loop",
+      "unknown_when": "barrier scope or loop nesting cannot be resolved",
+      "version": "1.0.0",
+      "view": "source"
+    },
+    {
+      "evaluation": {
+        "extractor_id": "tail_assignment_analysis",
+        "implementation_status": "unimplemented",
+        "mode": "derived"
+      },
+      "id": "predicate.source.tail_concentrated",
+      "inputs": [
+        "host_tiling_source",
+        "kernel_source"
+      ],
+      "provenance": [
+        {
+          "lines": "69-75",
+          "path": "skills/aprof/diagnosis/references/ai-core-utilization-diagnosis-metrics.md"
+        }
+      ],
+      "returns": "true_false_unknown",
+      "rule": "the final core receives a disproportionate tail or executes a substantially slower tail-only path",
+      "unknown_when": "per-core assignment or tail path is unavailable",
+      "version": "1.0.0",
+      "view": "source"
+    },
+    {
+      "evaluation": {
+        "extractor_id": "onchip_live_range_analysis",
+        "implementation_status": "unimplemented",
+        "mode": "derived",
+        "threshold_ref": "hardware_capacity.ub"
+      },
+      "id": "predicate.source.ub_live_bytes_near_capacity",
+      "inputs": [
+        "buffer_lifetimes",
+        "ub_capacity_bytes",
+        "alignment_bytes"
+      ],
+      "provenance": [
+        {
+          "lines": "18-25",
+          "path": "skills/aprof/optimization/references/onchip-memory-optimization-strategies.md"
+        }
+      ],
+      "returns": "true_false_unknown",
+      "rule": "aligned peak live UB bytes approach capacity and constrain tile size or buffering depth",
+      "unknown_when": "buffer lifetimes or target UB capacity is unavailable",
+      "version": "1.0.0",
+      "view": "source"
+    },
+    {
+      "evaluation": {
+        "extractor_id": "ub_bank_mapping",
+        "implementation_status": "unimplemented",
+        "mode": "derived",
+        "threshold_ref": "hardware_bank_geometry"
+      },
+      "id": "predicate.source.ub_stride_conflict_risk",
+      "inputs": [
+        "ub_offsets",
+        "block_strides",
+        "operand_layout",
+        "hardware_bank_geometry"
+      ],
+      "provenance": [
+        {
+          "lines": "27-32",
+          "path": "skills/aprof/diagnosis/references/source-hypothesis-routing.md"
+        }
+      ],
+      "returns": "true_false_unknown",
+      "rule": "operand offsets or periodic strides map concurrent accesses to the same UB bank or bank group",
+      "unknown_when": "layout or bank geometry is unavailable",
+      "version": "1.0.0",
+      "view": "source"
+    },
+    {
+      "evaluation": {
+        "extractor_id": "workload_attainable_utilization",
+        "implementation_status": "unimplemented",
+        "mode": "derived",
+        "threshold_ref": "workload_model.tiny_or_overhead_limited"
+      },
+      "id": "predicate.workload.tiny_or_overhead_limited",
+      "inputs": [
+        "element_count",
+        "effective_elements_per_core",
+        "attainable_utilization"
+      ],
+      "provenance": [
+        {
+          "lines": "18-23",
+          "path": "skills/aprof/diagnosis/references/workload-aware-diagnosis.md"
+        }
+      ],
+      "returns": "true_false_unknown",
+      "rule": "work is too small to amortize launch, scalar, and transfer setup overhead",
+      "unknown_when": "shape, effective core count, or workload model is unavailable",
+      "version": "1.0.0",
+      "view": "workload"
+    }
+  ],
+  "prior_semantics": {
+    "calibrated_probability": false,
+    "interpretation": "ordinal_initial_ranking_only",
+    "scale_id": "expert_seed_scale_v1",
+    "score_type": "uncalibrated_expert_score",
+    "temperature": 1.0,
+    "temperature_status": "fixed_untrained"
+  },
+  "schema_version": "1.0.0",
+  "transformations": [
+    {
+      "applicability": "Per-core work is imbalanced and the tail or weighted task assignment is identified as the cause.",
+      "capacity_constraints": [
+        "task metadata and offsets fit existing host/kernel contracts"
+      ],
+      "contraindications": [
+        "inter-core ordering is semantically required",
+        "imbalance is measurement noise"
+      ],
+      "expected_profile_delta": [
+        "lower per-core time variance",
+        "lower slowest-core duration"
+      ],
+      "gate_spec": [
+        "build",
+        "accuracy",
+        "paired_runtime",
+        "per_core_balance",
+        "held_out_shapes"
+      ],
+      "id": "transformation.balance_tail_assignment",
+      "kind": "atomic_transformation",
+      "name": "Distribute tail work across cores",
+      "parameter_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "assignment": {
+            "enum": [
+              "round_robin",
+              "balanced_contiguous",
+              "weighted_prefix"
+            ]
+          },
+          "tail_policy": {
+            "enum": [
+              "valid_count",
+              "masked_main_path"
+            ]
+          }
+        },
+        "required": [
+          "assignment",
+          "tail_policy"
+        ],
+        "type": "object"
+      },
+      "provenance": [
+        {
+          "lines": "8-17",
+          "path": "skills/aprof/optimization/references/ai-core-utilization-optimization-strategies.md"
+        }
+      ],
+      "required_evidence": {
+        "all": [
+          "predicate.profile.per_core_time_imbalanced"
+        ],
+        "any": [
+          "predicate.source.tail_concentrated"
+        ]
+      },
+      "rollback_spec": "restore the original task-to-core assignment and offset calculation",
+      "semantic_invariants": [
+        "every logical element is assigned exactly once",
+        "output ordering remains unchanged",
+        "tail accesses remain in bounds"
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    },
+    {
+      "applicability": "Repeated vector calls operate on compatible contiguous regions or can use repeat/stride features.",
+      "capacity_constraints": [
+        "batched region fits the selected tile and API repeat limits"
+      ],
+      "contraindications": [
+        "platform API support is unknown",
+        "batch crosses a dependency or non-contiguous boundary"
+      ],
+      "expected_profile_delta": [
+        "fewer vector API invocations",
+        "lower scalar control time",
+        "higher useful vector work per instruction"
+      ],
+      "gate_spec": [
+        "build",
+        "accuracy",
+        "paired_runtime",
+        "vector_granularity",
+        "held_out_shapes"
+      ],
+      "id": "transformation.batch_vector_api_calls",
+      "kind": "atomic_transformation",
+      "name": "Batch fragmented vector API calls",
+      "parameter_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "batch_elements": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "mode": {
+            "enum": [
+              "repeat",
+              "counter",
+              "stride"
+            ]
+          },
+          "repeat_limit": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "batch_elements",
+          "mode"
+        ],
+        "type": "object"
+      },
+      "provenance": [
+        {
+          "lines": "20-31",
+          "path": "skills/aprof/optimization/references/api-algorithm-optimization-strategies.md"
+        }
+      ],
+      "required_evidence": {
+        "all": [],
+        "any": [
+          "predicate.profile.vector_granularity_low"
+        ]
+      },
+      "rollback_spec": "restore the original per-chunk vector calls and masks",
+      "semantic_invariants": [
+        "mask and tail semantics are preserved",
+        "broadcast and stride interpretation is unchanged",
+        "dtype and rounding mode are unchanged"
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    },
+    {
+      "applicability": "Small DataCopy operations cover adjacent logical data and bandwidth is not already saturated.",
+      "capacity_constraints": [
+        "coalesced transfer and required staging fit on-chip capacity"
+      ],
+      "contraindications": [
+        "achieved bandwidth is already near platform limit",
+        "source regions are not logically contiguous",
+        "copy lifetime is unresolved"
+      ],
+      "expected_profile_delta": [
+        "fewer MTE instructions",
+        "more useful bytes per MTE instruction",
+        "no increase in algorithmic GM bytes"
+      ],
+      "gate_spec": [
+        "build",
+        "accuracy",
+        "paired_runtime",
+        "mte_instruction_density",
+        "gm_traffic",
+        "held_out_shapes"
+      ],
+      "id": "transformation.coalesce_contiguous_transfers",
+      "kind": "atomic_transformation",
+      "name": "Coalesce adjacent small transfers",
+      "parameter_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "alignment_bytes": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "coalesced_bytes": {
+            "minimum": 32,
+            "type": "integer"
+          },
+          "tail_mode": {
+            "enum": [
+              "valid_count",
+              "datacopypad"
+            ]
+          }
+        },
+        "required": [
+          "coalesced_bytes",
+          "tail_mode",
+          "alignment_bytes"
+        ],
+        "type": "object"
+      },
+      "provenance": [
+        {
+          "lines": "15-24",
+          "path": "skills/aprof/optimization/references/data-movement-optimization-strategies.md"
+        }
+      ],
+      "required_evidence": {
+        "all": [
+          "predicate.profile.mte_setup_dominated"
+        ],
+        "any": [
+          "predicate.source.inner_loop_copy"
+        ]
+      },
+      "rollback_spec": "restore original copy loop, offsets, and tail handling",
+      "semantic_invariants": [
+        "logical output order is unchanged",
+        "tail reads and writes remain in bounds",
+        "padding cannot enter compute or comparison"
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    },
+    {
+      "applicability": "A non-tiny workload has independent outer/group/head/M/N/S2 work but effective tasks are below available cores.",
+      "capacity_constraints": [
+        "per-task tile and any partial workspace fit platform capacity",
+        "metadata fits the tiling ABI"
+      ],
+      "contraindications": [
+        "workload is tiny or overhead limited",
+        "split requires an unproven cross-core reduction",
+        "core count would be hard-coded"
+      ],
+      "expected_profile_delta": [
+        "more useful active cores",
+        "lower longest-core work",
+        "no excessive launch/setup amplification"
+      ],
+      "gate_spec": [
+        "build",
+        "accuracy",
+        "paired_runtime",
+        "active_core_coverage",
+        "held_out_shapes"
+      ],
+      "id": "transformation.decompose_tasks_dynamically",
+      "kind": "atomic_transformation",
+      "name": "Expose more independent tasks with dynamic core selection",
+      "parameter_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "split_axis": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "target_tasks": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "used_core_policy": {
+            "enum": [
+              "min_tasks_cores",
+              "calibrated_cap"
+            ]
+          }
+        },
+        "required": [
+          "split_axis",
+          "target_tasks",
+          "used_core_policy"
+        ],
+        "type": "object"
+      },
+      "provenance": [
+        {
+          "lines": "8-25",
+          "path": "skills/aprof/optimization/references/ai-core-utilization-optimization-strategies.md"
+        }
+      ],
+      "required_evidence": {
+        "all": [
+          "predicate.profile.tasks_below_available_cores"
+        ],
+        "any": [
+          "predicate.source.fixed_or_undersubscribed_tasking"
+        ]
+      },
+      "rollback_spec": "restore original task construction, blockDim, offsets, and workspace layout",
+      "semantic_invariants": [
+        "tasks partition the logical domain exactly once",
+        "partial reductions use the required accumulator precision",
+        "dynamic shapes recompute offsets and tails"
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    },
+    {
+      "applicability": "A locally consumed intermediate is written to GM and reloaded while its live range can fit on chip.",
+      "capacity_constraints": [
+        "aligned peak live bytes including the resident intermediate fit the selected memory",
+        "main tile and required buffering still fit"
+      ],
+      "contraindications": [
+        "intermediate must persist across kernels or tasks",
+        "residency reduces the main tile enough to negate benefit",
+        "lifetime alias is unresolved"
+      ],
+      "expected_profile_delta": [
+        "lower GM read and write bytes",
+        "fewer MTE2/MTE3 intervals"
+      ],
+      "gate_spec": [
+        "build",
+        "accuracy",
+        "paired_runtime",
+        "gm_traffic",
+        "capacity",
+        "held_out_shapes"
+      ],
+      "id": "transformation.keep_intermediate_onchip",
+      "kind": "atomic_transformation",
+      "name": "Keep a producer-consumer intermediate on chip",
+      "parameter_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "buffer_count": {
+            "maximum": 2,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "deferred_copyout": {
+            "type": "boolean"
+          },
+          "storage": {
+            "enum": [
+              "UB",
+              "L1"
+            ]
+          }
+        },
+        "required": [
+          "storage",
+          "buffer_count",
+          "deferred_copyout"
+        ],
+        "type": "object"
+      },
+      "provenance": [
+        {
+          "lines": "15-24",
+          "path": "skills/aprof/optimization/references/data-movement-optimization-strategies.md"
+        }
+      ],
+      "required_evidence": {
+        "all": [
+          "predicate.source.gm_intermediate_roundtrip",
+          "predicate.profile.gm_traffic_amplified"
+        ],
+        "any": []
+      },
+      "rollback_spec": "restore the intermediate CopyOut/CopyIn path and original buffer lifetimes",
+      "semantic_invariants": [
+        "producer-consumer order is preserved",
+        "dtype and accumulator precision are unchanged",
+        "final externally visible output is written exactly once"
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    },
+    {
+      "applicability": "A repeated broad barrier orders independent stages beyond the true producer-consumer dependency.",
+      "capacity_constraints": [
+        "event or workspace slots do not alias while live"
+      ],
+      "contraindications": [
+        "global synchronization is algorithmically required",
+        "dependency graph is unresolved",
+        "platform event semantics are unknown"
+      ],
+      "expected_profile_delta": [
+        "lower wait ratio",
+        "fewer global barriers",
+        "greater stage overlap"
+      ],
+      "gate_spec": [
+        "build",
+        "accuracy",
+        "paired_runtime",
+        "wait_ratio",
+        "race_stress",
+        "held_out_shapes"
+      ],
+      "id": "transformation.narrow_sync_scope",
+      "kind": "atomic_transformation",
+      "name": "Replace broad synchronization with dependency-scoped synchronization",
+      "parameter_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "dependency_scope": {
+            "enum": [
+              "pipe_pair",
+              "buffer_slot",
+              "workspace_stage"
+            ]
+          },
+          "event_slots": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dependency_scope",
+          "event_slots"
+        ],
+        "type": "object"
+      },
+      "provenance": [
+        {
+          "lines": "8-15",
+          "path": "skills/aprof/optimization/references/pipeline-parallel-optimization-strategies.md"
+        }
+      ],
+      "required_evidence": {
+        "all": [
+          "predicate.source.sync_inside_tile_loop"
+        ],
+        "any": [
+          "predicate.profile.overlap_low"
+        ]
+      },
+      "rollback_spec": "restore original barrier and event ordering",
+      "semantic_invariants": [
+        "every consumer waits for its producer",
+        "buffer reuse cannot race outstanding work",
+        "cross-core visibility requirements remain satisfied"
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    },
+    {
+      "applicability": "Evidence is unresolved, workload-limited, contraindicated, or no candidate clears expected-value and safety thresholds.",
+      "capacity_constraints": [],
+      "contraindications": [],
+      "expected_profile_delta": [
+        "none"
+      ],
+      "gate_spec": [
+        "no_mutation",
+        "evidence_completeness"
+      ],
+      "id": "transformation.noop",
+      "kind": "control_action",
+      "name": "NOOP / stop without a patch",
+      "parameter_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "no_mutation": {
+            "const": true
+          },
+          "reason": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "no_mutation",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "provenance": [
+        {
+          "lines": "43-61",
+          "path": "skills/aprof/diagnosis/references/workload-aware-diagnosis.md"
+        }
+      ],
+      "required_evidence": {
+        "all": [],
+        "any": []
+      },
+      "rollback_spec": "no rollback is required because no mutation is permitted",
+      "semantic_invariants": [
+        "source tree and executable artifacts are unchanged"
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    },
+    {
+      "applicability": "Conflict counters and layout analysis identify a repeatable UB bank or bank-group collision.",
+      "capacity_constraints": [
+        "new aligned offsets and padding fit UB at peak live range"
+      ],
+      "contraindications": [
+        "conflict evidence is absent",
+        "padding causes capacity spill or smaller profitable tile"
+      ],
+      "expected_profile_delta": [
+        "lower vector conflict ratio",
+        "lower vector wait",
+        "unchanged GM traffic"
+      ],
+      "gate_spec": [
+        "build",
+        "accuracy",
+        "paired_runtime",
+        "ub_conflict",
+        "capacity",
+        "held_out_shapes"
+      ],
+      "id": "transformation.pad_ub_layout",
+      "kind": "atomic_transformation",
+      "name": "Alter UB offsets or padding to avoid bank conflicts",
+      "parameter_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "operand": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "padding_bytes": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "stride_adjustment": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "padding_bytes",
+          "operand",
+          "stride_adjustment"
+        ],
+        "type": "object"
+      },
+      "provenance": [
+        {
+          "lines": "8-16",
+          "path": "skills/aprof/optimization/references/onchip-memory-optimization-strategies.md"
+        }
+      ],
+      "required_evidence": {
+        "all": [
+          "predicate.profile.ub_conflict_high"
+        ],
+        "any": [
+          "predicate.source.ub_stride_conflict_risk"
+        ]
+      },
+      "rollback_spec": "restore original UB offsets, strides, and allocation size",
+      "semantic_invariants": [
+        "logical indexing ignores physical padding",
+        "vector stride remains within API limits",
+        "all accesses remain aligned and in bounds"
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    },
+    {
+      "applicability": "A live-range map proves that large on-chip buffers do not overlap semantically.",
+      "capacity_constraints": [
+        "recomputed aligned peak live bytes fit target capacity",
+        "queue depth and required double buffers remain valid"
+      ],
+      "contraindications": [
+        "lifetime alias is uncertain",
+        "reuse crosses an asynchronous stage without a proven barrier"
+      ],
+      "expected_profile_delta": [
+        "lower peak on-chip bytes",
+        "larger feasible tile or buffering depth",
+        "no new GM spill"
+      ],
+      "gate_spec": [
+        "build",
+        "accuracy",
+        "paired_runtime",
+        "capacity",
+        "race_stress",
+        "held_out_shapes"
+      ],
+      "id": "transformation.reuse_disjoint_onchip_buffers",
+      "kind": "atomic_transformation",
+      "name": "Reuse on-chip storage across disjoint live ranges",
+      "parameter_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "alias_groups": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "minItems": 2,
+              "type": "array"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "alignment_bytes": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "alias_groups",
+          "alignment_bytes"
+        ],
+        "type": "object"
+      },
+      "provenance": [
+        {
+          "lines": "8-25",
+          "path": "skills/aprof/optimization/references/onchip-memory-optimization-strategies.md"
+        }
+      ],
+      "required_evidence": {
+        "all": [
+          "predicate.source.ub_live_bytes_near_capacity"
+        ],
+        "any": []
+      },
+      "rollback_spec": "restore separate allocations and original lifetime barriers",
+      "semantic_invariants": [
+        "aliased buffers have disjoint live ranges",
+        "all outstanding async users complete before reuse",
+        "alignment requirements are preserved"
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    },
+    {
+      "applicability": "At least two iterations exist, buffering capacity is available, and timeline evidence shows serial copy/compute stages.",
+      "capacity_constraints": [
+        "all live buffer slots fit UB/L1/L0",
+        "loop trip count can reach a steady state"
+      ],
+      "contraindications": [
+        "loop trip count is below two",
+        "capacity cannot fit required slots",
+        "synchronization is algorithmically required"
+      ],
+      "expected_profile_delta": [
+        "higher copy/compute overlap",
+        "lower wait ratio",
+        "no extra GM traffic"
+      ],
+      "gate_spec": [
+        "build",
+        "accuracy",
+        "paired_runtime",
+        "stage_overlap",
+        "gm_traffic",
+        "held_out_shapes"
+      ],
+      "id": "transformation.software_pipeline_stages",
+      "kind": "atomic_transformation",
+      "name": "Rewrite loop as prolog, steady state, and drain",
+      "parameter_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "buffer_depth": {
+            "maximum": 3,
+            "minimum": 2,
+            "type": "integer"
+          },
+          "prefetch_distance": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "stages": {
+            "items": {
+              "enum": [
+                "copy_in",
+                "compute",
+                "copy_out"
+              ]
+            },
+            "minItems": 2,
+            "type": "array"
+          }
+        },
+        "required": [
+          "buffer_depth",
+          "prefetch_distance",
+          "stages"
+        ],
+        "type": "object"
+      },
+      "provenance": [
+        {
+          "lines": "17-30",
+          "path": "skills/aprof/optimization/references/pipeline-parallel-optimization-strategies.md"
+        }
+      ],
+      "required_evidence": {
+        "all": [
+          "predicate.profile.overlap_low"
+        ],
+        "any": [
+          "predicate.source.serial_queue_or_event_order"
+        ]
+      },
+      "rollback_spec": "restore original loop, queue depth, and event order",
+      "semantic_invariants": [
+        "stage dependencies are preserved",
+        "a slot is not reused before its consumer completes",
+        "prolog and drain cover every tile exactly once"
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    },
+    {
+      "applicability": "A hot scalar loop performs elementwise work supported by a target vector API with explicit tail handling.",
+      "capacity_constraints": [
+        "required vector temporaries fit the on-chip budget"
+      ],
+      "contraindications": [
+        "no semantically equivalent supported vector API exists",
+        "workload is tiny and vector setup dominates",
+        "precision behavior cannot be preserved"
+      ],
+      "expected_profile_delta": [
+        "lower scalar time",
+        "higher vector work ratio",
+        "no tiny-copy amplification"
+      ],
+      "gate_spec": [
+        "build",
+        "accuracy",
+        "paired_runtime",
+        "scalar_time",
+        "precision_cases",
+        "held_out_shapes"
+      ],
+      "id": "transformation.vectorize_scalar_loop",
+      "kind": "atomic_transformation",
+      "name": "Replace scalar element loop with a vector API path",
+      "parameter_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "elements_per_call": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "tail_mode": {
+            "enum": [
+              "mask",
+              "valid_count",
+              "datacopypad"
+            ]
+          },
+          "vector_api": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "vector_api",
+          "elements_per_call",
+          "tail_mode"
+        ],
+        "type": "object"
+      },
+      "provenance": [
+        {
+          "lines": "6-20",
+          "path": "skills/aprof/optimization/references/api-algorithm-optimization-strategies.md"
+        }
+      ],
+      "required_evidence": {
+        "all": [
+          "predicate.profile.scalar_hot"
+        ],
+        "any": [
+          "predicate.source.scalar_element_loop"
+        ]
+      },
+      "rollback_spec": "restore original scalar loop and element access path",
+      "semantic_invariants": [
+        "dtype, rounding, NaN, and saturation semantics match the original",
+        "tail elements outside the logical range cannot affect output",
+        "no production GetValue/SetValue fallback is introduced"
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    }
+  ]
+}

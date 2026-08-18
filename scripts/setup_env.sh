@@ -41,13 +41,14 @@ _aprof_setup_prepend_path() {
 }
 
 APROF_SETUP_CHECK_ONLY=0
+APROF_SETUP_INSTALL=0
 APROF_SETUP_CONDA_ENV="${APROF_SETUP_CONDA_ENV:-cann}"
 APROF_SETUP_CONDA_ROOT="${APROF_SETUP_CONDA_ROOT:-/rshome/jieran.zhang/anaconda3}"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --install)
-            _aprof_setup_log "--install is deprecated; this repo no longer installs a local Python aprof package"
+            APROF_SETUP_INSTALL=1
             shift
             ;;
         --check-only)
@@ -70,7 +71,7 @@ Usage:
   source scripts/setup_env.sh [--check-only] [--conda-env cann] [--conda-root PATH]
 
 Options:
-  --install          Deprecated no-op; the repo is plugin/skills first and has no local Python package.
+  --install          Install the local dependency-free aprof-runtime package in editable mode.
   --check-only       Only print diagnostics; do not install dependencies.
   --conda-env NAME   Conda env name. Default: cann.
   --conda-root PATH  Conda root. Default: /rshome/jieran.zhang/anaconda3.
@@ -117,8 +118,13 @@ _aprof_setup_log "python: $(command -v python)"
 
 cd "${APROF_REPO_ROOT}"
 
-export PYTHONPATH="${APROF_REPO_ROOT}:${PYTHONPATH:-}"
-_aprof_setup_log "PYTHONPATH includes repo root"
+export PYTHONPATH="${APROF_REPO_ROOT}/src:${APROF_REPO_ROOT}:${PYTHONPATH:-}"
+_aprof_setup_log "PYTHONPATH includes src and repo root"
+
+if [[ "${APROF_SETUP_INSTALL}" -eq 1 && "${APROF_SETUP_CHECK_ONLY}" -eq 0 ]]; then
+    python -m pip install -e "${APROF_REPO_ROOT}"
+    _aprof_setup_log "installed local aprof-runtime (aprofctl)"
+fi
 
 export ASCEND_CANN_ROOT="${ASCEND_CANN_ROOT:-${CONDA_PREFIX}/Ascend/ascend-toolkit}"
 

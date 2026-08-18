@@ -1,0 +1,113 @@
+{
+  "schema_version": "1.0.0",
+  "mechanisms": [
+    {
+      "id": "mechanism.core_tail_imbalance",
+      "version": "1.0.0",
+      "kind": "mechanism",
+      "status": "active",
+      "name": "Concentrated tail or uneven core work",
+      "description": "A small set of cores, commonly the final core, receives disproportionate work or a slower tail path.",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/ai-core-utilization-diagnosis-metrics.md", "lines": "69-75"}]
+    },
+    {
+      "id": "mechanism.excessive_sync_scope",
+      "version": "1.0.0",
+      "kind": "mechanism",
+      "status": "active",
+      "name": "Synchronization is broader or more frequent than dependencies require",
+      "description": "Global or PIPE_ALL synchronization inside a repeated stage blocks otherwise independent work.",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/bound-deep-routing.md", "lines": "83-87"}]
+    },
+    {
+      "id": "mechanism.onchip_capacity_pressure",
+      "version": "1.0.0",
+      "kind": "mechanism",
+      "status": "active",
+      "name": "On-chip live ranges constrain tile or pipeline depth",
+      "description": "Overlapping UB/L1/L0 live ranges consume enough capacity to force small tiles, spills, or single buffering.",
+      "provenance": [{"path": "skills/aprof/optimization/references/onchip-memory-optimization-strategies.md", "lines": "8-16"}]
+    },
+    {
+      "id": "mechanism.pipeline_serialization",
+      "version": "1.0.0",
+      "kind": "mechanism",
+      "status": "active",
+      "name": "Copy and compute stages are serialized",
+      "description": "Configured buffering does not produce a steady overlap because queue, event, or loop order serializes stages.",
+      "provenance": [{"path": "skills/aprof/optimization/references/pipeline-parallel-optimization-strategies.md", "lines": "6-15"}]
+    },
+    {
+      "id": "mechanism.redundant_gm_round_trip",
+      "version": "1.0.0",
+      "kind": "mechanism",
+      "status": "active",
+      "name": "Intermediate data makes avoidable GM round trips",
+      "description": "An intermediate with a local producer and consumer is copied to GM and read back instead of remaining on chip.",
+      "provenance": [{"path": "skills/aprof/optimization/references/data-movement-optimization-strategies.md", "lines": "6-13"}]
+    },
+    {
+      "id": "mechanism.scalar_control_hot_loop",
+      "version": "1.0.0",
+      "kind": "mechanism",
+      "status": "active",
+      "name": "Scalar control or elementwise work dominates a hot loop",
+      "description": "Per-element access, repeated branches, or object/state manipulation consumes material scalar time.",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md", "lines": "109-123"}]
+    },
+    {
+      "id": "mechanism.tiny_transfer_setup_amplification",
+      "version": "1.0.0",
+      "kind": "mechanism",
+      "status": "active",
+      "name": "Small transfers amplify MTE setup cost",
+      "description": "Many small DataCopy operations create high MTE instruction density without approaching bandwidth limits.",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/bound-deep-routing.md", "lines": "46-51"}]
+    },
+    {
+      "id": "mechanism.ub_bank_conflict",
+      "version": "1.0.0",
+      "kind": "mechanism",
+      "status": "active",
+      "name": "UB layout causes bank or bank-group conflict",
+      "description": "Concurrent vector operands alias bank geometry through offsets, padding, or stride periodicity.",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/bound-deep-routing.md", "lines": "58-64"}]
+    },
+    {
+      "id": "mechanism.underused_task_parallelism",
+      "version": "1.0.0",
+      "kind": "mechanism",
+      "status": "active",
+      "name": "Available task parallelism is not exposed",
+      "description": "For a non-tiny workload, task construction or fixed blockDim leaves useful AI cores idle.",
+      "provenance": [{"path": "skills/aprof/optimization/references/ai-core-utilization-optimization-strategies.md", "lines": "8-16"}]
+    },
+    {
+      "id": "mechanism.unknown_unresolved",
+      "version": "1.0.0",
+      "kind": "mechanism",
+      "status": "active",
+      "name": "Evidence does not resolve a supported mechanism",
+      "description": "Required evidence is absent, contradictory, or outside the seeded mechanism vocabulary; this is a first-class non-claim.",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/bound-deep-routing.md", "lines": "16-24"}]
+    },
+    {
+      "id": "mechanism.vector_api_fragmentation",
+      "version": "1.0.0",
+      "kind": "mechanism",
+      "status": "active",
+      "name": "Vector work is fragmented into inefficient API calls",
+      "description": "Small repeat/count, repeated masks, Cast chains, or missing repeat/stride features reduce useful vector work per call.",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md", "lines": "59-72"}]
+    },
+    {
+      "id": "mechanism.workload_limited",
+      "version": "1.0.0",
+      "kind": "mechanism",
+      "status": "active",
+      "name": "Workload cannot amortize fixed overhead",
+      "description": "The attainable utilization for the shape is low enough that invasive optimization is not justified by current evidence.",
+      "provenance": [{"path": "skills/aprof/diagnosis/references/workload-aware-diagnosis.md", "lines": "18-43"}]
+    }
+  ]
+}
