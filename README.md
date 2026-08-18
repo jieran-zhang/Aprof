@@ -1,143 +1,284 @@
 # AProf
 
-AProf 是面向 Ascend C 算子的 agent-native 性能诊断与优化插件集合。当前仓库不再维护 Python `src/` 包和
-`tests/unit/` 单测入口，主入口是 `plugins/aprof-performance-workflow` 以及 `skills/aprof/` 下的本地 skills。
+AProf is a profile-grounded, trace-producing Ascend C optimization system. It
+keeps the foundation model frozen and separates two layers:
 
-最新 workflow 做三件事：
+- a small Agent-facing skill/plugin layer for interaction, evidence collection,
+  and candidate proposal;
+- a machine-authoritative runtime and immutable SkillGraph for routing,
+  validation, episode storage, and post-training.
 
-- **Diagnosis**：从 kernel 源码或完整 `op_dir` 生成 `diagnosis_hypotheses.json`，按六类问题族定位源码假设和最多 3 个关键 metric。
-- **Profiling**：生成 warmup/repeat 的 `profiling_plan.json`，在用户授权后采集或解析 msprof/cannsim 产物，并输出 `profiling_results.json`。
-- **Optimization**：在完整 `op_dir` 上生成多算子族 optimization candidates，只修改隔离的 candidate 工程，默认只接受 production-safe 结果。
+The current `v0001` graph is an expert seed compiled from the repository's
+static diagnosis and optimization knowledge. It is a starting prior, not a
+trained taxonomy.
 
-## Repository Layout
+See [the training roadmap](docs/training_roadmap.md) for the current fixed-graph
+training boundary, episode eligibility rules, operator-disjoint data protocol,
+and the staged plan for evidence acquisition, graph evolution, parameter
+learning, and transfer evaluation.
+
+## Architecture
 
 ```text
-plugins/aprof-performance-workflow/  # AProf 总编排 plugin 和 wrapper agents
-skills/aprof/                        # AProf 本地 diagnosis / profiling / optimization / benchmark skills
-third_party/cannbot-skills/          # CANNBot 官方 skills（git submodule）
-benchmarks/                          # reference / injected / aprof benchmark 工程
-docs/                                # 设计记录和 benchmark 文档
-scripts/                             # 环境、远端部署和辅助脚本
+Agent-facing skills
+  -> versioned context/evidence draft
+  -> immutable SkillGraph + compatible policy
+  -> isolated candidate proposal
+  -> machine candidate gate
+  -> content-addressed artifacts + attested append-only candidate episode
+  -> fixed-graph policy update
+  -> separately validated future graph version
 ```
 
-`src/` 和 `tests/unit/` 已从当前仓库形态中移除；不要再通过 `pip install -e .`、`aprof ...` CLI 或 unit test 作为默认使用方式。
+The six historical performance families are non-exclusive facets. Runtime
+mechanisms and atomic transformations use stable IDs and versions. Agents never
+assign `selected_as_best`, terminal utility, or graph updates.
 
-## Install Plugin
+## Repository layout
 
-先拉取 CANNBot submodule：
+```text
+plugins/aprof-performance-workflow/  # thin Agent orchestration adapters
+skills/aprof/                        # user-facing capability skills and human references
+skillgraph/source/                   # typed expert seed sources
+skillgraph/versions/                 # immutable compiled graph snapshots
+schemas/                             # versioned runtime JSON contracts
+src/aprof_runtime/                   # validation, routing, gate, episode store, policy runtime
+scripts/                             # registry sync and deterministic graph compiler
+tests/                               # executable contract/runtime/compiler tests
+docs/                                # architecture, decision-surface, and training plans
+```
+
+Task-local runtime state belongs under `<op_dir>/.aprof/` and is not committed
+to Git.
+
+## Capability packages
+
+`skillgraph/registry.json` is the only source of truth for names, roles,
+dependencies, marketplace metadata, and host installation.
+
+- `aprof-skills`: core workflow, diagnosis, profiling, optimization, and
+  direct-invoke scaffolding.
+- `aprof-performance-workflow`: thin orchestration plugin depending on the core
+  skills.
+- `aprof-benchmark-tools`: independent benchmark/data-generation package. Its
+  injection recipes and labels are not core SkillGraph priors.
+- `ascendc-remote-kernel-deploy`: optional execution adapter.
+
+Validate generated installation metadata:
 
 ```bash
-git submodule update --init --recursive third_party/cannbot-skills
+python3 scripts/sync_aprof_registry.py check
 ```
 
-从仓库根目录安装 AProf workflow plugin 到当前项目的 `.cursor/` 配置：
+Install the core Cursor capabilities:
 
 ```bash
 bash plugins/aprof-performance-workflow/init.sh
 ```
 
-安装脚本会链接：
+Optional adapters are explicit:
 
-- AProf 本地 skills：diagnosis、profiling、optimization、direct-invoke scaffold。
-- AProf agents：workflow、diagnosis/profiling/optimization wrappers。
-- 必要 CANNBot skills：`ops-profiling`、`ops-simulator`、`npu-arch`、env/debug/API/code-review 等。
-
-注意：部分大型 CANNBot optimization/design/API skills 只是被安装为可用知识源，不会被 diagnosis 或 optimization agent 默认加载。运行时仍按 AProf 本地 reference 优先，只有 API、平台或算子机制不确定时才点读单个精确文档。
-
-## Use In Cursor
-
-安装后，在 Cursor 中调用：
-
-```text
-@aprof-performance-workflow
-请分析这个 Ascend C kernel 的潜在性能问题，并给出需要采集的硬件 metric。
-kernel_path: <path/to/kernel.asc>
-op_dir: <path/to/direct-invoke-op>
+```bash
+bash plugins/aprof-performance-workflow/init.sh --with-remote
+bash plugins/aprof-performance-workflow/init.sh --with-benchmark-tools
 ```
 
-如果只有 raw kernel，workflow 会先交给 `ascendc-kernel-direct-invoke` 搭建 direct-invoke 工程。若已经有完整 `op_dir`，会直接进入诊断。
+### Install as a Codex plugin
 
-只生成计划、不执行 msprof：
+The Codex plugin and the Python runtime are separate installations. From this
+repository root, register the repo-local marketplace and install the workflow
+plugin:
 
-```text
-@aprof-performance-workflow
-只生成 diagnosis_hypotheses.json 和 profiling_plan.json，不执行 msprof。
-op_dir: <path/to/direct-invoke-op>
+```bash
+codex plugin marketplace add "$PWD"
+codex plugin list --marketplace aprof --available --json
+codex plugin add aprof-performance-workflow@aprof
+python3 -m pip install -e .
 ```
 
-允许 profiling 时，给出执行上下文：
+`marketplace add` is only needed the first time this checkout is registered.
+The marketplace is defined by `.agents/plugins/marketplace.json`; the plugin
+manifest is `plugins/aprof-performance-workflow/.codex-plugin/plugin.json`.
+Start a new Codex thread after installation so the plugin skills are loaded.
+
+To invoke the workflow explicitly, name its skill:
 
 ```text
-@aprof-performance-workflow
-请完成诊断并采集缺失 metric。
+Use $ascendc-aprof-workflow.
+Build and validate an AProf plan, but do not modify source or run hardware.
 op_dir: <path/to/direct-invoke-op>
-run_cmd: ./<binary> <args>
-gen_data_cmd: python3 scripts/gen_data.py
-profiling_output_dir: profiling_out
-warm_up: 10
-repeat: 5
+budget:
+  candidate_limit: 1
+  build_limit: 0
+  timing_limit: 0
+  full_profile_limit: 0
 ```
 
-请求优化时，需要完整 `op_dir` 和已有诊断/profiling 证据：
+During local development, refresh Codex's cached plugin after changing plugin
+skills or metadata:
+
+```bash
+python3 /root/.codex/skills/.system/plugin-creator/scripts/update_plugin_cachebuster.py \
+  plugins/aprof-performance-workflow
+codex plugin add aprof-performance-workflow@aprof
+```
+
+Then start a new Codex thread. The helper replaces the single Codex cachebuster
+suffix; it does not require hand-editing the marketplace or Codex config.
+
+To remove only the plugin, and optionally the marketplace registration and
+runtime, run:
+
+```bash
+codex plugin remove aprof-performance-workflow@aprof
+codex plugin marketplace remove aprof
+python3 -m pip uninstall aprof-runtime
+```
+
+Do not remove the `aprof` marketplace if other plugins from this repository are
+still installed. Removing the plugin does not uninstall `aprofctl`, and
+uninstalling `aprof-runtime` does not remove the plugin.
+
+## Runtime
+
+Install the dependency-free Python 3.11 runtime if a command entry point is
+needed:
+
+```bash
+python3 -m pip install -e .
+```
+
+The same CLI can be invoked without installation with
+`PYTHONPATH=src python3 -m aprof_runtime`.
+
+Core commands:
 
 ```text
-@aprof-performance-workflow
-请基于已有诊断和 profiling 结果优化这个 Ascend C 算子。
-op_dir: <path/to/direct-invoke-op>
-diagnosis: <path/to/diagnosis_hypotheses.json>
-profiling_results: <path/to/profiling_results.json>
-constraints: production_safe
+aprofctl contract validate
+aprofctl graph validate
+aprofctl graph route
+aprofctl candidate gate
+aprofctl episode finalize
+aprofctl episode verify
+aprofctl artifact add
+aprofctl artifact verify
+aprofctl policy train
+aprofctl policy validate
 ```
 
-## Workflow Outputs
+Profiling execution is intentionally a separate draft-producing layer. From an
+AProf checkout, use the bundled tools to enforce stage ordering, compress raw
+msprof CSV, and collect AB/BA command timings:
 
-常见输出包括：
+```bash
+python3 skills/aprof/profiling/scripts/run_profile_stages.py \
+  --config <profile-stages.json> --report <stage-report.json> --dry-run
+python3 skills/aprof/profiling/scripts/compress_msprof.py \
+  --input <msprof-report-root> --op-name <exact-kernel-name> \
+  --available-cores <count> --output <symptoms.json>
+python3 skills/aprof/profiling/scripts/paired_timing.py \
+  --config <paired-timing.json> --output <paired-timing-output.json>
+```
 
-- `diagnosis_hypotheses.json`：源码阶段问题假设、六类 problem family 和最多 3 个 metric。
-- `profiling_plan.json`：msprof/cannsim 采集命令、warmup/repeat、artifact 需求和解析计划。
-- `profiling_results.json`：采集产物、metric 样本、统计值、缺失项和 measurement status。
-- `final_diagnosis.md`：能追溯到 workload model、metric/report 或源码证据的最终诊断。
-- `aprof_opt/optimization_plan.json`：候选优化策略列表、证据链接、容量模型、abort conditions 和 gate。
-- `aprof_opt/candidates/candidate_N/`：隔离复制的候选工程；baseline `op_dir` 不应被修改。
-- `aprof_opt/optimization_memory.jsonl`：成功/失败策略记忆。
-- `aprof_opt/final_optimization_report.md`：最终优化报告。
-- `aprof_opt/best_op/`：只有 production-safe、语义保持、测量稳定且性能改善时才会产生。
+These outputs are not runtime contract kinds. Map their measured evidence into
+`context` or `gate_request`; `aprofctl candidate gate` remains authoritative
+for stability, lower confidence bounds, and the verdict.
 
-## Problem Families
+Finalize with the exact behavior graph and optional learned behavior policy.
+Every source, patch, producer, and evidence digest referenced by the complete
+gate batch must already exist in the store's CAS:
 
-Diagnosis 和 optimization 保持同一组六类入口：
+```bash
+aprofctl episode finalize --context .aprof/context.json \
+  --request .aprof/gate-request.json \
+  --graph skillgraph/versions/v0001 \
+  --store .aprof/episodes.sqlite
+```
 
-| Problem family | 用途 |
-| --- | --- |
-| `tiling` | task/tile/tail/MatMul-FA-Sort-Reduction 分块问题 |
-| `data_movement` | GM/UB/L2 流量、小块 MTE、DataCopyPad、冗余往返 |
-| `pipeline_parallel` | DB、pingpong、preload、SetFlag/WaitFlag、stage overlap |
-| `onchip_memory` | UB/L1/L0 resident、buffer lifetime、bank conflict、workspace slot |
-| `ai_core_utilization` | blockDim、任务数、tail imbalance、StreamK、split-KV、Group Reduce |
-| `api_algorithm` | Scalar/Vector/API 反模式、Cast/repeat、online softmax、MrgSort/Reduce API |
+Train an immutable fixed-graph checkpoint only from a verified `EpisodeStore`
+SQLite database. Policy training verifies the episode attestations, CAS bytes,
+and append-only hash chain before reading any reward:
 
-Optimization 默认读取 AProf 本地小型 reference。复杂算子只额外加载一个 operator playbook：
+```bash
+aprofctl policy train --graph skillgraph/versions/v0001 \
+  --episodes .aprof/episodes.sqlite --policy-version p0001 \
+  --output .aprof/policies/p0001.json
+aprofctl policy validate --checkpoint .aprof/policies/p0001.json \
+  --graph skillgraph/versions/v0001
+aprofctl graph route --graph skillgraph/versions/v0001 \
+  --context .aprof/context.json --policy .aprof/policies/p0001.json
+```
 
-- MatMul / GMM：`skills/aprof/optimization/references/matmul-optimization-playbook.md`
-- Softmax / FA：`skills/aprof/optimization/references/softmax-fa-optimization-playbook.md`
-- Reduction / Sort / TopK：`skills/aprof/optimization/references/reduction-sort-optimization-playbook.md`
-- Vector / Scalar / Broadcast / Conversion：`skills/aprof/optimization/references/vector-scalar-pipeline-playbook.md`
+All Agent JSON is draft input. Unknown fields are rejected, candidate gates are
+recomputed by the runtime, routes are replayed from the exact graph/checkpoint,
+and finalized episodes are append-only. Raw JSON/JSONL episode files are not a
+production policy-training input because they cannot prove CAS existence.
 
-## Safety Rules
+## Seed SkillGraph
 
-- 未经用户确认，不执行 msprof 或远端命令；可以先生成计划。
-- 源码诊断只产生假设，最终结论必须经过 workload model 和 profiling/report 证据校验。
-- 真实硬件 final evidence 默认需要 warmup/repeat 和稳定性统计；单次或 simulator-only 只能作为 proxy/exploratory。
-- 优化候选不得覆盖 baseline `op_dir`，只能修改 `aprof_opt/candidates/candidate_N/op/`。
-- 每个 candidate 只应用一个 strategy，但该 strategy 可以包含必要的多行结构性改动。
-- 硬编码 shape/core/UB/tile、删除动态 tiling、降精度或缩小边界支持的 candidate 必须标为 benchmark-specialized，不能默认成为 `best_op`。
+Compile or verify the expert seed deterministically:
 
-## Useful Files
+```bash
+python3 scripts/compile_seed_graph.py --check
+```
 
-- Plugin quickstart: [plugins/aprof-performance-workflow/quickstart.md](plugins/aprof-performance-workflow/quickstart.md)
-- Workflow agent: [plugins/aprof-performance-workflow/AGENTS.md](plugins/aprof-performance-workflow/AGENTS.md)
-- Workflow details: [plugins/aprof-performance-workflow/workflows/references/workflow-details.md](plugins/aprof-performance-workflow/workflows/references/workflow-details.md)
-- Contracts: [skills/aprof/references/contracts.md](skills/aprof/references/contracts.md)
-- Diagnosis skill: [skills/aprof/diagnosis/SKILL.md](skills/aprof/diagnosis/SKILL.md)
-- Profiling skill: [skills/aprof/profiling/SKILL.md](skills/aprof/profiling/SKILL.md)
-- Optimization skill: [skills/aprof/optimization/SKILL.md](skills/aprof/optimization/SKILL.md)
+The source graph contains:
+
+- six non-trainable anchor facets;
+- tri-state evidence predicates with explicit implementation status;
+- actionable mechanism nodes plus `unknown_unresolved`;
+- atomic transformation contracts plus `NOOP`;
+- fixed evidence/facet edges and trainable problem-to-transformation priors.
+
+Unimplemented predicates remain explicitly unimplemented. No threshold or
+hardware fact is fabricated to make the graph appear executable.
+
+### Decision surface
+
+Audit the graph-only branch surface with:
+
+```bash
+python3 scripts/audit_skillgraph_decisions.py \
+  --graph skillgraph/versions/v0001 \
+  --output .aprof/v0001-decision-surface.json
+```
+
+See [the decision-surface contract](docs/skillgraph_decision_surface.md). The
+current classification is
+`fixed_graph_edge_ranking_with_handler_parameter_trace_collection`: raw
+symptoms may have several candidate mechanisms, but v0001 collapses them into
+one-target formal predicates; each actionable mechanism has only one positive
+transformation plus `NOOP`; and the runtime does not learn handler parameters
+or recovery transitions. A shape-validated `handler_attempt` sidecar can be
+kept for offline exploration, but it is not EpisodeStore/CAS-attested and is
+not policy-training input.
+
+## Workflow rules
+
+- Keep the baseline project read-only and modify only isolated candidates.
+- Preserve the complete legal route candidate set, hard-mask reasons, selection
+  mode/seed, selected edge, and true behavior probability.
+- Stop a candidate after the first mandatory gate failure and retain the typed
+  negative episode.
+- Use paired hardware samples for production performance decisions; simulator
+  data is feasibility/proxy evidence.
+- Preserve build, accuracy, runtime, stable-no-gain, regression, specialized,
+  and successful outcomes.
+- Express observable session limits with `candidate_limit`, `build_limit`,
+  `timing_limit`, and `full_profile_limit`; finalization and store append enforce
+  them cumulatively per session.
+- Never use legacy flat memory or historical FastGELU demonstrations as verified
+  policy reward.
+
+## Development checks
+
+```bash
+python3 scripts/sync_aprof_registry.py check
+python3 scripts/compile_seed_graph.py --check
+PYTHONPATH=src python3 -m unittest discover -s tests
+python3 -m pytest -q
+```
+
+The minimum system milestone is one versioned route, one isolated candidate,
+one machine verdict, one immutable episode, and a reproducible change in
+fixed-graph candidate ranking after policy training.
