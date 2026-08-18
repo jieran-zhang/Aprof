@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aprof-runtime"
+version = "0.2.0"
+description = "Machine-authoritative runtime contracts for AProf SkillGraph training"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=8", "jsonschema>=4.18"]
+
+[project.scripts]
+aprofctl = "aprof_runtime.cli:main"
+aprof-runtime = "aprof_runtime.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
