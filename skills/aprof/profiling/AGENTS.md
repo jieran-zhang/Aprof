@@ -1,6 +1,6 @@
 ---
 name: aprof-profiling-agent
-description: AProf Profiling Agent。接收硬件 metric 及描述，转换为带 warmup/repeat 的 msprof/msprof op simulator 采集命令，执行采集并解析 report 得到稳定 metric evidence。
+description: AProf Profiling Agent。接收 evidence requirements，生成带 warmup/repeat 的采集计划，执行或导入 msprof/simulator artifacts，并提交带 hash 的解析 draft 给 runtime 计算稳定 metric evidence。
 mode: primary
 skills:
   - ascendc-aprof-profiling
@@ -14,18 +14,25 @@ permission:
 
 # AProf Profiling Agent
 
-本 Agent 负责把诊断所需 metric 转换成可执行 profiling 计划，执行对应 `msprof` / `msprof op simulator` 命令，并从 report 中解析 metric 值。
+本 Agent 负责把诊断所需 metric 转换成可执行 profiling 计划，执行对应 `msprof` / `msprof op simulator` 命令，并从 report 中构造解析 draft。机器 runtime 独占 artifact completeness、配对统计和 measurement verdict。
 
 ## 强制规则
 
 1. **MUST** 先加载 `/ascendc-aprof-profiling`。
 2. **MUST** 读取 `references/metric-bundles.md`、`references/metric-to-msprof.md`、`references/report-parsing.md`。
-3. **MUST** 使用 `../references/contracts.md` 中的 `profiling_plan.json` 契约。
+3. **MUST** 把 `profiling_plan.json` 标为 draft。当前 `aprofctl contract
+   validate` 没有 profiling plan/results contract kind，不得声称已机器校验。
 4. 优先选择能直接得到硬件 metric 的 `hw-op` 或 `hw-msprof`；只有 trace/proxy 或无 NPU 场景才选择 `sim`。
-5. 真实硬件采集默认 `warm_up=10`、`repeat=5`、`statistic=median`、`stability_cv_threshold=0.05`。
+5. production gain 使用至少 30 个交错配对 cheap-timing samples，要求
+   `CV<=0.05`、`speedup LCB>=1.03`；完整 msprof 默认 `warm_up=10`、
+   `repeat=5`，只聚合机制 metric，不能替代 timing pairs。
 6. 输出每个 metric 的 `artifact`、`fields`、`formula`、`output_key`。
-7. 执行采集前必须确认用户授权、`run_cmd` / `op_config.json` 等必要输入和工具链可用。
+7. 执行采集前必须确认用户授权、`run_cmd` / `op_config.json` 等必要输入和工具链可用。先用 `scripts/run_profile_stages.py --dry-run` 校验声明式阶段。
 8. 不编造 msprof 字段、CSV 文件名、命令参数、解析脚本或 metric 值。
+9. 原始 artifacts 与 hashes 必须保留在 `.aprof/` state；Agent 不得自行签发 stable performance reward。
+10. build 成功后必须先跑全量 correctness，再允许 profile。CANNBench 要求 `run.sh --all --skip-build` 和 20/20 `results.json`。
+11. 使用 `scripts/compress_msprof.py` 生成结构化 symptom draft；保留同一 symptom 的多个 `candidate_problem_ids`，不得提前压成单一 mechanism。
+12. production timing 使用 `scripts/paired_timing.py` 或等价 timing-only collector 的至少 30 个 AB/BA pairs；CANNBot `--compare` 不能替代此 gate。
 
 ## 输入
 
