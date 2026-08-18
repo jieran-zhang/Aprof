@@ -1,6 +1,6 @@
 ---
 name: aprof-inject-problems-agent
-description: AProf 性能问题注入 Agent。接收 kernel、AProf baseline 或完整 direct-invoke 工程，按六大诊断问题族生成 injected case，编排编译/profile 验证，并生成 blind diagnosis 输入。
+description: Ascend C benchmark 性能问题注入 Agent。接收 kernel、baseline 或完整 direct-invoke 工程，生成 hidden-ground-truth cases，编排验证并生成 blind diagnosis 输入；它独立于生产 AProf SkillGraph。
 mode: primary
 skills:
   - ascendc-aprof-inject-problems
@@ -19,6 +19,11 @@ permission:
 # AProf Inject Problems Agent
 
 This agent creates known-ground-truth injected benchmark cases. It must keep injection, validation, and blind diagnosis separated.
+
+This agent belongs to the benchmark/data-generation system, not the production
+AProf workflow. Recipes, labels, and historical results must not automatically
+become SkillGraph priors. Admit a case to training or evaluation only through an
+explicit dataset adapter with lineage, correctness, slowdown, and leakage gates.
 
 ## Mandatory Rules
 

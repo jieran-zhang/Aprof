@@ -1,13 +1,26 @@
 ---
 name: ascendc-aprof-optimization
-description: Ascend C kernel 自动性能优化 Skill。用于在 AProf diagnosis/profiling 之后，把六类问题族映射到多算子族优化策略，生成 production-safe 或 benchmark-specialized candidate，复制候选 op_dir，本地编译、精度验证、msprof/profile 对比，并维护 optimization_memory.jsonl。
+description: Instantiate a selected AProf transformation contract into an isolated Ascend C candidate. Use after evidence collection and SkillGraph routing to propose one bounded optimization intent, preserve action parameters and provenance, and submit the draft to the machine candidate gate. This skill cannot accept a candidate or update learned policy state.
 ---
 
 # AscendC AProf Optimization
 
+## Machine boundary
+
+- Select an atomic transformation from the published SkillGraph and record its
+  exact `skill_id`, contract version, selected edge, complete legal candidate
+  set, and behavior probability.
+- Treat the historical six-family routing documents as expert explanation and
+  cold-start prior only. They are not the runtime selector or root-cause truth.
+- Generate a candidate draft only. Do not emit `selected_as_best`, terminal
+  utility, or a production verdict. Submit evidence to `aprofctl candidate gate`.
+- Finalize every attempted candidate, including early failures and stable
+  regressions, as a versioned episode. Do not update flat optimization memory as
+  training authority.
+
 Use this skill after `/ascendc-aprof-diagnosis` and `/ascendc-aprof-profiling` have produced source hypotheses, profiling data, or a final diagnosis. The target is a complete direct-invoke `op_dir`; raw kernel scaffolding stays in `/ascendc-kernel-direct-invoke`.
 
-When selecting or applying strategies, read [references/optimization-strategy-routing.md](references/optimization-strategy-routing.md). It is the contract between the diagnosis six-family entry and the optimization candidate loop.
+When interpreting the cold-start route, read [references/optimization-strategy-routing.md](references/optimization-strategy-routing.md). It documents the legacy expert prior; the published graph contract and policy remain authoritative.
 
 For candidate generation, read [references/optimization-candidate-design.md](references/optimization-candidate-design.md) and then only the branch reference(s) for the selected `problem_family`. For complex MatMul, Softmax/FA, Reduction/Sort, or Vector/Scalar pipeline cases, additionally load exactly one matching operator playbook from this skill.
 
@@ -21,8 +34,8 @@ For candidate generation, read [references/optimization-candidate-design.md](ref
 ## Workflow
 
 1. Run or require **EnvironmentPreflight** before local execution: use `ascendc-env-check` to confirm CANN env, device visibility, SoC/NPU arch, and `msprof`/`cannsim` availability.
-2. Generate `aprof_opt/optimization_plan.json` as an agent artifact. The plan must include selected strategy entries, diagnosis/profiling links, source anchors, capacity model, abort conditions, gate commands, and memory path.
-3. Route strategies in this order: diagnosis `problem_family` first, profiling bound second, source scan last. Preserve `linked_hypotheses` and `linked_metrics`.
+2. Read the selected transformation contract from the immutable graph snapshot and generate a draft plan. Include diagnosis/profiling links, source anchors, action parameters, capacity model, abort conditions, and exact graph/policy/contract versions.
+3. Use the graph route selected from current evidence. Use diagnosis facets, profiling bound, and source scan only to construct the expert prior or explain missing evidence; preserve the full candidate set and behavior probability.
 4. Before candidate generation, do **Workload/Tiling/Bound Modeling** with AProf local references, `workload-aware-diagnosis.md`, `roofline-single-case.md`, and `npu-arch` where available.
 5. Apply **CorrectnessAndGeneralityGate** before patching: default scope is `production_safe`; preserve operator math, dtype precision, dynamic shape/tiling, tail handling, and boundary safety.
 6. If candidates should be created, copy the baseline `op_dir` into `aprof_opt/candidates/candidate_N/op/` and write `candidate_plan.json` / `candidate_plan.md` for each selected strategy.
@@ -30,9 +43,11 @@ For candidate generation, read [references/optimization-candidate-design.md](ref
 8. For each candidate, apply exactly one strategy from `candidate_plan.json`; one strategy may still require coordinated multi-line edits such as loop restructuring, buffer lifetime changes, Host Tiling updates, workspace slot changes, or API fusion.
 9. Before risky API, pipeline, MatMul, Softmax, Sort, or DataCopy edits, first use the selected family reference plus at most one operator playbook. Use [references/optimization-cannbot-knowledge-index.md](references/optimization-cannbot-knowledge-index.md) only if local references do not settle the mechanism.
 10. After patching and before build, run **StaticReview** focused on API legality, UB/L1/L0/workspace bounds, DataCopy alignment, pipeline ordering, portability, and performance clauses.
-11. Run gates in order: build, accuracy, profile, measurement stability, correctness/generality acceptance.
-12. Record `candidate_result.json`, append `optimization_memory.jsonl`, and write `final_optimization_report.md`.
-13. Select `aprof_opt/best_op` only when accuracy passes, measurement is stable, metric improves over baseline, and `scope_status=production_safe`.
+11. Submit draft and collected evidence to the machine gate. Do not reproduce gate authority in prose.
+12. Register every referenced object in the task-local CAS. Finalize with
+    `aprofctl episode finalize --graph <snapshot>` and the exact behavior
+    `--policy` when applicable, under `<op_dir>/.aprof/`.
+13. Copy or report `best_op` only when the runtime returns a production-safe accepted verdict.
 
 ## Context-safe optimization
 
@@ -47,9 +62,9 @@ For candidate generation, read [references/optimization-candidate-design.md](ref
 - Load CANNBot original docs only through `optimization-cannbot-knowledge-index.md`, and only one precise reference at a time.
 - External docs can justify API parameters, platform boundaries, contraindications, and gate checks; they must not replace AProf diagnosis/profiling evidence.
 
-## Strategy Routing
+## Expert-prior lookup
 
-Route diagnosis problem families to these local references:
+Use non-exclusive diagnosis facets to find human guidance for the graph-selected mechanism and transformation:
 
 | Problem family | Strategy | Load when implementing |
 | --- | --- | --- |
@@ -64,7 +79,7 @@ For the full routing matrix, including trigger signals, required evidence, expec
 
 ## Operator Playbooks
 
-Use these only after the six-family branch is selected:
+Use these only after a mechanism and transformation are selected; load at most one matching playbook:
 
 | Operator family | Load when | Reference |
 | --- | --- | --- |
@@ -81,18 +96,28 @@ Use these only after the six-family branch is selected:
 - Simulator metrics are proxy evidence; do not present them as real `Memory.csv` / `PipeUtilization.csv`.
 - Production best selection requires `semantic_status=preserved`, `scope_status=production_safe`, `portability_risk != high`, and `accepted_for` containing `production`.
 - Mark candidates as `benchmark_specialized` when they hardcode shape/core/UB/tile values, remove dynamic tiling, reduce precision, or narrow supported boundaries. Report their speedup separately; do not copy them to `best_op` by default.
-- Failed compile/API attempts are valuable memory. Append them to `optimization_memory.jsonl` with `status=failed` and the concise failure reason.
+- Failed compile/API attempts are valuable typed negative episodes. Preserve the first failed gate, evidence, patch hash, and failure handoff in the append-only episode store.
 - Accuracy failure hands off to `ascendc-precision-debug`.
 - Runtime nonzero/error-code failure hands off to `ascendc-runtime-debug`.
 - Timeout, hang, crash, illegal access, or AIC error hands off to `ascendc-crash-debug`.
 - Profile artifact/metric gaps hand off to `ops-profiling`.
-- Metric regression is recorded in memory and the loop moves to the next candidate.
+- Stable metric regression is finalized as a negative episode and the session may route to the next candidate.
 
 ## Outputs
 
-- `optimization_plan.json`: strategy list, source anchors, expected benefit/risk, diagnosis linkage, bound type, checks, command plan, memory path.
-- `candidate_result.json`: per-candidate gate status, semantic/scope/portability status, changed files, before/after metric, measurement evidence, speedup, failure reason, failure handoff.
-- `optimization_memory.jsonl`: long-lived records keyed by op, shape, dtype, soc, problem family, strategy, status, metric, and handoff.
+- Draft candidate plan: selected transformation, source anchors, expected benefit/risk, evidence linkage, parameters, checks, and exact versions.
+- Runtime gate outcome: per-candidate state path, semantic/scope/portability status, before/after evidence, utility, failure reason, and handoff.
+- `.aprof/` episode state: append-only, versioned candidate attempts with route propensity, gate outcomes, hashes, metrics, and handoff. Legacy `optimization_memory.jsonl` is read-only and unverified.
+- For v0001 exploration, a separate versioned handler sidecar: handler ID and
+  version, exact parameters, shape/profile context buckets, parent attempt,
+  typed failure signature, and why the next step chose a sibling handler,
+  sibling transformation, evidence recollection, or debug handoff. A terminal
+  stop remains the typed episode outcome plus absence of a child until an
+  explicit transition contract is published. Do not
+  add these fields silently to the strict v1 episode schema. Serialize it as
+  the shape-validated `handler_attempt` exploration contract and validate with
+  `aprofctl contract validate --kind handler_attempt`. It is not an attested
+  policy-training input.
 - `final_optimization_report.md`: production-safe best candidate, metric evidence summary, and faster rejected/benchmark-only candidates with reasons.
 
-See `skills/aprof/references/contracts.md` for exact JSON contracts.
+Use the versioned files under repository `schemas/` as the machine contracts. Read `skills/aprof/references/contracts.md` only when adapting legacy artifacts.

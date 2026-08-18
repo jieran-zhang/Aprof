@@ -1,11 +1,17 @@
 ---
 name: ascendc-aprof-inject-problems
-description: AscendC AProf benchmark performance-problem injection. Use when Codex needs to create known-ground-truth injected cases from a direct-invoke scaffold, AProf baseline, or kernel file; supports six diagnosis families: tiling, data movement, pipeline parallelism, on-chip memory, AI Core utilization, and API/algorithm inefficiency.
+description: Generate synthetic Ascend C performance benchmark cases with hidden ground truth. Use only for benchmark construction, controlled evaluation, or data-generation experiments; keep it separate from the production AProf optimization workflow and never treat generated recipes as verified SkillGraph priors.
 ---
 
 # AscendC AProf Inject Problems
 
 Use this skill to create benchmark variants with known performance-problem ground truth while preserving mathematical correctness and buildability.
+
+This is a benchmark-generation system, not part of the production AProf
+SkillGraph. Generated cases may enter a training or evaluation pool only through
+an explicit dataset adapter after single-factor, correctness, slowdown, lineage,
+and leakage checks. Do not install this skill as a dependency of the core AProf
+workflow and do not import its labels into online diagnosis traces.
 
 ## Workflow
 

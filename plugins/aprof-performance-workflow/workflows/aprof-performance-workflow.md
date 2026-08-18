@@ -1,92 +1,71 @@
-# AProf Performance Workflow
+# AProf Trace-Producing Performance Workflow
 
-目标：输入 Ascend C kernel 源码或完整 `op_dir`，输出 workload-aware 性能诊断、带 warmup/repeat 的 profiling 证据，并在用户要求时生成默认 production-safe 的多算子族优化候选。
-
-本文件只保留总编排。详细 gate、handoff、memory 和六类优化路由见：
-
-- [workflow-details.md](references/workflow-details.md)
-- [optimization-strategy-routing.md](../../../skills/aprof/optimization/references/optimization-strategy-routing.md)
-- [contracts.md](../../../skills/aprof/references/contracts.md)
+Use this file only for Agent orchestration. The canonical capability inventory
+is `skillgraph/registry.json`; graph contracts and priors are under
+`skillgraph/`; machine schemas and decisions belong to `aprofctl`.
 
 ## Inputs
 
 | Field | Required | Notes |
 | --- | --- | --- |
-| `kernel_source` / `kernel_path` / `op_dir` | yes | kernel 文本、源码路径或完整 direct-invoke 工程 |
-| `operator_context` | no | op 名、shape、dtype、format、输入输出个数 |
-| `execution_context` | no | run/gen/profile/build/verify 命令、本机 NPU 或 simulator 环境、warmup/repeat/statistic |
-| `constraints` | no | dry-run、不执行 msprof、不执行优化、强制 sim 或上板、允许 benchmark-only |
+| `kernel_source` / `kernel_path` / `op_dir` | yes | Optimization requires a complete direct-invoke project |
+| `operator_context` | recommended | Shape, dtype, layout, operator semantics, supported boundaries |
+| `execution_context` | for execution | Build, correctness, timing/profile commands and environment |
+| `budget` | recommended | Runtime-enforced candidate/build/timing/full-profile limits; declared token and wall-clock limits |
+| `constraints` | no | Plan-only, no hardware, production-safe, or explicit benchmark-only mode |
 
-## Main Flow
+## Main flow
 
-1. **Input normalization**
-   - 完整 `op_dir` 直接进入诊断。
-   - raw kernel 先交给 `ascendc-kernel-direct-invoke` scaffold。
+1. Load `ascendc-aprof-workflow`. Scaffold a raw kernel with
+   `ascendc-kernel-direct-invoke`; keep the baseline read-only.
+2. Build source/workload/profile evidence with `ascendc-aprof-diagnosis`.
+   Historical families are non-exclusive facets. Preserve unresolved and
+   refuting evidence.
+3. Use `ascendc-aprof-profiling` only for missing evidence or paired candidate
+   measurement. Raw artifacts remain immutable and content-addressed.
+4. Map profiling plan/result, stage report, paired timing, and symptom drafts
+   into `context` or `gate_request`, then validate the supported runtime
+   contract kind with `aprofctl contract validate`. The raw profiling drafts
+   are not contract kinds.
+5. Route against one immutable graph snapshot and compatible policy. Record the
+   entire candidate set, hard-mask reasons, selection mode/seed, selected edge,
+   and true behavior probability.
+6. Use `ascendc-aprof-optimization` to instantiate exactly one atomic
+   transformation in an isolated candidate tree. The Agent submits a draft; it
+   does not assign a verdict.
+7. Run `aprofctl candidate gate`. Stop on the first mandatory failure. Preserve
+   successful, failed, stable-regression, specialized, and NOOP attempts.
+8. Register every referenced object in the task-local CAS, then run `aprofctl
+   episode finalize --graph <snapshot>` with the exact behavior `--policy` when
+   applicable. Append atomically under `<op_dir>/.aprof/`.
+9. Report the machine verdict and evidence. A reviewer may audit the evidence
+   chain but cannot override the gate.
 
-2. **Source audit**
-   - Agent: `aprof-diagnosis-agent`
-   - Output: `diagnosis_hypotheses.json`
-   - Problem families: `tiling`、`data_movement`、`pipeline_parallel`、`onchip_memory`、`ai_core_utilization`、`api_algorithm`
+## Authority boundaries
 
-3. **Workload model**
-   - Agent: `aprof-diagnosis-agent`
-   - Output: `workload_model` / `attainable_utilization`
-   - Low UB or AI Core utilization is interpreted relative to workload and hardware limits.
+- Agent: understand intent, gather context, propose evidence and patches,
+  explain results.
+- SkillGraph: immutable expert contracts, legal routes, hard masks, and current
+  policy-compatible IDs.
+- Runtime: schema validation, paired statistics, candidate verdict, utility,
+  gate/route replay, CAS verification, cumulative session budgets, append-only
+  storage, and graph/policy compatibility.
+- Training: consumes only eligible episodes from a verified SQLite store; it
+  never rewrites a published graph in place.
 
-4. **Profiling plan and repeated execution**
-   - Agent: `aprof-profiling-agent`
-   - Outputs: `profiling_plan.json`、`profiling_results.json`、CSV/trace/summary artifacts
-   - 未经用户授权，不执行 msprof；只生成 plan。
-   - Real hardware evidence defaults to `warm_up=10`、`repeat=5`、`statistic=median`。
+Injection recipes and injected labels belong to the independent
+`aprof-benchmark-tools` package. They are not loaded by this workflow and cannot
+be used as online diagnosis evidence.
 
-5. **Final diagnosis**
-   - Agent: `aprof-diagnosis-agent`
-   - Output: `final_diagnosis.md`
-   - 结论必须能追溯到 workload model、metric、report artifact 或源码证据。
+## Stop points
 
-6. **Optional optimization**
-   - Agent: `aprof-optimization-agent`
-   - Only for complete `op_dir`
-   - Outputs: `aprof_opt/optimization_plan.json`、candidate dirs、`candidate_result.json`、`optimization_memory.jsonl`、`final_optimization_report.md`
+- Missing execution authority or tools: return a validated plan and missing
+  inputs without claiming an optimization result.
+- No legal transformation: select explicit `transformation.noop`.
+- Mandatory gate failure: finalize the typed negative episode and stop that
+  candidate.
+- Budget exhausted: close the optimization session without inventing missing
+  measurements.
 
-7. **Independent cross-check**
-   - Agent: sub-agent reviewer
-   - Review diagnosis type, metric evidence stability, and candidate acceptance.
-   - Main agent only reports conclusions that pass the evidence chain.
-
-## Optimization Summary
-
-- 路由顺序：diagnosis problem family first -> profiling bound second -> source scan fallback。
-- 每个 candidate 只应用一个 `strategy_id`。
-- 单个 `strategy_id` 可以包含必要的多行结构性改动，例如 loop 重排、buffer lifetime 调整、Host Tiling 更新或 workspace slot 改写。
-- baseline `op_dir` 只读；修改只允许发生在 `aprof_opt/candidates/candidate_N/op/`。
-- Gate 顺序：static review -> build -> accuracy -> repeated profile -> measurement stability -> correctness/generality acceptance -> metric compare。
-- 只有 accuracy 通过、metric 稳定改善、`semantic_status=preserved` 且 `scope_status=production_safe` 时，才允许生成或声明 `aprof_opt/best_op/`。
-- simulator-only 性能数据必须标注为 proxy。
-- 更快但 `benchmark_specialized` 的 candidate 必须单独列出，不得作为默认 final output。
-
-## Stop Points
-
-- 只诊断：输出 `diagnosis_hypotheses.json` 和 `profiling_plan.json`。
-- profiling 数据不足：输出缺失 artifact 和下一步采集建议。
-- 只生成优化计划：输出 `optimization_plan.json`，必要时准备 candidate dirs，但不声称性能已优化。
-
-## Invocation
-
-```text
-@aprof-performance-workflow
-请基于已有诊断和 profiling 结果优化这个 Ascend C 算子。
-op_dir: <op_dir>
-diagnosis: <diagnosis.json>
-profiling_results: <profiling_results.json>
-constraints: production_safe
-```
-
-## Final Report Contract
-
-最终回答必须包含：
-
-- `contract with metric evidence`：baseline/candidate 样本、统计值、CV、measurement_status、诊断类型和证据来源。
-- `final output`：production-safe best op 路径；若没有可接受候选，明确写 none。
-- `performance improvement`：只基于稳定重复采样的 selected statistic；单次或 sim-only 只能标为 proxy/exploratory。
-- `rejected faster candidates`：列出性能更好但因 benchmark specialization、语义风险、portability risk 或测量不稳定被拒绝的候选。
+Details of wrapper responsibilities and failure handoff are in
+`references/workflow-details.md`.

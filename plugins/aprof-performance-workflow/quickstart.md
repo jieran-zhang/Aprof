@@ -1,95 +1,218 @@
-# AProf Performance Workflow Quickstart
+# AProf Workflow Quickstart
 
-## 安装
+## Install in Codex
 
-从仓库根目录执行：
+From the AProf repository root:
+
+```bash
+codex plugin marketplace add "$PWD"
+codex plugin list --marketplace aprof --available --json
+codex plugin add aprof-performance-workflow@aprof
+python3 -m pip install -e .
+```
+
+The first command registers `.agents/plugins/marketplace.json` and is only
+needed once per checkout. The last command installs the separate `aprofctl`
+runtime; plugin installation alone does not install the Python entry point.
+Start a new Codex thread after installation.
+
+## Install in Cursor
 
 ```bash
 bash plugins/aprof-performance-workflow/init.sh
+python3 -m pip install -e .
 ```
 
-如果提示缺少 `ascendc-*`、`ops-profiling`、`ops-simulator` 或 `npu-arch`：
+Remote execution and benchmark generation are separate opt-ins:
 
 ```bash
-git submodule update --init third_party/cannbot-skills
+bash plugins/aprof-performance-workflow/init.sh --with-remote
+bash plugins/aprof-performance-workflow/init.sh --with-benchmark-tools
 ```
 
-## 使用方式
+The benchmark option installs the independent injection system. It does not
+become a dependency or prior of the production workflow.
 
-在 Cursor 中调用诊断：
+## Verify the static library
+
+```bash
+python3 scripts/sync_aprof_registry.py check
+python3 scripts/compile_seed_graph.py --check
+aprofctl graph validate --graph skillgraph/versions/v0001
+```
+
+## Invoke in Codex
+
+Name the skill explicitly when you want deterministic selection:
+
+```text
+Use $ascendc-aprof-workflow.
+Optimize this Ascend C operator within the stated candidate and profiling
+budget. Preserve a versioned AProf trace for every attempted candidate.
+
+op_dir: <path/to/direct-invoke-op>
+build_cmd: <command>
+verify_cmd: <command>
+profile_cmd: <command>
+budget:
+  candidate_limit: 3
+  build_limit: 3
+  timing_limit: 2
+  full_profile_limit: 1
+constraints: production_safe
+```
+
+For a safe first run:
+
+```text
+Use $ascendc-aprof-workflow.
+Build and validate the evidence context and route, but do not execute a patch or
+hardware command.
+op_dir: <path/to/direct-invoke-op>
+budget:
+  candidate_limit: 1
+  build_limit: 0
+  timing_limit: 0
+  full_profile_limit: 0
+```
+
+## Invoke in Cursor
 
 ```text
 @aprof-performance-workflow
-请分析这个 Ascend C kernel 的潜在性能问题，并给出需要采集的硬件 metric。
-kernel_path: <path/to/kernel.asc>
+Optimize this Ascend C operator within the stated candidate and profiling
+budget. Preserve a versioned AProf trace for every attempted candidate.
+
+op_dir: <path/to/direct-invoke-op>
+build_cmd: <command>
+verify_cmd: <command>
+profile_cmd: <command>
+budget:
+  candidate_limit: 3
+  build_limit: 3
+  timing_limit: 2
+  full_profile_limit: 1
+constraints: production_safe
+```
+
+For planning only:
+
+```text
+@aprof-performance-workflow
+Build and validate the evidence context and route, but do not execute a patch or
+hardware command.
 op_dir: <path/to/direct-invoke-op>
 ```
 
-若只想生成计划，不执行 msprof：
+## Collect profiling evidence from a checkout
 
-```text
-@aprof-performance-workflow
-只生成 diagnosis_hypotheses.json 和 profiling_plan.json，不执行 msprof。
+Create the stage config described by the profiling skill, preview it, then run
+it only after the commands and hardware use are authorized:
+
+```bash
+python3 skills/aprof/profiling/scripts/run_profile_stages.py \
+  --config .aprof/profile-stages.json \
+  --report .aprof/profile-stages.dry-run.json --dry-run
+python3 skills/aprof/profiling/scripts/run_profile_stages.py \
+  --config .aprof/profile-stages.json \
+  --report .aprof/profile-stages.json
 ```
 
-若允许采集，给出执行所需命令：
+Compress an exported msprof report without inventing missing counters:
 
-```text
-run_cmd: ./<binary> <args>
-gen_data_cmd: python3 scripts/gen_data.py ...
-profiling_output_dir: profiling_out
-warm_up: 10
-repeat: 5
+```bash
+python3 skills/aprof/profiling/scripts/compress_msprof.py \
+  --input <msprof-report-root> --op-name <exact-kernel-name> \
+  --available-cores <count> --output .aprof/profile-symptoms.json
 ```
 
-## 产物
+For cheap paired timing, save a timing-only config (no build, data generation,
+or verification inside either command):
 
-典型产物包括：
-
-- `diagnosis_hypotheses.json`：源码阶段的问题假设和最多 3 个 metric。
-- `profiling_plan.json`：msprof 命令、warmup/repeat 执行计划和 report 解析方案。
-- `profiling_results.json`：采集产物、缺失项、metric 样本、统计值和稳定性状态。
-- `profiling_out/`：`msprof` 生成的 CSV、trace 或 summary。
-- `final_diagnosis.md`：带硬件数据支撑的最终诊断。
-- `aprof_opt/optimization_plan.json`：多算子族优化策略候选。
-- `aprof_opt/candidates/`：隔离复制的候选工程。
-- `aprof_opt/optimization_memory.jsonl`：历史成功/失败策略记忆。
-- `aprof_opt/final_optimization_report.md`：最终优化报告。
-- `aprof_opt/best_op/`：production-safe、语义保持、测量稳定且性能改善的最佳候选。
-
-## 优化入口
-
-优化只接受完整 `op_dir`，不会直接覆盖 baseline；候选会写到 `aprof_opt/candidates/`：
-
-```text
-@aprof-performance-workflow
-请在已有诊断和 profiling 基础上优化这个 Ascend C 算子。
-op_dir: benchmarks/reference_ops/fast_gelu
-diagnosis: <path/to/diagnosis_hypotheses.json>
-profiling_results: <path/to/profiling_results.json>
+```json
+{
+  "schema_version": "1.0.0",
+  "baseline": {"cwd": "/abs/path/baseline", "command": ["bash", "run_timing.sh"]},
+  "candidate": {"cwd": "/abs/path/candidate", "command": ["bash", "run_timing.sh"]},
+  "pairs": 30,
+  "warmup": 5,
+  "timeout_seconds": 120
+}
 ```
 
-本地 dry-run 只生成优化计划：
-
-```text
-@aprof-performance-workflow
-只生成 optimization_plan.json，不修改 baseline，不运行 build/profile。
-op_dir: benchmarks/reference_ops/fast_gelu
-diagnosis: path/to/diagnosis_hypotheses.json
-profiling_results: path/to/profiling_results.json
+```bash
+python3 skills/aprof/profiling/scripts/paired_timing.py \
+  --config .aprof/paired-timing.json \
+  --output .aprof/paired-timing-output.json
 ```
 
-如果要准备候选目录或让 agent 修改候选工程，需要明确授权 candidate 生成和本地 gate。
+All three outputs are drafts. The compressor keeps ambiguous candidate
+mechanisms and `unknown` fields; it does not finalize root cause. The paired
+timer does not issue an LCB verdict. Map the evidence into `context` or
+`gate_request` and let `aprofctl` validate and gate the candidate.
 
-## 边界
+## Update or uninstall the Codex plugin
 
-- 源码诊断阶段只产生假设，不直接确认瓶颈。
-- 最终诊断必须先构造 workload model；小 workload 的低 UB/AI Core 利用率默认是 `workload_limited`。
-- `sim` 只提供 trace / 指令 / 热点 proxy，不产出 msopprof 8 CSV。
-- 真实硬件 metric 优先通过 `hw-op` 或 `hw-msprof` 获取；final evidence 需要 warmup/repeat 和稳定性统计。
-- 优化候选不得直接覆盖 baseline `op_dir`。
-- 优化入口按诊断六问题族优先路由；profiling bound 次之，源码扫描兜底。
-- 本地优化执行前需要环境预检，patch 后 build 前需要静态检视。
-- 硬编码 shape/core/UB/tile、删除动态 tiling、降精度或缩小边界支持的候选标为 benchmark-only，不得默认成为 final output。
-- gate 失败会写入 `failure_handoff`，用于转给 precision/runtime/crash/debug skill。
-- simulator-only 性能数据必须标为 proxy。
+After editing the local plugin, replace its cachebuster, reinstall it, and
+start a new Codex thread:
+
+```bash
+python3 /root/.codex/skills/.system/plugin-creator/scripts/update_plugin_cachebuster.py \
+  plugins/aprof-performance-workflow
+codex plugin add aprof-performance-workflow@aprof
+```
+
+Uninstalling the plugin and the runtime are independent operations:
+
+```bash
+codex plugin remove aprof-performance-workflow@aprof
+python3 -m pip uninstall aprof-runtime
+```
+
+If this checkout no longer supplies any installed Codex plugins, also remove
+its marketplace registration:
+
+```bash
+codex plugin marketplace remove aprof
+```
+
+## Runtime sequence
+
+1. Validate the task context and evidence drafts.
+2. Route on an immutable graph/policy pair and retain the complete candidate
+   distribution and hard masks.
+3. Apply one atomic transformation in an isolated candidate tree.
+4. Submit raw gate evidence to `aprofctl candidate gate`.
+5. Add referenced objects to the task-local CAS.
+6. Finalize with the exact graph and behavior policy:
+
+   ```bash
+   aprofctl episode finalize --context .aprof/context.json \
+     --request .aprof/gate-request.json \
+     --graph skillgraph/versions/v0001 \
+     --store .aprof/episodes.sqlite
+   ```
+
+Runtime state is written under `<op_dir>/.aprof/`. A build or correctness
+failure is a valid typed negative episode; it does not require timing samples.
+
+For the first trace study, keep a `handler_attempt` JSON beside each episode
+and validate its shape with:
+
+```bash
+aprofctl contract validate --kind handler_attempt --input <handler-attempt.json>
+```
+
+This sidecar is not part of the strict v1 episode, is not CAS-attested, and is
+not consumed by the current policy trainer. From the AProf checkout root, run
+`python3 scripts/audit_skillgraph_decisions.py --graph
+skillgraph/versions/v0001` before making claims about graph learning.
+
+## Boundaries
+
+- Agents cannot set `selected_as_best`, terminal utility, or policy weights.
+- Six historical families are non-exclusive facets, not root-cause labels.
+- Missing evidence routes to `unknown_unresolved` or `NOOP`.
+- Simulator evidence cannot train production performance value.
+- Legacy `optimization_memory.jsonl` and historical demo summaries are not
+  verified training data.

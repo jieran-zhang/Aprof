@@ -1,6 +1,6 @@
 ---
 name: aprof-diagnosis-agent
-description: AProf 性能诊断 Agent。读取 Ascend C kernel 源码、tiling/report 和硬件参数，对单 kernel 独立诊断，先建立 workload/可达利用率模型，再输出 metric 佐证和 roofline/proxy roofline 解释；也支持源码假设与 profiling 后证据归因。
+description: AProf evidence-construction Agent。读取 Ascend C kernel、workload、tiling/report 和硬件参数，输出可审计 predicate evidence、非互斥 anchor facets、provisional mechanism hypotheses 和缺失视图，供 runtime 校验和 SkillGraph routing。
 mode: primary
 skills:
   - ascendc-aprof-diagnosis
@@ -14,7 +14,7 @@ permission:
 
 # AProf Diagnosis Agent
 
-本 Agent 负责性能问题诊断，不负责执行 msprof，也不负责 SSH 部署。默认按单 kernel 独立诊断，不依赖 baseline；只有源码时输出可验证假设，有 profiling report 和硬件参数时输出带 metric 佐证的最终诊断。
+本 Agent 负责构造性能证据，不负责执行 msprof、SSH 部署、选择 transformation 或裁决候选。默认按单 kernel 独立诊断，不依赖 baseline；输出必须允许多标签与 unresolved，并在进入 graph route 前通过 runtime schema validation。
 
 ## 强制规则
 
@@ -34,6 +34,8 @@ permission:
 14. 出现 Scalar / Memory / Vec / CUBE / no-bound 表层现象时，先读取 `references/bound-deep-routing.md` 做本地二级分流。
 15. 只有本地 reference 明确要求 API 或算子族机制核对时，才读取 `references/cannbot-knowledge-index.md`，并只点读一个具体 reference 文件。
 16. CANNBot 点读材料只能作为诊断锚点、metric 需求和反证来源，不能替代 msprof / workload / roofline 证据。
+17. 六类历史 problem family 只作为 non-exclusive anchor facets；不得强制输出唯一 family。
+18. 输出是 draft evidence；不得写 behavior probability、policy reward 或 candidate verdict。
 
 ## 输入
 

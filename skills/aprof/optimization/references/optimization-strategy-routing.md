@@ -1,12 +1,12 @@
 # AProf Optimization Strategy Routing
 
-This reference is the optimization routing contract for the plugin-first AProf workflow. Every diagnosis problem family must route to a strategy, local reference, required evidence, validation metric movement, contraindication, gate check, and failure handoff.
+This reference is the human-readable cold-start prior used to build the seed SkillGraph. It is not the runtime routing contract. The six historical families are non-exclusive facets; typed graph edges and transformation contracts are authoritative after `v0001` is published.
 
 ## Routing Order
 
-1. **Diagnosis first**: use `diagnosis_hypotheses.json.hypotheses[].problem_family` or `single_case_diagnosis.json.diagnoses[].problem_family`. Preserve `linked_hypotheses` and `linked_metrics` in `optimization_plan.json`.
+1. **Evidence first**: use diagnosis predicates and provisional mechanisms. Historical `problem_family` values may supply multiple facet priors. Preserve linked hypotheses, metrics, missing evidence, and refuting evidence.
 2. **Profiling bound second**: if diagnosis families are absent, map profiling evidence to a family. MTE/Memory -> `data_movement`; overlap/bubble -> `pipeline_parallel`; UB/resource conflict -> `onchip_memory`; core occupancy/load balance -> `ai_core_utilization`; vector/scalar/API -> `api_algorithm`.
-3. **Source scan fallback**: inspect `tileLength`, `blockDim`, `DataCopy`, `InitBuffer`, `TBuf/TQue`, `SetFlag/WaitFlag`, `MatMul/MMAD`, `Softmax`, `Sort/TopK`, `Reduce`, `GetValue/SetValue`, `std::`, and vector API usage.
+3. **Source scan fallback**: inspect `tileLength`, `blockDim`, `DataCopy`, `InitBuffer`, `TBuf/TQue`, `SetFlag/WaitFlag`, `MatMul/MMAD`, `Softmax`, `Sort/TopK`, `Reduce`, `GetValue/SetValue`, `std::`, and vector API usage. If evidence remains insufficient, route to `unknown_unresolved` or `NOOP` rather than forcing a family.
 
 ## Context-safe Loading
 
@@ -29,7 +29,7 @@ This reference is the optimization routing contract for the plugin-first AProf w
 - **Simulator label**: cannsim/msprof simulator data is proxy evidence unless validated against real hardware `msprof`/CSV artifacts.
 - **Benchmark specialization label**: hardcoded shape/core/UB/tile constants, removed dynamic tiling, reduced precision, or narrowed supported boundary cases must set `scope_status=benchmark_specialized`.
 
-## Six-Family Matrix
+## Six-Facet Expert-Prior Matrix
 
 | Problem family | Trigger signals | Candidate strategy | Local reference | Expected metric movement | Contraindications |
 | --- | --- | --- | --- | --- | --- |
