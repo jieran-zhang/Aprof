@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import math
+
+from aprof.skill_rl.config import SkillRlConfig
 from aprof.skill_rl.models import Candidate, Episode, RewardBreakdown, Skill
 
 
@@ -57,6 +60,7 @@ def score_episode(
     skills: dict[str, Skill] | None = None,
     min_warmup: int = 1,
     min_repeat: int = 3,
+    max_cv: float | None = 0.05,
 ) -> RewardBreakdown:
     """Compute RewardBreakdown for one optimization episode."""
     rb = RewardBreakdown()
@@ -86,11 +90,19 @@ def score_episode(
 
     # Measurement: episode-level or last round.
     meas = episode.measurement
-    if not meas.is_stable(min_warmup=min_warmup, min_repeat=min_repeat):
+    if not meas.is_stable(
+        min_warmup=min_warmup,
+        min_repeat=min_repeat,
+        max_cv=max_cv,
+    ):
         # Fallback: any round with enough samples counts as repeat evidence.
         ok = False
         for rnd in episode.rounds:
-            if rnd.measurement.is_stable(min_warmup=min_warmup, min_repeat=min_repeat):
+            if rnd.measurement.is_stable(
+                min_warmup=min_warmup,
+                min_repeat=min_repeat,
+                max_cv=max_cv,
+            ):
                 ok = True
                 meas = rnd.measurement
                 break
@@ -185,6 +197,57 @@ def score_episode(
         # Still allow partial credit for actionability/workload on exploratory runs.
         rb.primary = 0.35 * rb.actionability + 0.15 * rb.workload_awareness + 0.10 * rb.efficiency
         rb.notes.append("primary_exploratory_without_stable_measurement")
+    return rb
+
+
+def score_training_transition(
+    episode: Episode,
+    *,
+    skills: dict[str, Skill] | None = None,
+    frozen_outcome: float | None = None,
+    edited_outcome: float | None = None,
+    generated_skill_reused: bool = False,
+    outcome_override: float | None = None,
+    config: SkillRlConfig | None = None,
+) -> RewardBreakdown:
+    """Compute outcome + reuse + downstream edit reward for policy learning."""
+    cfg = config or SkillRlConfig()
+    rb = score_episode(
+        episode,
+        skills=skills,
+        min_warmup=cfg.min_warmup,
+        min_repeat=cfg.min_repeat,
+        max_cv=cfg.max_cv,
+    )
+    if not (rb.correctness_ok and rb.semantics_ok and rb.scope_primary_ok and rb.measurement_ok):
+        rb.training_reward = 0.0
+        rb.notes.append("training_hard_gate_failed")
+        return rb
+
+    speedup = _speedup_vs_original(episode, _primary_production_candidate(episode))
+    rb.outcome_reward = (
+        max(0.0, min(1.0, float(outcome_override)))
+        if outcome_override is not None
+        else min(1.0, math.log1p(max(0.0, speedup - 1.0)) / math.log(3.0))
+    )
+    actually_reused = bool(set(episode.retrieved_skill_ids) & set(episode.used_skill_ids))
+    if generated_skill_reused and actually_reused:
+        rb.reuse_reward = cfg.reuse_bonus
+
+    if frozen_outcome is not None and edited_outcome is not None:
+        rb.edit_reward = cfg.edit_bonus_scale * max(-1.0, min(1.0, edited_outcome - frozen_outcome))
+
+    measurements = float(episode.cost.get("hardware_measurements", 0.0))
+    candidates = float(episode.cost.get("candidate_count", 0.0))
+    rb.cost_penalty = cfg.measurement_cost * measurements + cfg.candidate_cost * candidates
+    rb.health_penalty = float(episode.cost.get("health_penalty", 0.0))
+    rb.training_reward = (
+        rb.outcome_reward
+        + rb.reuse_reward
+        + rb.edit_reward
+        - rb.cost_penalty
+        - rb.health_penalty
+    )
     return rb
 
 

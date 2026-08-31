@@ -54,13 +54,16 @@ contraindications:
 - `rounds[]`: `label`, `baseline`, `selected_candidate`, `rejected_candidates[]`
 - candidate：`scope`, `semantic_status`, `strategy_id`, `config`, `code_changes`, `accepted`, `reason`
 
-## SkillEdit
+## SkillEdit（Memory-R1 风格）
 
-`op`: `ADD` \| `UPDATE` \| `DEPRECATE`  
-`skill_id`, `payload`（完整或部分 skill 字段）, `evidence_episode_ids[]`, `scope`
+`op`: `ADD` \| `UPDATE` \| `DELETE` \| `NOOP`。旧 `DEPRECATE` 仅作输入兼容。  
+必备审计字段：`target_skill_id`、结构化 `payload`、`evidence_episode_ids[]`、
+`policy_name/logprob`、`candidate_group_id`、冲突/合并依据。
 
-- 成功且 `production_safe` → UPDATE/ADD 主库  
-- 失败候选 → DEPRECATE / 写入 contraindications  
+- 成功且 `production_safe` → UPDATE/ADD 主库
+- 重复或无新增信息 → NOOP，防止 library 无界膨胀
+- 明确有害且 held-out 回放失败 → DELETE；保留 tombstone 和历史证据
+- 同批 UPDATE+DELETE 冲突 → 保留成功 UPDATE，把失败变体合并为 contraindication
 - `benchmark_specialized` 成功 → 旁路标签，不写主 best
 
 ## RewardBreakdown（验证「skill 变好」）
@@ -85,7 +88,26 @@ Soft scores（写入报告，合成 `primary`）：
 **主对比**：同一组 episodes 上 `skill_lib@v0`（frozen）vs `skill_lib@vN`（curated）的 `primary` 与 `actionability`。  
 禁止仅用大 shape 弱启动的 258× 作为唯一 headline；小 shape 强 baseline（约 1.32×）必须同报。
 
-## SAGE-lite 流程
+## SAGE × Memory-R1 训练奖励
 
-Train episodes → Curator 提案 edits → Dev Validation Gate（hard + primary 不下降）→ commit → Test 只评估。  
-Sequential rollout：同 `scenario_id` 内按序累积已 commit 的 skill ids。
+训练奖励与旧 `primary` 报告分离：
+
+`R = r_outcome + r_reuse + r_edit - cost - health_penalty`
+
+- `r_outcome`：correctness-constrained、稳定测量下的 clipped/log speedup。
+- `r_reuse`：前序任务产生/更新的 skill 被后续任务实际检索、使用且成功。
+- `r_edit`：edited bank 相对 frozen bank 在同一后续任务上的 marginal gain。
+- `cost`：真机采样次数、候选数量；`health_penalty`：重复、冲突、专用化和库增长。
+
+`primary/actionability/workload_awareness` 继续用于诊断和论文消融，不冒充 SAGE
+官方 outcome + skill reuse reward。
+
+## Sequential rollout 与数据隔离
+
+Train episodes → Memory Manager 采样 edit group → replay → Dev Validation Gate
+→ commit → Test 只评估。任务链执行真实的
+`retrieve → use/apply → verify → edit`，记录 generated/retrieved/used 三类事件。
+
+split 以原始 `op` 为最小 group；同一 op 的 inject/baseline/shape 变体禁止跨
+Train/Dev/Test。历史单次测量只可用于 replay 排序；真机结论要求
+warmup≥10、repeat≥5、CV≤5%、correctness bad=0。

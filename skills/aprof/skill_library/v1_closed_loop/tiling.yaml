@@ -1,0 +1,128 @@
+skills:
+  - id: tiling.increase_blockdim_when_underused
+    family: tiling
+    version: 17
+    scope: production_safe
+    preconditions:
+      - diagnosis_type == true_bottleneck
+      - workload_class == normal
+    actionable_edits:
+      - from_trajectory: true
+        code_changes:
+          - restore topk/op_0001 knobs toward baseline for blockdim_too_small
+    expected_metric_delta:
+      primary: TaskDuration_median_us
+      direction: decrease
+      min_effect_pct: 3.0
+    measurement_policy:
+      warm_up: 10
+      repeat: 5
+      statistic: median
+      max_cv: 0.05
+    linked_hypotheses:
+      - tiling.increase_blockdim_when_underused
+    contraindications:
+      - elems_per_core_misaligned
+      - single_run_duration_as_proof
+      - tiny_workload_fake_low_util
+    notes: "curated_from:inject_restore_topk_op_0001"
+  - id: tiling.increase_tile_length
+    family: tiling
+    version: 9
+    scope: production_safe
+    preconditions:
+      - diagnosis_type == true_bottleneck
+      - workload_class == normal
+    actionable_edits:
+      - from_trajectory: true
+        code_changes:
+          - restore matmul/op_0003 knobs toward baseline for tile_length_too_small
+    expected_metric_delta:
+      primary: TaskDuration_median_us
+      direction: decrease
+      min_effect_pct: 3.0
+    measurement_policy:
+      warm_up: 10
+      repeat: 5
+      statistic: median
+      max_cv: 0.05
+    linked_hypotheses:
+      - tiling.increase_tile_length
+    contraindications:
+      - ub_overflow
+      - alignment_break
+      - single_run_duration_as_proof
+    notes: "curated_from:inject_restore_matmul_op_0003"
+  - id: tiling.fixed_shape_specialization
+    family: tiling
+    version: 1
+    scope: benchmark_specialized
+    preconditions:
+      - benchmark_only hardcoded shape allowed by user
+    actionable_edits:
+      - specialize: fixed_shape_tiling
+    expected_metric_delta:
+      primary: TaskDuration_median_us
+      direction: decrease
+      min_effect_pct: 3.0
+    measurement_policy:
+      warm_up: 10
+      repeat: 5
+      statistic: median
+      max_cv: 0.05
+    linked_hypotheses:
+      - [
+      - ]
+    contraindications:
+      - must_not_be_default_best
+    notes: Appendix skill only; never primary best
+  - id: tiling.restore_tileNum_unreasonable
+    family: tiling
+    version: 2
+    scope: production_safe
+    preconditions:
+      - diagnosis_type == true_bottleneck
+      - workload_class == normal
+    actionable_edits:
+      - from_trajectory: true
+        code_changes:
+          - restore fast_gelu/op_0006 knobs toward baseline for tileNum_unreasonable
+    expected_metric_delta:
+      primary: TaskDuration_median_us
+      direction: decrease
+      min_effect_pct: 3.0
+    measurement_policy:
+      warm_up: 10
+      repeat: 5
+      statistic: median
+      max_cv: 0.05
+    linked_hypotheses:
+      - tiling.restore_tileNum_unreasonable
+    contraindications:
+      - single_run_duration_as_proof
+    notes: "curated_from:inject_restore_fast_gelu_op_0006"
+  - id: tiling.restore_tile_num_unreasonable
+    family: tiling
+    version: 4
+    scope: production_safe
+    preconditions:
+      - diagnosis_type == true_bottleneck
+      - workload_class == normal
+    actionable_edits:
+      - from_trajectory: true
+        code_changes:
+          - restore mish/op_0006 knobs toward baseline for tile_num_unreasonable
+    expected_metric_delta:
+      primary: TaskDuration_median_us
+      direction: decrease
+      min_effect_pct: 3.0
+    measurement_policy:
+      warm_up: 10
+      repeat: 5
+      statistic: median
+      max_cv: 0.05
+    linked_hypotheses:
+      - tiling.restore_tile_num_unreasonable
+    contraindications:
+      - single_run_duration_as_proof
+    notes: "curated_from:inject_restore_mish_op_0006"

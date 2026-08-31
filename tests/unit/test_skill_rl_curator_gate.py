@@ -14,11 +14,16 @@ class TestSkillRlCuratorGate(unittest.TestCase):
         self.repo_lib = SkillLibrary(version_label="v0")
         self.repo_lib.load()
 
-    def test_propose_deprecate_from_failures(self):
+    def test_failure_is_delete_or_merged_contraindication(self):
         ep = adapt_fixture_b()
         edits = propose_edits(ep, self.repo_lib.skills)
-        deps = [e for e in edits if e.op == "DEPRECATE"]
-        self.assertTrue(deps)
+        deps = [e for e in edits if e.op == "DELETE"]
+        merged = [
+            e
+            for e in edits
+            if e.op in ("ADD", "UPDATE") and e.payload.get("contraindications")
+        ]
+        self.assertTrue(deps or merged)
 
     def test_filter_rejects_empty_actionable(self):
         bad = SkillEdit(

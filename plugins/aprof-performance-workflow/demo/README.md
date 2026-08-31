@@ -55,7 +55,15 @@ python plugins/aprof-performance-workflow/demo/run_glm_diagnosis_demo.py \
 | `offline_alignment.json` | **仅维护者**：与 `.ground_truth` 对比（未发给模型） |
 | `glm_raw_response.json` | 原始 API 响应 |
 
-## 与 plugin workflow 的关系
+## 批量盲诊评测
+
+加载 `ascendc-aprof-diagnosis` skill 后，对多个匿名 case 批量调用 GLM-5.2，并离线对齐 GT：
+
+```bash
+python plugins/aprof-performance-workflow/demo/run_glm_batch_eval.py --limit 6
+```
+
+汇报说明见仓库根下 `docs/blind_diagnosis_framework_briefing.md`。
 
 ```text
 @aprof-performance-workflow          ← Cursor 内编排（可走完整 diagnosis↔profiling）

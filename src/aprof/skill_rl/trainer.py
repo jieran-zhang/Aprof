@@ -5,9 +5,18 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from aprof.skill_rl.config import SkillRlConfig
 from aprof.skill_rl.curator import filter_executable_edits, propose_edits
+from aprof.skill_rl.group_relative import (
+    LightweightEditSelector,
+    candidates_from_replay,
+    export_verl_jsonl,
+)
 from aprof.skill_rl.library import SkillLibrary
+from aprof.skill_rl.memory_manager import ManagerPolicy, ManagerState
 from aprof.skill_rl.models import Episode
+from aprof.skill_rl.replay_env import ReplayEnvironment
+from aprof.skill_rl.retriever import retrieve_skills
 from aprof.skill_rl.reward import score_episode
 from aprof.skill_rl.sequential_rollout import sequential_rollout
 from aprof.skill_rl.validation_gate import validate_edits
@@ -42,8 +51,7 @@ def run_offline_round(
     curated_skills = dict(lib.skills)
     version_label = base_version
     if ok and applied:
-        trial = SkillLibrary(root=library_root, version_label=base_version)
-        trial.skills = dict(lib.skills)
+        trial = lib.clone()
         trial.apply_edits(applied)
         curated_skills = dict(trial.skills)
         if commit:
@@ -95,4 +103,70 @@ def run_offline_round(
                 for s in rollout.steps
             ],
         },
+    }
+
+
+def run_group_relative_round(
+    episodes: list[Episode],
+    *,
+    policy: ManagerPolicy,
+    base_library: SkillLibrary,
+    selector: LightweightEditSelector | None = None,
+    config: SkillRlConfig | None = None,
+    verl_output: Path | None = None,
+) -> dict[str, Any]:
+    """Sample edit groups, replay them, update a lightweight selector."""
+    cfg = config or SkillRlConfig()
+    selector = selector or LightweightEditSelector()
+    replay = ReplayEnvironment(config=cfg)
+    selected = []
+    group_reports = []
+    for episode in episodes:
+        retrieved = retrieve_skills(
+            episode,
+            base_library.skills,
+            config=cfg,
+            hardware=str(episode.metadata.get("hardware") or ""),
+        )
+        state = ManagerState(
+            episode=episode,
+            retrieved=retrieved,
+            skills=dict(base_library.skills),
+            bank_version=base_library.version_label,
+        )
+        edits = policy.propose(state, group_size=cfg.candidate_group_size)
+        results = [replay.evaluate(episode, edit, base_library) for edit in edits]
+        candidates = candidates_from_replay(results)
+        if not candidates:
+            continue
+        selector.update(candidates)
+        choice = selector.choose(candidates)
+        selected.append(choice.edit)
+        if verl_output is not None:
+            export_verl_jsonl(
+                verl_output,
+                prompt=state.to_prompt_dict(),
+                candidates=candidates,
+                bank_version=base_library.version_label,
+            )
+        group_reports.append(
+            {
+                "case_id": episode.case_id,
+                "selected": f"{choice.edit.op}:{choice.edit.skill_id}",
+                "candidates": [
+                    {
+                        "edit": f"{candidate.edit.op}:{candidate.edit.skill_id}",
+                        "reward": candidate.reward,
+                        "advantage": candidate.advantage,
+                        "accepted": candidate.accepted,
+                    }
+                    for candidate in candidates
+                ],
+            }
+        )
+    return {
+        "selected_edits": selected,
+        "selector_weights": dict(selector.weights),
+        "groups": group_reports,
+        "verl_output": str(verl_output) if verl_output else "",
     }

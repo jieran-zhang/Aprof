@@ -31,11 +31,17 @@ python scripts/run_skill_rl_inject_eval.py
 
 | 项 | 结果 |
 | --- | --- |
-| SSH 910B 重采 | `xeon6.pku-dasys.cn:2222` **超时**；改用仓库内既有 HW 产物 |
+| SSH 910B 重采 | 已通；`collect_msprof_repeats_and_score.py` / `run_skill_rl_closed_loop_hw.py` |
 | GLM-5.2 盲诊 | 成功：`fast_gelu/op_0005`、`gelu_mul/op_0005`（tile 过小） |
 | Skill-RL 对比 | generic frozen → curated：primary **0.46→0.55**，actionability **0.67→0.91** |
+| **闭环** | Curator→`v1_closed_loop`→应用 `tiling.increase_tile_length`（16→256）→910B 复测：fast_gelu **30.64→5.66 μs (~5.4×)**，gelu_mul **~9→~2 μs** 量级（见 closed_loop 报告） |
 
-报告副本：`tests/fixtures/skill_rl/inject_eval_report.json`
+报告：`tests/fixtures/skill_rl/inject_eval_report.json`、`msprof_live_score_report.json`、`closed_loop_hw_report.json`
+
+### SAGE 原版打分 ≠ 本仓库 primary
+
+SAGE（ACL'26）：任务链上 **outcome reward \(r\in[0,1]\)**（如 AppWorld 任务是否完成）+ **Skill-integrated bonus**（生成 skill 被后续任务成功复用时 +1）；评测主表是 **TGC/SGC**、步数/token。  
+AProf Skill-RL：面向 kernel 优化的 **多目标代理分**（speedup/actionability/workload/efficiency + 硬门禁），**不是** SAGE 同一套公式。我们借的是 Sequential Rollout / skill 版本化 / validation gate 的骨架。
 
 ## 模块
 
@@ -54,4 +60,40 @@ $env:PYTHONPATH="src"
 python -m unittest discover -s tests/unit -p "test_skill_rl*.py" -v
 ```
 
-当前 **16** 个 unittest 通过。
+当前 **25** 个 unittest 通过。
+
+## SAGE × Memory-R1 扩展（2026-08-11）
+
+当前 demo 已从“规则 Curator + ID 累积”扩展为可执行的轻量训练骨架：
+
+- Memory-R1 风格 `ADD / UPDATE / DELETE / NOOP`，含 tombstone、事务回滚、
+  edit audit、library budget。
+- 结构化 skill retriever 与 frozen/rule/sampled 三类 Manager policy。
+- SAGE 风格真实任务链：记录 generated / retrieved / actually-used，后续成功
+  复用才获得 reuse bonus。
+- 训练奖励拆为 `outcome + reuse + downstream edit delta - cost/health`；
+  原 `primary` 只保留为诊断报表。
+- group-relative candidate advantage、轻量 contextual-bandit selector 与
+  VERL-compatible JSONL 导出。
+- applicator registry 支持 `tile_length / blockdim / tile_num`；910B runner
+  支持 scenario JSON、skill version、correctness verify 和 CV 超限补采。
+
+离线复现：
+
+```powershell
+$env:PYTHONPATH="src"
+python scripts/run_sage_memory_r1_demo.py
+python -m unittest discover -s tests/unit -p "test_skill_rl*.py" -v
+```
+
+产物：
+
+- `tests/fixtures/skill_rl/sage_memory_r1_demo_report.json`
+- `tests/fixtures/skill_rl/transition_dataset.jsonl`
+- `tests/fixtures/skill_rl/closed_loop_blockdim_hw_report.json`（若 910B 不可达则
+  明确写 `status=blocked`，不生成伪性能结果）
+
+注意：历史 inject 的 warmup=3/repeat=1 仅用于 replay 候选排序；真实结论仍以
+warmup=10/repeat≥5/CV≤5% 的 910B gate 为准。Memory-R1 官方仓库截至本次实现
+仍未发布训练代码，因此本实现依据论文动作/下游 outcome 机制自建兼容接口，
+不是其代码复刻。

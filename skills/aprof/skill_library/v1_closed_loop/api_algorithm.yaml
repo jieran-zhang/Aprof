@@ -1,0 +1,24 @@
+skills:
+  - id: api_algorithm.reuse_tmp_buffer
+    family: api_algorithm
+    version: 1
+    scope: production_safe
+    preconditions:
+      - safe buffer lifetime alias proven
+    actionable_edits:
+      - reuse: tmpLocal
+    expected_metric_delta:
+      primary: TaskDuration_median_us
+      direction: decrease
+      min_effect_pct: 3.0
+    measurement_policy:
+      warm_up: 10
+      repeat: 5
+      statistic: median
+      max_cv: 0.05
+    linked_hypotheses:
+      - redundant_temp_buffer
+    contraindications:
+      - lifetime_alias_unclear
+      - single_run_duration_as_proof
+    notes: 

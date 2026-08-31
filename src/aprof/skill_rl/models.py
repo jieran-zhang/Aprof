@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 Scope = Literal["production_safe", "benchmark_specialized", "rejected", "unknown"]
 BaselineKind = Literal["naive", "strong"]
-EditOp = Literal["ADD", "UPDATE", "DEPRECATE"]
+EditOp = Literal["ADD", "UPDATE", "DELETE", "NOOP", "DEPRECATE"]
 DiagnosisType = Literal[
     "true_bottleneck",
     "workload_limited",
@@ -27,10 +27,17 @@ class Measurement:
     median_us: float | None = None
     cv: float | None = None
 
-    def is_stable(self, min_warmup: int = 1, min_repeat: int = 3) -> bool:
+    def is_stable(
+        self,
+        min_warmup: int = 1,
+        min_repeat: int = 3,
+        max_cv: float | None = None,
+    ) -> bool:
         if self.warm_up < min_warmup or self.repeat < min_repeat:
             return False
         if self.median_us is None and not self.samples_us:
+            return False
+        if max_cv is not None and self.cv is not None and self.cv > max_cv:
             return False
         return True
 
@@ -89,6 +96,14 @@ class Episode:
     measurement: Measurement = field(default_factory=Measurement)
     rounds: list[Round] = field(default_factory=list)
     actionable_strategy_ids: list[str] = field(default_factory=list)
+    retrieved_skill_ids: list[str] = field(default_factory=list)
+    used_skill_ids: list[str] = field(default_factory=list)
+    generated_skill_ids: list[str] = field(default_factory=list)
+    apply_result: dict[str, Any] = field(default_factory=dict)
+    compile_result: dict[str, Any] = field(default_factory=dict)
+    verification_result: dict[str, Any] = field(default_factory=dict)
+    profile_result: dict[str, Any] = field(default_factory=dict)
+    cost: dict[str, float] = field(default_factory=dict)
     min_effect_pct: float = 3.0
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -108,20 +123,36 @@ class Skill:
     measurement_policy: dict[str, Any] = field(default_factory=dict)
     linked_hypotheses: list[str] = field(default_factory=list)
     contraindications: list[str] = field(default_factory=list)
+    hardware_scope: list[str] = field(default_factory=list)
+    workload_scope: list[str] = field(default_factory=list)
+    operator_scope: list[str] = field(default_factory=list)
+    evidence_episode_ids: list[str] = field(default_factory=list)
+    success_count: int = 0
+    failure_count: int = 0
+    last_used_at: str = ""
+    confidence: float = 0.0
+    tombstone: bool = False
     notes: str = ""
 
     def is_actionable(self) -> bool:
-        return bool(self.actionable_edits) and bool(self.expected_metric_delta)
+        return not self.tombstone and bool(self.actionable_edits) and bool(self.expected_metric_delta)
 
 
 @dataclass
 class SkillEdit:
     op: EditOp
     skill_id: str
+    target_skill_id: str = ""
     payload: dict[str, Any] = field(default_factory=dict)
     evidence_episode_ids: list[str] = field(default_factory=list)
     scope: Scope = "production_safe"
     rationale: str = ""
+    conflict_basis: str = ""
+    merge_basis: str = ""
+    policy_name: str = "rule"
+    policy_logprob: float | None = None
+    candidate_group_id: str = ""
+    candidate_id: str = ""
 
 
 @dataclass
@@ -136,6 +167,12 @@ class RewardBreakdown:
     efficiency: float = 0.0
     specialized_appendix_speedup: float = 0.0
     primary: float = 0.0
+    outcome_reward: float = 0.0
+    reuse_reward: float = 0.0
+    edit_reward: float = 0.0
+    cost_penalty: float = 0.0
+    health_penalty: float = 0.0
+    training_reward: float = 0.0
     notes: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -147,3 +184,6 @@ class SkillLibrarySnapshot:
     version_label: str
     skills: dict[str, Skill] = field(default_factory=dict)
     content_hash: str = ""
+    parent_hash: str = ""
+    training_run_id: str = ""
+    audit_log: list[dict[str, Any]] = field(default_factory=list)

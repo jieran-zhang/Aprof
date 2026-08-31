@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import hashlib
 from typing import Any, Iterable
 
 
@@ -55,3 +56,49 @@ def stratified_keys(rows: list[dict[str, Any]], key_fields: tuple[str, ...] = ("
         parts = [str(r.get(k) or "unknown") for k in key_fields]
         keys.append("|".join(parts) + "|" + str(r.get("case_id") or r.get("id") or len(keys)))
     return keys
+
+
+def group_stratified_split(
+    rows: list[dict[str, Any]],
+    *,
+    group_fields: tuple[str, ...] = ("op",),
+    seed: int = 0,
+) -> SplitSpec:
+    """Split whole groups to prevent an operator and its variants leaking."""
+    groups: dict[str, list[str]] = {}
+    for index, row in enumerate(rows):
+        group = "|".join(str(row.get(field) or "unknown") for field in group_fields)
+        case_id = str(row.get("case_id") or row.get("id") or index)
+        groups.setdefault(group, []).append(case_id)
+    ordered_groups = sorted(
+        groups,
+        key=lambda key: hashlib.sha256(f"{seed}:{key}".encode()).hexdigest(),
+    )
+    split = SplitSpec()
+    for index, group in enumerate(ordered_groups):
+        target = ("train", "dev", "test")[index % 3]
+        getattr(split, target).extend(sorted(groups[group]))
+    return split
+
+
+def assert_no_group_leakage(
+    rows: list[dict[str, Any]],
+    split: SplitSpec,
+    *,
+    group_fields: tuple[str, ...] = ("op",),
+) -> None:
+    membership = {
+        case_id: bucket
+        for bucket, case_ids in split.to_dict().items()
+        for case_id in case_ids
+    }
+    seen: dict[str, str] = {}
+    for index, row in enumerate(rows):
+        case_id = str(row.get("case_id") or row.get("id") or index)
+        if case_id not in membership:
+            continue
+        group = "|".join(str(row.get(field) or "unknown") for field in group_fields)
+        bucket = membership[case_id]
+        if group in seen and seen[group] != bucket:
+            raise ValueError(f"group leakage: {group} in {seen[group]} and {bucket}")
+        seen[group] = bucket

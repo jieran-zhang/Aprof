@@ -465,6 +465,173 @@
         ],
         "latest_hw": "68/68 compile+hw, 61/68 verify"
       }
+    },
+    {
+      "id": "QA-016",
+      "timestamp": "2026-07-20T22:58:00+08:00",
+      "category": "diagnosis",
+      "question": "批量测试盲诊准确率并调用相关 skill；解释 demo 如何跑 case、如何避免 agent 知道答案、整个框架如何运作，便于向老板汇报。",
+      "answer_summary": "新增 run_glm_batch_eval.py：加载 ascendc-aprof-diagnosis（SKILL.md+路由+六类矩阵+roofline）进 GLM-5.2 system prompt，对 aprof_benchmark/fast_gelu 的 6 个匿名 op_XXXX 盲诊；GT 仅离线对齐。结果：family hit 6/6，id hit 5/6。框架=注入 skill 造题 / 诊断 skill+GLM 解题 / 离线打分。防泄密：匿名目录、.ground_truth 隔离、盲诊清洗、中性 metadata。汇报文档：docs/blind_diagnosis_framework_briefing.md。",
+      "related_ops": [
+        "fast_gelu"
+      ],
+      "related_files": [
+        "plugins/aprof-performance-workflow/demo/run_glm_batch_eval.py",
+        "docs/blind_diagnosis_framework_briefing.md",
+        "skills/aprof/diagnosis/SKILL.md",
+        "plugins/aprof-performance-workflow/demo/out/batch_eval/batch_accuracy_summary.md"
+      ],
+      "msprof_evidence": {
+        "batch_n": 6,
+        "family_hit_rate": 1.0,
+        "id_hit_rate": 0.833,
+        "model": "glm-5.2",
+        "skill_loaded": "ascendc-aprof-diagnosis"
+      }
+    },
+    {
+      "id": "QA-017",
+      "timestamp": "2026-07-21T09:40:00+08:00",
+      "category": "diagnosis",
+      "question": "不可以测一下新构造的case吗？请扩到全部12个op_XXXX或aprof_injected_ops",
+      "answer_summary": "已扩展批量盲诊：金标准 fast_gelu 全12 case family 10/12(83%) id 7/12；新构造 aprof_injected_ops 全57 case，legacy家族名规范化后 family 50/57(88%) id 24/57(42%)。脚本支持 --bench-root 与 --resume。",
+      "related_ops": [
+        "conv2d",
+        "fast_gelu",
+        "fast_gelu_grad",
+        "foreach_norm",
+        "gelu_mul",
+        "layer_norm",
+        "matmul",
+        "max_pool",
+        "mish",
+        "swi_glu",
+        "topk"
+      ],
+      "related_files": [
+        "plugins/aprof-performance-workflow/demo/run_glm_batch_eval.py",
+        "plugins/aprof-performance-workflow/demo/out/batch_eval_gold12/batch_accuracy_summary.md",
+        "plugins/aprof-performance-workflow/demo/out/batch_eval_injected_ops/batch_accuracy_summary.md"
+      ],
+      "msprof_evidence": {
+        "gold12_family": "10/12",
+        "gold12_id": "7/12",
+        "injected57_family_rescored": "50/57",
+        "injected57_id": "24/57"
+      }
+    },
+    {
+      "id": "QA-018",
+      "timestamp": "2026-07-28T08:13:00+08:00",
+      "category": "msprof_data",
+      "question": "median (μs) 是什么？报告里所有数据都是干什么的？这是什么对照实验？",
+      "answer_summary": "median=多次 Task Duration 的中位数（μs），抗抖动。910B 对照：baseline（正常 tile）vs op_0005（tile 过小）。samples=各次原始读数；CV=变异系数（测量稳定性）；speedup_restore=inject_median/baseline_median（修回 baseline 的物理加速比）；PipeUtilization 的 aiv_vec_ratio / aiv_mte2_bw / aiv_mte3_bw 解释慢因（tile 过小时带宽塌陷）。Skill-RL 的 primary/actionability 是 0–1 代理分，不是 μs。现场多轮采集（warmup=10，每 case 5 次）：fast_gelu baseline 5.12 vs op_0005 30.04（~5.87×）；gelu_mul 2.18 vs 9.02（~4.14×）。报告 tests/fixtures/skill_rl/msprof_live_score_report.json。",
+      "related_ops": ["fast_gelu", "gelu_mul"],
+      "related_files": [
+        "tests/fixtures/skill_rl/msprof_live_score_report.json",
+        "scripts/collect_msprof_repeats_and_score.py",
+        "src/aprof/skill_rl/reward.py"
+      ],
+      "msprof_evidence": {
+        "host": "xeon6.pku-dasys.cn:2222",
+        "warm_up": 10,
+        "repeat": 5,
+        "aic_metrics": "PipeUtilization",
+        "examples": [
+          {
+            "op": "fast_gelu",
+            "baseline_median_us": 5.12,
+            "inject_median_us": 30.04,
+            "speedup_restore": 5.87,
+            "inject_cv": 0.021,
+            "baseline_cv": 0.051
+          },
+          {
+            "op": "gelu_mul",
+            "baseline_median_us": 2.18,
+            "inject_median_us": 9.02,
+            "speedup_restore": 4.14,
+            "inject_cv": 0.016,
+            "baseline_cv": 0.044
+          }
+        ],
+        "skill_rl_means_on_restore_proxy": {
+          "generic_primary": 0.637,
+          "curated_primary": 0.712,
+          "note": "当时是假想恢复轨迹打分，尚未真改代码复测"
+        }
+      }
+    },
+    {
+      "id": "QA-019",
+      "timestamp": "2026-07-28T08:16:00+08:00",
+      "category": "skill_rl",
+      "question": "所以你并没有用 Skill-RL 优化一遍 skill 再测数据吗？",
+      "answer_summary": "当时那一轮确实没有。只做了 baseline vs inject 真机对照，并把「修回 baseline」当成假想 episode 给 generic/curated skill 打 primary。随后已补闭环：Curator 更新 skill→确定性应用 tiling.increase_tile_length（tile 16→256）→910B 复测（见 QA-021）。仍非完整 LLM 写代码 / GRPO。",
+      "related_ops": ["fast_gelu", "gelu_mul"],
+      "related_files": [
+        "scripts/collect_msprof_repeats_and_score.py",
+        "scripts/run_skill_rl_closed_loop_hw.py",
+        "docs/skill_rl_mvp.md"
+      ],
+      "msprof_evidence": null
+    },
+    {
+      "id": "QA-020",
+      "timestamp": "2026-07-28T08:17:00+08:00",
+      "category": "skill_rl",
+      "question": "SAGE 原版打分标准也是这个（primary/actionability）吗？",
+      "answer_summary": "不是。SAGE（ACL'26，AppWorld）：主奖励是任务完成 outcome r∈[0,1]，再加 Skill-integrated bonus（生成的 skill 被后续任务成功复用则 +1）；评测主表 TGC/SGC、步数/token。AProf Skill-RL 借的是 Sequential Rollout / skill 版本化 / validation gate 骨架；打分是面向 kernel 的多目标代理分（约 0.45×speedup + 0.25×actionability + 0.20×workload + 0.10×efficiency，外加正确性/测量硬门禁），直接吃 msprof Task Duration，公式与 SAGE 不同。",
+      "related_ops": [],
+      "related_files": [
+        "docs/skill_rl_mvp.md",
+        "docs/aprof_research_thinking.md",
+        "src/aprof/skill_rl/reward.py",
+        "skills/aprof/references/skill_rl_contracts.md"
+      ],
+      "msprof_evidence": null
+    },
+    {
+      "id": "QA-021",
+      "timestamp": "2026-07-28T08:23:00+08:00",
+      "category": "skill_rl",
+      "question": "训/更 skill → 自动改算子 → 真机复测跑一个；fast_gelu 优化 log 是什么样的？",
+      "answer_summary": "已跑通闭环脚本 run_skill_rl_closed_loop_hw.py：inject_hw 轨迹 Curator→commit skills/.../v1_closed_loop；按 skill 物化 op_9005（tile 16→256）；910B warmup=10、各 3 次采样。fast_gelu：30.64→5.66 μs（baseline 5.52，5.41×，primary 0.716）；gelu_mul：8.92→2.22 μs（baseline 2.20，4.02×，primary 0.703）。这是确定性改参 applicator，不是多轮 LLM 优化叙事。fast_gelu log 形态：materialized{skill, files} → measure before op_0005 → measure after op_9005（msprof WarmUp/Task Duration/Pipe summary）→ measure baseline → SUMMARY。结构化报告 closed_loop_hw_report.json；合作者大 shape 三轮叙事另见 aprof_fast_gelu_three_round_optimization_summary.json。",
+      "related_ops": ["fast_gelu", "gelu_mul"],
+      "related_files": [
+        "scripts/run_skill_rl_closed_loop_hw.py",
+        "src/aprof/skill_rl/apply_skill.py",
+        "skills/aprof/skill_library/v1_closed_loop/",
+        "tests/fixtures/skill_rl/closed_loop_hw_report.json",
+        "tests/fixtures/skill_rl/aprof_fast_gelu_three_round_optimization_summary.json",
+        "docs/skill_rl_mvp.md"
+      ],
+      "msprof_evidence": {
+        "warm_up": 10,
+        "repeats": 3,
+        "skill_id": "tiling.increase_tile_length",
+        "tile_before": 16,
+        "tile_after": 256,
+        "examples": [
+          {
+            "op": "fast_gelu",
+            "before_median_us": 30.64,
+            "after_median_us": 5.66,
+            "baseline_median_us": 5.52,
+            "speedup_vs_inject": 5.41,
+            "primary": 0.716
+          },
+          {
+            "op": "gelu_mul",
+            "before_median_us": 8.92,
+            "after_median_us": 2.22,
+            "baseline_median_us": 2.2,
+            "speedup_vs_inject": 4.02,
+            "primary": 0.703
+          }
+        ],
+        "log_shape": "materialize → msprof before → msprof after → msprof baseline → SUMMARY"
+      }
     }
   ]
 }

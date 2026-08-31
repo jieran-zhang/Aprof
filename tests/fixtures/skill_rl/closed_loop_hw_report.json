@@ -1,0 +1,196 @@
+{
+  "generated_at": "2026-07-28T08:23:59+0800",
+  "host": "xeon6.pku-dasys.cn",
+  "soc": "Ascend910",
+  "loop": "curate(skill) → apply(tile_length) → msprof remeasure",
+  "skill_version": "v1_closed_loop",
+  "trainer": {
+    "gate_accepted": true,
+    "applied_edits": [
+      "UPDATE:ai_core_utilization.balance_blockdim",
+      "DEPRECATE:ai_core_utilization.balance_blockdim",
+      "UPDATE:tiling.increase_tile_length",
+      "DEPRECATE:tiling.increase_tile_length",
+      "UPDATE:ai_core_utilization.balance_blockdim",
+      "DEPRECATE:ai_core_utilization.balance_blockdim",
+      "UPDATE:tiling.increase_tile_length",
+      "DEPRECATE:tiling.increase_tile_length",
+      "UPDATE:tiling.increase_tile_length",
+      "DEPRECATE:tiling.increase_tile_length",
+      "UPDATE:tiling.increase_blockdim_when_underused",
+      "DEPRECATE:tiling.increase_blockdim_when_underused",
+      "UPDATE:ai_core_utilization.balance_blockdim",
+      "DEPRECATE:ai_core_utilization.balance_blockdim",
+      "UPDATE:tiling.increase_tile_length",
+      "DEPRECATE:tiling.increase_tile_length",
+      "UPDATE:tiling.increase_blockdim_when_underused",
+      "DEPRECATE:tiling.increase_blockdim_when_underused",
+      "UPDATE:tiling.increase_blockdim_when_underused",
+      "DEPRECATE:tiling.increase_blockdim_when_underused",
+      "UPDATE:tiling.increase_blockdim_when_underused",
+      "DEPRECATE:tiling.increase_blockdim_when_underused",
+      "UPDATE:tiling.increase_blockdim_when_underused",
+      "DEPRECATE:tiling.increase_blockdim_when_underused",
+      "UPDATE:tiling.increase_blockdim_when_underused",
+      "DEPRECATE:tiling.increase_blockdim_when_underused",
+      "UPDATE:tiling.increase_blockdim_when_underused",
+      "DEPRECATE:tiling.increase_blockdim_when_underused",
+      "UPDATE:tiling.increase_blockdim_when_underused",
+      "DEPRECATE:tiling.increase_blockdim_when_underused",
+      "ADD:tiling.restore_tileNum_unreasonable",
+      "DEPRECATE:tiling.restore_tileNum_unreasonable",
+      "ADD:tiling.restore_tile_num_unreasonable",
+      "DEPRECATE:tiling.restore_tile_num_unreasonable",
+      "ADD:tiling.restore_tile_num_unreasonable",
+      "DEPRECATE:tiling.restore_tile_num_unreasonable"
+    ],
+    "primary": {
+      "frozen_mean": 0.5488636363636363,
+      "curated_mean": 0.5631818181818181
+    }
+  },
+  "msprof": {
+    "warm_up": 10,
+    "repeats": 3
+  },
+  "cases": [
+    {
+      "op": "fast_gelu",
+      "problem_id": "tileLength_too_small",
+      "skill_id": "tiling.increase_tile_length",
+      "tile_before": 16,
+      "tile_after": 256,
+      "before_samples_us": [
+        30.639999,
+        31.82,
+        30.42
+      ],
+      "after_samples_us": [
+        5.76,
+        5.28,
+        5.66
+      ],
+      "baseline_samples_us": [
+        5.52,
+        5.66,
+        5.14
+      ],
+      "before_median_us": 30.639999,
+      "after_median_us": 5.66,
+      "baseline_median_us": 5.52,
+      "speedup_vs_inject": 5.41342738515901,
+      "gap_to_baseline_pct": 2.5362318840579814,
+      "cv_before": 0.019854934857714723,
+      "cv_after": 0.037145059686876196,
+      "materialize": {
+        "src": "D:\\Code\\Aprof\\benchmarks\\aprof_injected_ops\\fast_gelu\\operators\\op_0005",
+        "dst": "D:\\Code\\Aprof\\benchmarks\\aprof_injected_ops\\fast_gelu\\operators\\op_9005",
+        "skill_id": "tiling.increase_tile_length",
+        "applied": [
+          {
+            "skill_id": "tiling.increase_tile_length",
+            "adjust": "tile_length",
+            "to": 256,
+            "files": [
+              "case_metadata.json",
+              "op_host/main.asc",
+              "scripts/gen_data.py"
+            ],
+            "notes": "from_trajectory_fallback",
+            "code_changes": [
+              "restore matmul/op_0003 knobs toward baseline for tile_length_too_small"
+            ]
+          }
+        ],
+        "target_tile_length": 256
+      },
+      "skill_rl_score": {
+        "correctness_ok": true,
+        "semantics_ok": true,
+        "scope_primary_ok": true,
+        "measurement_ok": true,
+        "speedup_score": 0.7682685477031801,
+        "actionability": 1.0,
+        "workload_awareness": 0.3,
+        "efficiency": 0.6000000000000001,
+        "specialized_appendix_speedup": 0.0,
+        "primary": 0.7157208464664311,
+        "notes": [
+          "small_workload_true_bottleneck_without_clear_anchor"
+        ]
+      }
+    },
+    {
+      "op": "gelu_mul",
+      "problem_id": "tile_length_too_small",
+      "skill_id": "tiling.increase_tile_length",
+      "tile_before": 16,
+      "tile_after": 256,
+      "before_samples_us": [
+        8.92,
+        8.92,
+        9.04
+      ],
+      "after_samples_us": [
+        2.22,
+        2.18,
+        2.22
+      ],
+      "baseline_samples_us": [
+        2.16,
+        2.22,
+        2.2
+      ],
+      "before_median_us": 8.92,
+      "after_median_us": 2.22,
+      "baseline_median_us": 2.2,
+      "speedup_vs_inject": 4.018018018018018,
+      "gap_to_baseline_pct": 0.9090909090909097,
+      "cv_before": 0.006313453403451277,
+      "cv_after": 0.008545097053613874,
+      "materialize": {
+        "src": "D:\\Code\\Aprof\\benchmarks\\aprof_injected_ops\\gelu_mul\\operators\\op_0005",
+        "dst": "D:\\Code\\Aprof\\benchmarks\\aprof_injected_ops\\gelu_mul\\operators\\op_9005",
+        "skill_id": "tiling.increase_tile_length",
+        "applied": [
+          {
+            "skill_id": "tiling.increase_tile_length",
+            "adjust": "tile_length",
+            "to": 256,
+            "files": [
+              "case_metadata.json",
+              "op_host/main.asc",
+              "scripts/gen_data.py"
+            ],
+            "notes": "from_trajectory_fallback",
+            "code_changes": [
+              "restore matmul/op_0003 knobs toward baseline for tile_length_too_small"
+            ]
+          }
+        ],
+        "target_tile_length": 256
+      },
+      "skill_rl_score": {
+        "correctness_ok": true,
+        "semantics_ok": true,
+        "scope_primary_ok": true,
+        "measurement_ok": true,
+        "speedup_score": 0.7403603603603603,
+        "actionability": 1.0,
+        "workload_awareness": 0.3,
+        "efficiency": 0.6000000000000001,
+        "specialized_appendix_speedup": 0.0,
+        "primary": 0.7031621621621622,
+        "notes": [
+          "small_workload_true_bottleneck_without_clear_anchor"
+        ]
+      }
+    }
+  ],
+  "means": {
+    "speedup_vs_inject": 4.715722701588514,
+    "primary": 0.7094415043142966,
+    "actionability": 1.0
+  },
+  "note": "This is a deterministic skill applicator for adjust:tile_length, not a full LLM optimize agent. SAGE original reward != AProf primary (see docs)."
+}

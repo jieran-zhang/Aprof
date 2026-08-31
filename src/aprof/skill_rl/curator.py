@@ -1,4 +1,4 @@
-"""Propose skill edits from optimization episodes (SAGE-lite curator)."""
+"""Rule curator and compatibility helpers for structured skill edits."""
 
 from __future__ import annotations
 
@@ -30,6 +30,17 @@ def _editable_from_candidate(episode: Episode, strategy_id: str, code_changes: l
         },
         "linked_hypotheses": list(episode.actionable_strategy_ids),
         "contraindications": ["single_run_duration_as_proof"],
+        "hardware_scope": [
+            str(episode.metadata.get("hardware"))
+        ] if episode.metadata.get("hardware") else [],
+        "workload_scope": [episode.workload.workload_class],
+        "operator_scope": [episode.workload.operator_family],
+        "evidence_episode_ids": [episode.case_id],
+        "success_count": 1,
+        "confidence": min(
+            1.0,
+            max(0.1, ((float(episode.combined_speedup or 1.0) - 1.0) / 4.0)),
+        ),
         "notes": f"curated_from:{episode.case_id}",
     }
 
@@ -77,7 +88,7 @@ def propose_edits(episode: Episode, library_skills: dict[str, Skill] | None = No
             sid = rej.strategy_id or f"failed.{rej.id}"
             edits.append(
                 SkillEdit(
-                    op="DEPRECATE",
+                    op="DELETE",
                     skill_id=sid if sid in library_skills else (sel.strategy_id if sel and sel.strategy_id else sid),
                     payload={
                         "contraindication": tip,
@@ -89,7 +100,50 @@ def propose_edits(episode: Episode, library_skills: dict[str, Skill] | None = No
                     rationale=tip,
                 )
             )
-    return edits
+    return consolidate_edits(edits)
+
+
+def consolidate_edits(edits: list[SkillEdit]) -> list[SkillEdit]:
+    """Deduplicate a batch and avoid UPDATE+DELETE conflicts for one skill."""
+    grouped: dict[str, list[SkillEdit]] = {}
+    order: list[str] = []
+    for edit in edits:
+        sid = edit.target_skill_id or edit.skill_id
+        if sid not in grouped:
+            grouped[sid] = []
+            order.append(sid)
+        grouped[sid].append(edit)
+
+    result: list[SkillEdit] = []
+    for sid in order:
+        candidates = grouped[sid]
+        writes = [e for e in candidates if e.op in ("ADD", "UPDATE")]
+        deletes = [e for e in candidates if e.op in ("DELETE", "DEPRECATE")]
+        noops = [e for e in candidates if e.op == "NOOP"]
+        if writes:
+            chosen = writes[-1]
+            reasons = list(
+                dict.fromkeys(
+                    str(e.payload.get("contraindication") or e.rationale)
+                    for e in deletes
+                    if e.payload.get("contraindication") or e.rationale
+                )
+            )
+            if reasons:
+                payload = dict(chosen.payload)
+                payload["contraindications"] = list(
+                    dict.fromkeys(list(payload.get("contraindications") or []) + reasons)
+                )
+                chosen.payload = payload
+                chosen.conflict_basis = "successful edit retained; rejected variants became contraindications"
+            result.append(chosen)
+        elif deletes:
+            chosen = deletes[-1]
+            chosen.op = "DELETE"
+            result.append(chosen)
+        elif noops:
+            result.append(noops[-1])
+    return result
 
 
 def filter_executable_edits(edits: list[SkillEdit]) -> list[SkillEdit]:
@@ -98,7 +152,7 @@ def filter_executable_edits(edits: list[SkillEdit]) -> list[SkillEdit]:
     for e in edits:
         if e.scope == "benchmark_specialized":
             continue
-        if e.op == "DEPRECATE":
+        if e.op in ("DELETE", "DEPRECATE", "NOOP"):
             kept.append(e)
             continue
         ae = e.payload.get("actionable_edits") or []

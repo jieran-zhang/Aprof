@@ -1,0 +1,25 @@
+skills:
+  - id: data_movement.coalesce_copy
+    family: data_movement
+    version: 1
+    scope: production_safe
+    preconditions:
+      - diagnosis_type == true_bottleneck
+      - small DataCopy or redundant GM traffic
+    actionable_edits:
+      - adjust: datacopy_granularity
+    expected_metric_delta:
+      primary: TaskDuration_median_us
+      direction: decrease
+      min_effect_pct: 3.0
+    measurement_policy:
+      warm_up: 10
+      repeat: 5
+      statistic: median
+      max_cv: 0.05
+    linked_hypotheses:
+      - redundant_copyin
+    contraindications:
+      - true_bandwidth_bound_without_algorithm_change
+      - single_run_duration_as_proof
+    notes: 

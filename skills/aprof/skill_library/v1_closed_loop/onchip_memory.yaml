@@ -1,0 +1,26 @@
+skills:
+  - id: onchip_memory.reclaim_dead_buffer
+    family: onchip_memory
+    version: 1
+    scope: production_safe
+    preconditions:
+      - unused TBuf/LocalTensor present
+      - reclaim enables larger tile or lower conflict
+    actionable_edits:
+      - remove: unused_buffer
+        notes: Delete dead bBuf/bLocal then optionally raise tileLength
+    expected_metric_delta:
+      primary: TaskDuration_median_us
+      direction: decrease
+      min_effect_pct: 3.0
+    measurement_policy:
+      warm_up: 10
+      repeat: 5
+      statistic: median
+      max_cv: 0.05
+    linked_hypotheses:
+      - ub_temp_overallocated
+    contraindications:
+      - buffer_still_live
+      - single_run_duration_as_proof
+    notes: 

@@ -2,8 +2,8 @@
   "schema_version": 1,
   "title": "Skill-RL 问题与交付记录",
   "branch": "feat/skill-rl-mvp",
-  "updated_at": "2026-07-28T04:05:00+08:00",
-  "plain_summary_zh": "我们模仿 SAGE 做了离线 Skill-RL demo：Episode→规则 Curator→Dev Gate→版本化 skill lib，并用多目标 reward 打 D1–D4。已用仓库内既有 910B inject 真机结果（22 条强信号恢复轨迹）生成 Train/Dev 与 optimization_memory.jsonl，并用 GLM-5.2 对 fast_gelu/gelu_mul 的 tile 过小 case 做了盲诊；现场 SSH 910B 超时未能当场重采。相对「空话六类 skill」，用去掉 actionable_edits 的 generic frozen 对比 curated：primary 约 0.46→0.55，actionability 约 0.67→0.91。仍缺：可学习 Curator、现场 repeat≥3 的稳定采样、完整 merge main 优化闭环。单测 16 个通过。",
+  "updated_at": "2026-07-28T08:41:00+08:00",
+  "plain_summary_zh": "离线 SAGE-lite（Episode→Curator→Dev Gate→版本化 skill）已落地；910B SSH 已通。多轮 msprof（warmup=10）确认 tile 过小信号：fast_gelu 30.04 vs 5.12 μs（~5.87×），gelu_mul 9.02 vs 2.18 μs（~4.14×）。闭环已跑：Curator→v1_closed_loop→应用 tiling.increase_tile_length（16→256）→复测，fast_gelu 30.64→5.66 μs（5.41×），gelu_mul 8.92→2.22 μs（4.02×）。SAGE 原版打分≠本仓库 primary（SAGE 是任务成功+skill 复用 bonus；我们是 kernel 多目标代理分）。仍缺：可学习 Curator、GRPO、完整 LLM 写代码优化 agent。",
   "context": {
     "goal": "为 ASPLOS'27（2026-09-09）准备 profiling-grounded skill library 自改进骨架，先做离线 SAGE-lite，不训 GRPO/torch。",
     "motivation": "六类 skill 已有叙述结构，但真实优化中暴露：测量不稳、诊断泛泛、利用率脱离可达上限、过度专用化追性能。Skill-RL 必须用可执行 θ + 多目标指标打这些缺陷，而不是只刷 latency。"
@@ -32,51 +32,54 @@
     {
       "id": "Q5",
       "question": "这一版 Skill-RL 做到哪一层？",
-      "answer": "离线 SAGE-lite：Episode / 多目标 Reward / Sequential Rollout / SkillLibrary / Curator(ADD·UPDATE·DEPRECATE) / Validation Gate。不做 torch/GRPO，不整仓 merge main。"
+      "answer": "离线 SAGE-lite + 确定性 skill 应用闭环真机复测。有 Episode/Reward/Curator/Gate/Library；有 apply_skill（tile_length）→910B msprof。不做 torch/GRPO，不做完整 LLM optimize agent，不整仓 merge main。"
+    },
+    {
+      "id": "Q6",
+      "question": "median / samples / CV / PipeUtilization / primary 各是什么？",
+      "answer": "median=多次 Task Duration 中位数(μs)；samples=原始读数；CV=测量稳定性；PipeUtilization 解释慢因；primary/actionability 是 0–1 代理分不是硬件 μs。详见 tests/qa_log.json QA-018。"
+    },
+    {
+      "id": "Q7",
+      "question": "是否已用 Skill-RL 改 skill 并真机复测？SAGE 打分是否相同？",
+      "answer": "已补闭环（确定性 applicator，非 GRPO）。SAGE 打分不同：outcome+skill-reuse bonus vs 我们的多目标 primary。详见 tests/qa_log.json QA-019/QA-020/QA-021。"
     }
   ],
   "what_was_built": {
-    "summary": "在 feat/skill-rl-mvp 落地缺陷驱动的离线 Skill-RL 框架：把六类 skill 升级为可版本化外部参数 θ，用优化轨迹 episode 提案 skill edit，经 Dev gate 后对比 frozen vs curated。",
+    "summary": "缺陷驱动离线 Skill-RL + 910B 对照采集 + Curator→apply tile_length→复测闭环。",
     "framework": {
-      "style": "SAGE-lite offline",
+      "style": "SAGE-lite offline + deterministic closed loop",
       "flow": [
         "Fixture/优化轨迹 → episode_adapter → Episode",
         "Episode → reward（Hard+Soft 多目标）",
         "Train episodes → curator 提案 ADD/UPDATE/DEPRECATE",
-        "Dev → validation_gate（primary 不下降 + 必须可执行）",
-        "SkillLibrary commit vN（specialized 不进主库 best）",
-        "sequential_rollout：同 scenario 累积 skill ids",
-        "trainer.run_offline_round → frozen vs curated 报告"
+        "Dev → validation_gate → SkillLibrary commit vN",
+        "apply_skill（adjust:tile_length）→ op_9005",
+        "910B msprof before/after/baseline → closed_loop_hw_report.json"
       ],
       "modules": {
-        "src/aprof/skill_rl/models.py": "Episode/Round/Candidate/Skill/SkillEdit/RewardBreakdown",
-        "src/aprof/skill_rl/episode_adapter.py": "解析 Fixture A/B",
-        "src/aprof/skill_rl/reward.py": "D1–D4 多目标打分",
-        "src/aprof/skill_rl/library.py": "版本化 skill lib load/commit",
-        "src/aprof/skill_rl/curator.py": "从轨迹提案 edit",
-        "src/aprof/skill_rl/validation_gate.py": "Dev 门禁",
-        "src/aprof/skill_rl/sequential_rollout.py": "scenario 内 skill 累积",
-        "src/aprof/skill_rl/trainer.py": "一轮离线 SAGE-lite",
-        "src/aprof/skill_rl/splits.py": "Train/Dev/Test API",
-        "skills/aprof/skill_library/v0/": "六族可执行 YAML stub",
-        "skills/aprof/references/skill_rl_contracts.md": "契约与指标定义"
+        "src/aprof/skill_rl/": "models/reward/curator/library/trainer/apply_skill/...",
+        "skills/aprof/skill_library/v0/": "初始六族 YAML",
+        "skills/aprof/skill_library/v1_closed_loop/": "本轮 Curator 提交版",
+        "scripts/collect_msprof_repeats_and_score.py": "多轮 msprof + 打分报告",
+        "scripts/run_skill_rl_closed_loop_hw.py": "闭环真机脚本"
       }
     },
     "defects_addressed": [
       {
         "id": "D1",
         "name": "测量无 warmup/repeat",
-        "mechanism": "measurement_ok；不稳则 speedup 不计 primary"
+        "mechanism": "measurement_ok；现场 warmup=10 + multi-run CV"
       },
       {
         "id": "D2",
         "name": "诊断过于通用",
-        "mechanism": "强制 actionable_edits + expected_metric_delta；空话 UPDATE 被拒"
+        "mechanism": "actionable_edits + apply_skill 可执行改参"
       },
       {
         "id": "D3",
         "name": "利用率脱离可达上限",
-        "mechanism": "workload_awareness；tiny/small 误报扣分"
+        "mechanism": "workload_awareness；PipeUtilization 对照"
       },
       {
         "id": "D4",
@@ -86,93 +89,52 @@
     ]
   },
   "evaluation": {
-    "method": "离线 unittest + 双 fixture；不重跑 msprof",
-    "command": "$env:PYTHONPATH='src'; python -m unittest discover -s tests/unit -p 'test_skill_rl*.py' -v",
-    "fixtures": [
-      {
-        "id": "A",
-        "path": "tests/fixtures/skill_rl/aprof_fast_gelu_three_round_optimization_summary.json",
-        "role": "大 shape 弱启动；证明闭环与稳定测量",
-        "numbers": {
-          "original_median_us": 23548.65,
-          "final_median_us": 91.178,
-          "approx_speedup": 258.27,
-          "baseline_kind": "naive",
-          "measurement": "warm_up=10, repeat=5, median"
-        }
+    "live_msprof_restore_proxy": {
+      "report": "tests/fixtures/skill_rl/msprof_live_score_report.json",
+      "fast_gelu_speedup_restore": 5.87,
+      "gelu_mul_speedup_restore": 4.14,
+      "generic_primary": 0.637,
+      "curated_primary": 0.712
+    },
+    "closed_loop_hw": {
+      "report": "tests/fixtures/skill_rl/closed_loop_hw_report.json",
+      "skill_version": "v1_closed_loop",
+      "fast_gelu": {
+        "before_us": 30.64,
+        "after_us": 5.66,
+        "baseline_us": 5.52,
+        "speedup": 5.41,
+        "primary": 0.716
       },
-      {
-        "id": "B",
-        "path": "tests/fixtures/skill_rl/fast_gelu_2048_strong_baseline_episode.json",
-        "role": "小 shape 强叙事；证明边际收益与 specialized 分轨；暴露无 warmup/repeat",
-        "numbers": {
-          "original_median_us": 7.8,
-          "production_best_us": 5.9,
-          "approx_speedup": 1.322,
-          "blockdim_best": 8,
-          "specialized_appendix_us": 5.8,
-          "baseline_kind": "strong",
-          "measurement": "warm_up=0, repeat=1 → measurement_ok=false"
-        }
-      }
-    ],
-    "metrics": {
-      "hard_gates": ["correctness", "semantics", "scope_production_safe", "measurement"],
-      "soft_scores": ["speedup_score", "actionability", "workload_awareness", "efficiency"],
-      "appendix": ["specialized_appendix_speedup"],
-      "main_comparison": "frozen skill_lib@v0 vs curated（run_offline_round metrics.primary）"
+      "gelu_mul": {
+        "before_us": 8.92,
+        "after_us": 2.22,
+        "baseline_us": 2.2,
+        "speedup": 4.02,
+        "primary": 0.703
+      },
+      "note": "确定性 skill applicator，非 LLM 多轮优化 / 非 GRPO"
     },
-    "unit_tests": {
-      "count": 14,
-      "status": "OK",
-      "files": [
-        "tests/unit/test_skill_rl_episode_adapter.py",
-        "tests/unit/test_skill_rl_reward.py",
-        "tests/unit/test_skill_rl_curator_gate.py",
-        "tests/unit/test_skill_rl_sequential_rollout.py",
-        "tests/unit/test_skill_rl_trainer.py"
-      ],
-      "key_assertions": [
-        "A 解析 23548.65→91.178，round1 speedup≈31",
-        "B 解析 7.8→5.9，blockDim=8，拒绝候选可解析",
-        "bad>0 → primary=0",
-        "无 warmup/repeat → measurement 失败且 speedup 不计 primary",
-        "specialized 不抬 primary",
-        "失败候选产生 DEPRECATE；空话 edit 被拒；commit 版本递增",
-        "sequential rollout 后轮可见前轮 skill id",
-        "trainer 报告含 primary 与 specialized_appendix"
-      ]
-    },
-    "smoke_trainer_result": {
-      "gate_accepted": true,
-      "fixture_ab_frozen_primary": 0.768,
-      "fixture_ab_curated_primary": 0.768,
-      "inject_hw_generic_primary": 0.463,
-      "inject_hw_curated_primary": 0.549,
-      "inject_hw_generic_actionability": 0.668,
-      "inject_hw_curated_actionability": 0.914,
-      "note": "910B inject restore train 上 generic vs curated 拉开差距；Fixture A/B 上 v0 已可执行故持平。"
+    "sage_vs_ours": {
+      "same": false,
+      "sage": "outcome r + skill-integrated reuse bonus；TGC/SGC",
+      "ours": "primary≈0.45 speedup + 0.25 actionability + 0.20 workload + 0.10 efficiency"
     }
   },
   "effects_and_limits": {
     "achieved": [
-      "Skill-RL 骨架与契约",
-      "22 条 910B inject→baseline restore episodes + optimization_memory.jsonl",
-      "GLM-5.2 盲诊样例 fast_gelu/gelu_mul op_0005",
-      "generic frozen vs curated：primary +0.086，actionability +0.245"
+      "910B 多轮 msprof 对照 + PipeUtilization CSV",
+      "Curator→v1_closed_loop→改 tile→真机复测闭环",
+      "fast_gelu/gelu_mul 优化后接近 baseline"
     ],
     "not_yet": [
-      "现场 SSH 910B 超时，未能 FORCE_RERUN 提高 repeat",
-      "未做 GRPO / 可学习 Curator",
-      "未整仓 merge origin/main optimization skill 树"
-    ],
-    "live_attempts": {
-      "ssh_910b": "TimeoutError xeon6.pku-dasys.cn:2222",
-      "glm_api": "ok",
-      "eval_report": "tests/fixtures/skill_rl/inject_eval_report.json"
-    }
+      "可学习 Curator / GRPO",
+      "完整 LLM 诊断→写代码→多轮候选优化 agent",
+      "整仓 merge origin/main optimization skill 树"
+    ]
   },
   "related_docs": [
+    "tests/qa_log.json",
     "docs/skill_rl_mvp.md",
     "docs/aprof_research_thinking.md",
     "skills/aprof/references/skill_rl_contracts.md"

@@ -33,8 +33,7 @@ def validate_edits(
     before_scores = [score_episode(ep, skills=base_library.skills) for ep in dev_episodes]
     before_mean = sum(s.primary for s in before_scores) / max(len(before_scores), 1)
 
-    trial = SkillLibrary(root=base_library.root, version_label=base_library.version_label)
-    trial.skills = dict(base_library.skills)
+    trial = base_library.clone()
     applied = trial.apply_edits(filtered)
     if not applied:
         report["reason"] = "edits_not_applied"
@@ -47,11 +46,22 @@ def validate_edits(
     before_act = sum(s.actionability for s in before_scores) / max(len(before_scores), 1)
     after_act = sum(s.actionability for s in after_scores) / max(len(after_scores), 1)
 
-    if after_mean + 1e-9 < before_mean and after_act + 1e-9 < before_act:
-        report["reason"] = "primary_and_actionability_regressed"
+    if after_mean + 1e-9 < before_mean:
+        report["reason"] = "primary_regressed"
         report["before_mean"] = before_mean
         report["after_mean"] = after_mean
         return False, [], report
+    if after_act + 1e-9 < before_act:
+        report["reason"] = "actionability_regressed"
+        return False, [], report
+
+    for before, after in zip(before_scores, after_scores):
+        if before.correctness_ok and not after.correctness_ok:
+            report["reason"] = "correctness_regressed"
+            return False, [], report
+        if before.semantics_ok and not after.semantics_ok:
+            report["reason"] = "semantics_regressed"
+            return False, [], report
 
     # Intentionally bad edit detection: empty actionable overwritten.
     for e in applied:
