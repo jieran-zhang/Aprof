@@ -1,0 +1,62 @@
+{
+  "base_model": "deepseek-v4-flash",
+  "base_url": "https://api.deepseek.com",
+  "branch": "feat/aprofgraph",
+  "checkpoint": "docs/training_runs/run_20260901_023025/policy_p0001.json",
+  "deepseek_proposal": {
+    "model": "deepseek-v4-flash",
+    "predicate_id": "predicate.profile.gm_traffic_amplified",
+    "rationale": "fallback_after_unparseable_model_output:We need answer JSON only. Need pick one predicate and transformation for Ascend C gelu-like kernel shape=[2048], suspected tiny tile / MTE setup overhead. Need rationale. Choose pr",
+    "transformation_id": "transformation.coalesce_contiguous_transfers",
+    "usage": {
+      "completion_tokens": 256,
+      "prompt_tokens": 402
+    }
+  },
+  "edge_updates": [],
+  "episode_store_head": "sha256:281e217f3835c960e59bbc1ebdfa19cd697cc431b84df1aa2ac9a9773ded2559",
+  "graph_sha256": "2ae0aaf81fc5d4fe6056154fd12d29b42fe8b048384395bdf30ac1762946c053",
+  "graph_version": "v0001",
+  "hardware_status": {
+    "ascend_toolkit": "only /usr/local/Ascend/driver found in probe",
+    "msprof": "not_on_PATH_for_this_account",
+    "npu_smi": "Ascend910 visible",
+    "ssh": "ok:longyihan@xeon6:2222"
+  },
+  "measurement_source": "contract_valid_placeholder_pairs_not_live_910b",
+  "notes": [
+    "Graph-selected transformation is authoritative over free-form model proposal.",
+    "Replace placeholder timing with paired 910B measurements after toolkit/msprof is available."
+  ],
+  "routes": [
+    {
+      "candidate_id": "c0001",
+      "episode_id": "episode-74e582f5-e44d-4808-9c2b-05d4ee998d96",
+      "policy_update_eligible": false,
+      "selected_edge_id": "edge.prior.roundtrip.noop",
+      "selected_transformation_id": "transformation.noop",
+      "session_id": "run_20260901_023025-s1",
+      "verdict": "static_rejected"
+    },
+    {
+      "candidate_id": "c0002",
+      "episode_id": "episode-94c0df85-d28f-427a-b26c-f12a9dffe699",
+      "policy_update_eligible": false,
+      "selected_edge_id": "edge.prior.roundtrip.noop",
+      "selected_transformation_id": "transformation.noop",
+      "session_id": "run_20260901_023025-s2",
+      "verdict": "static_rejected"
+    }
+  ],
+  "run_id": "run_20260901_023025",
+  "store": "docs/training_runs/run_20260901_023025/episodes.sqlite",
+  "training_summary": {
+    "input_record_count": 2,
+    "skip_reasons": {
+      "policy_update_ineligible": 2
+    },
+    "training_episode_count": 0,
+    "unique_valid_episode_count": 2,
+    "updated_edge_count": 0
+  }
+}

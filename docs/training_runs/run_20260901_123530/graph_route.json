@@ -1,0 +1,273 @@
+{
+  "behavior_probability": 1.0,
+  "candidates": [
+    {
+      "allowed": false,
+      "edge_id": "edge.prior.capacity.noop",
+      "logit": -1.0,
+      "mask_reasons": [
+        "mechanism_not_supported_by_fixed_evidence_graph"
+      ],
+      "probability": 0.0,
+      "source_id": "mechanism.onchip_capacity_pressure",
+      "target_id": "transformation.noop"
+    },
+    {
+      "allowed": false,
+      "edge_id": "edge.prior.capacity.reuse",
+      "logit": 2.4,
+      "mask_reasons": [
+        "mechanism_not_supported_by_fixed_evidence_graph",
+        "hard_preconditions_not_satisfied"
+      ],
+      "probability": 0.0,
+      "source_id": "mechanism.onchip_capacity_pressure",
+      "target_id": "transformation.reuse_disjoint_onchip_buffers"
+    },
+    {
+      "allowed": false,
+      "edge_id": "edge.prior.conflict.noop",
+      "logit": -1.0,
+      "mask_reasons": [
+        "mechanism_not_supported_by_fixed_evidence_graph"
+      ],
+      "probability": 0.0,
+      "source_id": "mechanism.ub_bank_conflict",
+      "target_id": "transformation.noop"
+    },
+    {
+      "allowed": false,
+      "edge_id": "edge.prior.conflict.pad",
+      "logit": 2.8,
+      "mask_reasons": [
+        "mechanism_not_supported_by_fixed_evidence_graph",
+        "hard_preconditions_not_satisfied"
+      ],
+      "probability": 0.0,
+      "source_id": "mechanism.ub_bank_conflict",
+      "target_id": "transformation.pad_ub_layout"
+    },
+    {
+      "allowed": false,
+      "edge_id": "edge.prior.pipeline.noop",
+      "logit": -1.0,
+      "mask_reasons": [
+        "mechanism_not_supported_by_fixed_evidence_graph"
+      ],
+      "probability": 0.0,
+      "source_id": "mechanism.pipeline_serialization",
+      "target_id": "transformation.noop"
+    },
+    {
+      "allowed": false,
+      "edge_id": "edge.prior.pipeline.software_pipeline",
+      "logit": 2.7,
+      "mask_reasons": [
+        "mechanism_not_supported_by_fixed_evidence_graph",
+        "hard_preconditions_not_satisfied"
+      ],
+      "probability": 0.0,
+      "source_id": "mechanism.pipeline_serialization",
+      "target_id": "transformation.software_pipeline_stages"
+    },
+    {
+      "allowed": false,
+      "edge_id": "edge.prior.roundtrip.keep_onchip",
+      "logit": 2.7,
+      "mask_reasons": [
+        "mechanism_not_supported_by_fixed_evidence_graph",
+        "hard_preconditions_not_satisfied"
+      ],
+      "probability": 0.0,
+      "source_id": "mechanism.redundant_gm_round_trip",
+      "target_id": "transformation.keep_intermediate_onchip"
+    },
+    {
+      "allowed": false,
+      "edge_id": "edge.prior.roundtrip.noop",
+      "logit": -1.0,
+      "mask_reasons": [
+        "mechanism_not_supported_by_fixed_evidence_graph"
+      ],
+      "probability": 0.0,
+      "source_id": "mechanism.redundant_gm_round_trip",
+      "target_id": "transformation.noop"
+    },
+    {
+      "allowed": false,
+      "edge_id": "edge.prior.scalar.noop",
+      "logit": -1.0,
+      "mask_reasons": [
+        "mechanism_not_supported_by_fixed_evidence_graph"
+      ],
+      "probability": 0.0,
+      "source_id": "mechanism.scalar_control_hot_loop",
+      "target_id": "transformation.noop"
+    },
+    {
+      "allowed": false,
+      "edge_id": "edge.prior.scalar.vectorize",
+      "logit": 2.5,
+      "mask_reasons": [
+        "mechanism_not_supported_by_fixed_evidence_graph",
+        "hard_preconditions_not_satisfied"
+      ],
+      "probability": 0.0,
+      "source_id": "mechanism.scalar_control_hot_loop",
+      "target_id": "transformation.vectorize_scalar_loop"
+    },
+    {
+      "allowed": false,
+      "edge_id": "edge.prior.sync.narrow",
+      "logit": 2.6,
+      "mask_reasons": [
+        "mechanism_not_supported_by_fixed_evidence_graph",
+        "hard_preconditions_not_satisfied"
+      ],
+      "probability": 0.0,
+      "source_id": "mechanism.excessive_sync_scope",
+      "target_id": "transformation.narrow_sync_scope"
+    },
+    {
+      "allowed": false,
+      "edge_id": "edge.prior.sync.noop",
+      "logit": -0.8,
+      "mask_reasons": [
+        "mechanism_not_supported_by_fixed_evidence_graph"
+      ],
+      "probability": 0.0,
+      "source_id": "mechanism.excessive_sync_scope",
+      "target_id": "transformation.noop"
+    },
+    {
+      "allowed": false,
+      "edge_id": "edge.prior.tail.balance",
+      "logit": 2.6,
+      "mask_reasons": [
+        "mechanism_not_supported_by_fixed_evidence_graph",
+        "hard_preconditions_not_satisfied"
+      ],
+      "probability": 0.0,
+      "source_id": "mechanism.core_tail_imbalance",
+      "target_id": "transformation.balance_tail_assignment"
+    },
+    {
+      "allowed": false,
+      "edge_id": "edge.prior.tail.noop",
+      "logit": -1.0,
+      "mask_reasons": [
+        "mechanism_not_supported_by_fixed_evidence_graph"
+      ],
+      "probability": 0.0,
+      "source_id": "mechanism.core_tail_imbalance",
+      "target_id": "transformation.noop"
+    },
+    {
+      "allowed": true,
+      "edge_id": "edge.prior.tiny_copy.coalesce",
+      "logit": 2.8,
+      "mask_reasons": [],
+      "probability": 0.973403006423134,
+      "source_id": "mechanism.tiny_transfer_setup_amplification",
+      "target_id": "transformation.coalesce_contiguous_transfers"
+    },
+    {
+      "allowed": true,
+      "edge_id": "edge.prior.tiny_copy.noop",
+      "logit": -0.8,
+      "mask_reasons": [],
+      "probability": 0.02659699357686586,
+      "source_id": "mechanism.tiny_transfer_setup_amplification",
+      "target_id": "transformation.noop"
+    },
+    {
+      "allowed": false,
+      "edge_id": "edge.prior.underused.dynamic_tasks",
+      "logit": 2.8,
+      "mask_reasons": [
+        "mechanism_not_supported_by_fixed_evidence_graph",
+        "hard_preconditions_not_satisfied"
+      ],
+      "probability": 0.0,
+      "source_id": "mechanism.underused_task_parallelism",
+      "target_id": "transformation.decompose_tasks_dynamically"
+    },
+    {
+      "allowed": false,
+      "edge_id": "edge.prior.underused.noop",
+      "logit": -0.7,
+      "mask_reasons": [
+        "mechanism_not_supported_by_fixed_evidence_graph"
+      ],
+      "probability": 0.0,
+      "source_id": "mechanism.underused_task_parallelism",
+      "target_id": "transformation.noop"
+    },
+    {
+      "allowed": false,
+      "edge_id": "edge.prior.unknown.noop",
+      "logit": 3.0,
+      "mask_reasons": [
+        "mechanism_not_supported_by_fixed_evidence_graph"
+      ],
+      "probability": 0.0,
+      "source_id": "mechanism.unknown_unresolved",
+      "target_id": "transformation.noop"
+    },
+    {
+      "allowed": false,
+      "edge_id": "edge.prior.vector.batch",
+      "logit": 2.7,
+      "mask_reasons": [
+        "mechanism_not_supported_by_fixed_evidence_graph",
+        "hard_preconditions_not_satisfied"
+      ],
+      "probability": 0.0,
+      "source_id": "mechanism.vector_api_fragmentation",
+      "target_id": "transformation.batch_vector_api_calls"
+    },
+    {
+      "allowed": false,
+      "edge_id": "edge.prior.vector.noop",
+      "logit": -1.0,
+      "mask_reasons": [
+        "mechanism_not_supported_by_fixed_evidence_graph"
+      ],
+      "probability": 0.0,
+      "source_id": "mechanism.vector_api_fragmentation",
+      "target_id": "transformation.noop"
+    },
+    {
+      "allowed": false,
+      "edge_id": "edge.prior.workload.noop",
+      "logit": 3.0,
+      "mask_reasons": [
+        "mechanism_not_supported_by_fixed_evidence_graph"
+      ],
+      "probability": 0.0,
+      "source_id": "mechanism.workload_limited",
+      "target_id": "transformation.noop"
+    }
+  ],
+  "graph_version": "v0001",
+  "mechanism_derivation": "fixed_supports_refutes_tri_state_v1",
+  "mechanism_scores": {
+    "mechanism.core_tail_imbalance": 0.0,
+    "mechanism.excessive_sync_scope": 0.0,
+    "mechanism.onchip_capacity_pressure": 0.0,
+    "mechanism.pipeline_serialization": 0.0,
+    "mechanism.redundant_gm_round_trip": 0.0,
+    "mechanism.scalar_control_hot_loop": 0.0,
+    "mechanism.tiny_transfer_setup_amplification": 1.0,
+    "mechanism.ub_bank_conflict": 0.0,
+    "mechanism.underused_task_parallelism": 0.0,
+    "mechanism.unknown_unresolved": 0.0,
+    "mechanism.vector_api_fragmentation": 0.0,
+    "mechanism.workload_limited": 0.0
+  },
+  "policy_version": "expert-prior",
+  "selected_edge_id": "edge.prior.tiny_copy.coalesce",
+  "selected_mechanism_id": "mechanism.tiny_transfer_setup_amplification",
+  "selection_mode": "argmax",
+  "selection_seed": null
+}

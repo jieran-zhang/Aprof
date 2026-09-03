@@ -1,0 +1,66 @@
+{
+  "base_model": "deepseek-v4-flash",
+  "branch": "feat/aprofgraph",
+  "checkpoint": "docs/training_runs/run_20260901_123623/policy_p0001.json",
+  "deepseek_proposal": {
+    "model": "deepseek-v4-flash",
+    "parameters": {
+      "tile_elements": 4096
+    },
+    "predicate_id": "predicate.profile.mte_setup_dominated",
+    "rationale": "fallback_after_unparseable_model_output:We need answer JSON. Need analyze. Need pick predicate and transformation. Operator gelu elementwise shape 2048x2048 float32 numel 4,194,304. baseline tile_elements=1024. That mean",
+    "transformation_id": "transformation.coalesce_contiguous_transfers",
+    "usage": {
+      "completion_tokens": 384,
+      "prompt_tokens": 546
+    }
+  },
+  "edge_updates": [],
+  "episode_store_head": "sha256:2096fbd14ba3ad29a1ae8abad835d69a22e208b6e148fc76ea3a45488d9e49f0",
+  "graph_selected": {
+    "edge_id": "edge.prior.tiny_copy.coalesce",
+    "transformation_id": "transformation.coalesce_contiguous_transfers"
+  },
+  "graph_sha256": "2ae0aaf81fc5d4fe6056154fd12d29b42fe8b048384395bdf30ac1762946c053",
+  "graph_version": "v0001",
+  "hardware_status": {
+    "msprof": "available_after_source",
+    "note": "paired timings use comparable full-binary wall-clock ns (H2D/kernel/D2H); not OpBasicInfo Task Duration yet",
+    "ssh": "ok:longyihan@xeon6:2222",
+    "toolkit": "/home/xueting.sun/pypto-dev/Ascend/cann-8.5.0"
+  },
+  "kind": "deepseek_live_trajectory",
+  "measurement_source": "live_xeon6_wallclock_pairs",
+  "patch_info": {
+    "applied": true,
+    "patch": "tileElements->4096",
+    "tile_elements": 4096,
+    "transformation_id": "transformation.coalesce_contiguous_transfers"
+  },
+  "routes": [
+    {
+      "baseline_mean_ns": 2359240194.3333335,
+      "candidate_id": "c0001",
+      "candidate_mean_ns": 2289592146.0,
+      "episode_id": "episode-4b7c6ec8-166c-4cb8-afd3-e10eebd5a481",
+      "policy_update_eligible": true,
+      "selected_edge_id": "edge.prior.tiny_copy.coalesce",
+      "selected_transformation_id": "transformation.coalesce_contiguous_transfers",
+      "session_id": "run_20260901_123623-s1",
+      "speedup_mean": 1.0304194126692001,
+      "verdict": "measurement_unstable"
+    }
+  ],
+  "run_id": "run_20260901_123623",
+  "store": "docs/training_runs/run_20260901_123623/episodes.sqlite",
+  "training_summary": {
+    "input_record_count": 1,
+    "skip_reasons": {
+      "measurement_unstable": 1
+    },
+    "training_episode_count": 0,
+    "unique_valid_episode_count": 1,
+    "updated_edge_count": 0
+  },
+  "trajectory_path": "docs/training_runs/run_20260901_123623/trajectory.json"
+}

@@ -1,0 +1,74 @@
+{
+  "base_model": "deepseek-v4-flash",
+  "base_url": "https://api.deepseek.com",
+  "branch": "feat/aprofgraph",
+  "checkpoint": "docs/training_runs/run_20260901_023054/policy_p0001.json",
+  "deepseek_proposal": {
+    "model": "deepseek-v4-flash",
+    "predicate_id": "predicate.profile.mte_setup_dominated",
+    "rationale": "fallback_after_unparseable_model_output:We need to output a JSON object with keys: predicate_id, transformation_id, rationale, parameters. The user gave a scenario: \"Ascend C gelu-like kernel, shape=[2048], suspected tin",
+    "transformation_id": "transformation.coalesce_contiguous_transfers",
+    "usage": {
+      "completion_tokens": 256,
+      "prompt_tokens": 422
+    }
+  },
+  "edge_updates": [
+    {
+      "bias": 0.06615043471078542,
+      "edge_id": "edge.prior.tiny_copy.coalesce",
+      "effective_logit": 2.8661504347107853,
+      "negative_count": 0,
+      "positive_count": 2,
+      "prior_logit": 2.8,
+      "reliability": 0.3333333333333333,
+      "source_id": "mechanism.tiny_transfer_setup_amplification",
+      "support_count": 2,
+      "target_id": "transformation.coalesce_contiguous_transfers",
+      "weighted_support": 2.0
+    }
+  ],
+  "episode_store_head": "sha256:ef3d0bb6f81fb441d9f8cd00829cbcf7b12f9805fdc0af8921f75420879070bc",
+  "graph_sha256": "2ae0aaf81fc5d4fe6056154fd12d29b42fe8b048384395bdf30ac1762946c053",
+  "graph_version": "v0001",
+  "hardware_status": {
+    "ascend_toolkit": "only /usr/local/Ascend/driver found in probe",
+    "msprof": "not_on_PATH_for_this_account",
+    "npu_smi": "Ascend910 visible",
+    "ssh": "ok:longyihan@xeon6:2222"
+  },
+  "measurement_source": "contract_valid_placeholder_pairs_not_live_910b",
+  "notes": [
+    "Graph-selected transformation is authoritative over free-form model proposal.",
+    "Replace placeholder timing with paired 910B measurements after toolkit/msprof is available."
+  ],
+  "routes": [
+    {
+      "candidate_id": "c0001",
+      "episode_id": "episode-b1c584e9-d559-450a-86dd-3ec194b95a8a",
+      "policy_update_eligible": true,
+      "selected_edge_id": "edge.prior.tiny_copy.coalesce",
+      "selected_transformation_id": "transformation.coalesce_contiguous_transfers",
+      "session_id": "run_20260901_023054-s1",
+      "verdict": "production_safe_gain"
+    },
+    {
+      "candidate_id": "c0002",
+      "episode_id": "episode-b6c7dc9d-1372-47c2-b809-293686eabc56",
+      "policy_update_eligible": true,
+      "selected_edge_id": "edge.prior.tiny_copy.coalesce",
+      "selected_transformation_id": "transformation.coalesce_contiguous_transfers",
+      "session_id": "run_20260901_023054-s2",
+      "verdict": "production_safe_gain"
+    }
+  ],
+  "run_id": "run_20260901_023054",
+  "store": "docs/training_runs/run_20260901_023054/episodes.sqlite",
+  "training_summary": {
+    "input_record_count": 2,
+    "skip_reasons": {},
+    "training_episode_count": 2,
+    "unique_valid_episode_count": 2,
+    "updated_edge_count": 1
+  }
+}
