@@ -23,6 +23,7 @@ def queued(tmp_path, monkeypatch):
         + 'raise SystemExit(1 if op=="apply_adam_w" and args[0]=="candidate" else 0)\n')
     (scripts / 'level2_r1_queue.py').write_text('# immutable coordinator fixture')
     (scripts / 'run_msprof_exploration_stage.py').write_text('# immutable stage fixture')
+    (scripts / 'prepare_trace_pilot.py').write_text('# immutable snapshot fixture')
     monkeypatch.setattr(q, 'ROOT', repo)
     monkeypatch.setattr(q, 'FRESH_PRODUCERS', {'level2_iteration.py'})
     run = tmp_path / 'run'; (run / 'bootstrap').mkdir(parents=True)
@@ -31,7 +32,7 @@ def queued(tmp_path, monkeypatch):
     for op in order:
         cid = op + ('001v2' if op in ('scatter','unsorted_segment_sum','cross_entropy_loss') else '001')
         task = run / 'train/tasks' / op; parent = task / 'candidates' / cid; parent.mkdir(parents=True)
-        for filename in ('source.tar','proposal.json'):
+        for filename in ('pre-registration-source.tar','proposal.json'):
             (parent / filename).write_text('{}')
         for filename in ('measurement-policy.json','manifest.json','baseline-source.tar'):
             (task / filename).write_text('{}')
@@ -252,3 +253,201 @@ def test_measured_completed_r1_replays_pinned_observation_after_final_starts(tmp
     state['frozen']=True;observation['close_feedback']=False
     with pytest.raises(ValueError,match='infrastructure block'):
         q.candidate_evidence(request,entry,allow_later=True,observation_id='r1-observation')
+
+
+# Preserve the production validator before the broad subprocess fixture replaces
+# it. These tests use genuine deterministic tar files and an append-only ledger.
+_REAL_CHECK_ENTRY = q.check_entry
+_REAL_CANDIDATE_EVIDENCE = q.candidate_evidence
+
+
+@pytest.fixture
+def materialized_queue(queued, monkeypatch):
+    old_queue, calls, order, schedule, engineering = queued
+    run=old_queue.parents[1];document=q.load(schedule);workloads={}
+    for row in document['operators']:
+        op=row['operator'];cid=row['r1_candidate'];task=run/'train/tasks'/op;parent=task/'candidates'/cid
+        for base,label,content,target in ((task/'baseline',op,'baseline',task/'baseline-source.tar'),
+            (parent/'op',cid,'candidate',parent/'pre-registration-source.tar')):
+            for folder in ('op_host','op_kernel'):
+                path=base/folder/(op+'.asc');path.parent.mkdir(parents=True,exist_ok=True)
+                path.write_text(content+' '+folder+'\n')
+            (base/'CMakeLists.txt').write_text('protected build metadata\n')
+            target.unlink()
+            q.create_source_snapshot(base,target,root_label=label)
+        save(parent/'proposal.json',{'operator':op,'candidate_id':cid,'source_parent':'baseline',
+            'implementation_source_hash':q.sha(parent/'pre-registration-source.tar'),
+            'source_dir':str(parent/'op'),'decision_basis':[]})
+        row['input_bindings']['proposal']=q.pointer(parent/'proposal.json')
+        workloads[op]={'baseline_source_hash':q.sha(task/'baseline-source.tar'),'source_split':'train',
+            'repeat_by_case':{str(c):1 for c in q.campaign.ALL_CASES},'pilot_ref':'sha256:'+'a'*64}
+    save(schedule,document)
+    ledger=q.campaign.create_fresh(run/'train/ledger',campaign_id='materialized-preview-test',workloads=workloads)
+    monkeypatch.setattr(q,'check_entry',_REAL_CHECK_ENTRY)
+    output=run/'preflight/r1-real-preview-01'
+    q.prepare(run,schedule,engineering,output)
+    request=q.load(output/'request.json')
+    return SimpleNamespace(queue=output,run=run,entries=request['entries'],request=request,ledger=ledger,calls=calls)
+
+
+def register_materialized(f, entry, *, source_ref_override=None, proposal_ref_override=None):
+    """CPU-only registration fixture; no stage runner or native process."""
+    op=entry['operator'];cid=entry['candidate_id'];task=Path(entry['task']);parent=task/'candidates'/cid
+    ledger=q.campaign.Campaign(f.run/'train/ledger')
+    baseline=ledger.config['tasks'][op]['baseline_source_hash']
+    for kind in ('build','correctness','runtime'):
+        sid='baseline-'+kind
+        plan={'case_ids':q.campaign.ALL_CASES,'source_hash':baseline}
+        ledger.start(event_id=op+'-'+sid+'-start',workload=op,stage_id=sid,kind=kind,plan=plan)
+        result=save(task/'stages'/kind/'result.json',{'status':'passed','fixture':'synthetic closed prerequisite'})
+        ledger.finish(event_id=op+'-'+sid+'-finish',workload=op,stage_id=sid,outcome='success',
+            evidence={'result':q.pointer(result),'prepared_output_checked':True},
+            native_started=kind!='build')
+    q.create_source_snapshot(parent/'op',parent/'source.tar',root_label=cid)
+    ledger.register(event_id=cid+'-register',workload=op,candidate_id=cid,
+        source_hash=q.sha(parent/'source.tar'),patch_hash='sha256:'+'b'*64,
+        source_parent={'candidate_id':None,'source_hash':baseline},decision_basis=[],
+        artifacts={'source':source_ref_override or q.pointer(parent/'source.tar'),
+                   'proposal':proposal_ref_override or q.pointer(parent/'proposal.json')})
+    return parent
+
+
+def test_prepare_binds_real_materialized_previews_without_registering_sources(materialized_queue):
+    f=materialized_queue
+    assert len(f.entries)==15
+    assert not f.calls.exists()
+    for entry in f.entries:
+        task=Path(entry['task']);parent=task/'candidates'/entry['candidate_id']
+        assert entry['bindings']['source_preview']==q.pointer(parent/'pre-registration-source.tar')
+        assert not (parent/'source.tar').exists()
+        ledger,_=q.check_entry(entry)
+        assert not ledger.state['tasks'][entry['operator']]['candidates']
+        with pytest.raises(ValueError,match='no formal registration'):
+            q.check_entry(entry,require_registered=True)
+
+
+def test_registration_must_reproduce_fixed_preview_and_complete_tree(materialized_queue):
+    f=materialized_queue;entry=f.entries[0];preview=dict(entry['bindings']['source_preview'])
+    parent=register_materialized(f,entry)
+    ledger,_=q.check_entry(entry,require_registered=True)
+    assert q.sha(parent/'source.tar')==preview['sha256']
+    assert entry['bindings']['source_preview']==preview
+    assert ledger.state['tasks'][entry['operator']]['candidates'][entry['candidate_id']]['artifacts']['source']==q.pointer(parent/'source.tar')
+    # A second read cannot replace the bound preview with the new formal file.
+    q.check_entry(entry,require_registered=True)
+    assert q.load(f.queue/'request.json')['entries'][0]['bindings']['source_preview']==preview
+    assert not f.calls.exists()
+
+
+@pytest.mark.parametrize('mutation',['preview','native_tree','protected_tree','file_mode','formal','formal_only',
+    'ledger_source_artifact','ledger_proposal_artifact','preview_path_alias','formal_symlink'])
+def test_preview_and_formal_identity_drift_is_never_silently_substituted(materialized_queue,mutation):
+    f=materialized_queue;entry=f.entries[0];parent=Path(entry['task'])/'candidates'/entry['candidate_id']
+    if mutation=='preview':
+        path=parent/'pre-registration-source.tar';path.write_bytes(path.read_bytes()+b'changed')
+    elif mutation in ('native_tree','protected_tree'):
+        path=parent/'op'/('op_kernel/'+entry['operator']+'.asc' if mutation=='native_tree' else 'CMakeLists.txt')
+        path.write_text(path.read_text()+'changed')
+    elif mutation=='file_mode':
+        path=parent/'op/CMakeLists.txt';path.chmod(path.stat().st_mode ^ 0o100)
+    elif mutation=='formal_symlink':
+        (parent/'source.tar').symlink_to(parent/'missing-outside-archive.tar')
+    elif mutation=='formal_only':
+        q.create_source_snapshot(parent/'op',parent/'source.tar',root_label=entry['candidate_id'])
+    elif mutation=='ledger_source_artifact':
+        register_materialized(f,entry,source_ref_override=entry['bindings']['source_preview'])
+    elif mutation=='ledger_proposal_artifact':
+        register_materialized(f,entry,proposal_ref_override={'path':str(parent/'proposal.json'),'sha256':'sha256:'+'c'*64})
+    elif mutation=='preview_path_alias':
+        alias=parent/'another-preview.tar';alias.write_bytes((parent/'pre-registration-source.tar').read_bytes())
+        entry['bindings']['source_preview']=q.pointer(alias)
+    else:
+        register_materialized(f,entry)
+        path=parent/'source.tar';path.write_bytes(path.read_bytes()+b'changed')
+    with pytest.raises(ValueError):q.check_entry(entry)
+    assert not f.calls.exists()
+
+
+def test_candidate_evidence_demands_registered_preview_equivalence(materialized_queue,monkeypatch):
+    entry=materialized_queue.entries[0]
+    # Use the real candidate auditor while its stage work has not started.
+    with pytest.raises(ValueError,match='no formal registration'):
+        _REAL_CANDIDATE_EVIDENCE(materialized_queue.request,entry)
+
+
+def test_candidate_controller_registers_preview_before_any_stage(materialized_queue,monkeypatch):
+    f=materialized_queue;entry=f.entries[0];cid=entry['candidate_id'];calls=[]
+    parent=Path(entry['task'])/'candidates'/cid;preview=q.pointer(parent/'pre-registration-source.tar')
+    def register(run,operator,candidate,proposal):
+        assert Path(run)==f.run and operator==entry['operator'] and candidate==cid
+        assert Path(proposal)==parent/'proposal.json'
+        calls.append('register')
+        register_materialized(f,entry)
+    def no_native(*args,**kwargs):
+        q.check_entry(entry,require_registered=True)
+        calls.append('stage')
+        raise RuntimeError('CPU fixture stops before first native/build stage')
+    monkeypatch.setattr(q.iteration,'register_proposal',register)
+    monkeypatch.setattr(q.iteration,'stage',no_native)
+    with pytest.raises(RuntimeError,match='CPU fixture stops'):
+        q.iteration.candidate(f.run,entry['operator'],cid)
+    assert calls==['register','stage']
+    assert q.pointer(parent/'pre-registration-source.tar')==preview
+    assert q.sha(parent/'source.tar')==preview['sha256']
+
+
+def test_operator_limit_yields_only_complete_checkpoint_and_resumes_without_relaunch(queued):
+    out,calls,order,*_=queued;request=(out/'request.json').read_bytes()
+    first=q.execute(out,max_new_operators=1)
+    assert first['status']=='operator_limit_reached' and first['after_operator']==order[0]
+    assert first['new_operators_completed']==1
+    assert len(calls.read_text().splitlines())==2
+    first_finished=(out/order[0]/'candidate/finished.json').read_bytes()
+    assert q.load(out/'state.json')['operators'][order[0]]['checkpoint']==first['checkpoint']
+    second=q.execute(out,max_new_operators=1)
+    assert second['status']=='operator_limit_reached' and second['after_operator']==order[1]
+    assert len(calls.read_text().splitlines())==4
+    assert (out/order[0]/'candidate/finished.json').read_bytes()==first_finished
+    assert (out/'request.json').read_bytes()==request
+    assert q.execute(out)['status']=='completed'
+    assert len(calls.read_text().splitlines())==30
+    assert q.execute(out,max_new_operators=1)['status']=='completed'
+    assert len(calls.read_text().splitlines())==30
+
+
+def test_operator_limit_reaudits_old_receipts_before_starting_next_operator(queued):
+    out,calls,order,*_=queued
+    assert q.execute(out,max_new_operators=1)['status']=='operator_limit_reached'
+    before=calls.read_bytes()
+    (out/order[0]/'candidate/stdout.log').write_text('changed retained child log')
+    assert q.execute(out,max_new_operators=1)['status']=='blocked'
+    assert calls.read_bytes()==before
+    assert not (out/order[1]).exists()
+
+
+def test_operator_limit_never_returns_success_before_checkpoint_is_durable(queued,monkeypatch):
+    out,calls,order,*_=queued;real=q.atomic
+    def interrupted(path,value,**kwargs):
+        if path.name=='checkpoint.json' and value.get('phase')=='candidate' and value.get('finished'):
+            raise OSError('operator checkpoint persistence failed')
+        return real(path,value,**kwargs)
+    monkeypatch.setattr(q,'atomic',interrupted)
+    value=q.execute(out,max_new_operators=1)
+    assert value['status']=='blocked' and q.load(out/'state.json')['status']=='blocked'
+    assert len(calls.read_text().splitlines())==2
+    assert not (out/order[1]).exists()
+
+
+@pytest.mark.parametrize('limit',[0,-1,True,1.0,'1'])
+def test_invalid_operator_limit_never_launches_or_changes_queue(queued,limit):
+    out,calls,*_=queued;before=(out/'state.json').read_bytes()
+    with pytest.raises(ValueError,match='positive integer'):q.execute(out,max_new_operators=limit)
+    assert not calls.exists() and (out/'state.json').read_bytes()==before
+
+
+def test_operator_limit_cli_returns_success_for_checkpoint_yield(queued,monkeypatch):
+    out,calls,order,*_=queued
+    monkeypatch.setattr(sys,'argv',['level2_r1_queue.py','run','--queue',str(out),'--max-new-operators','1'])
+    assert q.main()==0
+    assert q.load(out/'state.json')['status']=='operator_limit_reached'
+    assert len(calls.read_text().splitlines())==2

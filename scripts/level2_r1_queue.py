@@ -25,8 +25,9 @@ from level2_failure_classification import classify_failure
 from msprof_exploration_execute import load, pointer, sha
 from msprof_exploration_provenance import FRESH_PRODUCERS, verify_pointer_tree
 from msprof_raw_storage import LOCAL
+from prepare_trace_pilot import create_source_snapshot
 
-VERSION = 'level2_r1_serial_queue_v1'
+VERSION = 'level2_r1_serial_queue_v2'
 SETTINGS = {'epoch': 'local-raw-01', 'capture_storage': LOCAL}
 GROUP = 'aa-local-01'
 ROOT = Path(__file__).resolve().parents[1]
@@ -80,7 +81,7 @@ def ledger_for(entry):
     return campaign.Campaign(task.parents[1] / 'ledger'), task
 
 
-def check_entry(entry, *, allow_later=False):
+def check_entry(entry, *, allow_later=False, require_registered=False):
     for ref in entry['bindings'].values():
         path = canonical_path(ref['path'])
         require(pointer(path) == ref, 'queue operator input changed')
@@ -96,14 +97,40 @@ def check_entry(entry, *, allow_later=False):
                 'completed R1 source is absent or policy rounds exceeded')
     require(ledger.config['schema_version'] == campaign.FRESH_SCHEMA
             and ledger.config['policy']['max_new_rounds'] == 3, 'queue requires frozen fresh campaign')
+    parent = task / 'candidates' / entry['candidate_id']
+    preview = entry['bindings']['source_preview']
+    require(preview['path'] == str(parent / 'pre-registration-source.tar'),
+            'queue preview must retain its original materialized location')
+    require(entry['bindings']['baseline_source']['sha256']
+            == ledger.config['tasks'][entry['operator']]['baseline_source_hash'],
+            'queue baseline differs from frozen ledger')
     proposal = load(entry['bindings']['proposal']['path'])
     require(proposal['candidate_id'] == entry['candidate_id']
             and proposal['operator'] == entry['operator']
             and proposal['source_parent'] == 'baseline'
-            and proposal['implementation_source_hash'] == entry['bindings']['source_archive']['sha256'],
+            and proposal['implementation_source_hash'] == preview['sha256'],
             'R1 proposal source/parent differs')
-    iteration.verify_source_snapshot(entry['bindings']['source_archive']['path'],
-                                     task / 'candidates' / entry['candidate_id'] / 'op')
+    iteration.verify_source_snapshot(preview['path'], parent / 'op')
+    # Verify the complete deterministic snapshot, including protected non-native
+    # files and modes. The native-only role-tree check alone is insufficient.
+    with tempfile.TemporaryDirectory(prefix='aprof-queue-source-check-') as temporary:
+        replay = Path(temporary) / 'source.tar'
+        create_source_snapshot(parent / 'op', replay, root_label=entry['candidate_id'])
+        require(sha(replay) == preview['sha256'], 'materialized preview differs from complete source tree')
+    item = state['candidates'].get(entry['candidate_id'])
+    formal = canonical_path(parent / 'source.tar')
+    require(item is not None or not require_registered, 'candidate has no formal registration')
+    if item is None:
+        require(not formal.exists(), 'unregistered formal archive requires explicit review')
+    else:
+        formal_ref = pointer(canonical_path(formal))
+        require(formal_ref['sha256'] == preview['sha256'] == item['source_hash']
+                and item.get('artifacts', {}).get('source') == formal_ref
+                and item.get('artifacts', {}).get('proposal') == entry['bindings']['proposal']
+                and item['source_parent'] == {'candidate_id': None,
+                    'source_hash': entry['bindings']['baseline_source']['sha256']},
+                'registered source/ledger differs from immutable materialized preview')
+        iteration.verify_source_snapshot(formal, parent / 'op')
     return ledger, task
 
 
@@ -118,7 +145,7 @@ def prepare(run, schedule, engineering, output):
     require(frozen.get('version') == 'level2_frozen_engineering_v1'
             and engineering.parent == run / 'bootstrap', 'engineering manifest identity differs')
     identities = {row['path']: row for row in frozen['files']}
-    producer_names = sorted(FRESH_PRODUCERS | {'level2_r1_queue.py', 'run_msprof_exploration_stage.py'})
+    producer_names = sorted(FRESH_PRODUCERS | {'level2_r1_queue.py', 'run_msprof_exploration_stage.py', 'prepare_trace_pilot.py'})
     producers = []
     for name in producer_names:
         path = ROOT / 'scripts' / name
@@ -133,7 +160,7 @@ def prepare(run, schedule, engineering, output):
         cid = row['r1_candidate']; parent = task / 'candidates' / cid
         require(cid == op + ('001v2' if op in ('scatter', 'unsorted_segment_sum', 'cross_entropy_loss') else '001'),
                 'queue is restricted to the existing declared R1 IDs')
-        bindings = {'proposal': pointer(parent / 'proposal.json'), 'source_archive': pointer(parent / 'source.tar'),
+        bindings = {'proposal': pointer(parent / 'proposal.json'), 'source_preview': pointer(parent / 'pre-registration-source.tar'),
                     'measurement_policy': pointer(task / 'measurement-policy.json'),
                     'manifest': pointer(task / 'manifest.json'), 'baseline_source': pointer(task / 'baseline-source.tar')}
         require(bindings['proposal'] == row['input_bindings']['proposal']
@@ -222,7 +249,7 @@ def baseline_evidence(request, entry, *, allow_later=False, observation_id=None)
 
 
 def candidate_evidence(request, entry, *, allow_later=False, observation_id=None):
-    ledger, task = check_entry(entry, allow_later=allow_later); state = ledger.state['tasks'][entry['operator']]
+    ledger, task = check_entry(entry, allow_later=allow_later, require_registered=True); state = ledger.state['tasks'][entry['operator']]
     cid = entry['candidate_id']; item = state['candidates'][cid]
     require((allow_later or state['new_source_attempts'] == state['new_rounds_started'] == 1)
             and (item['feedback_closed'] or (allow_later and state.get('frozen') is True))
@@ -285,7 +312,7 @@ def request_state(queue):
     require([e['operator'] for e in request['entries']] == expected_order
             and len(expected_order) == len(set(expected_order)) == 15
             and set(expected_order) == set(iteration.OPERATORS) - {'maximum'}, 'queue order/scope changed')
-    expected_names = FRESH_PRODUCERS | {'level2_r1_queue.py', 'run_msprof_exploration_stage.py'}
+    expected_names = FRESH_PRODUCERS | {'level2_r1_queue.py', 'run_msprof_exploration_stage.py', 'prepare_trace_pilot.py'}
     require({Path(r['path']).name for r in request['producers']} == expected_names
             and len(request['producers']) == len(expected_names), 'queue producer closure differs')
     frozen_files = {r['path']: r for r in engineering['files']}
@@ -307,13 +334,17 @@ def request_state(queue):
     return state, request
 
 
-def execute(queue):
+def execute(queue, *, max_new_operators=None):
+    require(max_new_operators is None or (type(max_new_operators) is int and max_new_operators > 0),
+            'max_new_operators must be a positive integer')
     queue = canonical_path(queue)
     with (queue / 'queue.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         state, request = request_state(queue)
         require(state['status'] != 'blocked', 'queue blocked; explicit evidence recovery required')
-        for entry in request['entries']:
+        new_completed = 0
+        state.pop('stop', None)
+        for index, entry in enumerate(request['entries']):
             op = entry['operator']; checkpoint = queue / op / 'checkpoint.json'
             phase = None
             try:
@@ -361,6 +392,19 @@ def execute(queue):
                 state['operators'][op] = {'status': receipt['audit']['status'], 'checkpoint': pointer(checkpoint)}
                 state['status'] = 'running'; atomic(queue / 'state.json', state)
                 print(json.dumps({'operator': op, 'status': receipt['audit']['status']}), flush=True)
+                if not allow_later:
+                    new_completed += 1
+                if (max_new_operators is not None and new_completed >= max_new_operators
+                        and index + 1 < len(request['entries'])):
+                    # Scheduling yield only after the complete operator receipt
+                    # and checkpoint are durable. No ledger/protocol/request edit;
+                    # the next invocation reaudits all earlier finished receipts.
+                    state['status'] = 'operator_limit_reached'
+                    state['stop'] = {'max_new_operators': max_new_operators,
+                        'new_operators_completed': new_completed, 'after_operator': op,
+                        'checkpoint': pointer(checkpoint)}
+                    atomic(queue / 'state.json', state)
+                    return {'status': state['status'], **state['stop'], 'scope': 'R1 only'}
             except Exception as exc:
                 error = {'type': type(exc).__name__, 'message': str(exc)}
                 history = queue / op
@@ -449,6 +493,8 @@ def main():
     for name in ('run', 'schedule', 'engineering', 'output'):
         create.add_argument('--' + name, type=Path, required=True)
     start = commands.add_parser('run'); start.add_argument('--queue', type=Path, required=True)
+    start.add_argument('--max-new-operators', type=int,
+        help='Stop successfully after N newly completed operator checkpoints; completed receipts are reaudited and do not count.')
     reconcile = commands.add_parser('recover')
     reconcile.add_argument('--queue', type=Path, required=True)
     reconcile.add_argument('--operator', required=True, choices=iteration.OPERATORS)
@@ -456,9 +502,9 @@ def main():
     args = parser.parse_args()
     result = (prepare(args.run, args.schedule, args.engineering, args.output)
               if args.command == 'prepare' else recover(args.queue, args.operator, args.reason)
-              if args.command == 'recover' else execute(args.queue))
+              if args.command == 'recover' else execute(args.queue, max_new_operators=args.max_new_operators))
     print(json.dumps(result), flush=True)
-    return 0 if result['status'] in ('prepared', 'completed', 'reconciled') else 1
+    return 0 if result['status'] in ('prepared', 'completed', 'reconciled', 'operator_limit_reached') else 1
 
 
 if __name__ == '__main__':
