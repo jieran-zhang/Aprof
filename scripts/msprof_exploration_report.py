@@ -125,6 +125,8 @@ def _request(request):
     require(request.get('buffer_configs') in ('normal,swapped', 'swapped,normal'), 'both buffer configurations required')
     require(all(Path(request.get(key, '')).is_absolute() for key in ('role_build', 'runner_build')),
             'absolute build manifest paths required')
+    from msprof_raw_storage import policy as storage_policy
+    storage_policy(request)
     cases = request.get('cases')
     require(isinstance(cases, list) and cases, 'request cases missing')
     ids = _ids([row['case_id'] for row in cases])
@@ -161,6 +163,13 @@ def validate_plan(plan):
         request = entry['request']
         require(request.get('version')==(PRODUCER_V2 if plan['protocol']==PROTOCOL_V2 else PRODUCER), 'plan/producer protocol mismatch')
         require(_request(request) == ids, 'request case order differs from frozen case_ids')
+        from msprof_raw_storage import policy as storage_policy
+        if 'capture_storage' in request or 'capture_storage' in plan['calibration_scope']:
+            require(plan['calibration_scope'].get('capture_storage')==storage_policy(request),
+                    'capture storage must be frozen in calibration scope')
+            if request.get('capture_storage_producer'):
+                require(plan['calibration_scope'].get('capture_storage_producer_hash')==request['capture_storage_producer']['sha256'],
+                        'raw transport producer must be frozen in calibration scope')
         require(tuple(request[key] for key in ('load_order', 'first_order', 'buffer_configs')) == design,
                 'load/first/configuration execution design differs')
         current = {k: v for k, v in request.items() if k not in ('load_order', 'first_order', 'buffer_configs')}
@@ -419,7 +428,12 @@ def verify_observation(directory, expected_request=None, *, provenance_out=None)
                 and row['raw_duration'] > 0 and math.isclose(row['ns_per_call'], row['raw_duration'] * 1000000 / case_repeats[row['case_id']], rel_tol=1e-10),
                 'event units/repeat conversion differs')
     execution = load(directory / 'msprof.execution.json')
-    argv = ['taskset', '-c', str(request['cpu']), *timing.profiler_arguments(MODE, directory / 'raw'), runner['runner'],
+    from msprof_raw_storage import verify as verify_raw_storage
+    actual_raw, raw_evidence, storage_environment = verify_raw_storage(request,directory,execution)
+    if 'capture_storage' in request:
+        import msprof_raw_storage
+        _bound_file(bindings,Path(msprof_raw_storage.__file__).resolve())
+    argv = ['taskset', '-c', str(request['cpu']), *timing.profiler_arguments(MODE, actual_raw), runner['runner'],
             '--role-a', build['roles']['A']['binary'], '--role-b', build['roles']['B']['binary'],
             '--cases', str(directory / 'cases.tsv'), '--output-dir', str(directory / 'native'), '--session-id', directory.name,
             '--load-order', request['load_order'], '--first-order', request['first_order'], '--buffer-configs', request['buffer_configs'], '--device', '0']
@@ -495,6 +509,7 @@ def verify_observation(directory, expected_request=None, *, provenance_out=None)
     evidence = [directory / name for name in ('request.json', 'completion.json', 'bindings.json', 'cases.json', 'cases.tsv',
                 'native/journal.jsonl', 'msprof.execution.json', 'msprof.stdout.log', 'msprof.stderr.log',
                 'health-before.json', 'health-after.json', 'validation.json', 'samples.json')]
+    evidence.extend(raw_evidence)
     for c, k, r in expected_outputs:
         stem = f'{c}_{k}_{r}'
         evidence.append(directory / 'native' / (stem + '.bin'))
@@ -539,7 +554,7 @@ def verify_observation(directory, expected_request=None, *, provenance_out=None)
     return {'session_id': directory.name, 'directory': str(directory), 'host': start['host'], 'pid': start['pid'],
             'started_at': start['started_at'], 'ended_at': end['ended_at'], 'load_order': request['load_order'],
             'first_order': request['first_order'], 'buffer_configs': configs, 'cells': cells, 'case_bindings': case_bindings,
-            'environment_binding': {'device': request['device'], 'cpu': str(request['cpu']), 'profiler_mode': MODE,
+            'environment_binding': {**storage_environment, 'device': request['device'], 'cpu': str(request['cpu']), 'profiler_mode': MODE,
                                     'runner_hash': runner['runner_hash'], 'runner_source_hash': runner['source_hash'], 'abi_hash': runner['abi_hash'],
                                     'vector_cores': start['vector_cores'], 'csv_device_id': str(request.get('csv_device_id', request['device']))},
             'source_hashes': {r: build['roles'][r]['source_sha256'] for r in 'AB'}, 'operator': build['operator'],
@@ -635,6 +650,10 @@ def _scope_evidence(scope, session):
     observed = {'host': session['host'], 'physical_device': session['environment_binding']['device'],
                 'device': session['environment_binding']['device'], 'cpu': session['environment_binding']['cpu'],
                 'runner_hash': session['environment_binding']['runner_hash'], 'profiler_mode': MODE}
+    if 'capture_storage' in session['environment_binding']:
+        observed['capture_storage']=session['environment_binding']['capture_storage']
+        if 'capture_storage_producer_hash' in session['environment_binding']:
+            observed['capture_storage_producer_hash']=session['environment_binding']['capture_storage_producer_hash']
     checked = []
     for key, expected in observed.items():
         if key in scope and scope[key] is not None:

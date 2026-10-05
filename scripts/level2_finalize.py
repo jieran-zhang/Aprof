@@ -15,6 +15,7 @@ import level2_iteration as iteration
 import msprof_exploration_campaign as campaign
 import msprof_exploration_report as report
 import run_msprof_exploration_stage as stage_module
+import level2_failure_classification as failure_classification
 from level2_campaign import OPERATORS
 from msprof_exploration_execute import load, pointer, save, sha, task_paths, preflight_cohort
 from shared_context_build import source_hash
@@ -22,8 +23,6 @@ from msprof_exploration_provenance import verify_pointer_tree
 
 VERSION = "level2_final_evaluation_v1"
 GROUP = "final"
-INFRA_ERRORS = {"TimeoutExpired", "TimeoutError", "KeyboardInterrupt", "OSError",
-                "FileNotFoundError", "PermissionError", "ConnectionError"}
 
 
 class Unfinished(ValueError):
@@ -45,7 +44,7 @@ def producers():
     # Bind this controller and the code which prepares, resumes and interprets
     # its execution. A producer update requires explicit evidence recovery.
     return [pointer(path) for path in (__file__, iteration.__file__, campaign.__file__,
-                                      report.__file__, stage_module.__file__)]
+                                      report.__file__, stage_module.__file__, failure_classification.__file__)]
 
 
 def source_identity(task, state, baseline, cid):
@@ -115,7 +114,8 @@ def audit_attempts(run, operator, ledger, task):
         require(item["feedback_closed"] or state["frozen"], "source feedback is still open: " + cid)
         require(item["observation_ids"], "source has no real closed feedback: " + cid)
         observation = state["observations"][item["observation_ids"][-1]]
-        feedback_path = task / "feedback" / (cid + ".json")
+        feedback_ref = iteration.feedback_pointer(task, cid, observation)
+        feedback_path = Path(feedback_ref["path"])
         feedback = load(feedback_path)
         require(observation.get("close_feedback") is True
                 and observation["report_ref"] == sha(feedback_path)
@@ -153,24 +153,15 @@ def audit_attempts(run, operator, ledger, task):
             if kind not in latest or row["attempts"][-1]["start_order"] > rows[latest[kind]]["attempts"][-1]["start_order"]:
                 latest[kind] = sid
         failures = [results[sid] for sid in latest.values() if results[sid]["status"] != "passed"]
-        for failure in failures:
-            require(failure["kind"] in ("build", "correctness")
-                    and (failure.get("error") or {}).get("type") not in INFRA_ERRORS
-                    and (failure["kind"] != "correctness" or failure.get("native_started") is True),
-                    "stage failure is infrastructure, not a closed source failure")
         guard_ref = feedback.get("semantic_guards")
         guard = None
         if guard_ref is not None:
             require(guard_ref == pointer(parent / "boundary-validation/completion.json"), "boundary evidence changed")
             guard = iteration.boundary_result(task, parent, operator, cid)
             verify_pointer_tree(guard, evidence_path=guard_ref["path"])
-            require(not guard.get("error")
-                    and (guard.get("verification_error") or {}).get("type") not in INFRA_ERRORS
-                    and all((r.get("error") or {}).get("type") not in INFRA_ERRORS for r in guard.get("cases", [])),
-                    "boundary infrastructure failure is unfinished")
             require(guard.get("cases"), "boundary coverage is empty")
             if guard["status"] == "passed":
-                require(not guard.get("verification_error") and all(
+                require(not guard.get("error") and not guard.get("verification_error") and all(
                     r.get("expected_process_passed") is True and r.get("dispatch_log_passed") is True
                     for r in guard["cases"]), "boundary passed status contradicts actual checks")
         qualified = campaign._safe_source(state, cid) and guard is not None and guard["status"] == "passed"
@@ -183,6 +174,15 @@ def audit_attempts(run, operator, ledger, task):
         else:
             require(not qualified and (failures or (guard is not None and guard["status"] == "failed")),
                     "source failure has no actual failed source/semantic check")
+            first_failed = next((results[row['stage_id']] for row in feedback.get('stages', [])
+                                 if row['status'] != 'passed'), None)
+            require((first_failed in failures) if failures else first_failed is None,
+                    "source failure does not reference the current failed stage")
+            classification = failure_classification.classify_failure(task, parent, stage=first_failed, guard=guard)
+            require(classification['status'] == 'source_attempt_failed'
+                    and classification == feedback.get('failure_classification'),
+                    "source failure lacks unchanged positive classification evidence")
+            verify_pointer_tree(classification, evidence_path=feedback_path)
         audited.append({"candidate_id": cid, "source_hash": item["source_hash"], "status": feedback["status"],
                         "qualified": qualified, "feedback": pointer(feedback_path), "stages": refs,
                         "semantic_guards": guard_ref})
@@ -226,6 +226,8 @@ def validate_final_plan(path, ledger, task, operator, cid, options=None):
                 "final role source differs from parent or candidate")
         if "calibration_report" in cohort:
             checked(cohort["calibration_report"], "relation calibration")
+        calibration = checked(cohort.get("calibration_report", plan["calibration_report"]), "selected final calibration")
+        stage_module.validate_calibration_storage(frozen, calibration)
     return plan
 
 
@@ -266,8 +268,12 @@ def timing_settings(task, supplied, request_path, *, needs_calibration):
     if supplied is None and request_path.exists():
         settings = load(request_path)["timing_options"]
         verify_pointer_tree(settings, evidence_path=request_path)
+        iteration.timing_options({'epoch':settings['epoch'],
+            **({'capture_storage':settings['capture_storage']} if 'capture_storage' in settings else {}),
+            **({'calibration_path':settings['calibration_report']['path']} if settings['calibration_report'] else {}),
+            'calibration_by_relation':{relation:ref['path'] for relation,ref in settings['calibration_by_relation'].items()}})
         return settings
-    supplied = supplied or {}
+    supplied = iteration.timing_options(supplied)
     require(isinstance(supplied, dict) and not set(supplied) - {
         "capture_storage", "epoch", "calibration_path", "calibration_by_relation"}, "unknown final timing option")
     epoch = supplied.get("epoch", "epoch-01")

@@ -18,16 +18,90 @@ from msprof_exploration_campaign import Campaign
 from msprof_exploration_execute import ALL_CASES, event, load, pointer, save, sha, task_paths
 from msprof_exploration_report import digest
 from run_msprof_exploration_stage import (register_proposal, run_stage, prepare_timing,
-                                         verify_source_snapshot, successful_correctness_binding)
+                                         verify_source_snapshot, successful_correctness_binding,
+                                         measurement_options, validate_stage_options)
+
+
+def timing_options(value):
+    return measurement_options(value)
+
+
+def check_control_settings(plan, settings):
+    settings = timing_options(settings)
+    scope = plan["calibration_scope"]
+    if scope.get("epoch") != settings.get("epoch", "epoch-01"):
+        raise ValueError("requested epoch differs from frozen control/measurement")
+    if (scope.get("capture_storage") != settings.get("capture_storage") or not plan["schedule"]
+            or any(row["request"].get("capture_storage") != settings.get("capture_storage")
+                   for row in plan["schedule"])):
+        raise ValueError("requested capture storage differs from frozen control/measurement")
+    if len(plan["schedule"]) != 6:
+        raise ValueError("frozen control schedule must have six processes")
+    if settings.get("capture_storage") is not None:
+        from msprof_raw_storage import LOCAL, policy
+        for row in plan["schedule"]:
+            request = row["request"]
+            policy(request)
+            if settings["capture_storage"] == LOCAL and scope.get("capture_storage_producer_hash") != request["capture_storage_producer"]["sha256"]:
+                raise ValueError("frozen control transport producer differs")
+
+
+def check_timing_settings(plan, settings):
+    settings = timing_options(settings)
+    expected = pointer(settings["calibration_path"]) if settings.get("calibration_path") is not None else None
+    if plan.get("calibration_report") != expected:
+        raise ValueError("requested calibration differs from frozen timing plan")
+    overrides = settings.get("calibration_by_relation") or {}
+    if set(overrides) - {row["relation"] for row in plan["cohorts"]}:
+        raise ValueError("calibration override names an absent comparison relation")
+    for row in plan["cohorts"]:
+        frozen = checked_pointer(row["plan"], "cohort plan")
+        check_control_settings(frozen, settings)
+        selected = pointer(overrides[row["relation"]]) if row["relation"] in overrides else None
+        if row.get("calibration_report") != selected:
+            raise ValueError("requested relation calibration differs from frozen timing plan")
+
+
+def reclaim_outputs(run, task, parent, group):
+    # The synchronous stage returned and has reaped all writers before this call.
+    from level2_storage import deduplicate
+    result = deduplicate(run, parent / "stages" / group, kind="stage", writers_closed=True, apply=True)
+    event(task, "closed_outputs_deduplicated", {"manifest": pointer(result["manifest_path"]),
+          "reclaimed_bytes": result["reclaimed_bytes"], "evidence_bytes_deleted": 0})
 
 
 def checked_pointer(ref, label):
-    if not isinstance(ref, dict) or sha(ref["path"]) != ref["sha256"]:
+    if not isinstance(ref, dict) or set(ref) != {"path", "sha256"} or sha(ref["path"]) != ref["sha256"]:
         raise ValueError(label + " changed")
     return load(ref["path"])
 
 
+def feedback_pointer(task, candidate_id, observation):
+    """Find immutable feedback by ledger hash, including explicit later observations."""
+    task = Path(task)
+    expected = observation.get("report_ref")
+    if not isinstance(expected, str) or re.fullmatch(r"sha256:[0-9a-f]{64}", expected) is None:
+        raise ValueError("feedback observation has no content identity")
+    directory = task / "feedback"
+    if directory.is_symlink():
+        raise ValueError("feedback directory cannot be a symlink")
+    for path in sorted(directory.glob("*.json")):
+        if path.is_symlink():
+            raise ValueError("feedback evidence cannot be a symlink")
+        if path.is_file() and sha(path) == expected:
+            value = load(path)
+            if (value != observation.get("feedback") or value.get("candidate_id") != candidate_id
+                    or value.get("operator") != task.name):
+                raise ValueError("feedback observation identity differs")
+            return pointer(path)
+    raise ValueError("feedback file matching immutable observation is absent")
+
+
 def stage(run, operator, candidate, kind, group, **kwargs):
+    if set(kwargs) - {"cases", "plan_path", "capture_storage", "epoch"}:
+        raise ValueError("unknown stage option")
+    validate_stage_options(kind, kwargs.get("plan_path"),
+        capture_storage=kwargs.get("capture_storage"), epoch=kwargs.get("epoch", "epoch-01"))
     run, split, task, parent, source = task_paths(run, operator, candidate)
     result = parent / "stages" / group / "result.json"
     if result.exists():
@@ -64,8 +138,10 @@ def stage(run, operator, candidate, kind, group, **kwargs):
         if explicit_plan is not None:
             if load(explicit_plan) != plan:
                 raise ValueError("requested stage plan differs from frozen plan")
-        elif kind != "timing" and plan.get("case_ids") != list(kwargs.get("cases") or ALL_CASES):
+        elif kind != "timing" and plan.get("case_ids") != list(ALL_CASES if kwargs.get("cases") is None else kwargs["cases"]):
             raise ValueError("requested stage cases differ from frozen plan")
+        if kind == "control" and explicit_plan is None:
+            check_control_settings(plan["cohort"], {key: kwargs[key] for key in ("epoch", "capture_storage") if key in kwargs})
         return value
     if result.parent.exists():
         raise ValueError("incomplete stage requires explicit evidence recovery: " + str(result.parent))
@@ -158,7 +234,7 @@ def boundary_result(task, parent, operator, candidate_id):
     return value
 
 
-def baseline(run, operator, *, correctness_group="correctness"):
+def baseline(run, operator, *, correctness_group="correctness", control_group="aa-initial", measurement=None, deduplicate_outputs=False):
     """Revalidate every original output and native lifecycle, then calibrate A/A.
 
     The full calibration stays coordinator-only. Search feedback still exposes
@@ -166,15 +242,25 @@ def baseline(run, operator, *, correctness_group="correctness"):
     """
     if re.fullmatch(r"correctness(?:-[A-Za-z0-9][A-Za-z0-9_-]*)?", correctness_group) is None:
         raise ValueError("correctness group must be correctness or a named correctness-* recovery group")
+    if re.fullmatch(r"aa-[A-Za-z0-9][A-Za-z0-9_-]*", control_group) is None:
+        raise ValueError("control group must be a named aa-* group")
+    settings = timing_options(measurement)
+    if set(settings) - {"epoch", "capture_storage"}:
+        raise ValueError("baseline control cannot consume another calibration")
     for kind in ("correctness", "runtime", "control"):
-        group = correctness_group if kind == "correctness" else "aa-initial" if kind == "control" else kind
-        result = stage(run, operator, "baseline", kind, group, cases=ALL_CASES)
+        group = correctness_group if kind == "correctness" else control_group if kind == "control" else kind
+        result = stage(run, operator, "baseline", kind, group, cases=ALL_CASES,
+                       **(settings if kind == "control" else {}))
         if result["status"] != "passed":
             return {"operator": operator, "status": "blocked", "stage": result}
+        if kind == "control" and deduplicate_outputs:
+            _, _, task, parent, _ = task_paths(run, operator, "baseline")
+            reclaim_outputs(run, task, parent, group)
     return {"operator": operator, "status": "baseline_validated_and_calibrated"}
 
 
-def candidate(run, operator, candidate_id, *, boundaries=True):
+def candidate(run, operator, candidate_id, *, boundaries=True, measurement=None, deduplicate_outputs=False):
+    settings = timing_options(measurement)
     run, split, task, parent, _ = task_paths(run, operator, candidate_id)
     ledger = Campaign(run / split / "ledger")
     state = ledger.state["tasks"][operator]
@@ -182,16 +268,26 @@ def candidate(run, operator, candidate_id, *, boundaries=True):
         register_proposal(run, operator, candidate_id, parent / "proposal.json")
     ledger = Campaign(run / split / "ledger")
     item = ledger.state["tasks"][operator]["candidates"][candidate_id]
-    if item["feedback_closed"]:
-        feedback_path = task / "feedback" / (candidate_id + ".json")
+    plan_path = parent / "plans/search/stage-plan.json"
+    if plan_path.exists() and (not item["feedback_closed"] or measurement is not None):
+        check_timing_settings(load(plan_path), settings)
+    if item["feedback_closed"] or item["observation_ids"]:
         observation = ledger.state["tasks"][operator]["observations"][item["observation_ids"][-1]]
+        feedback_path = Path(feedback_pointer(task, candidate_id, observation)["path"])
         feedback = load(feedback_path)
         if (sha(feedback_path) != observation["report_ref"] or feedback != observation["feedback"]
                 or feedback.get("source_hash") != item["source_hash"]
                 or feedback.get("source_parent") != item["source_parent"]):
             raise ValueError("closed feedback differs from immutable ledger evidence")
+        if not item["feedback_closed"] and (feedback.get("status") != "infrastructure_blocked"
+                or observation.get("close_feedback") is not False):
+            raise ValueError("open feedback is not a recorded infrastructure block")
+        if feedback.get("failure_classification") is not None:
+            from msprof_exploration_provenance import verify_pointer_tree
+            verify_pointer_tree(feedback["failure_classification"], evidence_path=feedback_path)
         return {"operator": operator, "candidate_id": candidate_id, "status": feedback["status"],
-                "feedback_already_closed": True, "observation_ids": item["observation_ids"],
+                "feedback_already_closed": item["feedback_closed"], "feedback_already_recorded": True,
+                "observation_ids": item["observation_ids"],
                 "feedback": pointer(feedback_path)}
 
     results = []
@@ -217,10 +313,12 @@ def candidate(run, operator, candidate_id, *, boundaries=True):
         reserved = list(task_state["reserved_final_candidate_ids"])
         if candidate_id not in reserved:
             reserved.append(candidate_id)
-        plan_path = parent / "plans/search/stage-plan.json"
         if not plan_path.exists():
-            plan_path = prepare_timing(run, operator, candidate_id, "search", final_candidates=reserved)
+            plan_path = prepare_timing(run, operator, candidate_id, "search", final_candidates=reserved, **settings)
+        check_timing_settings(load(plan_path), settings)
         results.append(stage(run, operator, candidate_id, "timing", "search", plan_path=plan_path))
+        if results[-1]["status"] == "passed" and deduplicate_outputs:
+            reclaim_outputs(run, task, parent, "search")
 
     ledger = Campaign(run / split / "ledger")
     state = ledger.state["tasks"][operator]
@@ -238,13 +336,12 @@ def candidate(run, operator, candidate_id, *, boundaries=True):
     complete = (all(r["status"] == "passed" for r in results)
                 and (guard is None or guard["status"] == "passed") and bool(reports) and measurement_error is None)
     failed = next((r for r in results if r["status"] != "passed"), None)
-    # A failed compiler/correctness attempt is feedback, but failed measurement
-    # infrastructure is explicitly unfinished, never a successful three-round loop.
-    guard_infrastructure = bool(guard and (guard.get("error") or any(
-        row.get("error") and row["error"]["type"] in ("TimeoutExpired", "KeyboardInterrupt", "OSError")
-        for row in guard.get("cases", []))))
-    infrastructure_block = bool(measurement_error or guard_infrastructure
-                                or (failed and failed["kind"] in ("timing", "runtime")))
+    classification = None
+    if not complete:
+        from level2_failure_classification import classify_failure
+        classification = classify_failure(task, parent, stage=failed, guard=guard)
+    infrastructure_block = bool(not complete and (measurement_error
+        or classification["status"] == "infrastructure_blocked"))
     feedback = {"version": "level2_source_feedback_v1", "operator": operator, "candidate_id": candidate_id,
         "source_hash": item["source_hash"], "source_parent": item["source_parent"],
         "optimization_stage": load(parent / "proposal.json")["optimization_stage"],
@@ -254,9 +351,11 @@ def candidate(run, operator, candidate_id, *, boundaries=True):
                    for r in results],
         "semantic_guards": pointer(parent / "boundary-validation/completion.json") if guard is not None else None,
         "comparisons": reports, "measurement_error": measurement_error,
+        "failure_classification": classification,
         "formal_admission": "not_evaluated", "graph_policy_eligible": False,
         "episode_ref": None, "next_source_authored": False,
-        "next_action": "Analyze this closed feedback before selecting any parent and next intervention."}
+        "next_action": ("Resolve the recorded infrastructure failure through explicit evidence recovery; source feedback remains open."
+                        if infrastructure_block else "Analyze this closed feedback before selecting any parent and next intervention.")}
     feedback_path = task / "feedback" / (candidate_id + ".json")
     if feedback_path.exists():
         if load(feedback_path) != feedback:
@@ -266,10 +365,11 @@ def candidate(run, operator, candidate_id, *, boundaries=True):
     observation_id = candidate_id + "-feedback-01"
     ledger.observe(event_id=observation_id, workload=operator, candidate_id=candidate_id,
         observation_id=observation_id, stage_ids=stages, feedback=feedback,
-        close_feedback=True, report_ref=pointer(feedback_path)["sha256"],
+        close_feedback=not infrastructure_block, report_ref=pointer(feedback_path)["sha256"],
         quality={"formal_admission": "not_evaluated", "infrastructure_blocked": infrastructure_block,
                  "complete_measurement": complete})
-    event(task, "candidate_feedback_closed", {"observation_id": observation_id, "feedback": pointer(feedback_path)})
+    event(task, "candidate_feedback_blocked" if infrastructure_block else "candidate_feedback_closed",
+          {"observation_id": observation_id, "feedback": pointer(feedback_path)})
     return {"operator": operator, "candidate_id": candidate_id, "status": feedback["status"],
             "observation_id": observation_id, "feedback": pointer(feedback_path)}
 
@@ -282,14 +382,37 @@ def main():
     parser.add_argument("--candidate")
     parser.add_argument("--correctness-group", default="correctness",
                         help="Explicit baseline correctness group; a new recovery name preserves all prior attempts")
+    parser.add_argument("--capture-storage", choices=("direct", "local"))
+    parser.add_argument("--epoch", default="epoch-01")
+    parser.add_argument("--calibration-group", default="aa-initial")
+    parser.add_argument("--deduplicate-outputs", action="store_true",
+                        help="Synchronously deduplicate exact output bytes after closed control/timing stages")
     args = parser.parse_args()
+    settings = {"epoch": args.epoch} if args.epoch != "epoch-01" else {}
+    if args.capture_storage is not None:
+        from msprof_raw_storage import DIRECT, LOCAL
+        settings["capture_storage"] = LOCAL if args.capture_storage == "local" else DIRECT
+    try:
+        settings = timing_options(settings)
+    except ValueError as exc:
+        parser.error(str(exc))
+    if re.fullmatch(r"aa-[A-Za-z0-9][A-Za-z0-9_-]*", args.calibration_group) is None:
+        parser.error("calibration group must be a named aa-* group")
     if args.command == "candidate" and (len(args.operator) != 1 or not args.candidate):
         parser.error("one explicitly authored candidate is required")
     if args.command == "candidate" and args.correctness_group != "correctness":
         parser.error("--correctness-group currently supports baseline recovery only")
     for operator in args.operator:
-        result = (baseline(args.run, operator, correctness_group=args.correctness_group)
-                  if args.command == "baseline" else candidate(args.run, operator, args.candidate))
+        if args.command == "baseline":
+            result = baseline(args.run, operator, correctness_group=args.correctness_group,
+                control_group=args.calibration_group, measurement=settings, deduplicate_outputs=args.deduplicate_outputs)
+        else:
+            task = task_path(args.run, operator)
+            selected = dict(settings)
+            if settings or args.calibration_group != "aa-initial":
+                selected["calibration_path"] = task / "stages" / args.calibration_group / "cohort/report.json"
+            result = candidate(args.run, operator, args.candidate, measurement=selected,
+                               deduplicate_outputs=args.deduplicate_outputs)
         print(json.dumps(result), flush=True)
         if result["status"] in ("blocked", "infrastructure_blocked", "source_attempt_failed"):
             return 1

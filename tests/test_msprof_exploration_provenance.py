@@ -188,7 +188,8 @@ def test_saved_report_allows_only_attested_analyzer_identity_update(frozen, monk
         report.compare_saved_report(saved, actual, evidence_path=frozen['task'] / 'report.json')
 
 
-@pytest.mark.parametrize('name',['level2_iteration.py','level2_boundaries.py'])
+@pytest.mark.parametrize('name',['level2_iteration.py','level2_boundaries.py','level2_finalize.py',
+    'level2_storage.py','level2_failure_classification.py','level2_raw_method.py','msprof_raw_storage.py'])
 def test_fresh_iteration_producers_keep_task_attestation_constraints(frozen,monkeypatch,name):
     value=fresh_producer_fixture(frozen,monkeypatch)
     old=value['live']; new=old.with_name(name); old.rename(new)

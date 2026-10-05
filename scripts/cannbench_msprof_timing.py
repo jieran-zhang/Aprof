@@ -287,6 +287,8 @@ def collect(request_path, out):
     out = Path(out).resolve()
     out.mkdir(parents=True, exist_ok=False)
     save(out/'request.json',request)
+    from msprof_raw_storage import policy as storage_policy
+    capture_storage=storage_policy(request)
     build = load(request['role_build'])
     runner = load(request['runner_build'])
     version=runner['version']
@@ -334,6 +336,8 @@ def collect(request_path, out):
                 if path.is_file() and path.suffix in ('.py','.csv','.yaml','.yml'): bindings[str(path)]=sha(path)
     for path in [request_path,request['role_build'],request['runner_build'],__file__,runner['runner']]:
         bindings[str(path)]=sha(path)
+    if 'capture_storage' in request:
+        path=ROOT/'scripts/msprof_raw_storage.py';bindings[str(path)]=sha(path)
     save(out/'bindings.json',bindings)
     save(out/'cases.json',cases)
     (out/'cases.tsv').write_text('\n'.join(rows)+'\n')
@@ -348,13 +352,18 @@ def collect(request_path, out):
             '--cases',str(out/'cases.tsv'),'--output-dir',str(out/'native'), '--session-id',out.name,
             '--load-order',request.get('load_order','AB'),'--first-order',request.get('first_order','AB'),
             '--buffer-configs',request.get('buffer_configs','normal,swapped'),'--device','0']
-    argv=['taskset','-c',str(request.get('cpu',8)),
-          *profiler_arguments(request.get('profiler_mode','task_time_l1_pipe_utilization'),out/'raw'),*native]
     error=None
     with exclusive_host():
         try:
             health(out/'health-before.json')
-            run_logged(argv,out/'msprof',env,request.get('timeout',300))
+            from msprof_raw_storage import allocate as allocate_raw, archive as archive_raw
+            capture_root,transport=allocate_raw(request,out)
+            argv=['taskset','-c',str(request.get('cpu',8)),
+                  *profiler_arguments(request.get('profiler_mode','task_time_l1_pipe_utilization'),capture_root),*native]
+            try:
+                run_logged(argv,out/'msprof',env,request.get('timeout',300))
+            finally:
+                archive_raw(transport,out)
             validations=[];verifiers={}
             # The native process has exited: oracle CPU work cannot perturb timing.
             for spec in request['cases']:
@@ -405,6 +414,7 @@ def describe(values):
 def summarize(directories):
     """Process is the replication unit. No pooled per-launch confidence interval."""
     from scipy.stats import t
+    from msprof_raw_storage import policy as storage_policy
     groups={};missing={};condition=None;seen_directories=set()
     for directory in directories:
         directory=Path(directory).resolve()
@@ -418,6 +428,9 @@ def summarize(directories):
         current.update(profiler_mode=request.get('profiler_mode','task_time_l1_pipe_utilization'),
                        device=request.get('device',0),cpu=request.get('cpu',8),
                        host_delay_a_us=request.get('host_delay_a_us',0),host_delay_b_us=request.get('host_delay_b_us',0))
+        if 'capture_storage' in request:
+            current['capture_storage']=storage_policy(request)
+            current['capture_storage_producer']=request.get('capture_storage_producer')
         if condition is not None and current!=condition:
             raise ValueError('cannot pool different sources, cases, profiler modes or host-delay conditions')
         condition=current

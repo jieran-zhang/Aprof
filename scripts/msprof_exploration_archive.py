@@ -677,6 +677,47 @@ class Archive:
         summary['native_process_count'] = len(actual['sessions'])
         return self.document(dict(summary=summary, cases=saved['results']))
 
+    def single_process_method(self, directory, owner, plan, result):
+        """Replay the explicit local-raw method without synthesizing a cohort."""
+        require(plan.get('control_type') == 'method' and plan.get('declared_native_processes') == 1
+                and plan.get('calibration_eligible') is False, 'method qualification scope differs')
+        if result['status'] != 'passed':
+            return None  # stage() already preserves every partial raw/output byte.
+        require(result.get('control_type') == 'method' and result.get('calibration_eligible') is False,
+                'method result claims an incompatible control type')
+        template = analysis.validate_plan(plan['cohort_template'])
+        require(plan.get('selected_schedule_index') == 0 and template['comparison_kind'] == 'aa'
+                and plan['request'] == template['schedule'][0]['request']
+                and plan['case_ids'] == template['case_ids'] and len(plan['case_ids']) == 1,
+                'method frozen request differs from selected template')
+        request = load(directory / 'request.json')
+        require(request == plan['request'], 'method executed request differs')
+        proof_path = directory / 'method-qualification.json'
+        proof = load(proof_path)
+        require(proof.get('version') == plan['version'] and proof.get('status') == 'passed'
+                and proof.get('native_processes') == 1 and proof.get('case_ids') == plan['case_ids']
+                and proof.get('calibration_eligible') is False and proof.get('six_process_cohort_report_emitted') is False,
+                'method proof is not a one-process qualification')
+        for field, name in (('request', 'request.json'), ('observation', 'observation.json')):
+            require(proof.get(field) == {'path': str(directory / name), 'sha256': sha(directory / name)},
+                    'method proof pointer differs')
+        source_tar = self.control_source_tar(owner, plan['source_hash'])
+        build = load(self.safe(request['role_build'], owner))
+        for role in 'AB':
+            source = self.safe(build['roles'][role]['source_dir'], owner)
+            require(native_tar_hash(source_tar, source) == build['roles'][role]['source_sha256'],
+                    'method role source differs from fixed control source')
+        actual = analysis.verify_observation(directory / 'evidence', expected_request=request)
+        require(load(directory / 'observation.json') == actual and actual['operator'] == owner
+                and actual['source_hashes'] == dict.fromkeys('AB', native_tar_hash(source_tar)),
+                'method observation differs from raw/source replay')
+        for field in ('artifacts', 'bound_artifacts'):
+            for path, expected in actual.get(field, {}).items():
+                self.pointer(path, owner, expected=expected)
+        return self.document(dict(method_qualification=self.pointer(proof_path, owner),
+            observation=self.pointer(directory / 'observation.json', owner), native_process_count=1,
+            calibration_eligible=False, attribution='verified_single_process_method_only', **POLICY))
+
     def stage(self, path, task, cid, owner):
         value = load(self.safe(path, owner))
         sid = value['stage_id']
@@ -902,9 +943,11 @@ class Archive:
                 value, record = self.stage(path, task, None, owner)
                 represented.add(value['stage_id'])
                 method = dict(stage_id=value['stage_id'], status=value['status'], record=record['record'])
+                stage_plan = task['stages'][value['stage_id']].get('plan', {})
+                if stage_plan.get('version') == 'level2_local_raw_method_qualification_v1':
+                    method['single_process_qualification'] = self.single_process_method(path.parent, owner, stage_plan, value)
                 cohort = path.parent / 'cohort'
                 if (cohort / 'group-completion.json').is_file():
-                    stage_plan = task['stages'][value['stage_id']].get('plan', {})
                     source = self.control_source_tar(owner, stage_plan.get('source_hash'))
                     method['observations'] = self.cohort(cohort, owner, source, source)
                 methods.append(method)

@@ -132,7 +132,8 @@ def test_baseline_cli_passes_explicit_group_without_changing_candidate_flow(tmp_
     monkeypatch.setattr(sys, 'argv', ['level2_iteration.py', 'baseline', '--run', str(tmp_path), '--operator', 'maximum',
                                     '--correctness-group', 'correctness-recovery-01'])
     assert iteration.main() == 0
-    assert calls[0][1] == {'correctness_group': 'correctness-recovery-01'}
+    assert calls[0][1] == {'correctness_group': 'correctness-recovery-01',
+                             'control_group': 'aa-initial', 'measurement': {}, 'deduplicate_outputs': False}
     monkeypatch.setattr(sys, 'argv', ['level2_iteration.py', 'candidate', '--run', str(tmp_path), '--operator', 'maximum',
                                     '--candidate', 'maximum001', '--correctness-group', 'correctness-recovery-01'])
     with pytest.raises(SystemExit) as exc: iteration.main()

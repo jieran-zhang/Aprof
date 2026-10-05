@@ -102,7 +102,11 @@ def reports_fixture(tmp_path, monkeypatch):
         build_path = parent / 'plans' / (relation + '-roles.json')
         hashes = {'A': source_hash(source), 'B': source_hash(parent / 'op')}
         save(build_path, {'operator': 'gcd', 'roles': {r: {'source_sha256': h} for r, h in hashes.items()}})
-        frozen = {'case_ids': cases, 'identity_bindings': {'role_build': pointer(build_path)}}
+        frozen = {'case_ids': cases, 'identity_bindings': {'role_build': pointer(build_path)},
+                  'calibration_scope': {'epoch': 'epoch-01'},
+                  'schedule': [{'name': 'p'+str(i), 'request': {'version': 'msprof_kernel_time_study_v2',
+                      'load_order': load_order, 'first_order': first_order, 'buffer_configs': configs}}
+                      for i, (load_order, first_order, configs) in enumerate(__import__('msprof_exploration_report').DESIGN)]}
         frozen_path = parent / 'plans' / (relation + '-cohort.json');save(frozen_path, frozen)
         plan['cohorts'].append({'relation': relation, 'control_candidate_id': control_id, 'plan': pointer(frozen_path)})
         report = {'case_ids': [str(c) for c in cases], 'source_hashes': hashes, 'operator': 'gcd',
@@ -234,7 +238,8 @@ def test_closed_failure_remains_failure_and_never_reexecutes(tmp_path, monkeypat
     task = tmp_path / 'train/tasks/gcd';parent = task / 'candidates/gcd001'
     item = {'source_hash': 'sha256:'+'a'*64, 'source_parent': {'candidate_id': None, 'source_hash': 'sha256:'+'b'*64},
             'feedback_closed': True, 'observation_ids': ['gcd001-feedback-01']}
-    feedback = {'source_hash': item['source_hash'], 'source_parent': item['source_parent'], 'status': 'infrastructure_blocked'}
+    feedback = {'candidate_id': 'gcd001', 'operator': 'gcd', 'source_hash': item['source_hash'],
+                'source_parent': item['source_parent'], 'status': 'infrastructure_blocked'}
     path = task / 'feedback/gcd001.json';save(path, feedback)
     ledger = SimpleNamespace(state={'tasks': {'gcd': {'candidates': {'gcd001': item}, 'observations': {
         'gcd001-feedback-01': {'report_ref': sha(path), 'feedback': feedback}}}}})
@@ -243,13 +248,13 @@ def test_closed_failure_remains_failure_and_never_reexecutes(tmp_path, monkeypat
     result = iteration.candidate(tmp_path, 'gcd', 'gcd001')
     assert result['status'] == 'infrastructure_blocked' and result['feedback_already_closed']
     write(path, dict(feedback, status='measured'))
-    with pytest.raises(ValueError, match='immutable ledger evidence'):
+    with pytest.raises(ValueError, match='immutable observation'):
         iteration.candidate(tmp_path, 'gcd', 'gcd001')
 
 
 @pytest.mark.parametrize('failure,expected', [('none', 'measured'), ('missing_report', 'infrastructure_blocked'),
-                                              ('timing', 'infrastructure_blocked'), ('build', 'source_attempt_failed')])
-def test_candidate_feedback_closes_real_failures_without_claiming_success(reports_fixture, monkeypatch, failure, expected):
+                                              ('timing', 'infrastructure_blocked'), ('build', 'infrastructure_blocked')])
+def test_candidate_feedback_preserves_infrastructure_failures_without_closing_round(reports_fixture, monkeypatch, failure, expected):
     task, parent, item, baseline, plan = reports_fixture
     run = task.parents[2]
     item.update(feedback_closed=False, observation_ids=[])
@@ -272,7 +277,7 @@ def test_candidate_feedback_closes_real_failures_without_claiming_success(report
     monkeypatch.setattr(iteration, 'stage', run_stage)
     result = iteration.candidate(run, 'gcd', 'gcd002', boundaries=False)
     assert result['status'] == expected
-    assert len(observations) == 1 and observations[0]['close_feedback'] is True
+    assert len(observations) == 1 and observations[0]['close_feedback'] is (expected != 'infrastructure_blocked')
     feedback = observations[0]['feedback']
     assert feedback['source_parent'] == item['source_parent']
     assert feedback['source_hash'] == item['source_hash']
@@ -280,3 +285,97 @@ def test_candidate_feedback_closes_real_failures_without_claiming_success(report
     assert set(observations[0]['stage_ids']) == set(state['stages'])
     if failure == 'build': assert calls == ['build']
     if failure == 'missing_report': assert feedback['measurement_error'] and not feedback['comparisons']
+
+
+@pytest.mark.parametrize('kind', ['build', 'correctness'])
+def test_unknown_infrastructure_failure_stays_open_and_reentry_is_idempotent(reports_fixture, monkeypatch, kind):
+    task, parent, item, baseline, plan = reports_fixture
+    run = task.parents[2]
+    item.update(feedback_closed=False, observation_ids=[])
+    state = {'candidates': {'gcd002': item}, 'stages': {}, 'observations': {}, 'reserved_final_candidate_ids': []}
+    observations = []
+    def observe(**value):
+        observations.append(value)
+        state['observations'][value['observation_id']] = value
+        item['observation_ids'].append(value['observation_id'])
+        item['feedback_closed'] = value['close_feedback']
+    ledger = SimpleNamespace(state={'tasks': {'gcd': state}},
+        config={'tasks': {'gcd': {'baseline_source_hash': baseline}}}, observe=observe)
+    monkeypatch.setattr(iteration, 'Campaign', lambda *_: ledger)
+    save(parent / 'proposal.json', {'optimization_stage': 'execution'})
+    save(parent / 'plans/search/stage-plan.json', plan)
+    def execute(run, operator, cid, actual, group, **kwargs):
+        failed = actual == kind
+        result = {'kind': actual, 'candidate_id': cid, 'stage_id': cid+'-'+group,
+            'status': 'failed' if failed else 'passed', 'native_started': False,
+            'error': {'type': 'ValueError', 'message': 'expected exactly one supported host, found []'} if failed else None}
+        save(parent / 'stages' / group / 'result.json', result)
+        state['stages'][result['stage_id']] = {'candidate_id': cid,
+            'attempts': [{'outcome': 'failed' if failed else 'success'}]}
+        return result
+    monkeypatch.setattr(iteration, 'stage', execute)
+    monkeypatch.setattr(iteration, 'reclaim_outputs', lambda *a: pytest.fail('no closed successful timing to reclaim'))
+    first = iteration.candidate(run, 'gcd', 'gcd002', boundaries=False, deduplicate_outputs=True)
+    assert first['status'] == 'infrastructure_blocked'
+    assert item['feedback_closed'] is False and observations[0]['close_feedback'] is False
+    feedback = load(first['feedback']['path'])
+    assert feedback['failure_classification']['status'] == 'infrastructure_blocked'
+    before = Path(first['feedback']['path']).read_bytes()
+    monkeypatch.setattr(iteration, 'stage', lambda *a, **kw: pytest.fail('blocked reentry must not execute'))
+    again = iteration.candidate(run, 'gcd', 'gcd002', boundaries=False, deduplicate_outputs=True)
+    assert again['status'] == 'infrastructure_blocked' and again['feedback_already_recorded']
+    assert again['feedback_already_closed'] is False and len(observations) == 1
+    assert Path(first['feedback']['path']).read_bytes() == before
+
+
+def test_positive_compiler_source_failure_closes_real_candidate_feedback(tmp_path, monkeypatch):
+    from test_level2_failure_classification import compiler
+    task, parent, failed_stage = compiler(tmp_path)
+    cid = parent.name;run = task.parents[2]
+    item = {'source_hash': 'sha256:'+'c'*64,
+        'source_parent': {'candidate_id': None, 'source_hash': 'sha256:'+'b'*64},
+        'feedback_closed': False, 'observation_ids': []}
+    state = {'candidates': {cid: item}, 'stages': {failed_stage['stage_id']: {
+        'candidate_id': cid, 'attempts': [{'outcome': 'build_failed'}]}}, 'reserved_final_candidate_ids': []}
+    observations = []
+    ledger = SimpleNamespace(state={'tasks': {'maximum': state}},
+        config={'tasks': {'maximum': {'baseline_source_hash': 'sha256:'+'b'*64}}},
+        observe=lambda **value: observations.append(value))
+    monkeypatch.setattr(iteration, 'Campaign', lambda *_: ledger)
+    calls = []
+    def execute(*args, **kwargs):
+        calls.append(args[3]);assert args[3] == 'build'
+        return failed_stage
+    monkeypatch.setattr(iteration, 'stage', execute)
+    save(parent/'proposal.json', {'optimization_stage': 'execution'})
+    result = iteration.candidate(run, 'maximum', cid)
+    assert result['status'] == 'source_attempt_failed' and calls == ['build']
+    assert observations[0]['close_feedback'] is True
+    classification = observations[0]['feedback']['failure_classification']
+    assert classification['rule'] == 'original_source_compiler_diagnostic'
+    assert classification['status'] == 'source_attempt_failed' and classification['evidence']
+
+
+def test_candidate_reclaims_outputs_only_after_completed_timing_stage(reports_fixture, monkeypatch):
+    task,parent,item,baseline,plan = reports_fixture;run = task.parents[2]
+    item.update(feedback_closed=False, observation_ids=[])
+    state = {'candidates': {'gcd002': item}, 'stages': {}, 'reserved_final_candidate_ids': []}
+    calls = []
+    ledger = SimpleNamespace(state={'tasks': {'gcd': state}},
+        config={'tasks': {'gcd': {'baseline_source_hash': baseline}}}, observe=lambda **_: None)
+    monkeypatch.setattr(iteration,'Campaign',lambda *_: ledger)
+    save(parent/'proposal.json',{'optimization_stage':'execution'})
+    save(parent/'plans/search/stage-plan.json',plan)
+    def execute(run,operator,cid,kind,group,**kwargs):
+        result={'kind':kind,'candidate_id':cid,'stage_id':cid+'-'+group,'status':'passed','error':None}
+        save(parent/'stages'/group/'result.json',result)
+        state['stages'][result['stage_id']]={'candidate_id':cid,'attempts':[{'outcome':'success'}]}
+        calls.append('closed-'+kind)
+        return result
+    monkeypatch.setattr(iteration,'stage',execute)
+    def reclaim(*args):
+        assert calls == ['closed-build','closed-correctness','closed-runtime','closed-timing']
+        assert args[-1]=='search';calls.append('dedup')
+    monkeypatch.setattr(iteration,'reclaim_outputs',reclaim)
+    assert iteration.candidate(run,'gcd','gcd002',boundaries=False,deduplicate_outputs=True)['status']=='measured'
+    assert calls[-1]=='dedup'

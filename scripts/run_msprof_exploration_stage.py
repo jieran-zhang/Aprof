@@ -6,12 +6,82 @@ import difflib
 import hashlib
 import json
 from pathlib import Path
+import re
 import time
 
 from msprof_exploration_execute import (ALL_CASES, PROTOCOL, bootstrap_task, build_operator,
     canonical, cohort_plan, collect_cohort, comparison_manifest, diagnostic_group, event,
     load, native_started_in, now, pointer, save, sha, task_paths)
 from msprof_exploration_campaign import Campaign, timing_plan
+
+
+def measurement_options(value):
+    """Validate explicit options without adding fields to legacy frozen plans."""
+    if value is not None and not isinstance(value, dict):
+        raise ValueError('timing options must be a mapping')
+    result = dict(value or {})
+    if set(result) - {'epoch', 'capture_storage', 'calibration_path', 'calibration_by_relation'}:
+        raise ValueError('unknown timing option')
+    epoch = result.get('epoch', 'epoch-01')
+    if not isinstance(epoch, str) or re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]*', epoch) is None:
+        raise ValueError('invalid measurement epoch')
+    if 'capture_storage' in result:
+        from msprof_raw_storage import DIRECT, LOCAL
+        if result['capture_storage'] not in (DIRECT, LOCAL):
+            raise ValueError('unreviewed capture storage')
+        result['capture_storage'] = dict(result['capture_storage'])
+        if result['capture_storage'] == LOCAL and epoch == 'epoch-01':
+            raise ValueError('local capture requires an explicitly new measurement epoch')
+    overrides = result.get('calibration_by_relation', {})
+    if not isinstance(overrides, dict) or set(overrides) - {'direct_parent', 'original_baseline'}:
+        raise ValueError('unknown calibration relation')
+    paths = list(overrides.values())
+    if 'calibration_path' in result:
+        paths.append(result['calibration_path'])
+    if any(not isinstance(path, (str, Path)) or not str(path) for path in paths):
+        raise ValueError('invalid calibration path')
+    if 'calibration_by_relation' in result:
+        result['calibration_by_relation'] = dict(overrides)
+    return result
+
+
+def validate_stage_options(kind, plan_path, *, capture_storage=None, epoch='epoch-01'):
+    measurement_options({'epoch': epoch, **({'capture_storage': capture_storage} if capture_storage is not None else {})})
+    explicit = capture_storage is not None or epoch != 'epoch-01'
+    if explicit and kind != 'control':
+        raise ValueError('explicit capture settings are only valid for control; timing requires a frozen plan')
+    if plan_path is not None and explicit:
+        raise ValueError('capture settings cannot override an explicit frozen plan')
+
+
+def validate_calibration_storage(plan, calibration):
+    """Reject incompatible local A/A before launching any A/B cohort.
+
+    This preflight checks declared identity. Full observation replay still checks
+    case, source, environment and calibration quality after native collection.
+    Legacy direct-storage plans keep their existing admission semantics.
+    """
+    from msprof_raw_storage import LOCAL, policy
+    scope = plan.get('calibration_scope', {})
+    requests = [row['request'] for row in plan.get('schedule', [])]
+    local = scope.get('capture_storage') == LOCAL or any(request.get('capture_storage') == LOCAL for request in requests)
+    if not local:
+        return
+    measurement_options({'epoch': scope.get('epoch'), 'capture_storage': LOCAL})
+    if not requests or scope.get('capture_storage') != LOCAL or any(policy(request) != LOCAL for request in requests):
+        raise ValueError('local cohort capture identity differs')
+    producer = requests[0]['capture_storage_producer']['sha256']
+    if scope.get('capture_storage_producer_hash') != producer or any(request['capture_storage_producer']['sha256'] != producer for request in requests):
+        raise ValueError('local cohort transport producer differs')
+    if (calibration.get('protocol') != plan.get('protocol')
+            or calibration.get('analysis_version') != plan.get('analysis_version')
+            or calibration.get('comparison_kind') != 'aa'
+            or calibration.get('evidence_status') != 'verified_complete'
+            or calibration.get('formal_admission') != 'not_evaluated'
+            or calibration.get('calibration_scope') != scope
+            or calibration.get('environment_binding', {}).get('capture_storage') != LOCAL
+            or calibration.get('environment_binding', {}).get('capture_storage_producer_hash') != producer):
+        raise ValueError('local measurement requires a verified fresh A/A with matching epoch and capture storage')
 
 
 def source_content_identity(source):
@@ -317,23 +387,32 @@ def runtime_assessment(correctness, output, standalone=None, correctness_result=
     return result
 
 
-def prepare_timing(run, operator, candidate_id, group, *, purpose='search', final_candidates=None, calibration_path=None, calibration_by_relation=None, epoch='epoch-01'):
+def prepare_timing(run, operator, candidate_id, group, *, purpose='search', final_candidates=None, calibration_path=None, calibration_by_relation=None, epoch='epoch-01', capture_storage=None):
+    measurement_options({'epoch': epoch,
+        **({'capture_storage': capture_storage} if capture_storage is not None else {}),
+        **({'calibration_path': calibration_path} if calibration_path is not None else {}),
+        **({'calibration_by_relation': calibration_by_relation} if calibration_by_relation is not None else {})})
     run, split, task, parent, _ = task_paths(run, operator, candidate_id)
     ledger = Campaign(run / split / 'ledger')
     candidate = ledger.state['tasks'][operator]['candidates'][candidate_id]
     baseline = ledger.config['tasks'][operator]['baseline_source_hash']
-    planning = parent / 'plans' / group
-    planning.mkdir(parents=True, exist_ok=False)
     cases = ALL_CASES if purpose == 'final' else [1, 8, 14, 20] + [p['case_id'] for p in candidate['probes']]
     controls = [('direct_parent', candidate['source_parent']['candidate_id'] or 'baseline')]
     if candidate['source_parent']['source_hash'] != baseline: controls.append(('original_baseline', 'baseline'))
+    if set(calibration_by_relation or {}) - {relation for relation, _ in controls}:
+        raise ValueError('calibration override names an absent comparison relation')
+    from msprof_raw_storage import LOCAL
+    if capture_storage == LOCAL and calibration_path is None and set(calibration_by_relation or {}) != {relation for relation, _ in controls}:
+        raise ValueError('local timing requires an explicit fresh calibration for every comparison')
+    planning = parent / 'plans' / group
+    planning.mkdir(parents=True, exist_ok=False)
     cohorts = []
     for relation, control in controls:
         control_dir = task if control == 'baseline' else task / 'candidates' / control
         roles_path = planning / (relation + '-roles.json')
         comparison_manifest(control_dir / 'build/build_manifest.json', parent / 'build/build_manifest.json', roles_path)
         name = candidate_id + '-' + group + '-' + relation.replace('_', '-')
-        plan = cohort_plan(task, roles_path, run / 'tools/timing/build.json', cases, 'ab', name, epoch=epoch)
+        plan = cohort_plan(task, roles_path, run / 'tools/timing/build.json', cases, 'ab', name, epoch=epoch, **({'capture_storage': capture_storage} if capture_storage is not None else {}))
         save(planning / (relation + '-cohort.json'), plan)
         cohorts.append({'relation': relation, 'control_candidate_id': control,
                         'plan': pointer(planning / (relation + '-cohort.json'))})
@@ -349,7 +428,8 @@ def prepare_timing(run, operator, candidate_id, group, *, purpose='search', fina
     return planning / 'stage-plan.json'
 
 
-def run_stage(run, operator, candidate, kind, group, cases=None, plan_path=None):
+def run_stage(run, operator, candidate, kind, group, cases=None, plan_path=None, *, capture_storage=None, epoch='epoch-01'):
+    validate_stage_options(kind, plan_path, capture_storage=capture_storage, epoch=epoch)
     run, split, task, parent, source = task_paths(run, operator, candidate)
     ledger = Campaign(run / split / 'ledger')
     cid = None if candidate == 'baseline' else candidate
@@ -367,7 +447,7 @@ def run_stage(run, operator, candidate, kind, group, cases=None, plan_path=None)
             plan['control_type'] = 'aa'
             plan['control_phase'] = group
             plan['manifest_ref'] = sha(task / 'manifest.json')
-            plan['cohort'] = cohort_plan(task, parent / 'build/build_manifest.json', run / 'tools/timing/build.json', cases, 'aa', group)
+            plan['cohort'] = cohort_plan(task, parent / 'build/build_manifest.json', run / 'tools/timing/build.json', cases, 'aa', group, epoch=epoch, **({'capture_storage': capture_storage} if capture_storage is not None else {}))
         if kind == 'profile': plan['capture_window'] = {'warmup': 10, 'repeat': 5, 'full_operator': True}
         if kind == 'runtime':
             plan.update(successful_correctness_binding(ledger, operator, cid, parent, plan['source_hash']))
@@ -406,7 +486,7 @@ def run_stage(run, operator, candidate, kind, group, cases=None, plan_path=None)
             calibration_path = calibration_ref['path'] if calibration_ref else task / 'stages/aa-initial/cohort/report.json'
             if calibration_ref and sha(calibration_path) != calibration_ref['sha256']:
                 raise ValueError('frozen calibration report changed')
-            calibration = load(calibration_path)
+            calibration = load(calibration_path) if calibration_ref or any(not row.get('calibration_report') for row in plan['cohorts']) else None
             results = []
             resolved = []
             for cohort in plan['cohorts']:
@@ -416,10 +496,12 @@ def run_stage(run, operator, candidate, kind, group, cases=None, plan_path=None)
                     ref = cohort['calibration_report']
                     if sha(ref['path']) != ref['sha256']: raise ValueError('frozen cohort calibration report changed')
                     selected = load(ref['path'])
-                resolved.append((cohort, selected))
-            for cohort, selected in resolved:
+                frozen = load(cohort['plan']['path'])
+                validate_calibration_storage(frozen, selected)
+                resolved.append((cohort, frozen, selected))
+            for cohort, frozen, selected in resolved:
                 directory = out / cohort['relation']
-                results.append(collect_cohort(load(cohort['plan']['path']), directory, selected))
+                results.append(collect_cohort(frozen, directory, selected))
             result = {'comparisons': results}
         else: raise ValueError('unsupported explicit stage')
     except BaseException as exc:

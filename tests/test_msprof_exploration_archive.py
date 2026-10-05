@@ -1088,3 +1088,66 @@ def test_fresh_graph_bundle_cannot_change_provenance_after_registration(run, mon
     with pytest.raises(ValueError, match='hash|changed|checksum'):
         archive.archive_split(run['root'], 'train')
     assert not (run['root'] / 'archive/train/v2/current.json').exists()
+
+
+def local_method_fixture(run, monkeypatch, *, passed=True):
+    root=run['task']/'stages/raw-local-method-01';directory=root/'evidence'
+    run['state']['candidates']={};run['state']['new_rounds_started']=0
+    raw=directory/'raw/PROF/device_0/data.bin';raw.parent.mkdir(parents=True);raw.write_bytes(b'full raw bytes')
+    output=directory/'native/1_normal_A.bin';output.parent.mkdir(parents=True);output.write_bytes(b'output bytes')
+    transport=save(directory/'raw-storage.json',{'immutable':'transport proof'})
+    native_hash=archive.native_tar_hash(run['task']/'baseline-source.tar')
+    build=save(run['task']/'build/build_manifest.json',{'roles':{r:{'source_dir':str(run['task']/'baseline'),
+        'source_sha256':native_hash} for r in 'AB'}})
+    request={'role_build':str(build)}
+    template={'comparison_kind':'aa','case_ids':[1],'schedule':[{'request':request} for _ in range(6)]}
+    plan={'version':'level2_local_raw_method_qualification_v1','control_type':'method',
+        'source_hash':run['baseline'],'case_ids':[1],'declared_native_processes':1,'calibration_eligible':False,
+        'selected_schedule_index':0,'cohort_template':template,'request':request}
+    save(root/'request.json',request);save(root/'stage-plan.json',plan)
+    observation={'operator':'exp','source_hashes':dict.fromkeys('AB',native_hash),
+        'artifacts':{str(p):archive.sha(p) for p in (raw,output,transport)},'bound_artifacts':{}}
+    if passed:
+        save(root/'observation.json',observation)
+        save(root/'method-qualification.json',{'version':plan['version'],'status':'passed','native_processes':1,
+            'case_ids':[1],'calibration_eligible':False,'six_process_cohort_report_emitted':False,
+            'request':{'path':str(root/'request.json'),'sha256':archive.sha(root/'request.json')},
+            'observation':{'path':str(root/'observation.json'),'sha256':archive.sha(root/'observation.json')}})
+    result=save(root/'result.json',{'stage_id':'baseline-raw-local-method-01','candidate_id':None,
+        'kind':'control','control_type':'method','calibration_eligible':False,
+        'status':'passed' if passed else 'failed',**archive.POLICY})
+    run['state']['stages']={'baseline-raw-local-method-01':{'kind':'control','candidate_id':None,'plan':plan,
+        'attempts':[{'outcome':'success' if passed else 'failed',
+            'evidence':{'result':{'path':str(result),'sha256':archive.sha(result)}}}]}}
+    monkeypatch.setattr(archive.analysis,'validate_plan',lambda p:p)
+    verifier=Mock(return_value=observation)
+    monkeypatch.setattr(archive.analysis,'verify_observation',verifier)
+    return root,(raw,output,transport),verifier
+
+
+def test_local_method_archives_full_raw_outputs_and_replays_one_observation_only(run,monkeypatch):
+    root,files,verifier=local_method_fixture(run,monkeypatch)
+    prepared=archive.Archive(run['root'],'train').prepare()
+    verifier.assert_called_once_with(root/'evidence',expected_request=archive.load(root/'request.json'))
+    assert {str(p) for p in files}<={row['path'] for row in prepared['artifact_index']}
+    assert prepared['attempts']==[]
+    method=prepared['task_checkpoints'][0]['methods'][0]
+    projection=archive.load(method['single_process_qualification']['path'])
+    assert projection['native_process_count']==1 and projection['calibration_eligible'] is False
+    assert 'observations' not in method  # No six-process cohort summary is fabricated.
+
+
+def test_local_method_failed_capture_keeps_partial_bytes_without_replay_or_calibration(run,monkeypatch):
+    root,files,verifier=local_method_fixture(run,monkeypatch,passed=False)
+    prepared=archive.Archive(run['root'],'train').prepare()
+    verifier.assert_not_called()
+    assert {str(p) for p in files}<={row['path'] for row in prepared['artifact_index']}
+    method=prepared['task_checkpoints'][0]['methods'][0]
+    assert method['status']=='failed' and method['single_process_qualification'] is None
+
+
+def test_method_raw_mutation_cannot_be_blessed_by_new_archive_file_inventory(run,monkeypatch):
+    root,files,verifier=local_method_fixture(run,monkeypatch)
+    files[0].write_bytes(b'changed raw file')
+    with pytest.raises(ValueError,match='evidence hash differs'):
+        archive.Archive(run['root'],'train').prepare()

@@ -88,6 +88,19 @@ standalone 端到端时间可能因提交、同步和准备边界不同而变化
 此机制用于 pilot、prepared 采集及复用原 oracle 的 standalone/diagnostic
 路径。不得把实际临时路径伪装成原始 argv。
 
+## 原始 profiler 文件的采集位置
+
+`local_tmp_full_copyback_v1` 可将 msprof 的原始输出写入本机 `/tmp`，
+以避免共享文件系统的小文件写入影响采集进程退出。native 输出与其他证据
+仍写入 campaign。该路径保留真实 argv；采集结束后对全部原始文件和目录
+建清单、校验哈希、复制并同步到 campaign，持久化证明完成后才清理临时目录。
+失败时保留临时原始数据和实际开销，不自动重试。
+
+采集位置、实际文件系统和 transport producer 哈希参与校准身份。本地采集
+必须使用新的显式 epoch，并先取得同一方式的六进程 A/A；原有共享文件系统
+A/A 不能用于本地 A/B。`level2_raw_method.py` 的单进程验证只核验采集、
+完整调用、输出与证据重放，不能充当六进程校准或优化收益。
+
 ## 已取得的方法证据
 
 下列目录位于 `.aprof/runs/level2-skill-graph-base-20261005/`；它们是方法

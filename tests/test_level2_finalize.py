@@ -9,6 +9,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import level2_finalize as final
 import msprof_exploration_campaign as campaign
+import msprof_raw_storage as raw_storage
 from msprof_exploration_execute import load, save, sha, pointer
 from prepare_trace_pilot import create_source_snapshot
 
@@ -18,7 +19,8 @@ def rewrite(path, value):
 
 
 class Fixture:
-    def __init__(self, run, monkeypatch, *, failed=(), count=3, blocked=(), error_type="RuntimeError", parent_chain=False):
+    def __init__(self, run, monkeypatch, *, failed=(), count=3, blocked=(), error_type="RuntimeError", parent_chain=False,
+                 omit_classification=False):
         self.run, self.task = run, run / "train/tasks/maximum"
         self.ids, self.calls, self.actual_reports = [], [], {}
         save(self.task / "manifest.json", {"version": "msprof_task_time_exploration_v2"})
@@ -64,6 +66,9 @@ class Fixture:
                 "source_parent": source_parent, "status": "infrastructure_blocked" if i in blocked else
                 "source_attempt_failed" if i in failed else "measured", "measurement_error": None,
                 "stages": stages, "semantic_guards": guard_ref, "comparisons": comparisons[cid]}
+            if i in failed and not omit_classification:
+                feedback['failure_classification'] = final.failure_classification.classify_failure(
+                    self.task,parent,stage=value)
             path = self.task / "feedback" / (cid + ".json");save(path, feedback)
             oid = cid + "-feedback"
             self.ledger.observe(event_id=oid, workload="maximum", candidate_id=cid, observation_id=oid,
@@ -98,8 +103,16 @@ class Fixture:
                           stage_id=sid, kind=kind, plan=plan)
         value = {"stage_id": sid, "candidate_id": candidate_id, "kind": kind,
                  "status": "failed" if failed else "passed", "native_started": kind != "build",
-                 "error": {"type": error_type, "message": "source compile error"} if failed else None}
+                 "error": {"type": error_type, "message": "process failed (2): cmake"} if failed else None}
         save(directory / "result.json", value)
+        if failed and kind=='build':
+            from test_level2_failure_classification import execution
+            build=parent/'build'
+            save(build/'configure-execution/execution.json',execution(['cmake','-S',build,'-B',build/'build']))
+            save(build/'build-execution/execution.json',execution(['cmake','--build',build/'build','-j2'],2,value['error']['message']))
+            (build/'build-execution/stdout.log').write_text('')
+            (build/'build-execution/stderr.log').write_text(
+                f"{parent/'op/op_kernel/maximum.asc'}:1:1: error: use of undeclared identifier 'bad_api'\n")
         evidence = {"result": pointer(directory / "result.json")}
         if kind == "correctness":evidence["prepared_output_checked"] = not failed
         if kind == "runtime":
@@ -150,11 +163,19 @@ class Fixture:
             save(build, {"operator": "maximum", "roles": {"A": {"source_sha256": final.source_hash(control_source)},
                                                            "B": {"source_sha256": final.source_hash(parent / "op")}}})
             cohort_path = directory / (relation + "-cohort.json")
+            storage=kwargs.get('capture_storage')
+            storage_ref=pointer(raw_storage.__file__) if storage==raw_storage.LOCAL else None
+            request={'version':'msprof_kernel_time_study_v2',
+                     **({'capture_storage':storage} if storage is not None else {}),
+                     **({'capture_storage_producer':storage_ref} if storage_ref else {})}
+            scope={"epoch": kwargs.get("epoch", "epoch-01"),
+                   **({'capture_storage':storage} if storage is not None else {}),
+                   **({'capture_storage_producer_hash':storage_ref['sha256']} if storage_ref else {})}
             save(cohort_path, {"case_ids": campaign.ALL_CASES, "comparison_kind": "ab",
+                 "protocol":final.report.PROTOCOL_V2,"analysis_version":final.report.ANALYSIS_V2,
                  "identity_bindings": {"role_build": pointer(build)},
-                 "calibration_scope": {"epoch": kwargs.get("epoch", "epoch-01")},
-                 "schedule": [{"name": f"p{i}", "request": ({"capture_storage": kwargs["capture_storage"]}
-                              if "capture_storage" in kwargs else {})} for i in range(6)]})
+                 "calibration_scope": scope,
+                 "schedule": [{"name": f"p{i}", "request": request} for i in range(6)]})
             cohorts.append({"relation": relation, "control_candidate_id": control, "plan": pointer(cohort_path)})
             if relation in kwargs.get("calibration_by_relation", {}):
                 cohorts[-1]["calibration_report"] = pointer(kwargs["calibration_by_relation"][relation])
@@ -337,9 +358,13 @@ def test_passed_stage_summary_cannot_hide_changed_native_safety_evidence(fixture
 
 def test_new_epoch_storage_calibration_are_frozen_and_inherited_on_resume(fixture):
     f = fixture
-    aa = f.task / "local-aa.json";save(aa, {"new_local_calibration": True})
-    parent_aa = f.task / "parent-aa.json";save(parent_aa, {"parent_calibration": True})
-    options = {"epoch": "local-raw-01", "capture_storage": {"mode": "local_tmp_full_copyback_v1"},
+    scope={'epoch':'local-raw-01','capture_storage':dict(raw_storage.LOCAL),'capture_storage_producer_hash':sha(raw_storage.__file__)}
+    calibration={'protocol':final.report.PROTOCOL_V2,'analysis_version':final.report.ANALYSIS_V2,
+        'comparison_kind':'aa','evidence_status':'verified_complete','formal_admission':'not_evaluated',
+        'calibration_scope':scope,'environment_binding':{'capture_storage':dict(raw_storage.LOCAL),'capture_storage_producer_hash':sha(raw_storage.__file__)}}
+    aa = f.task / "local-aa.json";save(aa, calibration)
+    parent_aa = f.task / "parent-aa.json";save(parent_aa, calibration)
+    options = {"epoch": "local-raw-01", "capture_storage": dict(raw_storage.LOCAL),
                "calibration_path": aa, "calibration_by_relation": {"direct_parent": parent_aa}}
     prepared = final.finalize(f.run, "maximum", prepare_only=True, timing_options=options)
     assert prepared["status"] == "prepared", prepared
@@ -404,3 +429,52 @@ def test_changed_cohort_scope_cannot_hide_inside_full20_stage_plan(fixture):
     result = final.finalize(f.run, "maximum")
     assert result["status"] == "unfinished" and "cohort coverage" in result["error"]["message"]
     assert not any(c[0] == "execute" for c in f.calls)
+
+
+def test_source_failures_without_positive_classification_stay_unfinished(tmp_path,monkeypatch):
+    f=Fixture(tmp_path,monkeypatch,failed=(1,2,3),omit_classification=True)
+    result=final.finalize(f.run,'maximum')
+    assert result['status']=='unfinished' and 'positive classification' in result['error']['message']
+    assert not f.calls
+
+
+@pytest.mark.parametrize('text', ["fatal error: 'kernel_operator.h' file not found\n", ''])
+def test_classification_replay_rejects_changed_proof_even_same_positive_rule(tmp_path,monkeypatch,text):
+    f=Fixture(tmp_path,monkeypatch,failed=(1,2,3))
+    log=f.task/'candidates/maximum002/build/build-execution/stderr.log'
+    # Both a new infrastructure diagnostic and a changed-but-still-semantic
+    # witness differ from the complete classification frozen in feedback.
+    log.write_text(log.read_text().replace('bad_api','another_bad_api')+text)
+    result=final.finalize(f.run,'maximum')
+    assert result['status']=='unfinished' and 'positive classification' in result['error']['message']
+    assert not f.calls
+
+
+def test_feedback_is_resolved_by_observation_hash_not_legacy_filename(fixture):
+    f=fixture
+    for cid in f.ids:
+        path=f.task/'feedback'/f'{cid}.json'
+        path.rename(path.with_name(cid+'-immutable-observation-02.json'))
+    result=final.finalize(f.run,'maximum',prepare_only=True)
+    assert result['status']=='prepared',result
+    assert all('immutable-observation-02' in row['feedback']['path']
+               for row in load(result['request']['path'])['source_attempts'])
+    assert pointer(final.failure_classification.__file__) in load(result['request']['path'])['producers']
+
+
+@pytest.mark.parametrize('options', [
+    {'epoch':'../unsafe'}, {'capture_storage':{'mode':'unreviewed'},'epoch':'new'},
+    {'capture_storage':dict(raw_storage.LOCAL)},
+])
+def test_unreviewed_timing_options_fail_before_any_final_plan(fixture,options):
+    f=fixture;result=final.finalize(f.run,'maximum',prepare_only=True,timing_options=options)
+    assert result['status']=='unfinished' and not f.calls
+
+
+def test_prepare_only_rejects_old_direct_aa_for_new_local_epoch(fixture):
+    f=fixture
+    result=final.finalize(f.run,'maximum',prepare_only=True,timing_options={
+        'capture_storage':dict(raw_storage.LOCAL),'epoch':'local-raw-01'})
+    assert result['status']=='unfinished' and 'fresh A/A' in result['error']['message']
+    assert not campaign.Campaign(f.run/'train/ledger').state['tasks']['maximum']['frozen']
+    assert not any(row[0]=='execute' for row in f.calls)

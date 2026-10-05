@@ -285,7 +285,7 @@ def comparison_manifest(control_build, candidate_build, output):
     return result
 
 
-def cohort_plan(task, role_build, runner_build, case_ids, kind, name, epoch='epoch-01'):
+def cohort_plan(task, role_build, runner_build, case_ids, kind, name, epoch='epoch-01', *, capture_storage=None):
     task = Path(task)
     import cannbench_msprof_timing as timing
     inputs = load(task / 'input-bindings.json')
@@ -302,11 +302,17 @@ def cohort_plan(task, role_build, runner_build, case_ids, kind, name, epoch='epo
         request['version'] = 'msprof_kernel_time_study_v2'
         for row in request['cases']: row['repeat'] = repeats[str(row['case_id'])]
         request['timeout'] = measurement['timing_timeout_seconds']
+    if capture_storage is not None:
+        import msprof_raw_storage
+        from msprof_raw_storage import policy as storage_policy
+        request['capture_storage']=capture_storage
+        if capture_storage==msprof_raw_storage.LOCAL:request['capture_storage_producer']=pointer(msprof_raw_storage.__file__)
+        storage_policy(request)
     environment = task.parents[2] / 'bootstrap/environment.json'
     return {'protocol': 'msprof_task_time_exploration_v2' if fresh else PROTOCOL, 'analysis_version': 'msprof_exploration_analysis_v2' if fresh else 'msprof_exploration_analysis_v1', 'comparison_kind': kind,
             'identity_bindings': {'role_build': pointer(role_build), 'runner_build': pointer(runner_build),
                                   'input_bindings': pointer(task / 'input-bindings.json'), 'producer': pointer(timing.__file__)},
-            'case_ids': list(case_ids), 'calibration_scope': {'epoch': epoch, 'host': socket.gethostname(), 'physical_device': 0,
+            'case_ids': list(case_ids), 'calibration_scope': {**({'capture_storage':capture_storage} if capture_storage is not None else {}), **({'capture_storage_producer_hash':request['capture_storage_producer']['sha256']} if 'capture_storage_producer' in request else {}), 'epoch': epoch, 'host': socket.gethostname(), 'physical_device': 0,
                 'cpu': 8, 'runner_hash': load(runner_build)['runner_hash'], 'inputs': sha(task / 'input-bindings.json'),
                 'environment': pointer(environment) if environment.is_file() else {'status': 'not_recorded', 'reason': 'synthetic CPU test environment'},
                 'profiler_mode': 'task_time_l1_ai_core_off'},
