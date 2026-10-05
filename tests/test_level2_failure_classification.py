@@ -285,3 +285,275 @@ def test_classifier_entry_requires_canonical_task_and_candidate(tmp_path,field):
     value=classify_failure(task,parent,stage)
     assert value['status']=='infrastructure_blocked' and 'noncanonical' in value['reason']
     assert not value['evidence']
+
+
+def kernel_type_compiler(tmp_path, definition=None):
+    """Producer-shaped frozen source/role/CMake proof; never invoke a compiler."""
+    import tarfile
+    import shared_context_build
+    task,parent,directory,stage=fixtures(tmp_path)
+    build=parent/'build';sdk='/opt/Ascend/cann-9.0.0';compiler=sdk+'/bin/bisheng'
+    source=parent/'op'
+    write(source/'op_host/maximum.asc', '#include "../op_kernel/maximum_kernel.asc"\nint main(int argc, char **argv) { maximum_same_int64<<<1,nullptr,stream>>>(p); aclrtMemcpy(host, 8, p, 8, ACL_MEMCPY_DEVICE_TO_HOST); WriteFile("output",host,8); return 0; }\n')
+    write(source/'op_kernel/maximum_kernel.asc', definition if definition is not None else
+          'extern "C" __global__ __aicore__ void maximum_same_int64(void *p) { scalar_compare(p); }\n')
+    with tarfile.open(parent/'source.tar','w') as archive:
+        archive.add(source,arcname='source')
+    save(directory/'stage-plan.json',{'source_hash':ref(parent/'source.tar')['sha256']})
+    h=hashlib.sha256()
+    for path in sorted(p for p in source.rglob('*') if p.is_file()):
+        h.update(str(path.relative_to(source)).encode()+b'\0'+path.read_bytes()+b'\0')
+    digest=h.hexdigest()
+    for kind,argv,code,error in [('configure',['cmake','-S',build,'-B',build/'build'],0,None),
+             ('build',['cmake','--build',build/'build','-j2'],2,stage['error']['message'])]:
+        row=execution(argv,code,error);row['environment_overrides']={};row['cwd']=str(shared_context_build.HARNESS.parents[3])
+        row['shell_argv']=['taskset','-c','40-43','bash','-c',
+            f'source {sdk}/set_env.sh || exit $?; export LD_LIBRARY_PATH=/usr/local/Ascend/driver/lib64/common:/usr/local/Ascend/driver/lib64/driver:${{LD_LIBRARY_PATH:-}}; exec "$@"','feedback-hardware',*row['argv']]
+        save(build/(kind+'-execution/execution.json'),row)
+    write(build/'configure-execution/stdout.log',f'-- CMAKE_ASC_COMPILER: {compiler}\n'
+          f'-- CMAKE_ASC_LLD_LINKER: {sdk}/aarch64-linux/ccec_compiler/bin/ld.lld\n')
+    write(build/'configure-execution/stderr.log','')
+    write(build/'build/CMakeFiles/3.22.1/CMakeASCCompiler.cmake',
+          f'set(CMAKE_ASC_COMPILER "{compiler}")\nset(CMAKE_ASC_COMPILER_LOADED 1)\n')
+    manifest={'version':'shared_context_build_v1','operator':'maximum','roles':{},'harness':{p.name:ref(p)['sha256'][7:] for p in shared_context_build.HARNESS.iterdir() if p.is_file()}}
+    diagnostics=[];warnings=[]
+    for role in ('A','B'):
+        symbol=f'sc_{role}_{digest[:12]}_maximum_same_int64'
+        generated,identity,_=shared_context_build.generate_adapter(source,'maximum',role,digest)
+        host=write(build/role/'op_host/maximum.asc',generated)
+        write(build/role/'op_kernel/maximum_kernel.asc',(source/'op_kernel/maximum_kernel.asc').read_text())
+        manifest['roles'][role]={**identity,'role':role,'source_dir':str(source),'source_sha256':digest,
+            'kernel_symbols':symbol,'adapter_sha256':ref(host)['sha256'][7:],'npu_arch':'dav-2201'}
+        write(build/'build/CMakeFiles'/f'role_{role}.dir/flags.make',
+              f'# compile ASC with {compiler}\nASC_DEFINES = -Drole_{role}_EXPORTS\nASC_INCLUDES = -I{build/role/"op_host"} -I{build/role/"op_kernel"} -I{shared_context_build.HARNESS}\nASC_FLAGS = --npu-arch=dav-2201\n')
+        obj=f'CMakeFiles/role_{role}.dir/{role}/op_host/maximum.asc.o'
+        for dependency in ('depend.make','compiler_depend.make','compiler_depend.ts'):
+            write(build/'build/CMakeFiles'/f'role_{role}.dir'/dependency,'# Empty CMake dependency file\n')
+        write(build/'build/CMakeFiles'/f'role_{role}.dir/progress.make',f'CMAKE_PROGRESS_1 = {1 if role == "A" else 3}\nCMAKE_PROGRESS_2 = {2 if role == "A" else 4}\n')
+        includes=''.join(f'include CMakeFiles/role_{role}.dir/{name}\n' for name in ('depend.make','compiler_depend.make','progress.make','flags.make'))
+        from level2_failure_classification import reviewed_role_makefile
+        write(build/'build/CMakeFiles'/f'role_{role}.dir/build.make',
+              reviewed_role_makefile(build,role,'maximum',compiler)+'\n')
+        diagnostics.append(f'ld.lld: error: Error: the type of kernel function {symbol} auto derivate failed, please manually add the function type attribute')
+        warnings.append(f'WARNING: kernel type of __global__ func: {symbol} is not marked. auto type derivate may be failed.')
+    save(build/'build_manifest.json',manifest)
+    write(build/'build-execution/stdout.log','\n'.join(warnings)+'\n')
+    write(build/'build-execution/stderr.log','\n'.join(diagnostics+[
+        'bishengbisheng: : error: error: ld.lld command failed with exit code 1 (use -v to see invocation)',
+        'ld.lld command failed with exit code 1 (use -v to see invocation)',
+        'gmake[1]: *** Waiting for unfinished jobs....',
+        'gmake: *** [Makefile:91: all] Error 2'])+'\n')
+    return task,parent,stage
+
+
+def test_kernel_type_inference_requires_two_original_source_roles(tmp_path):
+    task,parent,stage=kernel_type_compiler(tmp_path)
+    before={str(p):p.read_bytes() for p in tmp_path.rglob('*') if p.is_file()}
+    value=classify_failure(task,parent,stage)
+    assert value['status']=='source_attempt_failed',value
+    assert value['rule']=='original_source_kernel_type_inference'
+    assert value==classify_failure(task,parent,stage)
+    assert before=={str(p):p.read_bytes() for p in tmp_path.rglob('*') if p.is_file()}
+    paths={r['path'] for r in value['evidence']}
+    assert all(ref(Path(r['path']))==r for r in value['evidence'])
+    required=['source.tar','stages/build/stage-plan.json','op/op_kernel/maximum_kernel.asc',
+        'build/build_manifest.json','build/configure-execution/stdout.log',
+        'build/build/CMakeFiles/3.22.1/CMakeASCCompiler.cmake',
+        *[f'build/{role}/op_host/maximum.asc' for role in ('A','B')],
+        *[f'build/{role}/op_kernel/maximum_kernel.asc' for role in ('A','B')],
+        *[f'build/build/CMakeFiles/role_{role}.dir/build.make' for role in ('A','B')]]
+    assert {str(parent/p) for p in required} <= paths
+
+
+@pytest.mark.parametrize('definition',[
+    '// extern "C" __global__ __aicore__ void maximum_same_int64(void *p) {}\n',
+    '/* extern "C" __global__ __aicore__ void maximum_same_int64(void *p) {} */\n',
+    'const char *text="__global__ __aicore__ void maximum_same_int64(void *p) {}";\n',
+    'extern "C" __global__ __aicore__ void generated_only(void *p) {}\n',
+    'extern "C" __global__ __aicore__ void maximum_same_int64(void *p);\n',
+    '#if 0\nextern "C" __global__ __aicore__ void maximum_same_int64(void *p) {}\n#endif\n',
+    'extern "C" __global__ __aicore__ void maximum_same_int64(void *p) {}\n' * 2,
+])
+def test_kernel_type_generated_comment_string_conditional_or_ambiguous_definition_is_blocked(tmp_path,definition):
+    task,parent,stage=kernel_type_compiler(tmp_path,definition)
+    value=classify_failure(task,parent,stage)
+    assert value['status']=='infrastructure_blocked',value
+
+
+@pytest.mark.parametrize('fault',[
+    'sdk_missing','tool_crash','environment_error','unresolved_linker','unknown_linker',
+    'extra_stdout_error','configure_failed','build_signal','single_role','role_mismatch',
+    'wrong_prefix','changed_source','changed_archive','corrupt_archive','unsafe_archive',
+    'generated_changed_kernel','generated_wrong_rename','generated_hash','generated_definition','generated_include','wrong_manifest_source',
+    'wrong_manifest_hash','wrong_manifest_symbol','missing_compiler','wrong_compiler_record',
+    'wrong_compiler_recipe','wrong_compiler_flags','wrong_linker_sdk','configure_stderr',
+    'environment_override','sdk_shell_mismatch','shell_extra_export','missing_recipe','recipe_symlink',
+])
+def test_kernel_type_positive_witness_never_overrides_unknown_or_infrastructure_failure(tmp_path,fault):
+    import tarfile
+    task,parent,stage=kernel_type_compiler(tmp_path);build=parent/'build'
+    stderr=build/'build-execution/stderr.log';manifest_path=build/'build_manifest.json'
+    manifest=json.loads(manifest_path.read_text())
+    if fault in ('sdk_missing','tool_crash','environment_error','unresolved_linker','unknown_linker'):
+        extra={'sdk_missing':'cannot execute bisheng: No such file or directory',
+            'tool_crash':'bisheng: internal compiler error: crash',
+            'environment_error':'ld.lld: error: failed to load environment',
+            'unresolved_linker':'ld.lld: error: undefined symbol: aclrtCreateStream',
+            'unknown_linker':'ld.lld: error: unexpected unsupported link failure'}[fault]
+        stderr.write_text(stderr.read_text()+extra+'\n')
+    elif fault=='extra_stdout_error':write(build/'build-execution/stdout.log','error: unrecognized option\n')
+    elif fault=='configure_failed':
+        p=build/'configure-execution/execution.json';v=json.loads(p.read_text());v['exit_status']=1;save(p,v)
+    elif fault=='build_signal':
+        p=build/'build-execution/execution.json';v=json.loads(p.read_text());v['exit_status']=-9;save(p,v)
+    elif fault=='single_role':stderr.write_text('\n'.join(x for x in stderr.read_text().splitlines() if 'sc_B_' not in x)+'\n')
+    elif fault=='role_mismatch':stderr.write_text(stderr.read_text().replace('sc_B_','sc_A_'))
+    elif fault=='wrong_prefix':stderr.write_text(stderr.read_text().replace(manifest['roles']['A']['source_sha256'][:12],'a'*12))
+    elif fault=='changed_source':write(parent/'op/op_kernel/maximum_kernel.asc','changed source\n')
+    elif fault=='changed_archive':write(parent/'source.tar','changed archive\n')
+    elif fault=='corrupt_archive':
+        write(parent/'source.tar','invalid tar bytes');save(parent/'stages/build/stage-plan.json',{'source_hash':ref(parent/'source.tar')['sha256']})
+    elif fault=='unsafe_archive':
+        with tarfile.open(parent/'source.tar','a') as archive:
+            member=tarfile.TarInfo('../outside');member.type=tarfile.SYMTYPE;member.linkname='/tmp/outside';archive.addfile(member)
+        save(parent/'stages/build/stage-plan.json',{'source_hash':ref(parent/'source.tar')['sha256']})
+    elif fault=='generated_changed_kernel':write(build/'A/op_kernel/maximum_kernel.asc','generated different kernel\n')
+    elif fault=='generated_wrong_rename':
+        p=build/'A/op_host/maximum.asc';p.write_text(p.read_text().replace('#define maximum_same_int64','#define generated_entry'))
+        manifest['roles']['A']['adapter_sha256']=ref(p)['sha256'][7:];save(manifest_path,manifest)
+    elif fault in ('generated_definition','generated_include'):
+        p=build/'A/op_host/maximum.asc'
+        if fault=='generated_definition':p.write_text(p.read_text()+'__global__ __aicore__ void maximum_same_int64(void *p) {}\n')
+        else:p.write_text(p.read_text().replace('../op_kernel/maximum_kernel.asc','generated_kernel.asc'))
+        manifest['roles']['A']['adapter_sha256']=ref(p)['sha256'][7:];save(manifest_path,manifest)
+    elif fault=='generated_hash':manifest['roles']['A']['adapter_sha256']='0'*64;save(manifest_path,manifest)
+    elif fault=='wrong_manifest_source':manifest['roles']['A']['source_dir']=str(build/'A');save(manifest_path,manifest)
+    elif fault=='wrong_manifest_hash':manifest['roles']['A']['source_sha256']='0'*64;save(manifest_path,manifest)
+    elif fault=='wrong_manifest_symbol':manifest['roles']['A']['kernel_symbols']='generated_only';save(manifest_path,manifest)
+    elif fault=='missing_compiler':write(build/'configure-execution/stdout.log','-- Compiler identity unavailable\n')
+    elif fault=='wrong_compiler_record':write(build/'build/CMakeFiles/3.22.1/CMakeASCCompiler.cmake','set(CMAKE_ASC_COMPILER "/other/bisheng")\nset(CMAKE_ASC_COMPILER_LOADED 1)\n')
+    elif fault=='wrong_compiler_recipe':write(build/'build/CMakeFiles/role_A.dir/build.make','\t/other/bisheng -c --asc-aicore-lang other.asc\n')
+    elif fault=='wrong_compiler_flags':write(build/'build/CMakeFiles/role_A.dir/flags.make','# compile ASC with /opt/Ascend/cann-9.0.0/bin/bisheng\nASC_FLAGS = --npu-arch=unsupported\n')
+    elif fault=='wrong_linker_sdk':
+        p=build/'configure-execution/stdout.log';p.write_text(p.read_text().replace('/opt/Ascend/cann-9.0.0/aarch64-linux','/other/sdk/aarch64-linux'))
+    elif fault=='configure_stderr':write(build/'configure-execution/stderr.log','warning: unknown compiler environment\n')
+    elif fault in ('environment_override','sdk_shell_mismatch','shell_extra_export'):
+        p=build/'build-execution/execution.json';v=json.loads(p.read_text())
+        if fault=='environment_override':v['environment_overrides']={'ASC':'/wrong/compiler'}
+        elif fault=='shell_extra_export':v['shell_argv'][5]=v['shell_argv'][5].replace('exec', 'export ASC=/other/bisheng; exec')
+        else:v['shell_argv'][5]='source /other/sdk/set_env.sh || exit $?; exec "$@"'
+        save(p,v)
+    elif fault=='missing_recipe':(build/'build/CMakeFiles/role_A.dir/build.make').unlink()
+    elif fault=='recipe_symlink':
+        p=build/'build/CMakeFiles/role_A.dir/build.make';other=write(tmp_path/'recipe',p.read_text());p.unlink();p.symlink_to(other)
+    value=classify_failure(task,parent,stage)
+    assert value['status']=='infrastructure_blocked',value
+
+
+@pytest.mark.parametrize('mutation',[
+    'disabled_original_replaced_by_generated_include','unreviewed_forced_include_recipe',
+    'unreviewed_forced_include_only','overridden_defines','unreviewed_include_search',
+    'recipe_redefines_flags','extra_role_header','changed_harness_identity',
+])
+def test_generated_compile_authority_cannot_be_misattributed_to_original(tmp_path,mutation):
+    task,parent,stage=kernel_type_compiler(tmp_path);build=parent/'build'
+    manifest_path=build/'build_manifest.json';manifest=json.loads(manifest_path.read_text())
+    for role in ('A','B'):
+        host=build/role/'op_host/maximum.asc';symbol=manifest['roles'][role]['kernel_symbols']
+        generated=build/role/'op_kernel/generated_kernel.asc'
+        if mutation in ('disabled_original_replaced_by_generated_include','unreviewed_forced_include_recipe'):
+            generated.write_text(f'extern "C" __global__ __aicore__ void {symbol}(void *p) {{ generated_scalar_failure(p); }}\n')
+        if mutation=='disabled_original_replaced_by_generated_include':
+            host.write_text(host.read_text().replace('#include "../op_kernel/maximum_kernel.asc"',
+                '#if 0\n#include "../op_kernel/maximum_kernel.asc"\n#endif\n#include "../op_kernel/generated_kernel.asc"'))
+            manifest['roles'][role]['adapter_sha256']=ref(host)['sha256'][7:]
+        elif mutation in ('unreviewed_forced_include_recipe','unreviewed_forced_include_only'):
+            recipe=build/'build/CMakeFiles'/f'role_{role}.dir/build.make'
+            recipe.write_text(recipe.read_text().replace(' $(ASC_DEFINES)',f' -include {generated} $(ASC_DEFINES)'))
+        elif mutation in ('overridden_defines','unreviewed_include_search'):
+            flags=build/'build/CMakeFiles'/f'role_{role}.dir/flags.make'
+            if mutation=='overridden_defines':flags.write_text(flags.read_text().replace('ASC_DEFINES = ','ASC_DEFINES = -Dmaximum_same_int64=generated '))
+            else:flags.write_text(flags.read_text().replace('ASC_INCLUDES = ','ASC_INCLUDES = -I/unknown/include '))
+        elif mutation=='recipe_redefines_flags':
+            recipe=build/'build/CMakeFiles'/f'role_{role}.dir/build.make'
+            recipe.write_text('ASC_DEFINES := -include generated.asc\n'+recipe.read_text())
+        elif mutation=='extra_role_header':write(build/role/'op_host/kernel_operator.h','generated override\n')
+        elif mutation=='changed_harness_identity':manifest['harness']['level2_adapter_common.h']='0'*64
+    save(manifest_path,manifest)
+    value=classify_failure(task,parent,stage)
+    assert value['status']=='infrastructure_blocked',value
+
+
+@pytest.mark.parametrize('mutation',['extra_shell_before','extra_linker_after','extra_dependency',
+                                    'inline_shell','duplicate_target_recipe','make_shell_expansion'])
+def test_complete_object_target_cannot_hide_an_additional_failure_producer(tmp_path,mutation):
+    task,parent,stage=kernel_type_compiler(tmp_path);build=parent/'build'
+    for role in ('A','B'):
+        recipe=build/'build/CMakeFiles'/f'role_{role}.dir/build.make';text=recipe.read_text()
+        obj=f'CMakeFiles/role_{role}.dir/{role}/op_host/maximum.asc.o'
+        if mutation=='extra_shell_before':text=text.replace('\t@$(CMAKE_COMMAND)', '\tsh -c "generate_failure"\n\t@$(CMAKE_COMMAND)')
+        elif mutation=='extra_linker_after':text+='\t/opt/Ascend/cann-9.0.0/bin/ld.lld generated.o\n'
+        elif mutation=='extra_dependency':text=obj+': generated_failure\n'+text
+        elif mutation=='inline_shell':text=text.replace(obj+': ../',obj+': ; sh -c generate_failure\n'+obj+': ../')
+        elif mutation=='duplicate_target_recipe':text+=obj+': other\n\tsh -c generate_failure\n'
+        else:text='EXTRA = $(shell generate_failure)\n'+text
+        recipe.write_text(text)
+    value=classify_failure(task,parent,stage)
+    assert value['status']=='infrastructure_blocked',value
+
+
+@pytest.mark.parametrize('operator',['../generated','exp','rms_norm','maximum/extra'])
+def test_kernel_type_operator_must_match_reviewed_level2_task(tmp_path,operator):
+    task,parent,stage=kernel_type_compiler(tmp_path)
+    path=parent/'build/build_manifest.json';value=json.loads(path.read_text());value['operator']=operator;save(path,value)
+    result=classify_failure(task,parent,stage)
+    assert result['status']=='infrastructure_blocked' and 'reviewed Level2 task' in result['reason'],result
+
+
+@pytest.mark.parametrize('name',['depend.make','compiler_depend.make','compiler_depend.ts','progress.make'])
+def test_make_dependency_cannot_supply_hidden_commands(tmp_path,name):
+    task,parent,stage=kernel_type_compiler(tmp_path)
+    path=parent/'build/build/CMakeFiles/role_A.dir'/name
+    path.write_text(path.read_text()+'EXTRA := $(shell generate_failure)\n')
+    assert classify_failure(task,parent,stage)['status']=='infrastructure_blocked'
+
+
+@pytest.mark.parametrize('statement',[
+    'override CMAKE_COMMAND = /tmp/generated-linker-wrapper',
+    'override SHELL = /tmp/generated-shell-wrapper',
+    'export CMAKE_COMMAND = /tmp/generated-wrapper',
+    'private SHELL = /tmp/generated-wrapper',
+    'COLOR = true; /tmp/generated-wrapper',
+    'define CMAKE_COMMAND\n/tmp/generated-wrapper\nendef',
+    '$(eval SHELL := /tmp/generated-wrapper)',
+    '.ONESHELL:',
+    '.SHELLFLAGS = -c /tmp/generated-wrapper',
+    'include /tmp/generated-makefile',
+    'role_A: SHELL = /tmp/generated-wrapper',
+    'MAKEFLAGS = --eval=generated',
+    'export MAKEFILES := /tmp/generated-makefile',
+    'undefine CMAKE_COMMAND',
+])
+def test_complete_make_authority_rejects_all_unreviewed_effective_statements(tmp_path,statement):
+    task,parent,stage=kernel_type_compiler(tmp_path)
+    for role in ('A','B'):
+        p=parent/'build/build/CMakeFiles'/f'role_{role}.dir/build.make'
+        p.write_text(p.read_text()+statement+'\n')
+    value=classify_failure(task,parent,stage)
+    assert value['status']=='infrastructure_blocked',value
+
+
+def test_make_continued_comment_cannot_hide_reviewed_shell_assignment(tmp_path):
+    task,parent,stage=kernel_type_compiler(tmp_path)
+    p=parent/'build/build/CMakeFiles/role_A.dir/build.make'
+    p.write_text(p.read_text().replace('SHELL = /bin/sh','# swallowed next line \\\nSHELL = /bin/sh'))
+    value=classify_failure(task,parent,stage)
+    assert value['status']=='infrastructure_blocked',value
+
+
+@pytest.mark.parametrize('name',['MAKEFLAGS','MFLAGS','MAKEFILES','GNUMAKEFLAGS'])
+def test_recorded_make_environment_override_is_never_admitted(tmp_path,name):
+    task,parent,stage=kernel_type_compiler(tmp_path)
+    p=parent/'build/build-execution/execution.json';value=json.loads(p.read_text())
+    value['environment_overrides']={name:'injected'};save(p,value)
+    assert classify_failure(task,parent,stage)['status']=='infrastructure_blocked'
