@@ -224,7 +224,22 @@ class AProfRegistryTest(unittest.TestCase):
             with self.subTest(skill=name):
                 source = REPO_ROOT / item["source"]
                 bundled = skills_root / name
-                self.assertEqual(file_map(source), file_map(bundled))
+                expected = {
+                    path.as_posix(): payload
+                    for path, payload in registry_tool.codex_bundle_files(REPO_ROOT, source).items()
+                }
+                self.assertEqual(expected, file_map(bundled))
+
+    def test_portable_shared_contract_links_resolve_inside_each_skill(self) -> None:
+        for name, source in registry_tool.codex_bundle_entries(REPO_ROOT, self.registry):
+            rendered = registry_tool.codex_bundle_files(REPO_ROOT, source)
+            for relative, payload in rendered.items():
+                if relative.suffix != ".md":
+                    continue
+                import re
+                for link in re.findall(r"\]\(([^)]+aprof-contracts\.md)\)", payload.decode()):
+                    target = (Path("/bundle") / relative.parent / link).resolve()
+                    self.assertIn(target.relative_to("/bundle"), rendered, (name, relative, link))
 
     def test_codex_renderers_are_deterministic(self) -> None:
         self.assertEqual(

@@ -2,8 +2,8 @@
   "schema_version": 1,
   "library": {
     "name": "aprof-skills",
-    "version": "0.2.0",
-    "description": "AProf Ascend C trainable performance workflow skills. Core capabilities cover trace-producing workflow orchestration, diagnosis, profiling, bounded optimization, and direct-invoke scaffolding; remote deployment is an optional adapter."
+    "version": "0.3.0",
+    "description": "Self-contained AProf skills for architecture-aware parallel planning, metadata tiling-key dispatch, profiling, bounded execution optimization and trace preservation."
   },
   "benchmark_package": {
     "name": "aprof-benchmark-tools",
@@ -12,12 +12,13 @@
   },
   "workflow_plugin": {
     "name": "aprof-performance-workflow",
-    "version": "0.2.0",
-    "description": "AProf trace-producing Ascend C performance workflow. It orchestrates diagnosis, profiling, bounded optimization, machine-gated validation, and training-trace preservation.",
+    "version": "0.3.0",
+    "description": "AProf self-contained architecture-aware parallel planning and workload-dispatched execution optimization, with versioned SkillGraph routes, machine gates and preserved traces.",
     "dependencies": [
       "aprof-skills"
     ],
     "agents": [
+      "plugins/aprof-performance-workflow/agents/aprof-parallel-planning-wrapper.md",
       "plugins/aprof-performance-workflow/agents/aprof-diagnosis-wrapper.md",
       "plugins/aprof-performance-workflow/agents/aprof-profiling-wrapper.md",
       "plugins/aprof-performance-workflow/agents/aprof-optimization-wrapper.md"
@@ -47,6 +48,11 @@
         "name": "ascendc-aprof-workflow",
         "source": "skills/aprof/ascendc-aprof-workflow",
         "purpose": "Stable user-facing entry for trace-producing AProf optimization sessions."
+      },
+      {
+        "name": "ascendc-aprof-parallel-planning",
+        "source": "skills/aprof/parallel-planning",
+        "purpose": "Architecture-aware algorithm/task decomposition and workload dispatch before execution tuning."
       },
       {
         "name": "ascendc-aprof-diagnosis",
@@ -99,55 +105,55 @@
   "support_skills": [
     {
       "name": "ascendc-env-check",
-      "source": "third_party/cannbot-skills/ops/ascendc-env-check"
+      "source": "skills/aprof/support/ascendc-env-check"
     },
     {
       "name": "ascendc-perf-optimize",
-      "source": "third_party/cannbot-skills/ops/ascendc-perf-optimize"
+      "source": "skills/aprof/support/ascendc-perf-optimize"
     },
     {
       "name": "ascendc-tiling-design",
-      "source": "third_party/cannbot-skills/ops/ascendc-tiling-design"
+      "source": "skills/aprof/support/ascendc-tiling-design"
     },
     {
       "name": "ascendc-performance-best-practices",
-      "source": "third_party/cannbot-skills/ops/ascendc-performance-best-practices"
+      "source": "skills/aprof/support/ascendc-performance-best-practices"
     },
     {
       "name": "ascendc-api-best-practices",
-      "source": "third_party/cannbot-skills/ops/ascendc-api-best-practices"
+      "source": "skills/aprof/support/ascendc-api-best-practices"
     },
     {
       "name": "ascendc-docs-search",
-      "source": "third_party/cannbot-skills/ops/ascendc-docs-search"
+      "source": "skills/aprof/support/ascendc-docs-search"
     },
     {
       "name": "ascendc-code-review",
-      "source": "third_party/cannbot-skills/ops/ascendc-code-review"
+      "source": "skills/aprof/support/ascendc-code-review"
     },
     {
       "name": "ascendc-precision-debug",
-      "source": "third_party/cannbot-skills/ops/ascendc-precision-debug"
+      "source": "skills/aprof/support/ascendc-precision-debug"
     },
     {
       "name": "ascendc-runtime-debug",
-      "source": "third_party/cannbot-skills/ops/ascendc-runtime-debug"
+      "source": "skills/aprof/support/ascendc-runtime-debug"
     },
     {
       "name": "ascendc-crash-debug",
-      "source": "third_party/cannbot-skills/ops/ascendc-crash-debug"
+      "source": "skills/aprof/support/ascendc-crash-debug"
     },
     {
       "name": "ops-profiling",
-      "source": "third_party/cannbot-skills/ops/ops-profiling"
+      "source": "skills/aprof/support/ops-profiling"
     },
     {
       "name": "ops-simulator",
-      "source": "third_party/cannbot-skills/ops/ops-simulator"
+      "source": "skills/aprof/support/ops-simulator"
     },
     {
       "name": "npu-arch",
-      "source": "third_party/cannbot-skills/ops/npu-arch"
+      "source": "skills/aprof/support/npu-arch"
     }
   ],
   "cursor_agents": [
@@ -178,6 +184,10 @@
     {
       "name": "aprof-optimization-wrapper",
       "source": "plugins/aprof-performance-workflow/agents/aprof-optimization-wrapper.md"
+    },
+    {
+      "name": "aprof-parallel-planning-wrapper",
+      "source": "plugins/aprof-performance-workflow/agents/aprof-parallel-planning-wrapper.md"
     }
   ]
 }

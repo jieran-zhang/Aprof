@@ -13,6 +13,7 @@ import csv
 import hashlib
 import json
 import math
+import re
 from pathlib import Path
 import statistics
 import sys
@@ -66,6 +67,9 @@ def _csv_kind(path: Path) -> str | None:
     lower = path.name.lower()
     if lower in RELEVANT_NAMES:
         return lower.removesuffix(".csv")
+    timestamped = re.fullmatch(r"(.+)_([0-9]{14,20})\.csv", lower)
+    if timestamped and timestamped.group(1) + ".csv" in RELEVANT_NAMES:
+        return timestamped.group(1)
     if lower.startswith("op_summary_"):
         suffix = lower.removeprefix("op_summary_").removesuffix(".csv")
         # CANNBot archives metric-specific files such as
@@ -74,6 +78,22 @@ def _csv_kind(path: Path) -> str | None:
         # duration/block/pipe fields in one row.  Do not mistake the timestamp
         # for a metric kind or those fields will silently disappear.
         return suffix if suffix in {name.removesuffix(".csv") for name in RELEVANT_NAMES} else "op_summary"
+    return None
+
+
+def _context_kernel(path: Path) -> str | None:
+    """msprof-op core tables omit Op Name; bind them to sibling metadata."""
+    observed = set()
+    for sibling in sorted(path.parent.glob("*.csv")):
+        if _csv_kind(sibling) == "opbasicinfo":
+            for row in _read_rows(sibling):
+                name = (row.get("Op Name") or row.get("OP Name") or "").strip()
+                if name:
+                    observed.add(name)
+    if len(observed) == 1:
+        return next(iter(observed))
+    if not observed and path.parent.name.isdecimal() and any(part.startswith("OPPROF_") for part in path.parts):
+        return path.parent.parent.name
     return None
 
 
@@ -91,6 +111,9 @@ def _candidate_rows(
     warnings: list[str] = []
     for path, kind in artifacts:
         if kind == "per_core_cycles":
+            continue
+        context_kernel = _context_kernel(path) if op_name else None
+        if context_kernel is not None and context_kernel != op_name:
             continue
         rows = [row for row in _read_rows(path) if _matches_op(row, op_name)]
         if not rows:
@@ -140,16 +163,20 @@ def _ratio(value: float | None) -> float | None:
 def _per_core_times(
     rows_by_kind: dict[str, list[dict[str, str]]], artifacts: list[tuple[Path, str]]
 ) -> list[float]:
-    times: list[float] = []
+    by_core: dict[tuple[str, str], list[float]] = {}
     for row in rows_by_kind.get("pipeutilization", []):
         core_id = _first_text(
-            [row], "Core ID", "Core Id", "core_id", "coreid", "AI Core ID"
+            [row], "Core ID", "Core Id", "core_id", "coreid", "AI Core ID", "block_id"
         )
         if core_id is None:
             continue
         values = _values([row], "aiv_time(us)", "aic_time(us)")
         if values:
-            times.append(max(values))
+            sub_core = _first_text([row], "sub_block_id", "Sub Block Id") or ""
+            by_core.setdefault((core_id, sub_core), []).append(max(values))
+    # Repeated launches are not additional cores. Reduce each core across
+    # invocations first so launch-to-launch jitter does not become imbalance.
+    times = [statistics.median(values) for _, values in sorted(by_core.items())]
     if len(times) >= 2:
         return times
     for path, kind in artifacts:
@@ -286,13 +313,11 @@ def compress(args: argparse.Namespace) -> dict[str, Any]:
         if gm_to_ub_kb is not None and mte2_instructions and mte2_instructions > 0
         else None
     )
-    bandwidth_usage = _ratio(
-        _median(
-            memory_rows,
-            "GM_to_UB_bw_usage_rate(%)",
-            "aiv_gm_to_ub_bw_usage_rate(%)",
-        )
+    bandwidth_percent = _median(
+        memory_rows, "GM_to_UB_bw_usage_rate(%)", "aiv_gm_to_ub_bw_usage_rate(%)"
     )
+    # Explicit CSV units remain percentages even when the value is below one.
+    bandwidth_usage = bandwidth_percent / 100.0 if bandwidth_percent is not None else None
     conflict_ratio = _ratio(
         _median(
             conflict_rows,
@@ -314,9 +339,9 @@ def compress(args: argparse.Namespace) -> dict[str, Any]:
         else None
     )
 
-    cannbot_thresholds = (
-        "ops-profiling/references/optimization_quickref.md and "
-        "csv_fields_reference.md; expert heuristic, not hardware calibration"
+    aprof_thresholds = (
+        "ascendc-aprof-profiling/references/heuristic-thresholds.md; "
+        "expert heuristic, not hardware calibration"
     )
     symptoms = [
         _state(
@@ -341,7 +366,7 @@ def compress(args: argparse.Namespace) -> dict[str, Any]:
                 "mechanism.underused_task_parallelism",
             ],
             evidence_fields=["per_core_time"],
-            threshold_source=cannbot_thresholds,
+            threshold_source=aprof_thresholds,
         ),
         _state(
             "symptom.profile.scalar_share_high",
@@ -354,7 +379,7 @@ def compress(args: argparse.Namespace) -> dict[str, Any]:
                 "mechanism.workload_limited",
             ],
             evidence_fields=["aiv_scalar_ratio", "aic_scalar_ratio"],
-            threshold_source=cannbot_thresholds,
+            threshold_source=aprof_thresholds,
         ),
         _state(
             "symptom.profile.ub_conflict_high",
@@ -366,7 +391,7 @@ def compress(args: argparse.Namespace) -> dict[str, Any]:
                 "mechanism.pipeline_serialization",
             ],
             evidence_fields=["aiv_vec_total_cflt_ratio"],
-            threshold_source=cannbot_thresholds,
+            threshold_source=aprof_thresholds,
         ),
         _state(
             "symptom.profile.gm_traffic_amplified",
@@ -407,7 +432,7 @@ def compress(args: argparse.Namespace) -> dict[str, Any]:
                 "minimum_useful_transfer_bytes": args.min_useful_transfer_bytes,
             },
             "direction": "compound",
-            "threshold_source": cannbot_thresholds,
+            "threshold_source": aprof_thresholds,
             "candidate_problem_ids": [
                 "mechanism.tiny_transfer_setup_amplification",
                 "mechanism.pipeline_serialization",
@@ -529,7 +554,7 @@ def compress(args: argparse.Namespace) -> dict[str, Any]:
         "extractor": {
             "id": "aprof.compress_msprof",
             "version": "1.0.0",
-            "threshold_profile": "cannbot-ops-profiling-expert-heuristics-v1",
+            "threshold_profile": "aprof-local-expert-heuristics-v1",
         },
         "artifacts": artifact_records,
         "features": {

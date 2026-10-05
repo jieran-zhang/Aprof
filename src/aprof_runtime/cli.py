@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import nullcontext
 import sys
 from pathlib import Path
 from typing import Any, Sequence
@@ -19,6 +20,9 @@ from .policy import (
     write_policy_checkpoint,
 )
 from .store import EpisodeStore
+from .traces import (export_episodes, merge_trace_streams, recover_trace_tail,
+                     validate_trace_contract, verify_optimization_traces, verify_trace)
+from .exploration import ExplorationGate, verify_exploration
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -69,6 +73,40 @@ def _parser() -> argparse.ArgumentParser:
     graph_route.add_argument("--selection-mode", choices=("argmax", "sample"), default="argmax")
     graph_route.add_argument("--selection-seed", type=int)
 
+    dispatch = commands.add_parser("dispatch", help="validate workload metadata entry selection")
+    dispatch_commands = dispatch.add_subparsers(dest="action", required=True)
+    dispatch_select = dispatch_commands.add_parser("select")
+    dispatch_select.add_argument("--plan", required=True, type=Path)
+    dispatch_select.add_argument("--workload", required=True, type=Path)
+    dispatch_validate = dispatch_commands.add_parser("validate-context")
+    dispatch_validate.add_argument("--context", required=True, type=Path)
+
+    trace = commands.add_parser("trace", help="validate and collect independent evidence streams")
+    trace_commands = trace.add_subparsers(dest="action", required=True)
+    trace_verify = trace_commands.add_parser("verify")
+    trace_verify.add_argument("--input", required=True, type=Path)
+    trace_verify.add_argument("--kind", choices=("events", "optimization"), default="events")
+    trace_verify.add_argument("--store", type=Path)
+    trace_merge = trace_commands.add_parser("merge")
+    trace_merge.add_argument("--input", required=True, nargs="+", type=Path)
+    trace_merge.add_argument("--output", required=True, type=Path)
+    trace_merge.add_argument("--store", type=Path)
+    trace_recover = trace_commands.add_parser("recover")
+    trace_recover.add_argument("--input", required=True, type=Path)
+    trace_recover.add_argument("--store", type=Path)
+    trace_export = trace_commands.add_parser("export-episodes")
+    trace_export.add_argument("--store", required=True, type=Path)
+    trace_export.add_argument("--output", required=True, type=Path)
+
+    exploration = commands.add_parser("exploration", help="gate graph coverage gaps without v1 episodes")
+    exploration_commands = exploration.add_subparsers(dest="action", required=True)
+    for action in ("gate", "verify"):
+        command = exploration_commands.add_parser(action)
+        command.add_argument("--request", required=True, type=Path)
+        command.add_argument("--store", required=True, type=Path)
+        if action == "verify":
+            command.add_argument("--outcomes", required=True, type=Path)
+
     policy = commands.add_parser("policy", help="train and validate fixed-graph policy checkpoints")
     policy_commands = policy.add_subparsers(dest="action", required=True)
     policy_train = policy_commands.add_parser("train")
@@ -101,9 +139,38 @@ def _episode_training_source(path: Path) -> Any:
 
 
 def run(arguments: argparse.Namespace) -> Any:
+    if arguments.command == "dispatch":
+        from .planning import select_dispatch, validate_planning_context
+        if arguments.action == "select":
+            return select_dispatch(load_json(arguments.plan), load_json(arguments.workload))
+        validate_planning_context(Context.from_dict(load_json(arguments.context)), execution=True)
+        return {"valid": True, "contract": "architecture_parallel_dispatch_v1"}
     if arguments.command == "contract":
-        validated = validate_contract(arguments.kind, load_json(arguments.input))
+        trace_kinds = {"trace_event", "optimization_trace", "exploration_manifest", "exploration_request", "exploration_outcome", "normalized_profile", "mechanism_report"}
+        validator = (lambda kind, value: validate_trace_contract(kind.replace("_", "-"), value)) if arguments.kind in trace_kinds else validate_contract
+        validated = validator(arguments.kind, load_json(arguments.input))
         return {"valid": True, "kind": arguments.kind, "value": to_primitive(validated)}
+    if arguments.command == "trace":
+        with EpisodeStore(arguments.store) if arguments.store else nullcontext(None) as store:
+            if arguments.action == "verify":
+                verifier = verify_trace if arguments.kind == "events" else verify_optimization_traces
+                return verifier(arguments.input, store)
+            if arguments.action == "merge":
+                return merge_trace_streams(arguments.input, arguments.output, store)
+            if arguments.action == "recover":
+                return recover_trace_tail(arguments.input, store)
+            return export_episodes(store, arguments.output)
+    if arguments.command == "exploration":
+        with EpisodeStore(arguments.store) as store:
+            request = load_json(arguments.request)
+            if arguments.action == "gate":
+                return {"outcomes": ExplorationGate().evaluate(request, store=store)}
+            outcomes = load_json(arguments.outcomes)
+            if isinstance(outcomes, dict):
+                outcomes = outcomes.get("outcomes", outcomes.get("result", {}).get("outcomes"))
+            if not isinstance(outcomes, list):
+                raise ContractError("expected exploration outcomes array")
+            return verify_exploration(request, outcomes, store=store)
     if arguments.command == "candidate":
         request = GateRequest.from_dict(load_json(arguments.request))
         return {"outcomes": to_primitive(CandidateGate().evaluate(request))}

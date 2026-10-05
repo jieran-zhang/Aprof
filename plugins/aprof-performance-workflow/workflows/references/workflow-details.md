@@ -8,6 +8,8 @@ contracts, schema fields, measurement thresholds, or gate rules here.
 | Stage | Agent responsibility | Machine authority |
 | --- | --- | --- |
 | Input/scaffold | Resolve a complete `op_dir`; preserve a read-only baseline | Registry and context schema validation |
+| Architecture / parallel plan | Recover algorithm and legal decompositions against observed resources; produce profile/parallel/dispatch artifacts | Strict schemas, content hashes, capability/capacity masks |
+| Dispatch | Wire metadata keys into actual host/kernel entries, preserve fallback | Unique keys, matching conditions and bound group/plan identities |
 | Evidence | Propose source/workload/profile observations and missing views | Predicate IDs, graph version, strict contract validation |
 | Profile collection | Propose/execute authorized commands; retain raw artifacts | Artifact hashes, parser identity, paired statistics, evidence quality |
 | Route | Supply validated context and budget | Legal candidate set, masks, policy probabilities, selected edge, behavior propensity |
@@ -21,7 +23,8 @@ contracts, schema fields, measurement thresholds, or gate rules here.
   anchor or choose a transformation.
 - Profiling wrapper constructs collection/parse drafts; it does not declare
   stable performance evidence.
-- Optimization wrapper constructs candidate drafts; it does not run an
+- Parallel-planning wrapper constructs algorithm/task and dispatch drafts; it does not invent platform resources or performance gains.
+- Optimization wrapper preserves the frozen parallel plan and selected workload group, and constructs execution candidate drafts; it does not run an
   independent acceptance implementation.
 - Reviewer audits traceability and suspicious artifacts; it cannot replace a
   machine verdict.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
 import yaml
-SPEC=Path(__file__).resolve().parents[5]/'third_party/cann-bench/tasks/level2/resize_bilinear/cases.yaml'
+SPEC=Path(__file__).resolve().parent / 'cases.yaml'
 CASES=yaml.safe_load(SPEC.read_text())['cases']
 def get_case(case_id):
  for c in CASES:

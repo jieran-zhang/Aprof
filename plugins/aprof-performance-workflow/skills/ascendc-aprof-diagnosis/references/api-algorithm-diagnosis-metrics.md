@@ -4,7 +4,7 @@
 
 使用时应交叉参考：
 
-- [cannbot-knowledge-index.md](cannbot-knowledge-index.md)：只有 API 参数或算子族机制不确定时，点读单个具体 CANNBot reference。
+- [local-knowledge-index.md](local-knowledge-index.md)：只有 API 参数或算子族机制不确定时，点读单个具体 AProf local reference。
 - [AI Core 利用率低诊断矩阵](ai-core-utilization-diagnosis-metrics.md)：Vector / Cube 利用率、Scalar 占比、AIC/AIV 配比。
 - [数据搬运瓶颈诊断矩阵](data-movement-diagnosis-metrics.md)：融合不足导致的 GM 往返。
 - [流水并行不足诊断矩阵](pipeline-parallel-diagnosis-metrics.md)：API 顺序、同步、queue 对性能的影响。
@@ -96,7 +96,7 @@
 ### MatMul / GMM
 
 - A2/A3 通用 MatMul / GMM 的高阶 API 只在平台和实现路线明确时作为候选假设；不确定时先通过
-  [cannbot-knowledge-index.md](cannbot-knowledge-index.md) 点读具体 API reference。
+  [local-knowledge-index.md](local-knowledge-index.md) 点读具体 API reference。
 - 950 路径不要直接套 A2/A3 MatmulImpl 经验，需按平台 skill 选择实现。
 - 后处理尽量与 Fixpipe / UB epilogue 融合，避免 C 矩阵 GM 往返。
 
@@ -143,7 +143,7 @@ Scalar 高时按下表定位，不要只输出“存在标量开销”：
 - MatMul/GMM 高阶 API 的平台范围必须确认；不要把 A2/A3 经验直接套到 DAV_3510 / 950 路径。
 - RegBase / SIMT / Blaze 等路径只在源码和平台明确时作为诊断假设，不作为默认建议。
 - API overload、Cast mode、repeat/mask、pipeline event 不确定时，只按
-  [cannbot-knowledge-index.md](cannbot-knowledge-index.md) 点读单个具体文档。
+  [local-knowledge-index.md](local-knowledge-index.md) 点读单个具体文档。
 
 ## 快速排查顺序
 

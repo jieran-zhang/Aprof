@@ -736,6 +736,10 @@ class CandidateEpisode:
         # are attestations of a runtime computation, not merely self-hashed data.
         from .gates import CandidateGate
 
+        if episode.graph_snapshot.get("planning_contract") == "architecture_parallel_dispatch_v1" and episode.draft.transformation_id != "transformation.noop":
+            if episode.context.workload.get("source_hash") != episode.draft.source_hashes.baseline:
+                raise ContractError(f"{path}: v0002 draft baseline differs from planning source identity")
+
         authoritative = {
             item.candidate_id: item for item in CandidateGate().evaluate(episode.gate_request)
         }
@@ -765,6 +769,9 @@ CONTRACTS = {
 
 
 def validate_contract(kind: str, value: Any) -> Any:
+    from .planning import SCHEMAS as planning_schemas, validate_planning_contract
+    if kind in planning_schemas:
+        return validate_planning_contract(kind, value)
     try:
         contract = CONTRACTS[kind]
     except KeyError as exc:

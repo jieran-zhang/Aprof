@@ -32,8 +32,8 @@ permission:
 12. 不编造 msprof 字段、硬件容量、核数、频率、理论带宽或阈值。
 13. **MUST NOT** 默认加载大型外部优化 Skill；默认 `skills:` 只保留本文件列出的四项。
 14. 出现 Scalar / Memory / Vec / CUBE / no-bound 表层现象时，先读取 `references/bound-deep-routing.md` 做本地二级分流。
-15. 只有本地 reference 明确要求 API 或算子族机制核对时，才读取 `references/cannbot-knowledge-index.md`，并只点读一个具体 reference 文件。
-16. CANNBot 点读材料只能作为诊断锚点、metric 需求和反证来源，不能替代 msprof / workload / roofline 证据。
+15. 只有本地 reference 明确要求 API 或算子族机制核对时，才读取 `references/local-knowledge-index.md`，并只点读一个具体 reference 文件。
+16. AProf 本地点读材料只能作为诊断锚点、metric 需求和反证来源，不能替代 msprof / workload / roofline 证据。
 17. 六类历史 problem family 只作为 non-exclusive anchor facets；不得强制输出唯一 family。
 18. 输出是 draft evidence；不得写 behavior probability、policy reward 或 candidate verdict。
 
@@ -64,8 +64,8 @@ permission:
 
 - 源码阶段默认只读 `SKILL.md`、`source-hypothesis-routing.md`、1-3 个相关问题族 reference。
 - 只有 bound 表层现象已经明确时再读 `bound-deep-routing.md`。
-- `cannbot-knowledge-index.md` 是 optional deep lookup；它不是默认入口。
-- 禁止打开 CANNBot 大型 `SKILL.md` 作为常规诊断步骤。
+- `local-knowledge-index.md` 是 optional deep lookup；它不是默认入口。
+- 禁止打开 外部大型 `SKILL.md` 作为常规诊断步骤。
 
 ## 输出：源码阶段
 

@@ -1,0 +1,337 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aprof.local/schemas/shared-context-manifest.schema.json",
+  "type": "object",
+  "properties": {
+    "protocol_version": {
+      "const": "shared_context_paired_v1"
+    },
+    "analysis_version": {
+      "const": "shared_context_analysis_v1"
+    },
+    "comparison_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "attempt_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "comparison_kind": {
+      "enum": [
+        "parent",
+        "original"
+      ]
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "attributes": {
+            "type": "object"
+          },
+          "input_hash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "oracle_hash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "launches_per_call": {
+            "type": "object",
+            "properties": {
+              "A": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "B": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "A",
+              "B"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "case_id",
+          "attributes",
+          "input_hash",
+          "oracle_hash",
+          "launches_per_call"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "identities": {
+      "type": "object",
+      "properties": {
+        "A": {
+          "type": "object",
+          "properties": {
+            "source_hash": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "binary_hash": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "entry": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "source_hash",
+            "binary_hash",
+            "entry"
+          ],
+          "additionalProperties": false
+        },
+        "B": {
+          "type": "object",
+          "properties": {
+            "source_hash": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "binary_hash": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "entry": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "source_hash",
+            "binary_hash",
+            "entry"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "A",
+        "B"
+      ],
+      "additionalProperties": false
+    },
+    "control_identities": {
+      "type": "object",
+      "properties": {
+        "A": {
+          "type": "object",
+          "properties": {
+            "source_hash": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "binary_hash": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "entry": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "source_hash",
+            "binary_hash",
+            "entry"
+          ],
+          "additionalProperties": false
+        },
+        "B": {
+          "type": "object",
+          "properties": {
+            "source_hash": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "binary_hash": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "entry": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "source_hash",
+            "binary_hash",
+            "entry"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "A",
+        "B"
+      ],
+      "additionalProperties": false
+    },
+    "harness_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "hardware": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": "string",
+          "minLength": 1
+        },
+        "physical_chip": {
+          "type": "string",
+          "minLength": 1
+        },
+        "logical_device": {
+          "type": "integer"
+        },
+        "environment_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "host",
+        "physical_chip",
+        "logical_device",
+        "environment_hash"
+      ],
+      "additionalProperties": false
+    },
+    "qualification_scope": {
+      "type": "object"
+    },
+    "seed": {
+      "type": "integer"
+    },
+    "stages": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "qualification",
+          "before",
+          "reverse",
+          "ab",
+          "after"
+        ]
+      }
+    },
+    "session_plan": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "phase": {
+            "enum": [
+              "qualification",
+              "before",
+              "reverse",
+              "ab",
+              "after"
+            ]
+          },
+          "replicate_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 6
+          },
+          "block_id": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 6
+          },
+          "load_order": {
+            "enum": [
+              "AB",
+              "BA"
+            ]
+          },
+          "buffer_configs": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "normal",
+                "swapped"
+              ]
+            }
+          },
+          "first_order": {
+            "enum": [
+              "AB",
+              "BA"
+            ]
+          },
+          "case_order": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "session_id",
+          "phase",
+          "replicate_id",
+          "block_id",
+          "load_order",
+          "buffer_configs",
+          "first_order",
+          "case_order"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "protocol_version",
+    "analysis_version",
+    "comparison_id",
+    "run_id",
+    "task_id",
+    "attempt_id",
+    "comparison_kind",
+    "cases",
+    "identities",
+    "control_identities",
+    "harness_hash",
+    "hardware",
+    "qualification_scope",
+    "seed",
+    "stages",
+    "session_plan"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aprof.local/schemas/exploration-manifest.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "split": {
+      "enum": [
+        "train",
+        "validation"
+      ]
+    },
+    "frozen_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "session_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_hashes": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "baseline": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "candidate": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              }
+            },
+            "required": [
+              "baseline",
+              "candidate"
+            ]
+          },
+          "patch_artifact_hash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "handler_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "handler_version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "parameters": {
+            "type": "object"
+          },
+          "coverage_gap": {
+            "type": "string",
+            "minLength": 1
+          },
+          "attempt_evidence_hash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "session_id",
+          "source_hashes",
+          "patch_artifact_hash",
+          "handler_id",
+          "handler_version",
+          "parameters",
+          "coverage_gap",
+          "attempt_evidence_hash"
+        ]
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "schema_version",
+    "run_id",
+    "task_id",
+    "split",
+    "frozen_at",
+    "candidates"
+  ]
+}

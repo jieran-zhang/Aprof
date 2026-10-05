@@ -15,8 +15,8 @@ This reference is the human-readable cold-start prior used to build the seed Ski
   `matmul-optimization-playbook.md`, `softmax-fa-optimization-playbook.md`,
   `reduction-sort-optimization-playbook.md`, or `vector-scalar-pipeline-playbook.md`.
 - Do not default-load `ascendc-perf-optimize`, `ascendc-tiling-design`, `ascendc-performance-best-practices`, or `ascendc-api-best-practices`.
-- Use `optimization-cannbot-knowledge-index.md` only when API overload, repeat/mask, pipeline event, MatMul/FA/Sort/Softmax mechanism, or platform boundary is unresolved.
-- A CANNBot point-read may refine a candidate, but it cannot replace AProf diagnosis/profiling/workload evidence.
+- Use `optimization-local-knowledge-index.md` only when API overload, repeat/mask, pipeline event, MatMul/FA/Sort/Softmax mechanism, or platform boundary is unresolved.
+- A local targeted knowledge read may refine a candidate, but it cannot replace AProf diagnosis/profiling/workload evidence.
 
 ## Common Workflow Guards
 

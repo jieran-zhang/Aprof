@@ -18,6 +18,10 @@ permission:
 
 This agent runs only after an `op_dir` and a graph route are available. It must not edit the baseline project in place. All outputs are drafts until validated by `aprofctl`.
 
+## Parallel-plan and dispatch boundary
+
+Require validated architecture/parallel/dispatch evidence before stage-aware execution tuning. Bind their content hashes, selected workload group, tiling key and actual kernel entry. Set `optimization_stage=execution`; changing task partition, ownership, reduction or global algorithm returns to `ascendc-aprof-parallel-planning` with a new plan. Optimize and measure the selected region, then run the full correctness/regression matrix including fallback. A metadata guard with a general fallback is permitted; a case-ID shortcut or narrowed contract is benchmark specialization.
+
 ## Mandatory Rules
 
 1. Load `/ascendc-aprof-optimization` first.
@@ -31,7 +35,7 @@ This agent runs only after an `op_dir` and a graph route are available. It must 
 9. Apply CorrectnessAndGeneralityGate before patching; default scope is `production_safe`.
 10. Modify only `aprof_opt/candidates/candidate_N/op/`.
 11. Apply exactly one strategy per candidate; a strategy may include coordinated multi-line edits required by that single optimization idea.
-12. Before risky API, DataCopy, Cast, buffer, pipeline, MatMul, Softmax, or Sort edits, first use local references; only then point-read `references/optimization-cannbot-knowledge-index.md`.
+12. Before risky API, DataCopy, Cast, buffer, pipeline, MatMul, Softmax, or Sort edits, first use local references; only then point-read `references/optimization-local-knowledge-index.md`.
 13. After patching and before build, run StaticReview or require review evidence focused on API legality, UB/L1/L0/workspace bounds, DataCopy alignment, pipeline ordering, and portability.
 14. Submit candidate draft and evidence to the runtime gate; do not reproduce the gate verdict locally.
 15. Route gate failures explicitly: accuracy -> `ascendc-precision-debug`; runtime nonzero -> `ascendc-runtime-debug`; timeout/crash/AIC -> `ascendc-crash-debug`; metric regression -> memory + next candidate.
@@ -39,7 +43,7 @@ This agent runs only after an `op_dir` and a graph route are available. It must 
 17. Mark hardcoded shape/core/UB/tile, removed dynamic tiling, reduced precision, or narrowed boundary support as `benchmark_specialized`; report but do not copy to `best_op`.
 18. Finalize failures and successes as versioned candidate episodes under `.aprof/`; legacy optimization memory is read-only.
 19. Mark simulator-derived metrics as proxy evidence.
-20. Do not default-load CANNBot `ascendc-perf-optimize`, `ascendc-tiling-design`, `ascendc-performance-best-practices`, or `ascendc-api-best-practices`.
+20. Load only candidate-relevant local references from `ascendc-perf-optimize`, `ascendc-tiling-design`, `ascendc-performance-best-practices`, or `ascendc-api-best-practices`.
 
 ## Loop
 
@@ -63,4 +67,4 @@ op_dir + diagnosis/profiling
 - No SSH/remote deployment in the local candidate loop.
 - The injection system is benchmark-only and is not a core workflow dependency; no recipe or hidden label may enter routing.
 - No claims of real hardware counters from simulator-only artifacts.
-- No default CANNBot large skill loading; use optional precise index only for unresolved API/platform/operator mechanisms.
+- No external skill loading; use optional precise index only for unresolved API/platform/operator mechanisms.

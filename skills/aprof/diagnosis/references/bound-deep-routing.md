@@ -10,8 +10,8 @@ problem family；它只帮助 agent 在看到 `Scalar`、`MTE`、`VEC/CUBE` 或 
   `Scalar` / `Memory` / `VEC` / `CUBE` / no-bound 时才读取本文。
 - 读取本文后仍然回到六类 reference：`tiling`、`data_movement`、`pipeline_parallel`、
   `onchip_memory`、`ai_core_utilization`、`api_algorithm`。
-- 不直接读取 CANNBot 大型 `SKILL.md`。若需要核对具体 API 或算子族细节，按
-  [cannbot-knowledge-index.md](cannbot-knowledge-index.md) 点读单个具体 reference。
+- 不直接读取 外部大型 `SKILL.md`。若需要核对具体 API 或算子族细节，按
+  [local-knowledge-index.md](local-knowledge-index.md) 点读单个具体 reference。
 
 ## 输入信号
 

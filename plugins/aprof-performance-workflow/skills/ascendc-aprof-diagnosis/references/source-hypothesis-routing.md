@@ -11,8 +11,8 @@
 - 涉及 `blockDim`、UB 占用或 AI Core 利用率时，先记录 shape/dtype/total elements；最终判断必须交给 workload-aware predicate 和 graph route，不得仅凭低利用率下结论。
 - 若源码或 profiling 已经呈现 Scalar / Memory / Vec / CUBE / no-bound 现象，读取
   [bound-deep-routing.md](bound-deep-routing.md) 做二级分流；仍然把输出落到六类 problem family。
-- 不直接打开 CANNBot 大型 `SKILL.md`。只有 AProf 本地 reference 明确需要 API 或算子族细节时，才按
-  [cannbot-knowledge-index.md](cannbot-knowledge-index.md) 点读单个具体 reference。
+- 不直接打开 外部大型 `SKILL.md`。只有 AProf 本地 reference 明确需要 API 或算子族细节时，才按
+  [local-knowledge-index.md](local-knowledge-index.md) 点读单个具体 reference。
 
 ## 源码模式映射
 

@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 
-TASK_CSV = Path(__file__).resolve().parents[5] / "third_party/cann-bench/tasks/level2/apply_adam_w/cases.csv"
+TASK_CSV = Path(__file__).resolve().parent / 'cases.csv'
 
 
 def load_cases():

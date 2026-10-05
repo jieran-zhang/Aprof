@@ -24,35 +24,15 @@ natural-language judgment alone.
 
 ## Workflow
 
-1. Load `ascendc-aprof-diagnosis` to extract source, workload, and available
-   profile evidence. Preserve unknown and missing views; do not force a family.
-2. Load `ascendc-aprof-profiling` only when required evidence is absent or a
-   candidate needs paired measurement.
-3. Validate supported runtime kinds (`context`, `candidate_draft`,
-   `handler_attempt`, `gate_request`, `gate_outcome`, and `candidate_episode`)
-   with `aprofctl contract validate` before using them as runtime state.
-   Profiling plan/result, stage report, paired timing, and symptom JSON remain
-   drafts until mapped into `context` or `gate_request`.
-4. Route on the published `skillgraph/versions/<graph_version>` snapshot as
-   soon as the context is schema-valid. Missing profile views remain `unknown`;
-   they do not block routing because `unknown_unresolved -> NOOP` is a legal
-   conservative result. They do block unsupported non-NOOP candidates.
-   Record the complete legal candidate set, hard-mask reasons, selected edge
-   IDs, logits, and behavior probabilities. The six historical families are
-   non-exclusive facets, not ground-truth problem labels.
-5. Load `ascendc-aprof-optimization` for the selected atomic transformation
-   contract. Instantiate one optimization intent per candidate and preserve the
-   exact contract version and action parameters.
-6. Submit the candidate draft to `aprofctl candidate gate`. Import raw gate
-   evidence in this order: schema/precondition,
-   capacity/static review, build, accuracy/semantic, runtime safety, cheap
-   timing, paired profile, stability, mechanism consistency, and generality.
-7. Add every referenced source, patch, producer, and evidence object to the
-   task-local CAS. Finalize with `aprofctl episode finalize --graph <snapshot>`
-   and the exact `--policy` when learned routing was used. Keep verified
-   failures and stable regressions.
-8. Report only the runtime verdict. A faster candidate is not production-safe
-   when correctness, stability, scope, portability, or held-out checks fail.
+1. Preserve the full operator contract, workload metadata and baseline source hash. Run the bundled environment preflight and `npu-arch`; record actual SoC/ISA, SDK, visible resources and unknown capabilities. Do not infer 910B versus 910C from the shared 2201 ISA enum.
+2. Use `ascendc-aprof-diagnosis` to construct source/workload evidence and collect only missing profile views with `ascendc-aprof-profiling`. Preserve ambiguity; six legacy families remain nonexclusive evidence facets.
+3. Run **algorithm parallel planning** with `ascendc-aprof-parallel-planning`: compare legal algorithms, partitions, ownership, reduction/synchronization and workspace per workload group. Validate `architecture_profile` and `parallel_plan`. Any algorithm implementation candidate uses `optimization_stage=algorithm_parallel` and the normal gates.
+4. Create and validate `dispatch_plan` for metadata → workload group → uint64 tiling key → actual kernel entry, with a general fallback. Implement equivalent host/kernel dispatch for the project's registered or direct-launch mode; trace-only keys do not satisfy this stage. Verify overlap, boundary and unseen-metadata behavior.
+5. Freeze the selected parallel plan and dispatch. Bind all three artifact objects and canonical hashes in `Context.evidence`, and use `optimization_stage=execution` for **execution optimization**. A new decomposition/ownership/reduction returns to parallel planning. Route on the immutable stage-aware graph snapshot; retain full legal candidate set, hard-mask reasons, selected edges and actual behavior probability.
+6. Use `ascendc-aprof-optimization` to instantiate one selected execution intent per isolated candidate, scoped to the selected group/key. Tile size, buffer depth, memory movement and pipeline scheduling are evaluated under the frozen algorithm plan. Test the complete correctness contract and all other regions/fallback for regression.
+7. Submit supported runtime contracts through `aprofctl contract validate`, then run `aprofctl candidate gate` in the declared gate order. Profiling plan/result, stage report, timing and symptom files are drafts until mapped into runtime evidence; planning JSON has its own strict contract kinds. Stop a candidate at the first mandatory failure.
+8. Register source, patch, plan/profile/dispatch and evidence objects in the task CAS. When a compatible runtime gate actually ran, finalize with `aprofctl episode finalize --graph <snapshot>` and the exact behavior `--policy` if used. For a research campaign without that gate, retain optimization-memory/conditional-lesson v2 evidence with `formal_admission=not_evaluated`, `graph_policy_eligible=false` and no episode reference. Preserve every failed, regressed and NOOP attempt, stage labels, per-group results, parent lineage and budget.
+9. For requested consecutive rounds, seed the next round from the selected previous parent that passed correctness and runtime validation, with explicit source lineage. Keep performance admission separate: an exploratory parent is not a production best; a failed round retains the previous validated parent. Report measured changes by group and overall, and only the runtime's production verdict. A proposal, schema-valid plan, simulator run or trace export is not proof of hardware improvement.
 
 ## Training boundary
 
@@ -65,9 +45,15 @@ natural-language judgment alone.
   FastGELU demonstrations as verified policy reward.
 - Train only from the verified SQLite EpisodeStore. Raw JSON/JSONL traces lack
   CAS and chain attestation.
+- Research memory and lesson v2 may preserve verified measurements and portable
+  evidence without formal runtime admission. Link each lesson to a real memory;
+  separate algorithm-parallel and execution lessons, including their conditions,
+  counterexamples and uncertainty. Neither a portable evidence bundle nor a
+  research runtime-safety assessment is a compatible formal gate result.
 - Keep benchmark generation in `ascendc-aprof-inject-problems` outside this
   workflow. It may later supply sealed tasks through an adapter, but it is not
   part of the production SkillGraph.
+- Preserve historical `v0001` as a fixed mechanism/transformation skeleton. New stage-aware runs use the published `v0002` snapshot; do not rewrite old episodes.
 - Treat `v0001` as a fixed mechanism/transformation skeleton. Its formal
   predicates map one-to-one to mechanisms, and each actionable mechanism has
   one positive transformation plus `NOOP`. Do not describe its global edge-bias
@@ -88,7 +74,8 @@ natural-language judgment alone.
 
 - Stop at a validated plan when execution is not authorized or required tools
   are unavailable.
-- Stop a candidate after the first failed mandatory gate and finalize the typed
-  negative episode.
+- Stop a candidate after the first failed mandatory gate. Finalize a typed
+  negative episode only for a compatible gate execution; otherwise retain the
+  failed research attempt and its raw evidence without a graph episode.
 - Select `NOOP` when no transformation satisfies evidence, applicability,
   capacity, or safety constraints.

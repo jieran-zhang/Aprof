@@ -17,6 +17,24 @@ training boundary, episode eligibility rules, operator-disjoint data protocol,
 and the staged plan for evidence acquisition, graph evolution, parameter
 learning, and transfer evaluation.
 
+For a preparation-only first run, see the
+[lightweight trace pilot](docs/trace_collection_pilot.md). It freezes graph,
+split, budget, source, and store identities without executing hardware or
+modifying a candidate.
+
+For organizing new optimization experiments, recording feedback, and extracting
+conditional lessons, start with the
+[experiment playbook (中文)](docs/optimization_experiment_playbook.md) and its
+[shared-context paired measurement specification](docs/shared_context_paired_protocol.md).
+The new measurement protocol is specified but not yet implemented or qualified;
+the documentation update does not start hardware. Existing CPU data tools are
+described in [trace collection v2](docs/optimization_trace_collection_v2.md).
+
+For the historical bounded Level1 device experiments and local structured data, see the
+[hardware trace campaign](docs/level1_trace_campaign.md),
+[JSONL contracts](docs/trace_jsonl_contract.md), and
+[isolated knowledge manifests](docs/level1_knowledge_manifest.md).
+
 ## Architecture
 
 ```text

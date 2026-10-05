@@ -18,6 +18,7 @@ from .contracts import (
     SCHEMA_VERSION,
 )
 from .jsonio import content_hash, to_primitive
+from .errors import ContractError
 
 
 def _median(samples: tuple[float, ...]) -> float:
@@ -86,107 +87,7 @@ class CandidateGate:
         candidate_id = draft.candidate_id
         if draft.transformation_id == "transformation.noop":
             return self._evaluate_noop(draft, evidence)
-        baseline = _median(evidence.baseline_samples_ns)
-        candidate = _median(evidence.candidate_samples_ns)
-        speedup = 0.0
-        speedup_lcb = 0.0
-        cv = max(_cv(evidence.baseline_samples_ns), _cv(evidence.candidate_samples_ns))
-        max_regression = max(evidence.heldout_regressions, default=0.0)
-        utility = -1.0
-        path = ["draft", "static_review"]
-        reasons: list[str] = []
-
-        verdict = GateVerdict.STATIC_REJECTED
-        eligible = False
-        if evidence.static_review is not GateStageStatus.PASSED:
-            verdict = GateVerdict.STATIC_REJECTED
-            reasons.append(f"static review status is {evidence.static_review.value}")
-        elif evidence.build is not GateStageStatus.PASSED:
-            path.append("build")
-            verdict = GateVerdict.BUILD_FAILED
-            reasons.append(f"build status is {evidence.build.value}")
-        else:
-            path.extend(("build", "accuracy"))
-            if evidence.accuracy is not GateStageStatus.PASSED or evidence.semantic is not GateStageStatus.PASSED:
-                verdict = GateVerdict.ACCURACY_FAILED
-                reasons.append(f"accuracy status is {evidence.accuracy.value}; semantic status is {evidence.semantic.value}")
-            elif evidence.runtime is not GateStageStatus.PASSED:
-                path.append("runtime")
-                verdict = GateVerdict.RUNTIME_FAILED
-                reasons.append(f"runtime status is {evidence.runtime.value}")
-            else:
-                path.extend(("runtime", "artifacts"))
-                missing = sorted(set(config.required_artifacts) - evidence.artifacts.keys())
-                if missing:
-                    verdict = GateVerdict.ARTIFACTS_INCOMPLETE
-                    reasons.append("missing required artifacts: " + ", ".join(missing))
-                else:
-                    path.append("measurement_stability")
-                    paired = len(evidence.baseline_samples_ns) == len(evidence.candidate_samples_ns)
-                    enough = len(evidence.baseline_samples_ns) >= config.min_pairs
-                    if not paired or not enough:
-                        verdict = GateVerdict.MEASUREMENT_UNSTABLE
-                        reasons.append(
-                            f"paired measurements require equal arrays with at least {config.min_pairs} pairs"
-                        )
-                    elif cv > config.max_cv:
-                        verdict = GateVerdict.MEASUREMENT_UNSTABLE
-                        reasons.append(f"candidate runtime cv {cv:.6g} exceeds {config.max_cv:.6g}")
-                    else:
-                        speedup, speedup_lcb = _paired_estimate(
-                            evidence.baseline_samples_ns, evidence.candidate_samples_ns, config, candidate_id
-                        )
-                        utility = math.log(speedup) - max(0.0, max_regression)
-                        path.append("mechanism_alignment")
-                        if config.require_mechanism_alignment and evidence.mechanism_alignment is not True:
-                            verdict = GateVerdict.ATTRIBUTION_UNCERTAIN
-                            reasons.append("required mechanism alignment was not demonstrated")
-                        else:
-                            if evidence.mechanism_alignment is not True:
-                                reasons.append("mechanism attribution is uncertain (non-blocking)")
-                            path.append("heldout_regression")
-                            if max_regression > config.max_heldout_regression:
-                                verdict = GateVerdict.HELDOUT_REGRESSION
-                                reasons.append(
-                                    f"held-out regression {max_regression:.6g} exceeds {config.max_heldout_regression:.6g}"
-                                )
-                            else:
-                                path.append("performance_gain")
-                                if speedup_lcb < config.min_speedup_lcb:
-                                    verdict = GateVerdict.STABLE_NO_GAIN
-                                    reasons.append(
-                                        f"paired speedup LCB {speedup_lcb:.6g} is below {config.min_speedup_lcb:.6g}"
-                                    )
-                                elif evidence.scope is not GateStageStatus.PASSED or evidence.portability is not GateStageStatus.PASSED:
-                                    verdict = GateVerdict.BENCHMARK_SPECIALIZED_GAIN
-                                    reasons.append(
-                                        f"gain is benchmark-specialized; scope={evidence.scope.value}, portability={evidence.portability.value}"
-                                    )
-                                else:
-                                    path.extend(("production_safety", "eligible"))
-                                    verdict = GateVerdict.PRODUCTION_SAFE_GAIN
-                                    eligible = True
-                                    reasons.append("all machine gates passed")
-
-        return GateOutcome(
-            schema_version=SCHEMA_VERSION,
-            candidate_id=candidate_id,
-            verdict=verdict,
-            state_path=tuple(path),
-            baseline_median_ns=baseline,
-            candidate_median_ns=candidate,
-            speedup=speedup,
-            speedup_lcb=speedup_lcb,
-            pair_count=min(len(evidence.baseline_samples_ns), len(evidence.candidate_samples_ns)),
-            measurement_protocol="paired_log_speedup_deterministic_bootstrap_lcb_v1",
-            measurement_cv=cv,
-            utility=utility,
-            eligible=eligible,
-            policy_update_eligible=True,
-            selected_as_best=False,
-            reasons=tuple(reasons),
-            decision_hash="sha256:" + "0" * 64,
-        )
+        return evaluate_candidate_evidence(candidate_id, evidence, config)
 
     def _evaluate_noop(self, draft: CandidateDraft, evidence: GateEvidence) -> GateOutcome:
         reasons: list[str] = []
@@ -226,3 +127,116 @@ class CandidateGate:
             reasons=(f"verified no mutation: {reason.strip()}",) if verified else tuple(reasons),
             decision_hash="sha256:" + "0" * 64,
         )
+
+
+def evaluate_candidate_evidence(candidate_id: str, evidence: GateEvidence, config: GateConfig) -> GateOutcome:
+    """Shared non-NOOP gate; graph routing remains the caller's responsibility.
+
+    The arithmetic and state transitions are exactly those used by v1 episodes.
+    Exploration callers replace policy flags and create their own attestation.
+    """
+    GateConfig.from_dict(to_primitive(config), "$.config")
+    evidence = GateEvidence.from_dict(to_primitive(evidence), "$.evidence")
+    if candidate_id != evidence.candidate_id:
+        raise ContractError("candidate and evidence ids disagree")
+    baseline = _median(evidence.baseline_samples_ns)
+    candidate = _median(evidence.candidate_samples_ns)
+    speedup = 0.0
+    speedup_lcb = 0.0
+    cv = max(_cv(evidence.baseline_samples_ns), _cv(evidence.candidate_samples_ns))
+    max_regression = max(evidence.heldout_regressions, default=0.0)
+    utility = -1.0
+    path = ["draft", "static_review"]
+    reasons: list[str] = []
+
+    verdict = GateVerdict.STATIC_REJECTED
+    eligible = False
+    if evidence.static_review is not GateStageStatus.PASSED:
+        verdict = GateVerdict.STATIC_REJECTED
+        reasons.append(f"static review status is {evidence.static_review.value}")
+    elif evidence.build is not GateStageStatus.PASSED:
+        path.append("build")
+        verdict = GateVerdict.BUILD_FAILED
+        reasons.append(f"build status is {evidence.build.value}")
+    else:
+        path.extend(("build", "accuracy"))
+        if evidence.accuracy is not GateStageStatus.PASSED or evidence.semantic is not GateStageStatus.PASSED:
+            verdict = GateVerdict.ACCURACY_FAILED
+            reasons.append(f"accuracy status is {evidence.accuracy.value}; semantic status is {evidence.semantic.value}")
+        elif evidence.runtime is not GateStageStatus.PASSED:
+            path.append("runtime")
+            verdict = GateVerdict.RUNTIME_FAILED
+            reasons.append(f"runtime status is {evidence.runtime.value}")
+        else:
+            path.extend(("runtime", "artifacts"))
+            missing = sorted(set(config.required_artifacts) - evidence.artifacts.keys())
+            if missing:
+                verdict = GateVerdict.ARTIFACTS_INCOMPLETE
+                reasons.append("missing required artifacts: " + ", ".join(missing))
+            else:
+                path.append("measurement_stability")
+                paired = len(evidence.baseline_samples_ns) == len(evidence.candidate_samples_ns)
+                enough = len(evidence.baseline_samples_ns) >= config.min_pairs
+                if not paired or not enough:
+                    verdict = GateVerdict.MEASUREMENT_UNSTABLE
+                    reasons.append(
+                        f"paired measurements require equal arrays with at least {config.min_pairs} pairs"
+                    )
+                elif cv > config.max_cv:
+                    verdict = GateVerdict.MEASUREMENT_UNSTABLE
+                    reasons.append(f"candidate runtime cv {cv:.6g} exceeds {config.max_cv:.6g}")
+                else:
+                    speedup, speedup_lcb = _paired_estimate(
+                        evidence.baseline_samples_ns, evidence.candidate_samples_ns, config, candidate_id
+                    )
+                    utility = math.log(speedup) - max(0.0, max_regression)
+                    path.append("mechanism_alignment")
+                    if config.require_mechanism_alignment and evidence.mechanism_alignment is not True:
+                        verdict = GateVerdict.ATTRIBUTION_UNCERTAIN
+                        reasons.append("required mechanism alignment was not demonstrated")
+                    else:
+                        if evidence.mechanism_alignment is not True:
+                            reasons.append("mechanism attribution is uncertain (non-blocking)")
+                        path.append("heldout_regression")
+                        if max_regression > config.max_heldout_regression:
+                            verdict = GateVerdict.HELDOUT_REGRESSION
+                            reasons.append(
+                                f"held-out regression {max_regression:.6g} exceeds {config.max_heldout_regression:.6g}"
+                            )
+                        else:
+                            path.append("performance_gain")
+                            if speedup_lcb < config.min_speedup_lcb:
+                                verdict = GateVerdict.STABLE_NO_GAIN
+                                reasons.append(
+                                    f"paired speedup LCB {speedup_lcb:.6g} is below {config.min_speedup_lcb:.6g}"
+                                )
+                            elif evidence.scope is not GateStageStatus.PASSED or evidence.portability is not GateStageStatus.PASSED:
+                                verdict = GateVerdict.BENCHMARK_SPECIALIZED_GAIN
+                                reasons.append(
+                                    f"gain is benchmark-specialized; scope={evidence.scope.value}, portability={evidence.portability.value}"
+                                )
+                            else:
+                                path.extend(("production_safety", "eligible"))
+                                verdict = GateVerdict.PRODUCTION_SAFE_GAIN
+                                eligible = True
+                                reasons.append("all machine gates passed")
+
+    return GateOutcome(
+        schema_version=SCHEMA_VERSION,
+        candidate_id=candidate_id,
+        verdict=verdict,
+        state_path=tuple(path),
+        baseline_median_ns=baseline,
+        candidate_median_ns=candidate,
+        speedup=speedup,
+        speedup_lcb=speedup_lcb,
+        pair_count=min(len(evidence.baseline_samples_ns), len(evidence.candidate_samples_ns)),
+        measurement_protocol="paired_log_speedup_deterministic_bootstrap_lcb_v1",
+        measurement_cv=cv,
+        utility=utility,
+        eligible=eligible,
+        policy_update_eligible=True,
+        selected_as_best=False,
+        reasons=tuple(reasons),
+        decision_hash="sha256:" + "0" * 64,
+    )

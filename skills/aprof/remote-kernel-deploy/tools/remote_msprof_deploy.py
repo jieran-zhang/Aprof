@@ -39,14 +39,13 @@ PROFILING_SCRIPT_NAMES = ("msprof_profile_run.sh", "msprof_perf_summary.py", "pe
 
 def profiling_scripts_dir() -> Path:
     for candidate in (
-        _REPO_ROOT / "third_party/cannbot-skills/ops/ops-profiling/scripts",
+        _REPO_ROOT / "skills/aprof/support/ops-profiling/scripts",
         _REPO_ROOT / ".cursor/skills/ops-profiling/scripts",
     ):
         if (candidate / "msprof_profile_run.sh").is_file():
             return candidate
     raise SystemExit(
-        "找不到 ops-profiling 脚本。请执行: git submodule update --init "
-        "或 bash scripts/link_cannbot_skills.sh"
+        "找不到 AProf 本地 ops-profiling 脚本。请运行 python3 scripts/sync_aprof_registry.py check"
     )
 
 

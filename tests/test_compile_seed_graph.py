@@ -22,10 +22,13 @@ class SeedGraphCompilerTest(unittest.TestCase):
         self.source_dir = REPO_ROOT / "skillgraph" / "source"
         self.snapshot_dir = REPO_ROOT / "skillgraph" / "versions" / "v0001"
 
-    def test_checked_in_snapshot_is_current_and_internally_consistent(self) -> None:
-        artifacts = COMPILER.materialize_snapshot(
-            self.source_dir, self.snapshot_dir, REPO_ROOT, check=True
-        )
+    def test_published_v1_snapshot_is_internally_consistent(self) -> None:
+        # v0001 is historical. Distilled knowledge may evolve without rewriting
+        # its bound source hashes; v0002 has a separate reproducibility check.
+        from aprof_runtime.graph import load_snapshot
+        load_snapshot(self.snapshot_dir)
+        artifacts = {name: (self.snapshot_dir / name).read_bytes()
+                     for name in ("graph.json", "manifest.json", "checksums.json", "lineage.json")}
         graph = json.loads(artifacts["graph.json"])
         manifest = json.loads(artifacts["manifest.json"])
         checksums = json.loads(artifacts["checksums.json"])

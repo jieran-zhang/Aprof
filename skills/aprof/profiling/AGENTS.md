@@ -30,9 +30,9 @@ permission:
 7. 执行采集前必须确认用户授权、`run_cmd` / `op_config.json` 等必要输入和工具链可用。先用 `scripts/run_profile_stages.py --dry-run` 校验声明式阶段。
 8. 不编造 msprof 字段、CSV 文件名、命令参数、解析脚本或 metric 值。
 9. 原始 artifacts 与 hashes 必须保留在 `.aprof/` state；Agent 不得自行签发 stable performance reward。
-10. build 成功后必须先跑全量 correctness，再允许 profile。CANNBench 要求 `run.sh --all --skip-build` 和 20/20 `results.json`。
+10. build 成功后必须先跑全量 correctness，再允许 profile。CANNBench 要求 `run.sh --all --skip-build` 和全量声明case通过的 `results.json`。
 11. 使用 `scripts/compress_msprof.py` 生成结构化 symptom draft；保留同一 symptom 的多个 `candidate_problem_ids`，不得提前压成单一 mechanism。
-12. production timing 使用 `scripts/paired_timing.py` 或等价 timing-only collector 的至少 30 个 AB/BA pairs；CANNBot `--compare` 不能替代此 gate。
+12. production timing 使用 `scripts/paired_timing.py` 或等价 timing-only collector 的至少 30 个 AB/BA pairs；本地兼容工具的 `--compare` 不能替代此 gate。
 
 ## 输入
 

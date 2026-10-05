@@ -4,7 +4,7 @@
 This runner does not infer commands or silently install dependencies. Commands
 must be JSON arrays, every stage is logged, and execution stops at the first
 failed mandatory stage. It is suitable for CANNBench ``run.sh`` projects and
-for explicit CANNBot ``ops-profiling`` commands.
+for explicit AProf-bundled ``ops-profiling`` commands.
 """
 
 from __future__ import annotations

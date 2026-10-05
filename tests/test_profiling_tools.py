@@ -36,6 +36,21 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
 
 
 class ProfilingToolsTest(unittest.TestCase):
+    def test_explicit_bandwidth_percent_below_one_remains_percent(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            write_csv(root / 'Memory.csv', [{
+                'Op Name': 'demo_kernel', 'GM_to_UB_bw_usage_rate(%)': 0.637692,
+            }])
+            args = compress_msprof.build_parser().parse_args([
+                '--input', str(root), '--output', str(root / 'symptoms.json'),
+                '--op-name', 'demo_kernel',
+            ])
+            result = compress_msprof.compress(args)
+            symptom = next(row for row in result['symptoms'] if isinstance(row.get('value'), dict)
+                           and 'bandwidth_usage' in row['value'])
+            self.assertAlmostEqual(symptom['value']['bandwidth_usage'], 0.00637692)
+
     def test_compressor_reads_timestamped_standard_msprof_summary(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

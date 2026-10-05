@@ -10,7 +10,7 @@
 - 再按 `problem_family` 只读取 1 个对应分支 reference。
 - 如果 candidate 是复杂算子机制，额外读取 exactly one operator playbook：MatMul、Softmax/FA、Reduction/Sort 或 Vector/Scalar。
 - 只有 API overload、平台约束或算子族机制无法从本地 reference 确认时，才读取
-  `optimization-cannbot-knowledge-index.md` 并点读一个具体 CANNBot reference。
+  `optimization-local-knowledge-index.md` 并点读一个具体 AProf local reference。
 
 ## Candidate Depth
 

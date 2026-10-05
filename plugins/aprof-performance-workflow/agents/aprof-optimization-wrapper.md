@@ -18,6 +18,10 @@ permission:
 
 在 workflow 中调用 `aprof-optimization-agent` 的轻量 wrapper。只规范化输入输出，不复制 transformation 或 gate 规则。
 
+## Parallel-plan and dispatch boundary
+
+Require validated architecture/parallel/dispatch evidence before stage-aware execution tuning. Bind their content hashes, selected workload group, tiling key and actual kernel entry. Set `optimization_stage=execution`; changing task partition, ownership, reduction or global algorithm returns to `ascendc-aprof-parallel-planning` with a new plan. Optimize and measure the selected region, then run the full correctness/regression matrix including fallback. A metadata guard with a general fallback is permitted; a case-ID shortcut or narrowed contract is benchmark specialization.
+
 ## 输入
 
 - `op_dir`（必需，完整 direct-invoke 工程）
@@ -46,7 +50,7 @@ permission:
 - patch 前执行 CorrectnessAndGeneralityGate：默认 `production_safe`，保持算法语义、dtype 精度、动态 shape/tiling、tail 和边界安全。
 - 不直接修改 baseline `op_dir`。
 - 每个 candidate 只应用一个 strategy；单个 strategy 可以包含必要的多行循环、buffer、Host Tiling 或 workspace 改写。
-- 修改策略前先加载 AProf 本地分支 reference；风险 API/overload/算子族机制不确定时才按 optional CANNBot index 点读一个具体 reference。
+- 修改策略前先加载 AProf 本地分支 reference；风险 API/overload/算子族机制不确定时才按 local targeted knowledge index 点读一个具体 reference。
 - patch 后、build 前执行或要求 StaticReview 静态检视。
 - wrapper 只提交 draft 与 evidence；gate 顺序、状态和最终 verdict 由 runtime state machine 计算。
 - 硬编码 shape/core/UB/tile、删动态 tiling、降精度或缩小边界支持的候选必须标为 `benchmark_specialized`；即使更快也不能默认写入 `best_op/`。

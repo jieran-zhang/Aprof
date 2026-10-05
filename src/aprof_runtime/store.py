@@ -105,6 +105,23 @@ def _artifact_links(episode: CandidateEpisode) -> dict[str, str]:
     """Enumerate typed artifact references in the complete authoritative batch."""
 
     links: dict[str, str] = {}
+    if episode.graph_snapshot.get("planning_contract") == "architecture_parallel_dispatch_v1":
+        for name in ("architecture_profile", "parallel_plan", "dispatch_plan"):
+            digest = episode.context.evidence.get(name + "_ref")
+            if digest is not None:
+                links[f"planning.{name}"] = require_sha256(digest, f"context.evidence.{name}_ref")
+        profile = episode.context.evidence.get("architecture_profile", {})
+        for role, digest in profile.get("provenance", {}).items():
+            if digest is not None:
+                links[f"planning.architecture_provenance.{role}"] = require_sha256(digest, role)
+        for capability, record in profile.get("capabilities", {}).items():
+            for index, digest in enumerate(record.get("evidence_refs", [])):
+                links[f"planning.capability.{capability}.{index}"] = require_sha256(digest, capability)
+        for index, digest in enumerate(profile.get("compiler", {}).get("evidence_refs", [])):
+            links[f"planning.compiler.{index}"] = require_sha256(digest, "compiler evidence")
+        for group in episode.context.evidence.get("parallel_plan", {}).get("groups", []):
+            for index, digest in enumerate(group.get("selection_evidence", [])):
+                links[f"planning.group.{group['group_id']}.{index}"] = require_sha256(digest, group["group_id"])
     evidence = {item.candidate_id: item for item in episode.gate_request.evidence}
     for draft in episode.gate_request.candidates:
         prefix = f"batch.{draft.candidate_id}"
@@ -135,6 +152,19 @@ def _parse_payload(payload: str, path: str) -> CandidateEpisode:
     if canonical_json(episode) != payload:
         raise StoreError(f"{path}: payload is not canonical JSON")
     return episode
+
+
+def _verify_planning_artifacts(episode, resolve):
+    if episode.graph_snapshot.get("planning_contract") != "architecture_parallel_dispatch_v1":
+        return
+    from .planning import verify_profile_probe
+    profile = episode.context.evidence.get("architecture_profile")
+    if profile is not None:
+        try:
+            raw = json.loads(resolve(profile["provenance"]["raw_probe_ref"]).read_text())
+            verify_profile_probe(profile, raw)
+        except (ContractError, ValueError) as exc:
+            raise StoreError(f"architecture probe verification failed: {exc}") from exc
 
 
 def _usage(episode: CandidateEpisode) -> dict[str, int]:
@@ -288,6 +318,7 @@ def verify_store_connection(connection: sqlite3.Connection, objects_path: str | 
                 raise StoreError(f"CAS object is missing for {digest}")
             if file_hash(object_path) != digest:
                 raise StoreError(f"CAS object content does not match {digest}")
+        _verify_planning_artifacts(episode, lambda digest: _object_path(root, digest))
         previous = stored_chain_hash
 
     chain_count = connection.execute("SELECT COUNT(*) FROM episode_chain").fetchone()[0]
@@ -329,12 +360,30 @@ class EpisodeStore:
         artifact_path = Path(path)
         if artifact_path.is_symlink() or not artifact_path.is_file():
             raise StoreError(f"artifact must be a regular non-symlink file: {artifact_path}")
+        # Re-importing an already indexed immutable object needs no temporary
+        # copy/fsync or SQLite write transaction. Still hash both current source
+        # and CAS bytes on every call; this is not a cross-call trust cache.
+        existing_digest = file_hash(artifact_path)
+        existing_path = self.object_path(existing_digest)
+        if existing_path.exists():
+            if existing_path.is_symlink() or not existing_path.is_file() or file_hash(existing_path) != existing_digest:
+                raise StoreError(f"existing CAS object is corrupt: {existing_digest}")
+            cas_uri = existing_path.resolve().as_uri()
+            source_uri = uri or artifact_path.resolve().as_uri()
+            indexed = self.connection.execute("SELECT 1 FROM artifacts WHERE content_hash=?", (existing_digest,)).fetchone()
+            locations = self.connection.execute("SELECT uri FROM artifact_locations WHERE content_hash=? AND uri IN (?, ?)",
+                (existing_digest, cas_uri, source_uri)).fetchall()
+            if indexed and {row[0] for row in locations} >= {cas_uri, source_uri}:
+                return existing_digest
         self.objects_path.mkdir(parents=True, exist_ok=True)
         temporary_fd, temporary_name = tempfile.mkstemp(prefix=".incoming-", dir=self.objects_path)
         temporary_path = Path(temporary_name)
         digest_builder = hashlib.sha256()
         try:
             with artifact_path.open("rb") as source, os.fdopen(temporary_fd, "wb") as target:
+                # fdopen now owns this descriptor. A second close in finally
+                # could close a different thread's newly recycled descriptor.
+                temporary_fd = -1
                 while chunk := source.read(1024 * 1024):
                     target.write(chunk)
                     digest_builder.update(chunk)
@@ -410,6 +459,7 @@ class EpisodeStore:
         links = _artifact_links(episode)
         for digest in sorted(set(links.values())):
             self.verify_artifact(digest)
+        _verify_planning_artifacts(episode, self.verify_artifact)
         if episode.outcome.verdict is GateVerdict.VERIFIED_NOOP:
             baseline = self.verify_artifact(episode.draft.source_hashes.baseline)
             candidate = self.verify_artifact(episode.draft.source_hashes.candidate)

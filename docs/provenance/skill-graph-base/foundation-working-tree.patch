@@ -1,0 +1,804 @@
+diff --git a/README.md b/README.md
+index a9baeb1..5178a39 100644
+--- a/README.md
++++ b/README.md
+@@ -17,6 +17,24 @@ training boundary, episode eligibility rules, operator-disjoint data protocol,
+ and the staged plan for evidence acquisition, graph evolution, parameter
+ learning, and transfer evaluation.
+ 
++For a preparation-only first run, see the
++[lightweight trace pilot](docs/trace_collection_pilot.md). It freezes graph,
++split, budget, source, and store identities without executing hardware or
++modifying a candidate.
++
++For organizing new optimization experiments, recording feedback, and extracting
++conditional lessons, start with the
++[experiment playbook (中文)](docs/optimization_experiment_playbook.md) and its
++[shared-context paired measurement specification](docs/shared_context_paired_protocol.md).
++The new measurement protocol is specified but not yet implemented or qualified;
++the documentation update does not start hardware. Existing CPU data tools are
++described in [trace collection v2](docs/optimization_trace_collection_v2.md).
++
++For the historical bounded Level1 device experiments and local structured data, see the
++[hardware trace campaign](docs/level1_trace_campaign.md),
++[JSONL contracts](docs/trace_jsonl_contract.md), and
++[isolated knowledge manifests](docs/level1_knowledge_manifest.md).
++
+ ## Architecture
+ 
+ ```text
+diff --git a/plugins/aprof-performance-workflow/skills/ascendc-aprof-diagnosis/AGENTS.md b/plugins/aprof-performance-workflow/skills/ascendc-aprof-diagnosis/AGENTS.md
+index f8cf651..3e3e118 100644
+--- a/plugins/aprof-performance-workflow/skills/ascendc-aprof-diagnosis/AGENTS.md
++++ b/plugins/aprof-performance-workflow/skills/ascendc-aprof-diagnosis/AGENTS.md
+@@ -21,7 +21,7 @@ permission:
+ 1. **MUST** 先加载 `/ascendc-aprof-diagnosis`。
+ 2. 输入是源码或源码路径时，**MUST** 读取 `references/source-hypothesis-routing.md`。
+ 3. 单 kernel 独立诊断时，**MUST** 读取 `references/workload-aware-diagnosis.md` 和 `references/roofline-single-case.md`。
+-4. **MUST** 使用 `../references/contracts.md` 中的 `diagnosis_hypotheses.json` 或 `single_case_diagnosis.json` 契约。
++4. **MUST** 使用 `references/aprof-contracts.md` 中的 `diagnosis_hypotheses.json` 或 `single_case_diagnosis.json` 契约。
+ 5. 源码静态阶段最多输出 3 个 `hypotheses` 和 3 个 `metrics`。
+ 6. 有 profiling 数据时，**MUST** 加载 `/ops-profiling` 和 `/npu-arch`，再按诊断矩阵验证。
+ 7. 每个 `diagnoses[]` 问题 **MUST** 至少包含 2 个 metric 佐证。
+diff --git a/plugins/aprof-performance-workflow/skills/ascendc-aprof-diagnosis/SKILL.md b/plugins/aprof-performance-workflow/skills/ascendc-aprof-diagnosis/SKILL.md
+index f084b46..5330f0b 100644
+--- a/plugins/aprof-performance-workflow/skills/ascendc-aprof-diagnosis/SKILL.md
++++ b/plugins/aprof-performance-workflow/skills/ascendc-aprof-diagnosis/SKILL.md
+@@ -30,7 +30,7 @@ description: Build source, workload, and profile evidence for an Ascend C perfor
+ 1. 若输入是源码，先读取 [references/source-hypothesis-routing.md](references/source-hypothesis-routing.md)，把代码模式映射到一个或多个 anchor facets 和可检验机制假设。
+ 2. 按相关 facets 加载本 Skill 的 reference 文档，提出最多 3 个 provisional mechanism hypotheses，并保留支持、反驳和缺失证据。
+ 3. 若源码或 profiling 已呈现 Scalar / Memory / Vec / CUBE / no-bound 现象，再读取 [references/bound-deep-routing.md](references/bound-deep-routing.md) 做二级根因分流。
+-4. 从这些假设中挑选最多 3 个最相关硬件 metric。输出是 draft；机器 schema 位于仓库 `schemas/`，旧格式映射说明见 [../references/contracts.md](../references/contracts.md)。
++4. 从这些假设中挑选最多 3 个最相关硬件 metric。输出是 draft；机器 schema 位于仓库 `schemas/`，旧格式映射说明见 [references/aprof-contracts.md](references/aprof-contracts.md)。
+ 5. 若还没有采集数据，把 `metrics[]` 交给 `/ascendc-aprof-profiling` 设计采集任务和 metric 清单。
+ 6. 若已有 profiling 数据，再用 `/ops-profiling` 读取采集方式、CSV 字段和瓶颈判定方法。
+ 7. 再用 `/npu-arch` 获取核数、UB/L1/L0/L2/BT 容量、频率、理论带宽和理论算力等分母参数。
+@@ -77,7 +77,7 @@ description: Build source, workload, and profile evidence for an Ascend C perfor
+ - Workload-aware 可达上限诊断：[references/workload-aware-diagnosis.md](references/workload-aware-diagnosis.md)
+ - 单 kernel roofline 诊断：[references/roofline-single-case.md](references/roofline-single-case.md)
+ - Optional deep lookup 索引：[references/cannbot-knowledge-index.md](references/cannbot-knowledge-index.md)
+-- Agent 阶段契约：[../references/contracts.md](../references/contracts.md)
++- Agent 阶段契约：[references/aprof-contracts.md](references/aprof-contracts.md)
+ 
+ ## 扩展新诊断矩阵
+ 
+diff --git a/plugins/aprof-performance-workflow/skills/ascendc-aprof-optimization/SKILL.md b/plugins/aprof-performance-workflow/skills/ascendc-aprof-optimization/SKILL.md
+index 483e907..9f3d1ed 100644
+--- a/plugins/aprof-performance-workflow/skills/ascendc-aprof-optimization/SKILL.md
++++ b/plugins/aprof-performance-workflow/skills/ascendc-aprof-optimization/SKILL.md
+@@ -120,4 +120,4 @@ Use these only after a mechanism and transformation are selected; load at most o
+   policy-training input.
+ - `final_optimization_report.md`: production-safe best candidate, metric evidence summary, and faster rejected/benchmark-only candidates with reasons.
+ 
+-Use the versioned files under repository `schemas/` as the machine contracts. Read `skills/aprof/references/contracts.md` only when adapting legacy artifacts.
++Use the versioned files under repository `schemas/` as the machine contracts. Read `references/aprof-contracts.md` only when adapting legacy artifacts.
+diff --git a/plugins/aprof-performance-workflow/skills/ascendc-aprof-profiling/references/report-parsing.md b/plugins/aprof-performance-workflow/skills/ascendc-aprof-profiling/references/report-parsing.md
+index 7e18085..ee19647 100644
+--- a/plugins/aprof-performance-workflow/skills/ascendc-aprof-profiling/references/report-parsing.md
++++ b/plugins/aprof-performance-workflow/skills/ascendc-aprof-profiling/references/report-parsing.md
+@@ -126,4 +126,4 @@ selected_value = statistics[statistic]
+ - `single_run_exploration`：只有单次样本，只能用于探索。
+ - `measurement_limited`：缺失样本、缺失字段、baseline/candidate policy 不一致或提升小于噪声阈值。
+ 
+-示例输出见 [../../references/contracts.md](../../references/contracts.md)。
++示例输出见 [aprof-contracts.md](aprof-contracts.md)。
+diff --git a/plugins/aprof-performance-workflow/skills/ascendc-aprof-profiling/scripts/compress_msprof.py b/plugins/aprof-performance-workflow/skills/ascendc-aprof-profiling/scripts/compress_msprof.py
+index cbab2ea..389dc29 100755
+--- a/plugins/aprof-performance-workflow/skills/ascendc-aprof-profiling/scripts/compress_msprof.py
++++ b/plugins/aprof-performance-workflow/skills/ascendc-aprof-profiling/scripts/compress_msprof.py
+@@ -13,6 +13,7 @@ import csv
+ import hashlib
+ import json
+ import math
++import re
+ from pathlib import Path
+ import statistics
+ import sys
+@@ -66,6 +67,9 @@ def _csv_kind(path: Path) -> str | None:
+     lower = path.name.lower()
+     if lower in RELEVANT_NAMES:
+         return lower.removesuffix(".csv")
++    timestamped = re.fullmatch(r"(.+)_([0-9]{14,20})\.csv", lower)
++    if timestamped and timestamped.group(1) + ".csv" in RELEVANT_NAMES:
++        return timestamped.group(1)
+     if lower.startswith("op_summary_"):
+         suffix = lower.removeprefix("op_summary_").removesuffix(".csv")
+         # CANNBot archives metric-specific files such as
+@@ -77,6 +81,22 @@ def _csv_kind(path: Path) -> str | None:
+     return None
+ 
+ 
++def _context_kernel(path: Path) -> str | None:
++    """msprof-op core tables omit Op Name; bind them to sibling metadata."""
++    observed = set()
++    for sibling in sorted(path.parent.glob("*.csv")):
++        if _csv_kind(sibling) == "opbasicinfo":
++            for row in _read_rows(sibling):
++                name = (row.get("Op Name") or row.get("OP Name") or "").strip()
++                if name:
++                    observed.add(name)
++    if len(observed) == 1:
++        return next(iter(observed))
++    if not observed and path.parent.name.isdecimal() and any(part.startswith("OPPROF_") for part in path.parts):
++        return path.parent.parent.name
++    return None
++
++
+ def _matches_op(row: dict[str, str], op_name: str | None) -> bool:
+     if not op_name:
+         return True
+@@ -92,6 +112,9 @@ def _candidate_rows(
+     for path, kind in artifacts:
+         if kind == "per_core_cycles":
+             continue
++        context_kernel = _context_kernel(path) if op_name else None
++        if context_kernel is not None and context_kernel != op_name:
++            continue
+         rows = [row for row in _read_rows(path) if _matches_op(row, op_name)]
+         if not rows:
+             warnings.append(f"no matching rows: {path}")
+@@ -140,16 +163,20 @@ def _ratio(value: float | None) -> float | None:
+ def _per_core_times(
+     rows_by_kind: dict[str, list[dict[str, str]]], artifacts: list[tuple[Path, str]]
+ ) -> list[float]:
+-    times: list[float] = []
++    by_core: dict[tuple[str, str], list[float]] = {}
+     for row in rows_by_kind.get("pipeutilization", []):
+         core_id = _first_text(
+-            [row], "Core ID", "Core Id", "core_id", "coreid", "AI Core ID"
++            [row], "Core ID", "Core Id", "core_id", "coreid", "AI Core ID", "block_id"
+         )
+         if core_id is None:
+             continue
+         values = _values([row], "aiv_time(us)", "aic_time(us)")
+         if values:
+-            times.append(max(values))
++            sub_core = _first_text([row], "sub_block_id", "Sub Block Id") or ""
++            by_core.setdefault((core_id, sub_core), []).append(max(values))
++    # Repeated launches are not additional cores. Reduce each core across
++    # invocations first so launch-to-launch jitter does not become imbalance.
++    times = [statistics.median(values) for _, values in sorted(by_core.items())]
+     if len(times) >= 2:
+         return times
+     for path, kind in artifacts:
+@@ -286,13 +313,11 @@ def compress(args: argparse.Namespace) -> dict[str, Any]:
+         if gm_to_ub_kb is not None and mte2_instructions and mte2_instructions > 0
+         else None
+     )
+-    bandwidth_usage = _ratio(
+-        _median(
+-            memory_rows,
+-            "GM_to_UB_bw_usage_rate(%)",
+-            "aiv_gm_to_ub_bw_usage_rate(%)",
+-        )
++    bandwidth_percent = _median(
++        memory_rows, "GM_to_UB_bw_usage_rate(%)", "aiv_gm_to_ub_bw_usage_rate(%)"
+     )
++    # Explicit CSV units remain percentages even when the value is below one.
++    bandwidth_usage = bandwidth_percent / 100.0 if bandwidth_percent is not None else None
+     conflict_ratio = _ratio(
+         _median(
+             conflict_rows,
+diff --git a/pyproject.toml b/pyproject.toml
+index b08a784..811431b 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -7,7 +7,7 @@ name = "aprof-runtime"
+ version = "0.2.0"
+ description = "Machine-authoritative runtime contracts for AProf SkillGraph training"
+ requires-python = ">=3.11"
+-dependencies = []
++dependencies = ["jsonschema>=4.18"]
+ 
+ [project.optional-dependencies]
+ test = ["pytest>=8", "jsonschema>=4.18"]
+diff --git a/scripts/sync_aprof_registry.py b/scripts/sync_aprof_registry.py
+index 14b8618..506a0de 100755
+--- a/scripts/sync_aprof_registry.py
++++ b/scripts/sync_aprof_registry.py
+@@ -5,6 +5,7 @@ from __future__ import annotations
+ 
+ import argparse
+ import json
++import os
+ from pathlib import Path
+ import re
+ import shutil
+@@ -488,6 +489,37 @@ def _configured_codex_bundle_names(registry: dict[str, Any]) -> set[str]:
+     } | {item["name"] for item in registry.get("support_skills", [])}
+ 
+ 
++def codex_bundle_files(repo_root: Path, source: Path) -> dict[Path, bytes]:
++    """Render a portable skill, including shared contracts used by that skill.
++
++    Canonical skills retain their repository-relative links. Each generated
++    skill owns a byte-identical copy of the shared contract and links to it
++    locally, so an installed plugin does not depend on the checkout layout.
++    """
++    files = {relative: path.read_bytes() for relative, path in _bundle_source_files(source).items()}
++    shared = repo_root / "skills/aprof/references/contracts.md"
++    destination = Path("references/aprof-contracts.md")
++    used = False
++    for relative, payload in list(files.items()):
++        if relative.suffix != ".md":
++            continue
++        content = payload.decode("utf-8")
++        replacement = Path(os.path.relpath(destination, relative.parent)).as_posix()
++        rewritten = re.sub(
++            r"(?:skills/aprof/references/contracts\.md|(?:\.\./)+references/contracts\.md)",
++            replacement,
++            content,
++        )
++        if rewritten != content:
++            used = True
++            files[relative] = rewritten.encode("utf-8")
++    if used:
++        if not shared.is_file() or shared.is_symlink():
++            raise RegistryError(f"shared contract is missing or is a symlink: {shared}")
++        files[destination] = shared.read_bytes()
++    return files
++
++
+ def check_codex_skill_bundle(
+     repo_root: Path, registry: dict[str, Any]
+ ) -> list[str]:
+@@ -525,7 +557,7 @@ def check_codex_skill_bundle(
+             # Support submodules may be absent in a consumer checkout. The
+             # already materialized bundle remains usable and self-contained.
+             continue
+-        expected_files = _bundle_source_files(source)
++        expected_files = codex_bundle_files(repo_root, source)
+         actual_files: dict[Path, Path] = {}
+         for path in sorted(destination.rglob("*")):
+             relative = path.relative_to(destination)
+@@ -536,9 +568,9 @@ def check_codex_skill_bundle(
+         if set(actual_files) != set(expected_files):
+             errors.append(f"bundled skill file set is stale: {name}")
+             continue
+-        for relative, source_file in expected_files.items():
++        for relative, expected_bytes in expected_files.items():
+             try:
+-                if actual_files[relative].read_bytes() != source_file.read_bytes():
++                if actual_files[relative].read_bytes() != expected_bytes:
+                     errors.append(f"bundled skill file is stale: {name}/{relative}")
+             except OSError as exc:
+                 errors.append(f"cannot compare bundled skill {name}/{relative}: {exc}")
+@@ -564,18 +596,19 @@ def write_codex_skill_bundle(repo_root: Path, registry: dict[str, Any]) -> None:
+             continue
+         # Validate before removing the old generated copy, so a source symlink
+         # cannot escape into the archived plugin.
+-        _bundle_source_files(source)
++        rendered_files = codex_bundle_files(repo_root, source)
+         if destination.exists() or destination.is_symlink():
+             if destination.is_symlink() or not destination.is_dir():
+                 destination.unlink()
+             else:
+                 shutil.rmtree(destination)
+-        shutil.copytree(
+-            source,
+-            destination,
+-            symlinks=False,
+-            ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo"),
+-        )
++        for relative, payload in rendered_files.items():
++            target = destination / relative
++            target.parent.mkdir(parents=True, exist_ok=True)
++            target.write_bytes(payload)
++            source_file = source / relative
++            if source_file.is_file():
++                shutil.copymode(source_file, target)
+ 
+     for path in bundle_root.iterdir():
+         if path.name in configured_names:
+diff --git a/skills/aprof/profiling/scripts/compress_msprof.py b/skills/aprof/profiling/scripts/compress_msprof.py
+index cbab2ea..389dc29 100755
+--- a/skills/aprof/profiling/scripts/compress_msprof.py
++++ b/skills/aprof/profiling/scripts/compress_msprof.py
+@@ -13,6 +13,7 @@ import csv
+ import hashlib
+ import json
+ import math
++import re
+ from pathlib import Path
+ import statistics
+ import sys
+@@ -66,6 +67,9 @@ def _csv_kind(path: Path) -> str | None:
+     lower = path.name.lower()
+     if lower in RELEVANT_NAMES:
+         return lower.removesuffix(".csv")
++    timestamped = re.fullmatch(r"(.+)_([0-9]{14,20})\.csv", lower)
++    if timestamped and timestamped.group(1) + ".csv" in RELEVANT_NAMES:
++        return timestamped.group(1)
+     if lower.startswith("op_summary_"):
+         suffix = lower.removeprefix("op_summary_").removesuffix(".csv")
+         # CANNBot archives metric-specific files such as
+@@ -77,6 +81,22 @@ def _csv_kind(path: Path) -> str | None:
+     return None
+ 
+ 
++def _context_kernel(path: Path) -> str | None:
++    """msprof-op core tables omit Op Name; bind them to sibling metadata."""
++    observed = set()
++    for sibling in sorted(path.parent.glob("*.csv")):
++        if _csv_kind(sibling) == "opbasicinfo":
++            for row in _read_rows(sibling):
++                name = (row.get("Op Name") or row.get("OP Name") or "").strip()
++                if name:
++                    observed.add(name)
++    if len(observed) == 1:
++        return next(iter(observed))
++    if not observed and path.parent.name.isdecimal() and any(part.startswith("OPPROF_") for part in path.parts):
++        return path.parent.parent.name
++    return None
++
++
+ def _matches_op(row: dict[str, str], op_name: str | None) -> bool:
+     if not op_name:
+         return True
+@@ -92,6 +112,9 @@ def _candidate_rows(
+     for path, kind in artifacts:
+         if kind == "per_core_cycles":
+             continue
++        context_kernel = _context_kernel(path) if op_name else None
++        if context_kernel is not None and context_kernel != op_name:
++            continue
+         rows = [row for row in _read_rows(path) if _matches_op(row, op_name)]
+         if not rows:
+             warnings.append(f"no matching rows: {path}")
+@@ -140,16 +163,20 @@ def _ratio(value: float | None) -> float | None:
+ def _per_core_times(
+     rows_by_kind: dict[str, list[dict[str, str]]], artifacts: list[tuple[Path, str]]
+ ) -> list[float]:
+-    times: list[float] = []
++    by_core: dict[tuple[str, str], list[float]] = {}
+     for row in rows_by_kind.get("pipeutilization", []):
+         core_id = _first_text(
+-            [row], "Core ID", "Core Id", "core_id", "coreid", "AI Core ID"
++            [row], "Core ID", "Core Id", "core_id", "coreid", "AI Core ID", "block_id"
+         )
+         if core_id is None:
+             continue
+         values = _values([row], "aiv_time(us)", "aic_time(us)")
+         if values:
+-            times.append(max(values))
++            sub_core = _first_text([row], "sub_block_id", "Sub Block Id") or ""
++            by_core.setdefault((core_id, sub_core), []).append(max(values))
++    # Repeated launches are not additional cores. Reduce each core across
++    # invocations first so launch-to-launch jitter does not become imbalance.
++    times = [statistics.median(values) for _, values in sorted(by_core.items())]
+     if len(times) >= 2:
+         return times
+     for path, kind in artifacts:
+@@ -286,13 +313,11 @@ def compress(args: argparse.Namespace) -> dict[str, Any]:
+         if gm_to_ub_kb is not None and mte2_instructions and mte2_instructions > 0
+         else None
+     )
+-    bandwidth_usage = _ratio(
+-        _median(
+-            memory_rows,
+-            "GM_to_UB_bw_usage_rate(%)",
+-            "aiv_gm_to_ub_bw_usage_rate(%)",
+-        )
++    bandwidth_percent = _median(
++        memory_rows, "GM_to_UB_bw_usage_rate(%)", "aiv_gm_to_ub_bw_usage_rate(%)"
+     )
++    # Explicit CSV units remain percentages even when the value is below one.
++    bandwidth_usage = bandwidth_percent / 100.0 if bandwidth_percent is not None else None
+     conflict_ratio = _ratio(
+         _median(
+             conflict_rows,
+diff --git a/src/aprof_runtime/cli.py b/src/aprof_runtime/cli.py
+index 6d65d13..4a58725 100644
+--- a/src/aprof_runtime/cli.py
++++ b/src/aprof_runtime/cli.py
+@@ -1,6 +1,7 @@
+ from __future__ import annotations
+ 
+ import argparse
++from contextlib import nullcontext
+ import sys
+ from pathlib import Path
+ from typing import Any, Sequence
+@@ -19,6 +20,9 @@ from .policy import (
+     write_policy_checkpoint,
+ )
+ from .store import EpisodeStore
++from .traces import (export_episodes, merge_trace_streams, recover_trace_tail,
++                     validate_trace_contract, verify_optimization_traces, verify_trace)
++from .exploration import ExplorationGate, verify_exploration
+ 
+ 
+ def _parser() -> argparse.ArgumentParser:
+@@ -69,6 +73,32 @@ def _parser() -> argparse.ArgumentParser:
+     graph_route.add_argument("--selection-mode", choices=("argmax", "sample"), default="argmax")
+     graph_route.add_argument("--selection-seed", type=int)
+ 
++    trace = commands.add_parser("trace", help="validate and collect independent evidence streams")
++    trace_commands = trace.add_subparsers(dest="action", required=True)
++    trace_verify = trace_commands.add_parser("verify")
++    trace_verify.add_argument("--input", required=True, type=Path)
++    trace_verify.add_argument("--kind", choices=("events", "optimization"), default="events")
++    trace_verify.add_argument("--store", type=Path)
++    trace_merge = trace_commands.add_parser("merge")
++    trace_merge.add_argument("--input", required=True, nargs="+", type=Path)
++    trace_merge.add_argument("--output", required=True, type=Path)
++    trace_merge.add_argument("--store", type=Path)
++    trace_recover = trace_commands.add_parser("recover")
++    trace_recover.add_argument("--input", required=True, type=Path)
++    trace_recover.add_argument("--store", type=Path)
++    trace_export = trace_commands.add_parser("export-episodes")
++    trace_export.add_argument("--store", required=True, type=Path)
++    trace_export.add_argument("--output", required=True, type=Path)
++
++    exploration = commands.add_parser("exploration", help="gate graph coverage gaps without v1 episodes")
++    exploration_commands = exploration.add_subparsers(dest="action", required=True)
++    for action in ("gate", "verify"):
++        command = exploration_commands.add_parser(action)
++        command.add_argument("--request", required=True, type=Path)
++        command.add_argument("--store", required=True, type=Path)
++        if action == "verify":
++            command.add_argument("--outcomes", required=True, type=Path)
++
+     policy = commands.add_parser("policy", help="train and validate fixed-graph policy checkpoints")
+     policy_commands = policy.add_subparsers(dest="action", required=True)
+     policy_train = policy_commands.add_parser("train")
+@@ -102,8 +132,31 @@ def _episode_training_source(path: Path) -> Any:
+ 
+ def run(arguments: argparse.Namespace) -> Any:
+     if arguments.command == "contract":
+-        validated = validate_contract(arguments.kind, load_json(arguments.input))
++        trace_kinds = {"trace_event", "optimization_trace", "exploration_manifest", "exploration_request", "exploration_outcome", "normalized_profile", "mechanism_report"}
++        validator = (lambda kind, value: validate_trace_contract(kind.replace("_", "-"), value)) if arguments.kind in trace_kinds else validate_contract
++        validated = validator(arguments.kind, load_json(arguments.input))
+         return {"valid": True, "kind": arguments.kind, "value": to_primitive(validated)}
++    if arguments.command == "trace":
++        with EpisodeStore(arguments.store) if arguments.store else nullcontext(None) as store:
++            if arguments.action == "verify":
++                verifier = verify_trace if arguments.kind == "events" else verify_optimization_traces
++                return verifier(arguments.input, store)
++            if arguments.action == "merge":
++                return merge_trace_streams(arguments.input, arguments.output, store)
++            if arguments.action == "recover":
++                return recover_trace_tail(arguments.input, store)
++            return export_episodes(store, arguments.output)
++    if arguments.command == "exploration":
++        with EpisodeStore(arguments.store) as store:
++            request = load_json(arguments.request)
++            if arguments.action == "gate":
++                return {"outcomes": ExplorationGate().evaluate(request, store=store)}
++            outcomes = load_json(arguments.outcomes)
++            if isinstance(outcomes, dict):
++                outcomes = outcomes.get("outcomes", outcomes.get("result", {}).get("outcomes"))
++            if not isinstance(outcomes, list):
++                raise ContractError("expected exploration outcomes array")
++            return verify_exploration(request, outcomes, store=store)
+     if arguments.command == "candidate":
+         request = GateRequest.from_dict(load_json(arguments.request))
+         return {"outcomes": to_primitive(CandidateGate().evaluate(request))}
+diff --git a/src/aprof_runtime/gates.py b/src/aprof_runtime/gates.py
+index ff0d99b..90ac2ae 100644
+--- a/src/aprof_runtime/gates.py
++++ b/src/aprof_runtime/gates.py
+@@ -18,6 +18,7 @@ from .contracts import (
+     SCHEMA_VERSION,
+ )
+ from .jsonio import content_hash, to_primitive
++from .errors import ContractError
+ 
+ 
+ def _median(samples: tuple[float, ...]) -> float:
+@@ -86,107 +87,7 @@ class CandidateGate:
+         candidate_id = draft.candidate_id
+         if draft.transformation_id == "transformation.noop":
+             return self._evaluate_noop(draft, evidence)
+-        baseline = _median(evidence.baseline_samples_ns)
+-        candidate = _median(evidence.candidate_samples_ns)
+-        speedup = 0.0
+-        speedup_lcb = 0.0
+-        cv = max(_cv(evidence.baseline_samples_ns), _cv(evidence.candidate_samples_ns))
+-        max_regression = max(evidence.heldout_regressions, default=0.0)
+-        utility = -1.0
+-        path = ["draft", "static_review"]
+-        reasons: list[str] = []
+-
+-        verdict = GateVerdict.STATIC_REJECTED
+-        eligible = False
+-        if evidence.static_review is not GateStageStatus.PASSED:
+-            verdict = GateVerdict.STATIC_REJECTED
+-            reasons.append(f"static review status is {evidence.static_review.value}")
+-        elif evidence.build is not GateStageStatus.PASSED:
+-            path.append("build")
+-            verdict = GateVerdict.BUILD_FAILED
+-            reasons.append(f"build status is {evidence.build.value}")
+-        else:
+-            path.extend(("build", "accuracy"))
+-            if evidence.accuracy is not GateStageStatus.PASSED or evidence.semantic is not GateStageStatus.PASSED:
+-                verdict = GateVerdict.ACCURACY_FAILED
+-                reasons.append(f"accuracy status is {evidence.accuracy.value}; semantic status is {evidence.semantic.value}")
+-            elif evidence.runtime is not GateStageStatus.PASSED:
+-                path.append("runtime")
+-                verdict = GateVerdict.RUNTIME_FAILED
+-                reasons.append(f"runtime status is {evidence.runtime.value}")
+-            else:
+-                path.extend(("runtime", "artifacts"))
+-                missing = sorted(set(config.required_artifacts) - evidence.artifacts.keys())
+-                if missing:
+-                    verdict = GateVerdict.ARTIFACTS_INCOMPLETE
+-                    reasons.append("missing required artifacts: " + ", ".join(missing))
+-                else:
+-                    path.append("measurement_stability")
+-                    paired = len(evidence.baseline_samples_ns) == len(evidence.candidate_samples_ns)
+-                    enough = len(evidence.baseline_samples_ns) >= config.min_pairs
+-                    if not paired or not enough:
+-                        verdict = GateVerdict.MEASUREMENT_UNSTABLE
+-                        reasons.append(
+-                            f"paired measurements require equal arrays with at least {config.min_pairs} pairs"
+-                        )
+-                    elif cv > config.max_cv:
+-                        verdict = GateVerdict.MEASUREMENT_UNSTABLE
+-                        reasons.append(f"candidate runtime cv {cv:.6g} exceeds {config.max_cv:.6g}")
+-                    else:
+-                        speedup, speedup_lcb = _paired_estimate(
+-                            evidence.baseline_samples_ns, evidence.candidate_samples_ns, config, candidate_id
+-                        )
+-                        utility = math.log(speedup) - max(0.0, max_regression)
+-                        path.append("mechanism_alignment")
+-                        if config.require_mechanism_alignment and evidence.mechanism_alignment is not True:
+-                            verdict = GateVerdict.ATTRIBUTION_UNCERTAIN
+-                            reasons.append("required mechanism alignment was not demonstrated")
+-                        else:
+-                            if evidence.mechanism_alignment is not True:
+-                                reasons.append("mechanism attribution is uncertain (non-blocking)")
+-                            path.append("heldout_regression")
+-                            if max_regression > config.max_heldout_regression:
+-                                verdict = GateVerdict.HELDOUT_REGRESSION
+-                                reasons.append(
+-                                    f"held-out regression {max_regression:.6g} exceeds {config.max_heldout_regression:.6g}"
+-                                )
+-                            else:
+-                                path.append("performance_gain")
+-                                if speedup_lcb < config.min_speedup_lcb:
+-                                    verdict = GateVerdict.STABLE_NO_GAIN
+-                                    reasons.append(
+-                                        f"paired speedup LCB {speedup_lcb:.6g} is below {config.min_speedup_lcb:.6g}"
+-                                    )
+-                                elif evidence.scope is not GateStageStatus.PASSED or evidence.portability is not GateStageStatus.PASSED:
+-                                    verdict = GateVerdict.BENCHMARK_SPECIALIZED_GAIN
+-                                    reasons.append(
+-                                        f"gain is benchmark-specialized; scope={evidence.scope.value}, portability={evidence.portability.value}"
+-                                    )
+-                                else:
+-                                    path.extend(("production_safety", "eligible"))
+-                                    verdict = GateVerdict.PRODUCTION_SAFE_GAIN
+-                                    eligible = True
+-                                    reasons.append("all machine gates passed")
+-
+-        return GateOutcome(
+-            schema_version=SCHEMA_VERSION,
+-            candidate_id=candidate_id,
+-            verdict=verdict,
+-            state_path=tuple(path),
+-            baseline_median_ns=baseline,
+-            candidate_median_ns=candidate,
+-            speedup=speedup,
+-            speedup_lcb=speedup_lcb,
+-            pair_count=min(len(evidence.baseline_samples_ns), len(evidence.candidate_samples_ns)),
+-            measurement_protocol="paired_log_speedup_deterministic_bootstrap_lcb_v1",
+-            measurement_cv=cv,
+-            utility=utility,
+-            eligible=eligible,
+-            policy_update_eligible=True,
+-            selected_as_best=False,
+-            reasons=tuple(reasons),
+-            decision_hash="sha256:" + "0" * 64,
+-        )
++        return evaluate_candidate_evidence(candidate_id, evidence, config)
+ 
+     def _evaluate_noop(self, draft: CandidateDraft, evidence: GateEvidence) -> GateOutcome:
+         reasons: list[str] = []
+@@ -226,3 +127,116 @@ class CandidateGate:
+             reasons=(f"verified no mutation: {reason.strip()}",) if verified else tuple(reasons),
+             decision_hash="sha256:" + "0" * 64,
+         )
++
++
++def evaluate_candidate_evidence(candidate_id: str, evidence: GateEvidence, config: GateConfig) -> GateOutcome:
++    """Shared non-NOOP gate; graph routing remains the caller's responsibility.
++
++    The arithmetic and state transitions are exactly those used by v1 episodes.
++    Exploration callers replace policy flags and create their own attestation.
++    """
++    GateConfig.from_dict(to_primitive(config), "$.config")
++    evidence = GateEvidence.from_dict(to_primitive(evidence), "$.evidence")
++    if candidate_id != evidence.candidate_id:
++        raise ContractError("candidate and evidence ids disagree")
++    baseline = _median(evidence.baseline_samples_ns)
++    candidate = _median(evidence.candidate_samples_ns)
++    speedup = 0.0
++    speedup_lcb = 0.0
++    cv = max(_cv(evidence.baseline_samples_ns), _cv(evidence.candidate_samples_ns))
++    max_regression = max(evidence.heldout_regressions, default=0.0)
++    utility = -1.0
++    path = ["draft", "static_review"]
++    reasons: list[str] = []
++
++    verdict = GateVerdict.STATIC_REJECTED
++    eligible = False
++    if evidence.static_review is not GateStageStatus.PASSED:
++        verdict = GateVerdict.STATIC_REJECTED
++        reasons.append(f"static review status is {evidence.static_review.value}")
++    elif evidence.build is not GateStageStatus.PASSED:
++        path.append("build")
++        verdict = GateVerdict.BUILD_FAILED
++        reasons.append(f"build status is {evidence.build.value}")
++    else:
++        path.extend(("build", "accuracy"))
++        if evidence.accuracy is not GateStageStatus.PASSED or evidence.semantic is not GateStageStatus.PASSED:
++            verdict = GateVerdict.ACCURACY_FAILED
++            reasons.append(f"accuracy status is {evidence.accuracy.value}; semantic status is {evidence.semantic.value}")
++        elif evidence.runtime is not GateStageStatus.PASSED:
++            path.append("runtime")
++            verdict = GateVerdict.RUNTIME_FAILED
++            reasons.append(f"runtime status is {evidence.runtime.value}")
++        else:
++            path.extend(("runtime", "artifacts"))
++            missing = sorted(set(config.required_artifacts) - evidence.artifacts.keys())
++            if missing:
++                verdict = GateVerdict.ARTIFACTS_INCOMPLETE
++                reasons.append("missing required artifacts: " + ", ".join(missing))
++            else:
++                path.append("measurement_stability")
++                paired = len(evidence.baseline_samples_ns) == len(evidence.candidate_samples_ns)
++                enough = len(evidence.baseline_samples_ns) >= config.min_pairs
++                if not paired or not enough:
++                    verdict = GateVerdict.MEASUREMENT_UNSTABLE
++                    reasons.append(
++                        f"paired measurements require equal arrays with at least {config.min_pairs} pairs"
++                    )
++                elif cv > config.max_cv:
++                    verdict = GateVerdict.MEASUREMENT_UNSTABLE
++                    reasons.append(f"candidate runtime cv {cv:.6g} exceeds {config.max_cv:.6g}")
++                else:
++                    speedup, speedup_lcb = _paired_estimate(
++                        evidence.baseline_samples_ns, evidence.candidate_samples_ns, config, candidate_id
++                    )
++                    utility = math.log(speedup) - max(0.0, max_regression)
++                    path.append("mechanism_alignment")
++                    if config.require_mechanism_alignment and evidence.mechanism_alignment is not True:
++                        verdict = GateVerdict.ATTRIBUTION_UNCERTAIN
++                        reasons.append("required mechanism alignment was not demonstrated")
++                    else:
++                        if evidence.mechanism_alignment is not True:
++                            reasons.append("mechanism attribution is uncertain (non-blocking)")
++                        path.append("heldout_regression")
++                        if max_regression > config.max_heldout_regression:
++                            verdict = GateVerdict.HELDOUT_REGRESSION
++                            reasons.append(
++                                f"held-out regression {max_regression:.6g} exceeds {config.max_heldout_regression:.6g}"
++                            )
++                        else:
++                            path.append("performance_gain")
++                            if speedup_lcb < config.min_speedup_lcb:
++                                verdict = GateVerdict.STABLE_NO_GAIN
++                                reasons.append(
++                                    f"paired speedup LCB {speedup_lcb:.6g} is below {config.min_speedup_lcb:.6g}"
++                                )
++                            elif evidence.scope is not GateStageStatus.PASSED or evidence.portability is not GateStageStatus.PASSED:
++                                verdict = GateVerdict.BENCHMARK_SPECIALIZED_GAIN
++                                reasons.append(
++                                    f"gain is benchmark-specialized; scope={evidence.scope.value}, portability={evidence.portability.value}"
++                                )
++                            else:
++                                path.extend(("production_safety", "eligible"))
++                                verdict = GateVerdict.PRODUCTION_SAFE_GAIN
++                                eligible = True
++                                reasons.append("all machine gates passed")
++
++    return GateOutcome(
++        schema_version=SCHEMA_VERSION,
++        candidate_id=candidate_id,
++        verdict=verdict,
++        state_path=tuple(path),
++        baseline_median_ns=baseline,
++        candidate_median_ns=candidate,
++        speedup=speedup,
++        speedup_lcb=speedup_lcb,
++        pair_count=min(len(evidence.baseline_samples_ns), len(evidence.candidate_samples_ns)),
++        measurement_protocol="paired_log_speedup_deterministic_bootstrap_lcb_v1",
++        measurement_cv=cv,
++        utility=utility,
++        eligible=eligible,
++        policy_update_eligible=True,
++        selected_as_best=False,
++        reasons=tuple(reasons),
++        decision_hash="sha256:" + "0" * 64,
++    )
+diff --git a/src/aprof_runtime/store.py b/src/aprof_runtime/store.py
+index fd84d64..c231cf3 100644
+--- a/src/aprof_runtime/store.py
++++ b/src/aprof_runtime/store.py
+@@ -329,12 +329,30 @@ class EpisodeStore:
+         artifact_path = Path(path)
+         if artifact_path.is_symlink() or not artifact_path.is_file():
+             raise StoreError(f"artifact must be a regular non-symlink file: {artifact_path}")
++        # Re-importing an already indexed immutable object needs no temporary
++        # copy/fsync or SQLite write transaction. Still hash both current source
++        # and CAS bytes on every call; this is not a cross-call trust cache.
++        existing_digest = file_hash(artifact_path)
++        existing_path = self.object_path(existing_digest)
++        if existing_path.exists():
++            if existing_path.is_symlink() or not existing_path.is_file() or file_hash(existing_path) != existing_digest:
++                raise StoreError(f"existing CAS object is corrupt: {existing_digest}")
++            cas_uri = existing_path.resolve().as_uri()
++            source_uri = uri or artifact_path.resolve().as_uri()
++            indexed = self.connection.execute("SELECT 1 FROM artifacts WHERE content_hash=?", (existing_digest,)).fetchone()
++            locations = self.connection.execute("SELECT uri FROM artifact_locations WHERE content_hash=? AND uri IN (?, ?)",
++                (existing_digest, cas_uri, source_uri)).fetchall()
++            if indexed and {row[0] for row in locations} >= {cas_uri, source_uri}:
++                return existing_digest
+         self.objects_path.mkdir(parents=True, exist_ok=True)
+         temporary_fd, temporary_name = tempfile.mkstemp(prefix=".incoming-", dir=self.objects_path)
+         temporary_path = Path(temporary_name)
+         digest_builder = hashlib.sha256()
+         try:
+             with artifact_path.open("rb") as source, os.fdopen(temporary_fd, "wb") as target:
++                # fdopen now owns this descriptor. A second close in finally
++                # could close a different thread's newly recycled descriptor.
++                temporary_fd = -1
+                 while chunk := source.read(1024 * 1024):
+                     target.write(chunk)
+                     digest_builder.update(chunk)
+diff --git a/tests/test_aprof_registry.py b/tests/test_aprof_registry.py
+index 8ec6aec..3f03cdd 100644
+--- a/tests/test_aprof_registry.py
++++ b/tests/test_aprof_registry.py
+@@ -224,7 +224,22 @@ class AProfRegistryTest(unittest.TestCase):
+             with self.subTest(skill=name):
+                 source = REPO_ROOT / item["source"]
+                 bundled = skills_root / name
+-                self.assertEqual(file_map(source), file_map(bundled))
++                expected = {
++                    path.as_posix(): payload
++                    for path, payload in registry_tool.codex_bundle_files(REPO_ROOT, source).items()
++                }
++                self.assertEqual(expected, file_map(bundled))
++
++    def test_portable_shared_contract_links_resolve_inside_each_skill(self) -> None:
++        for name, source in registry_tool.codex_bundle_entries(REPO_ROOT, self.registry):
++            rendered = registry_tool.codex_bundle_files(REPO_ROOT, source)
++            for relative, payload in rendered.items():
++                if relative.suffix != ".md":
++                    continue
++                import re
++                for link in re.findall(r"\]\(([^)]+aprof-contracts\.md)\)", payload.decode()):
++                    target = (Path("/bundle") / relative.parent / link).resolve()
++                    self.assertIn(target.relative_to("/bundle"), rendered, (name, relative, link))
+ 
+     def test_codex_renderers_are_deterministic(self) -> None:
+         self.assertEqual(
+diff --git a/tests/test_profiling_tools.py b/tests/test_profiling_tools.py
+index b3d8549..2474e28 100644
+--- a/tests/test_profiling_tools.py
++++ b/tests/test_profiling_tools.py
+@@ -36,6 +36,21 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
+ 
+ 
+ class ProfilingToolsTest(unittest.TestCase):
++    def test_explicit_bandwidth_percent_below_one_remains_percent(self) -> None:
++        with tempfile.TemporaryDirectory() as directory:
++            root = Path(directory)
++            write_csv(root / 'Memory.csv', [{
++                'Op Name': 'demo_kernel', 'GM_to_UB_bw_usage_rate(%)': 0.637692,
++            }])
++            args = compress_msprof.build_parser().parse_args([
++                '--input', str(root), '--output', str(root / 'symptoms.json'),
++                '--op-name', 'demo_kernel',
++            ])
++            result = compress_msprof.compress(args)
++            symptom = next(row for row in result['symptoms'] if isinstance(row.get('value'), dict)
++                           and 'bandwidth_usage' in row['value'])
++            self.assertAlmostEqual(symptom['value']['bandwidth_usage'], 0.00637692)
++
+     def test_compressor_reads_timestamped_standard_msprof_summary(self) -> None:
+         with tempfile.TemporaryDirectory() as directory:
+             root = Path(directory)

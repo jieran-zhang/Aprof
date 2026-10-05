@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -172,9 +173,11 @@ def validate_registry(repo_root: Path, registry: dict[str, Any]) -> list[str]:
         if name in seen_support_names:
             errors.append(f"duplicate support skill name: {name}")
         seen_support_names.add(name)
+        if not source.startswith("skills/aprof/"):
+            errors.append(f"support skill must be owned by AProf under skills/aprof/: {source}")
         skill_file = source_path / "SKILL.md"
         if not skill_file.is_file():
-            # A missing optional submodule is an install-time warning, not registry drift.
+            errors.append(f"missing required local support skill: {skill_file}")
             continue
         try:
             actual_name = read_frontmatter_name(skill_file)
@@ -300,6 +303,8 @@ def render_marketplace(registry: dict[str, Any]) -> str:
         _marketplace_skill_path(item["source"])
         for _, item in capabilities(registry, ("core", "optional_adapters"))
     ]
+    skill_paths.extend(_marketplace_skill_path(item["source"])
+                       for item in registry.get("support_skills", []))
     benchmark_skill_paths = [
         _marketplace_skill_path(item["source"])
         for _, item in capabilities(registry, ("benchmark_only",))
@@ -460,8 +465,9 @@ def codex_bundle_entries(
         source = _repo_path(
             repo_root, item["source"], f"support skill {item['name']} source"
         )
-        if (source / "SKILL.md").is_file():
-            entries.append((item["name"], source))
+        if not (source / "SKILL.md").is_file():
+            raise RegistryError(f"missing required local support skill: {source}")
+        entries.append((item["name"], source))
     return entries
 
 
@@ -486,6 +492,70 @@ def _configured_codex_bundle_names(registry: dict[str, Any]) -> set[str]:
         item["name"]
         for _, item in capabilities(registry, ("core",))
     } | {item["name"] for item in registry.get("support_skills", [])}
+
+
+def codex_bundle_files(repo_root: Path, source: Path) -> dict[Path, bytes]:
+    """Render a portable skill, including shared contracts used by that skill.
+
+    Canonical skills retain their repository-relative links. Each generated
+    skill owns a byte-identical copy of the shared contract and links to it
+    locally, so an installed plugin does not depend on the checkout layout.
+    """
+    files = {relative: path.read_bytes() for relative, path in _bundle_source_files(source).items()}
+    shared = repo_root / "skills/aprof/references/contracts.md"
+    destination = Path("references/aprof-contracts.md")
+    used = False
+    for relative, payload in list(files.items()):
+        if relative.suffix != ".md":
+            continue
+        content = payload.decode("utf-8")
+        replacement = Path(os.path.relpath(destination, relative.parent)).as_posix()
+        rewritten = re.sub(
+            r"(?:skills/aprof/references/contracts\.md|(?:\.\./)+references/contracts\.md)",
+            replacement,
+            content,
+        )
+        if rewritten != content:
+            used = True
+            files[relative] = rewritten.encode("utf-8")
+    if used:
+        if not shared.is_file() or shared.is_symlink():
+            raise RegistryError(f"shared contract is missing or is a symlink: {shared}")
+        files[destination] = shared.read_bytes()
+    # Cross-skill links must survive the canonical skills/aprof layout being
+    # flattened to plugin/skills/<registry-name>. Keep a single canonical source
+    # for distilled knowledge rather than duplicating manuals in each skill.
+    registry = load_registry(repo_root)
+    entries = codex_bundle_entries(repo_root, registry)
+    current_name = next((name for name, path in entries if path == source.resolve()), None)
+    if current_name is None:
+        raise RegistryError(f"unregistered Codex skill source: {source}")
+
+    def portable_link(target: str, relative: Path) -> str:
+        if "://" in target or target.startswith(("#", "/")):
+            return target
+        file_part, sep, anchor = target.partition("#")
+        candidate = ((repo_root / file_part) if file_part.startswith("skills/aprof/")
+                     else source / relative.parent / file_part).resolve()
+        for name, canonical_source in entries:
+            try:
+                suffix = candidate.relative_to(canonical_source)
+            except ValueError:
+                continue
+            if not candidate.is_file():
+                continue
+            mapped = Path(os.path.relpath(Path(name) / suffix,
+                                         Path(current_name) / relative.parent)).as_posix()
+            return mapped + (sep + anchor if sep else "")
+        return target
+
+    for relative, payload in list(files.items()):
+        if relative.suffix == ".md":
+            text = payload.decode("utf-8")
+            text = re.sub(r"(?<=\]\()([^\s)]+)(?=\))",
+                          lambda match: portable_link(match.group(0), relative), text)
+            files[relative] = text.encode("utf-8")
+    return files
 
 
 def check_codex_skill_bundle(
@@ -522,10 +592,9 @@ def check_codex_skill_bundle(
             continue
         source = available.get(name)
         if source is None:
-            # Support submodules may be absent in a consumer checkout. The
-            # already materialized bundle remains usable and self-contained.
+            errors.append(f"missing canonical local skill source: {name}")
             continue
-        expected_files = _bundle_source_files(source)
+        expected_files = codex_bundle_files(repo_root, source)
         actual_files: dict[Path, Path] = {}
         for path in sorted(destination.rglob("*")):
             relative = path.relative_to(destination)
@@ -536,9 +605,9 @@ def check_codex_skill_bundle(
         if set(actual_files) != set(expected_files):
             errors.append(f"bundled skill file set is stale: {name}")
             continue
-        for relative, source_file in expected_files.items():
+        for relative, expected_bytes in expected_files.items():
             try:
-                if actual_files[relative].read_bytes() != source_file.read_bytes():
+                if actual_files[relative].read_bytes() != expected_bytes:
                     errors.append(f"bundled skill file is stale: {name}/{relative}")
             except OSError as exc:
                 errors.append(f"cannot compare bundled skill {name}/{relative}: {exc}")
@@ -557,25 +626,22 @@ def write_codex_skill_bundle(repo_root: Path, registry: dict[str, Any]) -> None:
         destination = bundle_root / name
         source = available.get(name)
         if source is None:
-            if not (destination / "SKILL.md").is_file():
-                raise RegistryError(
-                    f"support skill source and materialized bundle are both missing: {name}"
-                )
-            continue
+            raise RegistryError(f"missing canonical local skill source: {name}")
         # Validate before removing the old generated copy, so a source symlink
         # cannot escape into the archived plugin.
-        _bundle_source_files(source)
+        rendered_files = codex_bundle_files(repo_root, source)
         if destination.exists() or destination.is_symlink():
             if destination.is_symlink() or not destination.is_dir():
                 destination.unlink()
             else:
                 shutil.rmtree(destination)
-        shutil.copytree(
-            source,
-            destination,
-            symlinks=False,
-            ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo"),
-        )
+        for relative, payload in rendered_files.items():
+            target = destination / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(payload)
+            source_file = source / relative
+            if source_file.is_file():
+                shutil.copymode(source_file, target)
 
     for path in bundle_root.iterdir():
         if path.name in configured_names:
@@ -758,8 +824,7 @@ def install_cursor(
     for item in registry.get("support_skills", []):
         source = _repo_path(repo_root, item["source"], f"support skill {item['name']} source")
         if not (source / "SKILL.md").is_file():
-            print(f"warn: support skill missing (submodule not initialized): {source}")
-            continue
+            raise RegistryError(f"missing required local support skill: {source}")
         _replace_symlink(source, skills_dir / item["name"])
         installed_skills.append(item["name"])
         print(f"linked {skills_dir / item['name']} -> {source}")

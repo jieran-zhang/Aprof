@@ -123,3 +123,7 @@ Reference helper scripts and config templates remain under `references/` for man
 - `bash run.sh profile` produces repeated hardware report directories under `tmp/aprof/**/msprof_hw_output/**` on a host with NPU and ordinary `msprof` support.
 - `bash run.sh sim-build` produces `build_sim/<op_name>_kernel.o`.
 - `bash run.sh sim` produces `tmp/aprof/**/msprof_sim_output/OPPROF_*` with `trace.json` or `*_instr_exe_*.csv`.
+
+## Workload tiling-key dispatch
+
+For multiple workload regions, use a validated parallel plan and dispatch plan from `ascendc-aprof-parallel-planning`. The direct-launch host must compute the selected uint64 key from real shape/dtype/layout/attributes and launch the matching compiled implementation, or explicitly pass that key to a matching kernel parameter. A registered-operator `SetTilingKey`/`TILING_KEY_IS` example is not automatically valid in a raw direct launch. Keep argument declarations, host launch and kernel definition consistent, retain a general fallback, and record the actual group/key/entry with timing and correctness outputs. Test equality boundaries and nearby unseen shapes as well as the full declared case matrix.

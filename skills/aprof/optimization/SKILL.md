@@ -5,6 +5,10 @@ description: Instantiate a selected AProf transformation contract into an isolat
 
 # AscendC AProf Optimization
 
+## Parallel-plan and dispatch boundary
+
+Require validated architecture/parallel/dispatch evidence before stage-aware execution tuning. Bind their content hashes, selected workload group, tiling key and actual kernel entry. Set `optimization_stage=execution`; changing task partition, ownership, reduction or global algorithm returns to `ascendc-aprof-parallel-planning` with a new plan. Optimize and measure the selected region, then run the full correctness/regression matrix including fallback. A metadata guard with a general fallback is permitted; a case-ID shortcut or narrowed contract is benchmark specialization.
+
 ## Machine boundary
 
 - Select an atomic transformation from the published SkillGraph and record its
@@ -38,10 +42,10 @@ For candidate generation, read [references/optimization-candidate-design.md](ref
 3. Use the graph route selected from current evidence. Use diagnosis facets, profiling bound, and source scan only to construct the expert prior or explain missing evidence; preserve the full candidate set and behavior probability.
 4. Before candidate generation, do **Workload/Tiling/Bound Modeling** with AProf local references, `workload-aware-diagnosis.md`, `roofline-single-case.md`, and `npu-arch` where available.
 5. Apply **CorrectnessAndGeneralityGate** before patching: default scope is `production_safe`; preserve operator math, dtype precision, dynamic shape/tiling, tail handling, and boundary safety.
-6. If candidates should be created, copy the baseline `op_dir` into `aprof_opt/candidates/candidate_N/op/` and write `candidate_plan.json` / `candidate_plan.md` for each selected strategy.
+6. If candidates should be created, copy the selected immutable parent `op_dir` (the baseline or a previous correctness/runtime-validated candidate) into `aprof_opt/candidates/candidate_N/op/`, record its source hash and selection evidence and write `candidate_plan.json` / `candidate_plan.md` for each selected strategy.
 7. Modify only files under `aprof_opt/candidates/candidate_N/op/`. Never edit the baseline `op_dir`.
 8. For each candidate, apply exactly one strategy from `candidate_plan.json`; one strategy may still require coordinated multi-line edits such as loop restructuring, buffer lifetime changes, Host Tiling updates, workspace slot changes, or API fusion.
-9. Before risky API, pipeline, MatMul, Softmax, Sort, or DataCopy edits, first use the selected family reference plus at most one operator playbook. Use [references/optimization-cannbot-knowledge-index.md](references/optimization-cannbot-knowledge-index.md) only if local references do not settle the mechanism.
+9. Before risky API, pipeline, MatMul, Softmax, Sort, or DataCopy edits, first use the selected family reference plus at most one operator playbook. Use [references/optimization-local-knowledge-index.md](references/optimization-local-knowledge-index.md) only if local references do not settle the mechanism.
 10. After patching and before build, run **StaticReview** focused on API legality, UB/L1/L0/workspace bounds, DataCopy alignment, pipeline ordering, portability, and performance clauses.
 11. Submit draft and collected evidence to the machine gate. Do not reproduce gate authority in prose.
 12. Register every referenced object in the task-local CAS. Finalize with
@@ -51,7 +55,7 @@ For candidate generation, read [references/optimization-candidate-design.md](ref
 
 ## Context-safe optimization
 
-- Do not add large CANNBot optimization/design/API skills to the default optimization agent context.
+- Do not add large unrelated optimization/design/API skills to the default optimization agent context.
 - Default reads are this `SKILL.md`, [references/optimization-strategy-routing.md](references/optimization-strategy-routing.md), [references/optimization-candidate-design.md](references/optimization-candidate-design.md), and 1 selected branch reference.
 - When one candidate spans a complex operator mechanism, load exactly one operator playbook:
   - MatMul / GMM / BatchMatMul / GroupMatMul: [references/matmul-optimization-playbook.md](references/matmul-optimization-playbook.md)
@@ -59,7 +63,7 @@ For candidate generation, read [references/optimization-candidate-design.md](ref
   - Reduction / Sort / TopK / Argsort: [references/reduction-sort-optimization-playbook.md](references/reduction-sort-optimization-playbook.md)
   - Elementwise / Broadcast / Conversion / Vector-Scalar pipeline: [references/vector-scalar-pipeline-playbook.md](references/vector-scalar-pipeline-playbook.md)
 - Do not load more than one operator playbook for a single candidate unless the user explicitly asks for broad design exploration.
-- Load CANNBot original docs only through `optimization-cannbot-knowledge-index.md`, and only one precise reference at a time.
+- Load AProf local distilled references only through `optimization-local-knowledge-index.md`, and only one precise reference at a time.
 - External docs can justify API parameters, platform boundaries, contraindications, and gate checks; they must not replace AProf diagnosis/profiling evidence.
 
 ## Expert-prior lookup

@@ -66,6 +66,13 @@ def validate_graph(graph: Any) -> dict[str, Any]:
     predicates = _ids(obj["predicates"], "predicates")
     mechanisms = _ids(obj["mechanisms"], "mechanisms")
     transformations = _ids(obj["transformations"], "transformations")
+    if obj["graph_version"] == "v0002":
+        from .planning import STAGES
+        if obj.get("planning_contract") != "architecture_parallel_dispatch_v1":
+            raise GraphError("v0002 requires the architecture/parallel/dispatch planning contract")
+        for transformation in obj["transformations"]:
+            if transformation["id"] != "transformation.noop" and transformation.get("optimization_stage") not in STAGES:
+                raise GraphError("v0002 transformations require an explicit optimization_stage")
     if "transformation.noop" not in transformations:
         raise GraphError("graph.transformations: required transformation.noop is missing")
     if "mechanism.unknown_unresolved" not in mechanisms:
@@ -292,12 +299,16 @@ def route_graph(
     if not edges:
         raise GraphError("graph has no problem_to_skill_prior edges")
     mask_reasons: list[tuple[str, ...]] = []
+    transformations = {item["id"]: item for item in graph["transformations"]}
     for edge in edges:
         reasons: list[str] = []
         if edge["source"] not in active_set:
             reasons.append("mechanism_not_supported_by_fixed_evidence_graph")
         if not _condition_matches(context, edge["hard_preconditions"]):
             reasons.append("hard_preconditions_not_satisfied")
+        if graph.get("planning_contract") == "architecture_parallel_dispatch_v1":
+            from .planning import planning_mask_reasons
+            reasons.extend(planning_mask_reasons(context, transformations[edge["target"]]))
         mask_reasons.append(tuple(reasons))
     allowed = [not reasons for reasons in mask_reasons]
     logits = [

@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aprof.local/schemas/normalized-profile.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "case_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "kernel": {
+      "type": "string",
+      "minLength": 1
+    },
+    "metrics": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_artifact_hash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "field": {
+            "type": "string",
+            "minLength": 1
+          },
+          "aggregation": {
+            "enum": [
+              "mean",
+              "median",
+              "sum",
+              "min",
+              "max"
+            ]
+          },
+          "samples": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "value",
+          "unit",
+          "source_artifact_hash",
+          "field",
+          "aggregation",
+          "samples"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "case_id",
+    "kernel",
+    "metrics"
+  ]
+}

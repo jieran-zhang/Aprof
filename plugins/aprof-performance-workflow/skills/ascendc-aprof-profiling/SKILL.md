@@ -1,6 +1,6 @@
 ---
 name: ascendc-aprof-profiling
-description: Plan, execute, and normalize Ascend C profiling evidence for AProf. Use when source/workload diagnosis lacks required metrics, when build and full-case correctness must precede profiling, when a candidate needs paired measurement, or when raw msprof/msprof-op CSV and simulator artifacts must be compressed into versioned symptom drafts. Use the bundled stage runner, symptom compressor, paired timer, and CANNBot collectors; let the runtime gate remain authoritative.
+description: Plan, execute, and normalize Ascend C profiling evidence for AProf. Use when source/workload diagnosis lacks required metrics, when build and full-case correctness must precede profiling, when a candidate needs paired measurement, or when raw msprof/msprof-op CSV and simulator artifacts must be compressed into versioned symptom drafts. Use the bundled stage runner, symptom compressor, paired timer, and AProf-bundled collectors; let the runtime gate remain authoritative.
 ---
 
 # AscendC AProf Profiling 采集与解析
@@ -33,7 +33,7 @@ description: Plan, execute, and normalize Ascend C profiling evidence for AProf.
 3. 读取 [references/metric-to-msprof.md](references/metric-to-msprof.md)，把 metric 映射到 `hw-op`、`hw-msprof` 或 `sim`。
 4. 先执行环境、build 和 correctness gate。优先加载 `ascendc-env-check`；对
    CANNBench direct-invoke 工程，build 使用 CMake，correctness 使用
-   `bash run.sh --all --skip-build`，并要求 `results.json` 为 20/20。用
+   `bash run.sh --all --skip-build`，并要求 `results.json` 覆盖并通过完整声明case集合。用
    `scripts/run_profile_stages.py` 的 JSON command arrays 固化执行顺序、timeout、
    exit code、日志与 hash；先 `--dry-run`，获得用户授权后再执行。
 5. 分开记录两种预算与采样：production gain gate 使用至少 30 个交错配对的
@@ -60,7 +60,7 @@ checkout layout.
 - `scripts/run_profile_stages.py`: execute declared preflight/build/correctness/profile stages. Commands are arrays, not shell strings. Stops at the first failed mandatory stage and hashes every log.
 - `scripts/paired_timing.py`: collect deterministic alternating AB/BA command-wall-clock pairs. Use only for timing-only commands; fewer than 30 pairs remain exploratory.
 - `scripts/compress_msprof.py`: normalize `op_summary_*.csv`, msprof-op CSV, and archived per-core cycles into measured features, heuristic symptoms, ambiguity sets, artifact hashes, and tri-state predicate drafts.
-- `ops-profiling/scripts/msprof_profile_run.sh`: CANNBot full hardware collector. Use for selected sentinel/final cases, not every search candidate.
+- `ops-profiling/scripts/msprof_profile_run.sh`: AProf-bundled full hardware collector. Use for selected sentinel/final cases, not every search candidate.
 - `ops-simulator/scripts/trace_bubble_analyzer.py --json`: optional structured trace-bubble adapter when a Chrome trace exists. Keep its evidence proxy-labelled.
 
 Example stage config for CANNBench:
@@ -78,7 +78,7 @@ Example stage config for CANNBench:
 ```
 
 Add a profile stage only after the correctness stage passes. Point it at an
-explicit CANNBot collector command and a unique `.aprof/` output directory.
+explicit AProf-bundled collector command and a unique `.aprof/` output directory.
 
 Execute from this skill directory (or resolve the installed skill path):
 

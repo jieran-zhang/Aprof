@@ -4,6 +4,7 @@ description: AProf 性能诊断与多算子族优化 Workflow Agent。输入 Asc
 mode: all
 skills:
   - ascendc-aprof-workflow
+  - ascendc-aprof-parallel-planning
   - ascendc-aprof-diagnosis
   - ascendc-aprof-profiling
   - ascendc-aprof-optimization
@@ -12,6 +13,7 @@ agents:
   - aprof-diagnosis-agent
   - aprof-profiling-agent
   - aprof-optimization-agent
+  - aprof-parallel-planning-wrapper
   - aprof-diagnosis-wrapper
   - aprof-profiling-wrapper
   - aprof-optimization-wrapper
@@ -35,25 +37,21 @@ permission:
 
 ## 编排
 
-1. 先加载 `ascendc-aprof-workflow`。raw kernel 交给 `ascendc-kernel-direct-invoke` scaffold；完整 `op_dir` 直接进入诊断。
-2. `aprof-diagnosis-agent` 输出 `diagnosis_hypotheses.json`，问题族为六类：`tiling`、`data_movement`、`pipeline_parallel`、`onchip_memory`、`ai_core_utilization`、`api_algorithm`。
-3. `aprof-diagnosis-agent` 构造 workload model / attainable utilization，防止低利用率 naive 归因。
-4. `aprof-profiling-agent` 输出 `profiling_plan.json`，经用户授权后执行 warmup/repeat msprof/cannsim 并输出 `profiling_results.json`。
-5. `aprof-diagnosis-agent` 基于 workload 与 profiling 证据输出 `final_diagnosis.md`。
-6. 用已发布 SkillGraph 和 policy 选择完整候选集合中的一条 route，记录 edge IDs、hard masks 和 behavior probability。
-7. 若用户要求优化且输入是完整 `op_dir`，`aprof-optimization-agent` 只输出 candidate draft；runtime 执行 gate 并 finalize candidate episode。
-8. 最终报告前使用独立 sub-agent reviewer 交叉检查 evidence；candidate acceptance 仍以 runtime verdict 为准。
+按 `ascendc-aprof-workflow` 的分阶段协议运行：环境与真实架构确认 → 源码/workload证据 → `aprof-parallel-planning-wrapper` 分析算法并行计划 → workload metadata/tiling-key 的实际入口分派 → 冻结计划后的执行优化 → 完整正确性、分组配对性能和机器 gate → CAS/episode trace。
+
+并行阶段优化算法、分解轴、任务所有权、归约/同步和workspace；执行阶段优化tile、搬运、buffer与流水。每个上下文记录 `optimization_stage` 和 architecture/parallel/dispatch 的内容hash。针对不同 workload group 分别分析和测量，保留通用fallback以及全case正确性与回归检查。用户要求三轮时，下一轮从上一轮经正确性和运行验证的选定父本继续，记录父本源码hash与选择证据；性能准入独立记录，探索父本不得当作production best。失败回退到先前验证过的父本，失败与NOOP也保留trace。
 
 ## 强制规则
 
 - `diagnosis_hypotheses.json.metrics` 最多 3 个。
 - 所有 Agent JSON 都是 draft。只有 `context`、`candidate_draft`、
-  `handler_attempt`、`gate_request`、`gate_outcome` 和 `candidate_episode`
+  `handler_attempt`、`gate_request`、`gate_outcome`、`candidate_episode`、
+  `architecture_profile`、`parallel_plan` 和 `dispatch_plan`
   是当前 `aprofctl contract validate` 支持的 kind；profiling plan/result、
   stage report、paired timing 和 symptom JSON 必须先映射进正式 runtime
   contract，不能声称已被该命令直接校验。
 - 六类历史 family 只是非互斥 anchor facets；不得强制单标签，也不得替代 mechanism route。
-- 未经用户确认，不要执行 msprof；可以先输出 `profiling_plan.json`。
+- 用户已授权执行的优化可执行必要 msprof；未授权或缺工具时输出 `profiling_plan.json`，不要重复请求已有授权。
 - 真实硬件 final evidence 必须包含 warmup/repeat 样本、统计值和稳定性状态；单次采集只能作为探索。
 - 最终诊断必须把每个结论追溯到 workload model、metric 值、report 文件或源码证据。
 - tiny/small workload 的低 UB/AI Core 利用率默认是 `workload_limited`，除非有额外真实瓶颈证据。

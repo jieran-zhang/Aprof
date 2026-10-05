@@ -126,4 +126,4 @@ selected_value = statistics[statistic]
 - `single_run_exploration`：只有单次样本，只能用于探索。
 - `measurement_limited`：缺失样本、缺失字段、baseline/candidate policy 不一致或提升小于噪声阈值。
 
-示例输出见 [../../references/contracts.md](../../references/contracts.md)。
+示例输出见 [aprof-contracts.md](aprof-contracts.md)。

@@ -43,7 +43,7 @@ description: Build source, workload, and profile evidence for an Ascend C perfor
 - 默认只读取本 Skill 的本地 reference。不要把大型外部 Skill 加入 diagnosis agent 默认上下文。
 - 源码静态诊断的默认读取集是：`source-hypothesis-routing.md`、1-3 个相关问题族 reference、必要时 `bound-deep-routing.md`。
 - 证据归因阶段再按需读取 `workload-aware-diagnosis.md`、`roofline-single-case.md`、`ops-profiling` 和 `npu-arch`。
-- 只有 API overload、repeat limit、DataCopyPad 参数、MatMul/FA/Sort/Softmax 机制等本地 reference 无法确认时，才读取 [references/cannbot-knowledge-index.md](references/cannbot-knowledge-index.md)，并只点读其中一个具体 reference 文件。
+- 只有 API overload、repeat limit、DataCopyPad 参数、MatMul/FA/Sort/Softmax 机制等本地 reference 无法确认时，才读取 [references/local-knowledge-index.md](references/local-knowledge-index.md)，并只点读其中一个具体 reference 文件。
 - 禁止把外部优化策略直接写成诊断结论。外部知识只能用于形成源码锚点、metric 需求、反证规则和 `missing_evidence`。
 
 ## 源码静态诊断约束
@@ -76,7 +76,7 @@ description: Build source, workload, and profile evidence for an Ascend C perfor
 - Bound 二级深层路由：[references/bound-deep-routing.md](references/bound-deep-routing.md)
 - Workload-aware 可达上限诊断：[references/workload-aware-diagnosis.md](references/workload-aware-diagnosis.md)
 - 单 kernel roofline 诊断：[references/roofline-single-case.md](references/roofline-single-case.md)
-- Optional deep lookup 索引：[references/cannbot-knowledge-index.md](references/cannbot-knowledge-index.md)
+- Optional deep lookup 索引：[references/local-knowledge-index.md](references/local-knowledge-index.md)
 - Agent 阶段契约：[../references/contracts.md](../references/contracts.md)
 
 ## 扩展新诊断矩阵
