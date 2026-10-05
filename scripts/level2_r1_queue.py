@@ -28,6 +28,7 @@ from msprof_raw_storage import LOCAL
 from prepare_trace_pilot import create_source_snapshot
 
 VERSION = 'level2_r1_serial_queue_v2'
+CONTINUATION_VERSION = 'level2_r1_serial_queue_suffix_v1'
 SETTINGS = {'epoch': 'local-raw-01', 'capture_storage': LOCAL}
 GROUP = 'aa-local-01'
 ROOT = Path(__file__).resolve().parents[1]
@@ -302,16 +303,22 @@ def candidate_evidence(request, entry, *, allow_later=False, observation_id=None
             'classification': feedback.get('failure_classification'), 'observation_id': observation_id}
 
 
-def request_state(queue):
-    state = load(queue / 'state.json'); request = checked(state['request'])
-    require(request['version'] == state['version'] == VERSION and request['settings'] == SETTINGS
+def request_identity(queue, state, request, *, live_producers=True):
+    require(request['version'] == state['version']
+            and request['version'] in (VERSION, CONTINUATION_VERSION) and request['settings'] == SETTINGS
             and request['calibration_group'] == GROUP and request['deduplicate_outputs'] is True,
             'queue protocol identity differs')
     schedule = checked(request['schedule']); engineering = checked(request['engineering'])
     expected_order = schedule['scheduling']['after_current_recommended_new_operator_order']
+    full_order = expected_order
+    if request['version'] == CONTINUATION_VERSION:
+        require(full_order[:3] == ['apply_adam_w', 'group_norm', 'rms_norm'], 'unsupported continuation prefix')
+        expected_order = full_order[2:]
+    else:
+        require('continuation' not in request, 'legacy queue cannot declare continuation')
     require([e['operator'] for e in request['entries']] == expected_order
-            and len(expected_order) == len(set(expected_order)) == 15
-            and set(expected_order) == set(iteration.OPERATORS) - {'maximum'}, 'queue order/scope changed')
+            and len(full_order) == len(set(full_order)) == 15
+            and set(full_order) == set(iteration.OPERATORS) - {'maximum'}, 'queue order/scope changed')
     expected_names = FRESH_PRODUCERS | {'level2_r1_queue.py', 'run_msprof_exploration_stage.py', 'prepare_trace_pilot.py'}
     require({Path(r['path']).name for r in request['producers']} == expected_names
             and len(request['producers']) == len(expected_names), 'queue producer closure differs')
@@ -329,9 +336,196 @@ def request_state(queue):
                 and entry['task'] == str(Path(request['run']) / row['split'] / 'tasks' / entry['operator'])
                 and entry['bindings']['proposal'] == row['input_bindings']['proposal']
                 and entry['bindings']['measurement_policy'] == row['input_bindings']['policy'], 'queue entry differs from frozen schedule')
-    for ref in request['producers']:
-        require(pointer(canonical_path(ref['path'])) == ref, 'queue producer changed')
+    if live_producers:
+        for ref in request['producers']:
+            require(pointer(canonical_path(ref['path'])) == ref, 'queue producer changed')
+
+
+def request_state(queue):
+    state = load(queue / 'state.json'); request = checked(state['request'])
+    require(state['request'] == pointer(queue / 'request.json'), 'queue request location differs')
+    request_identity(queue, state, request)
+    if request['version'] == CONTINUATION_VERSION:
+        inheritance = request.get('continuation')
+        require(isinstance(inheritance, dict), 'continuation proof missing')
+        previous = canonical_path(inheritance['previous_queue'])
+        require(queue == previous.with_name('r1-queue-02'), 'continuation queue location differs')
+        with (previous / 'queue.lock').open('rb') as historical_lock:
+            fcntl.flock(historical_lock, fcntl.LOCK_SH | fcntl.LOCK_NB)
+            require(continuation_evidence(previous, inheritance['observation_id']) == inheritance,
+                    'inherited queue evidence changed')
+        require(request['schedule'] == inheritance['schedule']
+                and request['entries'] == inheritance['remaining_entries'], 'continuation suffix differs')
     return state, request
+
+
+def inherited_child(previous, request, entry, phase, *, finished):
+    """Bind historical exit/logs without rewriting or rerunning the old child."""
+    directory = previous / entry['operator'] / phase
+    names = ('started.json', 'execution.json', 'stdout.log', 'stderr.log')
+    refs = {name: pointer(canonical_path(directory / name)) for name in names}
+    started, execution = (checked(refs[name]) for name in names[:2])
+    require(started.get('request') == pointer(previous / 'request.json')
+            and started.get('argv') == execution.get('argv') == argv(request, entry, phase)
+            and type(execution.get('returncode')) is int
+            and isinstance(execution.get('started_at'), (int, float))
+            and isinstance(execution.get('ended_at'), (int, float))
+            and execution['started_at'] <= execution['ended_at'], 'historical child identity/exit differs')
+    if finished:
+        ref = pointer(directory / 'finished.json'); receipt = checked(ref)
+        require(receipt.get('request') == pointer(previous / 'request.json')
+                and receipt.get('execution') == execution
+                and receipt.get('logs') == [refs[name] for name in names[2:]], 'historical finished receipt differs')
+        if 'recovery' in receipt:
+            validate_recovery_receipt(receipt, directory)
+        else:
+            require(execution['returncode'] == (1 if receipt['audit']['status'] == 'source_attempt_failed' else 0),
+                    'historical finished exit contradicts audit')
+        auditor = baseline_evidence if phase == 'baseline' else candidate_evidence
+        audit = auditor(request, entry, allow_later=True,
+                        observation_id=receipt['audit'].get('observation_id'))
+        require(audit == receipt['audit'], 'historical finished evidence changed')
+        refs['finished.json'] = ref
+    else:
+        require(not (directory / 'finished.json').exists() and execution['returncode'] == 1,
+                'blocked historical candidate must have a completed unsuccessful child')
+    return refs
+
+
+def recovered_guard_evidence(previous, request, entry, observation_id, child):
+    """Only a closed append-only reclassification of this exact old block qualifies."""
+    audit = candidate_evidence(request, entry, allow_later=True, observation_id=observation_id)
+    require(audit['status'] == 'source_attempt_failed' and audit.get('observation_id') == observation_id,
+            'continuation requires a closed positively classified GN R1')
+    feedback = checked(audit['feedback']); recovery = feedback.get('reclassification', {})
+    old_ref = recovery.get('previous_feedback'); old = checked(old_ref)
+    parent = canonical_path(entry['task']) / 'candidates' / entry['candidate_id']
+    require(old_ref['path'] == str(parent.parent.parent / 'feedback' / (entry['candidate_id'] + '.json'))
+            and old.get('status') == 'infrastructure_blocked'
+            and old.get('source_hash') == feedback.get('source_hash')
+            and old.get('source_parent') == feedback.get('source_parent')
+            and old.get('stages') == feedback.get('stages')
+            and old.get('semantic_guards') == feedback.get('semantic_guards')
+            and not old.get('measurement_error')
+            and recovery.get('native_reexecuted') is False and recovery.get('source_attempt_added') is False,
+            'GN reclassification does not preserve the exact original blocked evidence')
+    verify_pointer_tree(feedback, evidence_path=audit['feedback']['path'])
+    historical_summary = json.loads(Path(child['stdout.log']['path']).read_text().splitlines()[-1])
+    require(historical_summary == {'operator':entry['operator'], 'candidate_id':entry['candidate_id'],
+                'status':'infrastructure_blocked', 'observation_id':recovery.get('previous_observation_id'),
+                'feedback':old_ref}, 'historical child stdout does not bind recovered blocked feedback')
+    request_ref = recovery.get('request'); recorded = checked(request_ref)
+    require(request_ref['path'] == str(parent / 'feedback-recovery' / recovery['recovery_id'] / 'request.json')
+            and recorded.get('operator') == entry['operator'] and recorded.get('candidate_id') == entry['candidate_id']
+            and recorded.get('new_observation_id') == observation_id
+            and recorded.get('blocked_observation_id') == recovery['previous_observation_id']
+            and recorded.get('previous_feedback') == old_ref
+            and recorded.get('classification') == audit['classification']
+            and recorded.get('native_rerun') is False and recorded.get('source_attempt_added') is False,
+            'GN recovery request identity differs')
+    ledger, _ = ledger_for(entry); state = ledger.state['tasks'][entry['operator']]
+    old_observation = state['observations'].get(recovery['previous_observation_id'], {})
+    require(old_observation.get('candidate_id') == entry['candidate_id']
+            and old_observation.get('close_feedback') is False
+            and old_observation.get('quality', {}).get('infrastructure_blocked') is True
+            and old_observation.get('feedback') == old and old_observation.get('report_ref') == old_ref['sha256'],
+            'old blocked observation is absent or changed')
+    return {'audit':audit, 'previous_feedback':old_ref, 'recovery_request':request_ref}
+
+
+def continuation_evidence(previous, observation_id):
+    """Pure audit of exactly queue-01's completed Adam and recovered GN prefix."""
+    previous = canonical_path(previous)
+    require(previous.name == 'r1-queue-01' and previous.parent.name == 'preflight', 'unsupported predecessor queue')
+    state_ref, request_ref = pointer(previous / 'state.json'), pointer(previous / 'request.json')
+    state, request = checked(state_ref), checked(request_ref)
+    require(state.get('request') == request_ref and request.get('version') == VERSION,
+            'predecessor must be the original complete-schedule v2 queue')
+    request_identity(previous, state, request, live_producers=False)
+    require([e['operator'] for e in request['entries'][:3]] == ['apply_adam_w', 'group_norm', 'rms_norm'],
+            'unsupported predecessor ordering')
+    entries = request['entries']; adam, gn = entries[:2]
+    require(state.get('status') == 'blocked'
+            and set(state['operators']) == {e['operator'] for e in entries}
+            and state['operators']['group_norm'].get('status') == 'infrastructure_blocked', 'predecessor is not the GN block')
+    for entry in entries[2:]:
+        require(state['operators'][entry['operator']] == {'status':'pending'}
+                and not (previous / entry['operator']).exists(), 'predecessor suffix already has queue work')
+    blocked_ref = state['operators']['group_norm'].get('blocked'); blocked = checked(blocked_ref)
+    require(blocked_ref['path'] == str(previous / 'group_norm/blocked.json')
+            and blocked.get('request') == request_ref and blocked.get('operator') == 'group_norm'
+            and blocked.get('phase') == 'candidate', 'predecessor blocked evidence differs')
+    receipts = {}
+    for entry, phase in ((adam,'baseline'), (adam,'candidate'), (gn,'baseline')):
+        receipts[entry['operator'] + '/' + phase] = inherited_child(previous, request, entry, phase, finished=True)
+    adam_checkpoint_ref = state['operators']['apply_adam_w'].get('checkpoint')
+    adam_checkpoint = checked(adam_checkpoint_ref)
+    require(adam_checkpoint_ref['path'] == str(previous / 'apply_adam_w/checkpoint.json')
+            and adam_checkpoint.get('finished') == receipts['apply_adam_w/candidate']['finished.json']
+            and adam_checkpoint.get('phase') == 'candidate'
+            and adam_checkpoint.get('status') == state['operators']['apply_adam_w'].get('status'),
+            'completed Adam checkpoint differs')
+    child = inherited_child(previous, request, gn, 'candidate', finished=False)
+    require(blocked.get('evidence') == child, 'GN block does not bind unchanged exited child')
+    gn_checkpoint_ref = pointer(previous / 'group_norm/checkpoint.json'); gn_checkpoint = checked(gn_checkpoint_ref)
+    require(gn_checkpoint == {'operator':'group_norm','phase':'candidate','status':'running','started':child['started.json']},
+            'GN historical checkpoint differs')
+    recovered = recovered_guard_evidence(previous, request, gn, observation_id, child)
+    return {'version':'level2_queue_prefix_transfer_v1', 'previous_queue':str(previous),
+            'previous_request':request_ref, 'previous_state':state_ref, 'previous_blocked':blocked_ref,
+            'schedule':request['schedule'], 'checkpoints':[adam_checkpoint_ref, gn_checkpoint_ref],
+            'completed_children':receipts, 'blocked_child':child, 'recovered_guard':recovered,
+            'observation_id':observation_id, 'remaining_entries':entries[2:],
+            'scope':'rms_norm and remaining12 R1 operators; historical queue retained unchanged',
+            'native_reexecuted':False,'source_attempt_added':False}
+
+
+def prepare_continuation(previous, engineering, output, observation_id):
+    """Publish a new suffix request only after complete immutable-prefix review."""
+    previous, engineering, output = map(canonical_path, (previous, engineering, output))
+    require(previous.name == 'r1-queue-01' and output == previous.with_name('r1-queue-02'),
+            'continuation is restricted to queue-01 -> queue-02')
+    require(not output.exists(), 'fresh continuation directory required')
+    with (previous / 'queue.lock').open('rb') as old_lock:
+        # Exclusive read-only-fd flock serializes publishers and rejects a live
+        # predecessor; no predecessor bytes are changed. Recheck after locking.
+        fcntl.flock(old_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        require(not output.exists(), 'fresh continuation directory required')
+        inherited = continuation_evidence(previous, observation_id)
+        old_request = checked(inherited['previous_request']); run = canonical_path(old_request['run'])
+        frozen = load(engineering)
+        require(engineering.parent == run / 'bootstrap' and engineering != Path(old_request['engineering']['path'])
+                and frozen.get('version') == 'level2_frozen_engineering_v1', 'fresh engineering manifest required')
+        identities = {row['path']:row for row in frozen['files']}
+        names = sorted(FRESH_PRODUCERS | {'level2_r1_queue.py','run_msprof_exploration_stage.py','prepare_trace_pilot.py'})
+        producers = []
+        for name in names:
+            path = ROOT / 'scripts' / name; identity = identities.get(str(path))
+            require(identity is not None and sha(path) == identity['sha256']
+                    and sha(canonical_path(identity['snapshot'])) == identity['sha256'], 'new engineering producer differs: '+name)
+            producers.append(pointer(path))
+        for entry in inherited['remaining_entries']:
+            check_entry(entry)
+        request = {'version':CONTINUATION_VERSION, 'run':str(run), 'schedule':inherited['schedule'],
+            'engineering':pointer(engineering), 'producers':producers, 'python':str(Path(sys.executable).resolve()),
+            'settings':SETTINGS, 'calibration_group':GROUP, 'deduplicate_outputs':True,
+            'entries':inherited['remaining_entries'], 'continuation':inherited,
+            'scope':'R1 suffix only; inherited prefix audited without replaying children; no R2/R3, native retries or budget reset'}
+        require(continuation_evidence(previous, observation_id) == inherited, 'predecessor changed during continuation preparation')
+        # Publish a complete directory in one rename. Failed writes leave no
+        # official queue/request behind; the state pins the final request path.
+        with tempfile.TemporaryDirectory(prefix='.r1-queue-02-staging-', dir=output.parent) as temporary:
+            staging = Path(temporary)
+            atomic(staging / 'request.json', request, exclusive=True)
+            request_ref = {'path':str(output / 'request.json'), 'sha256':sha(staging / 'request.json')}
+            atomic(staging / 'state.json', {'version':CONTINUATION_VERSION,'request':request_ref,
+                'status':'prepared','operators':{entry['operator']:{'status':'pending'} for entry in request['entries']}})
+            sync_dir(staging)
+            require(not output.exists(), 'fresh continuation directory required')
+            os.rename(staging, output)
+            sync_dir(output.parent)
+    return {'status':'prepared','queue':str(output),'operators':[e['operator'] for e in request['entries']],
+            'inherited_prefix':['apply_adam_w','group_norm'], 'no_child_executed':True}
 
 
 def execute(queue, *, max_new_operators=None):
@@ -352,6 +546,8 @@ def execute(queue, *, max_new_operators=None):
                 require(not allow_later or (queue / op / 'baseline/finished.json').is_file(), 'completed R1 lacks baseline receipt')
                 check_entry(entry, allow_later=allow_later)
                 for phase, auditor in [('baseline', baseline_evidence), ('candidate', candidate_evidence)]:
+                    if request['version'] == CONTINUATION_VERSION:
+                        request_state(queue)
                     directory = queue / op / phase
                     finished = directory / 'finished.json'
                     command = argv(request, entry, phase)
@@ -492,6 +688,10 @@ def main():
     create = commands.add_parser('prepare')
     for name in ('run', 'schedule', 'engineering', 'output'):
         create.add_argument('--' + name, type=Path, required=True)
+    continuation = commands.add_parser('prepare-continuation')
+    for name in ('previous-queue', 'engineering', 'output'):
+        continuation.add_argument('--' + name, type=Path, required=True)
+    continuation.add_argument('--observation-id', required=True)
     start = commands.add_parser('run'); start.add_argument('--queue', type=Path, required=True)
     start.add_argument('--max-new-operators', type=int,
         help='Stop successfully after N newly completed operator checkpoints; completed receipts are reaudited and do not count.')
@@ -500,7 +700,8 @@ def main():
     reconcile.add_argument('--operator', required=True, choices=iteration.OPERATORS)
     reconcile.add_argument('--reason', required=True)
     args = parser.parse_args()
-    result = (prepare(args.run, args.schedule, args.engineering, args.output)
+    result = (prepare_continuation(args.previous_queue, args.engineering, args.output, args.observation_id)
+              if args.command == 'prepare-continuation' else prepare(args.run, args.schedule, args.engineering, args.output)
               if args.command == 'prepare' else recover(args.queue, args.operator, args.reason)
               if args.command == 'recover' else execute(args.queue, max_new_operators=args.max_new_operators))
     print(json.dumps(result), flush=True)

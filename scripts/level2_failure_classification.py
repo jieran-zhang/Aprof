@@ -12,6 +12,7 @@ crashes, missing outputs and arbitrary guard-script failures require investigati
 from __future__ import annotations
 import hashlib
 import json
+import math
 from pathlib import Path
 import re
 import tarfile
@@ -533,6 +534,261 @@ def dispatch_failure(e, task, parent, guard):
     return 'actual_dispatch_mismatch', 'Healthy successful guard processes emitted dispatch inconsistent with their bound plan.'
 
 
+REVIEWED_GROUP_NORM_GUARD = 'sha256:c9789d9ca9e48cd3b680650122c3ce8169d5d9549b492615537c7f15f79fe8a3'
+# Vendored Huawei CANNBench Level2 group_norm/golden.py, CANN Open Software License v2.
+REVIEWED_GROUP_NORM_GOLDEN = 'sha256:883644051a1954338a43d31c5ffeb0953a90d8b9b695f6423e54469f9647165c'
+REVIEWED_GROUP_NORM_VERIFIER = 'sha256:9ef76d44b2af9b17cdca879632fbb4ec4c35f935b661045e8d85acfc752a0f70'
+
+
+def boundary_execution_wrapper(e, record, cpu):
+    """Corroborate declared argv with the actual retained shell invocation."""
+    argv, shell = record.get('argv', []), record.get('shell_argv', [])
+    require(isinstance(argv, list) and isinstance(shell, list) and len(shell) == len(argv) + 7
+            and shell[:5] == ['taskset', '-c', cpu, 'bash', '-c']
+            and shell[6:] == ['feedback-hardware', *argv], 'numeric guard actual shell argv differs')
+    setup = shell[5]
+    require(isinstance(setup, str), 'numeric guard setup command is missing')
+    match = re.fullmatch(r'source (/[^\n ;]+/set_env\.sh) \|\| exit \$\?; '
+        r'export LD_LIBRARY_PATH=/usr/local/Ascend/driver/lib64/common:'
+        r'/usr/local/Ascend/driver/lib64/driver:\$\{LD_LIBRARY_PATH:-\}; exec "\$@"', setup)
+    require(match is not None, 'numeric guard setup wrapper is unreviewed')
+    e.file(match[1])
+
+
+def boundary_event_prefix(e, task, parent, request_ref, completion_ref, manifest_ref, count):
+    """Verify the historical linked prefix without binding future journal appends."""
+    path = e.path(task / 'events.jsonl')
+    previous, prepared, started, bindings = None, None, None, []
+    for index, raw in enumerate(path.read_bytes().splitlines()):
+        row = json.loads(raw); payload = {k: v for k, v in row.items() if k != 'hash'}
+        digest = 'sha256:' + hashlib.sha256((json.dumps(payload, ensure_ascii=False, sort_keys=True,
+                                                        allow_nan=False) + '\n').encode()).hexdigest()
+        require(row.get('sequence') == index and row.get('previous_hash') == previous and row.get('hash') == digest,
+                'numeric guard public event prefix is not intact')
+        previous = digest
+        if row.get('kind') == 'boundary_cpu_prepared' and started is None:
+            prepared = row
+        if row.get('kind') == 'boundary_validation_started' and row.get('value', {}).get('candidate') == parent.name:
+            require(started is None and row['value'].get('request') == request_ref,
+                    'numeric guard start event differs')
+            require(prepared and prepared['value'].get('manifest') == manifest_ref
+                    and prepared['value'].get('count') == count and prepared['value'].get('hardware_executed') is False,
+                    'numeric guard preparation was not declared before native execution')
+            started = row
+        if row.get('kind') == 'boundary_validation_completed' and row.get('value', {}).get('candidate') == parent.name:
+            require(started is not None and row['value'].get('completion') == completion_ref,
+                    'numeric guard completed event differs')
+            for item in (prepared, started, row):
+                bindings.append({'journal_path': str(path), 'sequence': item['sequence'],
+                                 'event_hash': item['hash'], 'kind': item['kind']})
+            e.event_bindings = bindings
+            return
+    raise Unproven('numeric guard lacks a completed public event prefix')
+
+
+def boundary_numeric_failure(e, task, parent, guard):
+    """Finite proof for the reviewed GN guard, including CPU oracle replay.
+
+    Arbitrary verifier exit 1 is still insufficient. No guard or golden code is
+    executed: known source hashes authorize the explicit CPU formula below.
+    Unsupported operators/scripts/dtypes remain blocked. Historical process
+    attribution relies on retained native records, as the existing oracle rule.
+    """
+    require(task.name == 'group_norm', 'no reviewed numeric boundary oracle for this operator')
+    root = parent / 'boundary-validation'
+    require(e.read(root / 'completion.json') == guard and not guard.get('error'),
+            'numeric guard completion differs or records infrastructure failure')
+    request = e.bound(guard.get('request'), root / 'request.json')
+    require(request.get('operator') == 'group_norm' and request.get('candidate') == parent.name
+            and request.get('dispatch_logs_required') is True, 'numeric guard identity differs')
+    script = task / 'agent/boundary_guard.py'
+    e.bound(request.get('script'), script, text=True)
+    require(request['script']['sha256'] == REVIEWED_GROUP_NORM_GUARD, 'unreviewed numeric guard source')
+    require(e.file(task / 'baseline/scripts/verify_result.py')['sha256'] == REVIEWED_GROUP_NORM_VERIFIER,
+            'numeric guard original tolerance verifier is unreviewed')
+    plan = e.bound(request.get('dispatch_plan'), parent / 'dispatch_plan.json')
+    build = e.read(parent / 'build/build_manifest.json')
+    require(build.get('operator') == 'group_norm' and request.get('binary') == build.get('standalone'),
+            'numeric guard binary differs from operator build')
+    e.bound(request.get('binary'), parent / 'build/build/standalone', binary=True)
+    build_result = e.read(parent / 'stages/build/result.json')
+    require(build_result.get('status') == 'passed' and build_result.get('candidate_id') == parent.name
+            and build_result.get('kind') == 'build' and not build_result.get('error'), 'candidate build was not successful')
+    build_plan = e.read(parent / 'stages/build/stage-plan.json')
+    source_ref = e.file(parent / 'source.tar')
+    require(build_plan.get('source_hash') == source_ref['sha256'] == plan.get('source_hash'),
+            'numeric guard source/dispatch/build archive differs')
+    native_files = {}
+    with tarfile.open(parent / 'source.tar') as archive:
+        names = set()
+        for member in archive.getmembers():
+            path = Path(member.name)
+            require(not path.is_absolute() and '..' not in path.parts and member.name not in names
+                    and (member.isfile() or member.isdir()), 'unsafe frozen numeric guard source member')
+            names.add(member.name)
+            parts = path.parts[1:] if path.parts and path.parts[0] == 'source' else path.parts
+            if member.isfile() and parts and parts[0] in ('op_host', 'op_kernel'):
+                relative = Path(*parts); source = parent / 'op' / relative
+                require(str(relative) not in native_files, 'duplicate normalized original source')
+                data = archive.extractfile(member).read(); e.file(source)
+                require(source.read_bytes() == data, 'numeric guard original source differs from archive')
+                native_files[str(relative)] = data
+    actual_files = {str(p.relative_to(parent / 'op')) for name in ('op_host', 'op_kernel')
+                    for p in (parent / 'op' / name).rglob('*') if p.is_file()}
+    require(native_files and set(native_files) == actual_files, 'numeric guard native file set differs')
+    native_hash = hashlib.sha256()
+    for name, data in sorted(native_files.items()):
+        native_hash.update(name.encode() + b'\0' + data + b'\0')
+    require(set(build.get('roles', {})) == {'A', 'B'} and all(
+        role.get('source_sha256') == native_hash.hexdigest()
+        and role.get('source_dir') == str(parent / 'op') for role in build['roles'].values()),
+        'numeric guard source identity differs from built roles')
+    health(e, root)
+    prepare = e.read(root / 'prepare/execution.json'); process(prepare)
+    verify = e.read(root / 'verify/execution.json'); process(verify, 1)
+    argv = verify.get('argv', [])
+    require(isinstance(argv, list) and len(argv) == 8 and Path(argv[0]).is_absolute()
+            and Path(argv[0]).name.startswith('python')
+            and argv[1:] == ['-B', str(script), '--output', str(root / 'inputs'), '--verify', '--plan', str(parent / 'dispatch_plan.json')],
+            'numeric verifier argv differs')
+    expected_error = f'process failed (1): {argv[0]}'
+    require(verify.get('error') == expected_error and guard.get('verification_error') == {
+        'type': 'RuntimeError', 'message': expected_error}, 'numeric verifier termination is unrecognized')
+    require(prepare.get('argv') == [argv[0], '-B', str(script), '--output', str(root / 'inputs'), '--plan', str(parent / 'dispatch_plan.json')],
+            'numeric guard preparation argv differs')
+    for label, record in [('prepare', prepare), ('verify', verify)]:
+        require(record.get('cwd') == str(task) and record.get('environment_overrides') == {},
+                'numeric guard execution environment differs')
+        require(not e.read(root / label / 'stderr.log', text=True).strip(), 'numeric guard process stderr is not empty')
+        boundary_execution_wrapper(e, record, '40-43')
+    commands = e.read(root / 'inputs/coordinator_commands.json')
+    specification = e.read(task / 'agent/boundary_cases.json')
+    verification = e.read(root / 'inputs/verification.json')
+    prepared = e.read(root / 'inputs/cpu_preparation.json')
+    rows, cases, results = guard.get('cases', []), specification.get('cases', []), verification.get('results', [])
+    require(specification.get('operator') == verification.get('operator') == prepared.get('operator') == 'group_norm'
+            and verification.get('hardware_executed_by_this_script') is False
+            and prepared.get('hardware_executed_by_this_script') is False
+            and len(rows) == len(cases) == len(commands) == len(results) == len(prepared.get('results', []))
+            and 0 < len(rows) <= 32, 'numeric guard coverage is incomplete')
+    manifest_path = task / 'agent/boundary_inputs/coordinator_commands.json'
+    manifest = e.read(manifest_path)
+    require(manifest.get('operator') == 'group_norm' and manifest.get('hardware_executed') is False
+            and len(manifest.get('commands', [])) == len(cases), 'numeric guard original preparation manifest differs')
+    boundary_event_prefix(e, task, parent, e.file(root / 'request.json'), e.file(root / 'completion.json'),
+                          e.file(manifest_path), len(cases))
+    require(json.loads(e.read(root / 'verify/stdout.log', text=True)) == {
+        'operator': 'group_norm', 'cases': len(rows), 'mode': 'verify_existing_outputs', 'passed': False},
+        'numeric verification stdout contradicts result')
+    require(json.loads(e.read(root / 'prepare/stdout.log', text=True)) == {
+        'operator': 'group_norm', 'cases': len(rows), 'mode': 'cpu_only', 'passed': True},
+        'numeric guard preparation stdout contradicts result')
+    try:
+        import numpy as np
+        import torch
+        from aprof_runtime.planning import select_dispatch
+        from level2_adapters import workload_metadata
+    except ImportError as exc:
+        raise Unproven('CPU numeric replay dependencies unavailable: ' + str(exc)) from exc
+    # Record actual replay dependencies; do not execute arbitrary oracle sources.
+    for path in (np.__file__, torch.__file__, torch.nn.functional.__file__, torch._C.__file__):
+        e.file(path)
+    golden = task / 'agent/reference/golden.py'
+    require(e.file(golden)['sha256'] == REVIEWED_GROUP_NORM_GOLDEN, 'numeric guard golden is not the reviewed original')
+    names = set(); numeric_mismatch = False
+    for row, case, command, result, preparation in zip(rows, cases, commands, results, prepared['results']):
+        name = case.get('name')
+        require(isinstance(name, str) and re.fullmatch(r'[A-Za-z0-9_-]+', name) and name not in names,
+                'numeric guard case name is invalid or duplicated')
+        names.add(name)
+        require(row.get('name') == command.get('name') == result.get('name') == preparation.get('name') == name,
+                'numeric guard case ordering differs')
+        descriptor = case['metadata']; attrs = descriptor['attributes']; shape = descriptor['shape']; dtype = descriptor['dtype']
+        require(isinstance(shape, list) and 2 <= len(shape) <= 8 and all(type(n) is int and n > 0 for n in shape)
+                and math.prod(shape) <= 1_000_000 and dtype in ('float16', 'float32', 'bfloat16'), 'unsupported numeric guard shape/dtype')
+        require(type(attrs.get('num_groups')) is int and attrs['num_groups'] > 0 and shape[1] % attrs['num_groups'] == 0
+                and type(attrs.get('epsilon')) in (float, int) and math.isfinite(attrs['epsilon']) and attrs['epsilon'] > 0,
+                'unsupported group norm parameters')
+        metadata = workload_metadata('group_norm', {**attrs, 'shape': shape, 'dtype': dtype, 'attrs': attrs})
+        selected = select_dispatch(plan, metadata)
+        require(command.get('metadata') == metadata and result.get('dispatch') == preparation.get('dispatch') == selected
+                and case.get('expected_key') == command.get('expected_key') == selected['tiling_key']
+                and command.get('expected_entry') == selected['kernel_entry'], 'numeric guard semantic dispatch differs')
+        source = task / 'agent/boundary_inputs' / name; dest = root / 'inputs' / name
+        declaration = e.read(source / 'guard.json')
+        require(declaration == manifest['commands'][len(names) - 1], 'numeric guard declaration differs from the public prepared manifest')
+        require(declaration.get('name') == name and declaration.get('operator') == 'group_norm'
+                and declaration.get('hardware_executed') is False and declaration.get('workload_metadata') == descriptor
+                and declaration.get('expected_key') == selected['tiling_key'], 'numeric guard declaration differs')
+        e.bound(declaration.get('producer'), task / 'agent/prepare_boundary_inputs.py', text=True)
+        e.bound(declaration.get('oracle'), golden, text=True)
+        require(result.get('oracle') == preparation.get('oracle') == declaration['oracle']
+                and result.get('reference_status') == preparation.get('reference_status') == declaration.get('reference_status'),
+                'numeric guard reference identity differs')
+        expected_ref = e.bound(declaration.get('expected'), source / 'expected.bin', binary=True)
+        require(e.file(dest / 'expected.bin')['sha256'] == expected_ref['sha256']
+                and command.get('reference') == str(dest / 'expected.bin'), 'numeric guard expected bytes differ')
+        for filename in ('x.bin', 'gamma.bin', 'beta.bin'):
+            require(e.file(source / filename)['sha256'] == e.file(dest / filename)['sha256'], 'numeric guard input bytes differ')
+        expected_args = ['--shape', ','.join(map(str, shape)), '--dtype', dtype, '--groups', str(attrs['num_groups']),
+                         '--epsilon', str(attrs['epsilon']), '--x', str(dest / 'x.bin'), '--gamma', str(dest / 'gamma.bin'),
+                         '--beta', str(dest / 'beta.bin'), '--output', str(dest / 'output.bin'), '--device', '0']
+        declared_args = [value.replace(str(source), str(dest)).replace('{device}', '0') for value in declaration['native_arguments']]
+        require(command.get('argv') == declared_args == expected_args, 'numeric guard actual input/output argv differs')
+        directory = root / 'executions' / name
+        native = e.bound(row.get('execution'), directory / 'execution.json'); process(native)
+        require(native.get('argv') == [request['binary']['path'], *expected_args]
+                and native.get('cwd') == str(parent / 'op') and native.get('environment_overrides') == {}
+                and not row.get('error') and row.get('expected_process_passed') is True,
+                'numeric guard native process identity differs')
+        boundary_execution_wrapper(e, native, '8')
+        stdout = e.read(directory / 'stdout.log', text=True)
+        require(not e.read(directory / 'stderr.log', text=True).strip(), 'numeric guard native stderr is not empty')
+        logs = [json.loads(line.split('APROF_DISPATCH_JSON:', 1)[1]) for line in stdout.splitlines()
+                if line.startswith('APROF_DISPATCH_JSON:')]
+        expected_log = {'tiling_key': selected['tiling_key'], 'kernel_entry': selected['kernel_entry']}
+        require(logs == row.get('dispatch_logs') == [expected_log] and row.get('dispatch_log_passed') is True,
+                'numeric guard has a missing or mismatched actual dispatch')
+        def read_array(path, count):
+            e.file(path)
+            storage_dtype = {'float16': np.float16, 'float32': np.float32, 'bfloat16': np.uint16}[dtype]
+            require(path.stat().st_size == count * np.dtype(storage_dtype).itemsize,
+                    'numeric guard byte length differs from shape/dtype')
+            raw = np.fromfile(path, storage_dtype)
+            require(raw.size == count, 'numeric guard data size differs')
+            return (raw.astype(np.uint32) << 16).view(np.float32) if dtype == 'bfloat16' else raw
+        n = math.prod(shape); actual = read_array(dest / 'output.bin', n); expected = read_array(dest / 'expected.bin', n)
+        x = read_array(dest / 'x.bin', n); gamma = read_array(dest / 'gamma.bin', shape[1]); beta = read_array(dest / 'beta.bin', shape[1])
+        require(all(np.isfinite(value).all() for value in (x, gamma, beta, actual, expected)), 'nonfinite numeric boundary proof is unsupported')
+        try:
+            torch_dtype = getattr(torch, dtype)
+            replay = torch.nn.functional.group_norm(torch.from_numpy(x.copy()).reshape(shape).to(torch_dtype), attrs['num_groups'],
+                torch.from_numpy(gamma.copy()).to(torch_dtype), torch.from_numpy(beta.copy()).to(torch_dtype), attrs['epsilon'])
+            replay_bytes = replay.contiguous().view(torch.uint8).numpy().tobytes()
+        except RuntimeError as exc:
+            raise Unproven('CPU original golden replay failed: ' + str(exc)) from exc
+        require(replay_bytes == (dest / 'expected.bin').read_bytes(),
+                'stored numeric guard reference differs from original golden CPU replay')
+        diff = np.abs(actual.astype(np.float32) - expected.astype(np.float32)); rel = diff / (np.abs(expected.astype(np.float32)) + 1e-7)
+        threshold = .01 if dtype == 'bfloat16' else .005
+        metrics = {'passed': bool(rel.mean(dtype=np.float64) < threshold and rel.max(initial=0) < 10 * threshold),
+                   'special_values_match': True, 'mere': float(rel.mean(dtype=np.float64)),
+                   'mare': float(rel.max(initial=0)), 'threshold': threshold}
+        require(result.get('output') == metrics and result.get('passed') is metrics['passed']
+                and result.get('status') == ('coordinator_output_verified' if metrics['passed'] else 'coordinator_output_failed'),
+                'numeric guard result does not replay from actual bytes')
+        if not metrics['passed']:
+            require(dtype == 'float32', 'only finite float32 GN numeric failures have a reviewed positive proof')
+            # Original baseline verifier grants this absolute tolerance. It must
+            # still fail, so a stricter supplemental guard cannot cause admission.
+            canonical_rel = np.where(diff <= 5e-5, np.float32(0), rel)
+            require(not (canonical_rel.mean(dtype=np.float64) < threshold and canonical_rel.max(initial=0) < 10 * threshold),
+                    'numeric guard only fails a stricter-than-original tolerance')
+            numeric_mismatch = True
+    require(numeric_mismatch, 'numeric guard has no original-oracle numeric mismatch')
+    return 'original_boundary_oracle_numeric_mismatch', 'Retained successful native GN records, bound dispatch and original-golden CPU replay consistently show a numeric mismatch; historical raw outputs and verification were not individually presealed.'
+
+
 def classify_failure(task, parent, stage=None, guard=None):
     """Return a deterministic evidence-bound classification; never execute or write.
 
@@ -556,9 +812,15 @@ def classify_failure(task, parent, stage=None, guard=None):
                 raise Unproven('measurement/runtime/unsupported stage remains unfinished')
         else:
             require(guard is not None and guard.get('status') == 'failed', 'no failed stage or guard')
-            rule, reason = dispatch_failure(e, task, parent, guard)
+            if guard.get('verification_error') is not None:
+                rule, reason = boundary_numeric_failure(e, task, parent, guard)
+            else:
+                rule, reason = dispatch_failure(e, task, parent, guard)
         status = 'source_attempt_failed'
     except (ValueError, TypeError, KeyError, IndexError, AttributeError, OSError, OverflowError, tarfile.TarError) as exc:
         reason = str(exc)
-    return {'version': VERSION, 'status': status, 'rule': rule, 'reason': reason,
-            'evidence': [e.refs[k] for k in sorted(e.refs)]}
+    result = {'version': VERSION, 'status': status, 'rule': rule, 'reason': reason,
+              'evidence': [e.refs[k] for k in sorted(e.refs)]}
+    if hasattr(e, 'event_bindings'):
+        result['event_bindings'] = e.event_bindings
+    return result
