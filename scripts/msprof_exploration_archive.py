@@ -63,7 +63,7 @@ def map_lesson_evidence(node, transform):
     return result
 
 
-def normalize_exploration_lessons(items, memories, evidence):
+def normalize_exploration_lessons(items, memories, evidence, *, stage_scoped=False):
     """Use unchanged v2 lesson/link semantics with opaque-aware fact conversion.
 
     The legacy converter consumes every nested evidence key. Its structural
@@ -108,6 +108,14 @@ def normalize_exploration_lessons(items, memories, evidence):
             facts = []
             for i, value in enumerate(values):
                 value = {'statement': value} if isinstance(value, str) else value
+                if stage_scoped and body['kind'] == 'operator_optimization':
+                    for scope_key in ('case_ids', 'cases'):
+                        if scope_key in value:
+                            require(isinstance(value[scope_key], list)
+                                    and all(type(cid) is int and cid >= 0 for cid in value[scope_key]),
+                                    'fresh lesson case scope must be a list of nonnegative integer IDs')
+                    require(not {'case_ids', 'cases'} <= value.keys() or value['case_ids'] == value['cases'],
+                            'fresh lesson case_ids and cases scopes contradict each other')
                 local = index_entries(value.get('evidence', []))
                 fact = v2.fact(str(value.get('id', item['id'] + '/' + key + '/' + str(i))),
                                clean(value), local or body['evidence_ids'])
@@ -121,6 +129,16 @@ def normalize_exploration_lessons(items, memories, evidence):
         body['intervention'] = convert('intervention', [item['intervention']])[0]
         for field, key in zip(fields, ('effective', 'ineffective', 'counterexample', 'claim')):
             body[field] = convert(key, item.get(field, []), claims=field == 'claims')
+        if stage_scoped and body['kind'] == 'operator_optimization':
+            memory_index = {row['id']: row for row in memories}
+            binding = v2.lesson_planning_bindings(body, memory_index)
+            require(item.get('optimization_stage', binding['optimization_stage']) == binding['optimization_stage'],
+                    'declared lesson optimization stage differs from its memories')
+            attrs = body['intervention']['attributes']
+            require(all(key not in attrs or v2.canonical(attrs[key]) == v2.canonical(value) for key, value in binding.items()),
+                    'declared lesson stage/planning context contradicts its memories')
+            attrs.update(binding)
+            v2.verify_lesson_planning(body, memory_index)
     return result
 
 def load(path):
@@ -1106,6 +1124,7 @@ class Archive:
             evaluation_granularity='one evaluation per actual comparison; shared execution stages retain original evidence', **POLICY)
         if self.fresh:
             metadata['campaign_schema'] = campaign.FRESH_SCHEMA
+            metadata['lesson_planning_contract'] = v2.LESSON_PLANNING_CONTRACT
             metadata['source_splits'] = {owner: declaration['source_split'] for owner, declaration in self.ledger.config['tasks'].items()}
             metadata['graph_snapshots'] = {'v0002': [dict(content_hash=digest,
                 evidence_id=recorder.pointer(pointer, self.split, 'frozen v0002 graph association authority'))
@@ -1126,7 +1145,7 @@ class Archive:
                 v2.write_synced(staging / 'current.json', current.read_bytes())
             self.seed_history(recorder, staging)
             result = v2.publish(staging, memories,
-                lambda rows: normalize_exploration_lessons(lessons, rows, recorder.evidence), recorder.evidence, metadata)
+                lambda rows: normalize_exploration_lessons(lessons, rows, recorder.evidence, stage_scoped=self.fresh), recorder.evidence, metadata)
             pointer = load(staging / 'current.json')
             result['verification'] = verify_dataset(self.output, self.split, deep=True, pointer=pointer)
             result.update(root=str(self.output), new_source_attempts=metadata['new_source_attempts'],

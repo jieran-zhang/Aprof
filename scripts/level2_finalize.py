@@ -78,7 +78,8 @@ def runtime_evidence(ledger, operator, cid, parent, row):
     ref = row["attempts"][-1]["evidence"].get("runtime")
     value = checked(ref, "runtime assessment")
     verify_pointer_tree(value, evidence_path=ref["path"])
-    source = ledger.state["tasks"][operator]["candidates"][cid]["source_hash"]
+    source = (ledger.config["tasks"][operator]["baseline_source_hash"] if cid is None
+              else ledger.state["tasks"][operator]["candidates"][cid]["source_hash"])
     binding = stage_module.successful_correctness_binding(ledger, operator, cid, parent, source)
     directory = Path(binding["correctness_directory"])
     require(value.get("status") == "passed" and value.get("correctness_stage_result") == binding["correctness_result"]
@@ -97,6 +98,7 @@ def runtime_evidence(ledger, operator, cid, parent, row):
     original = load(standalone)
     require(original.get("status") == "passed" and original.get("passed_count") == 20,
             "standalone correctness coverage differs")
+    return value
 
 
 def audit_attempts(run, operator, ledger, task):

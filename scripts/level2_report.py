@@ -180,7 +180,20 @@ def final_selection(selection, baseline_hash, rounds, evidence):
     return {**selection,'status':'selected_measured_candidate'}
 
 
-def qualified_source(task, state, item, feedback, evidence):
+def runtime_closure(task, ledger, cid, evidence):
+    """Reuse the finalizer's read-only lifecycle audit, including baseline."""
+    import level2_finalize as finalizer
+    state=ledger.state['tasks'][task.name]
+    current=max((row for row in state['stages'].values() if row['candidate_id']==cid and row['kind']=='runtime'),
+                key=lambda row:row['attempts'][-1]['start_order'])
+    parent=task if cid is None else task/'candidates'/cid
+    value=finalizer.runtime_evidence(ledger,task.name,cid,parent,current)
+    evidence.add(Path(finalizer.__file__),role='runtime_closure_verifier')
+    evidence.pointer(current['attempts'][-1]['evidence']['runtime'],'runtime_assessment')
+    evidence.tree(value,'runtime_native_evidence')
+
+
+def qualified_source(task, state, item, feedback, evidence, *, ledger):
     """Qualification follows current safety and bound guards, never gain."""
     cid = item['candidate_id']
     if not campaign._safe_source(state, cid): return False
@@ -196,7 +209,43 @@ def qualified_source(task, state, item, feedback, evidence):
     require(not guard.get('error') and not guard.get('verification_error') and guard.get('cases')
         and all(r.get('expected_process_passed') is True and r.get('dispatch_log_passed') is True for r in guard['cases']),
         'passed boundary validation lacks successful actual checks')
+    runtime_closure(task,ledger,cid,evidence)
     return True
+
+
+def source_failure(task, state, item, feedback, evidence):
+    """Replay the same positive proof as the finalizer before counting a failure."""
+    import level2_failure_classification as classifier
+    cid=item['candidate_id'];parent=task/'candidates'/cid
+    declared=feedback.get('failure_classification')
+    require(isinstance(declared,dict),'source failure has no positive classification')
+    evidence.add(Path(classifier.__file__),role='source_failure_classifier')
+    first=next((row for row in feedback.get('stages',[]) if row.get('status')!='passed'),None)
+    actual_stage=None
+    if first is not None:
+        stage=state['stages'].get(first['stage_id'])
+        require(stage is not None and stage['candidate_id']==cid,'failure stage belongs to another source')
+        latest=max((row for row in state['stages'].values() if row['candidate_id']==cid and row['kind']==stage['kind']),
+                   key=lambda row:row['attempts'][-1]['start_order'])
+        require(latest['stage_id']==stage['stage_id'] and stage['attempts'][-1]['outcome'] not in (None,'success'),
+                'failure proof does not describe the current failed stage')
+        ref=stage['attempts'][-1]['evidence'].get('result')
+        require(first.get('result')==ref,'failure feedback result differs from ledger')
+        actual_stage,_=evidence.read(ref,'source_failure_stage')
+        require(actual_stage.get('candidate_id')==cid and actual_stage.get('stage_id')==stage['stage_id']
+                and actual_stage.get('status')=='failed'
+                and all(first.get(k)==actual_stage.get(k) for k in ('kind','status','error')),
+                'failure feedback differs from executed stage')
+    guard=None
+    if feedback.get('semantic_guards') is not None:
+        ref=feedback['semantic_guards']
+        require(Path(ref['path']).resolve()==parent/'boundary-validation/completion.json','failure guard belongs to another source')
+        guard,_=evidence.read(ref,'source_failure_guard')
+    actual=classifier.classify_failure(task,parent,stage=actual_stage,guard=guard)
+    require(actual['status']=='source_attempt_failed' and actual==declared,
+            'source failure lacks unchanged positive classification evidence')
+    evidence.tree(actual,'source_failure_classification')
+    return actual
 
 
 def final_evaluation(state, config, rounds, baseline_hash):
@@ -262,6 +311,11 @@ def task_report(run, split, operator, task, manifest, ledger, selection, evidenc
     require(ledger.config['tasks'][operator]['baseline_source_hash']==baseline_hash,'ledger baseline differs from manifest')
     record['baseline']['stages']=stage_rows(state,None,evidence)
     record['baseline']['current_safe']=campaign._safe_source(state,None)
+    if record['baseline']['current_safe']:
+        try: runtime_closure(task,ledger,None,evidence)
+        except (ValueError,KeyError,OSError,TypeError) as exc:
+            record['baseline']['current_safe']=False
+            record['issues'].append('baseline runtime closure: '+str(exc))
     for number,item in enumerate((c for c in state['candidates'].values() if not c.get('inherited')),1):
         row={'round':number,'candidate_id':item['candidate_id'],'source_hash':item['source_hash'],
              'source_parent':item['source_parent'],'decision_basis':item['decision_basis'],
@@ -296,9 +350,12 @@ def task_report(run, split, operator, task, manifest, ledger, selection, evidenc
                 row['status']={'measured':'measured','infrastructure_blocked':'blocked','source_attempt_failed':'failed'}.get(observations[-1]['status'],'blocked')
                 if observations[-1]['infrastructure_blocked']: row['status']='blocked'
                 if row['status']=='measured': require(row['measurements'],'measured feedback lacks a complete real timing stage')
+                if row['status']=='failed':
+                    row['failure_classification']=source_failure(task,state,item,latest_feedback,evidence)
             elif any(s['status']=='failed' for s in row['stages']): row['status']='failed'
-            row['qualified_current']=qualified_source(task,state,item,latest_feedback,evidence)
+            row['qualified_current']=qualified_source(task,state,item,latest_feedback,evidence,ledger=ledger)
             if row['status']=='measured': require(row['qualified_current'],'measured source lacks current correctness/runtime/boundary qualification')
+            if row['status']=='failed': require(not row['qualified_current'],'source failure contradicts current safety qualification')
         except (ValueError,KeyError,OSError,TypeError) as exc:
             row['status']='blocked';row['issues'].append(str(exc))
     record['registered_rounds']=len(record['rounds'])

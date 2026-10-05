@@ -8,6 +8,8 @@ from types import SimpleNamespace
 import pytest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
 import level2_report as report
+import level2_iteration  # Import before fixtures replace the Campaign factory.
+import level2_finalize
 
 
 def save(path,value):
@@ -20,6 +22,25 @@ def ptr(path):return {'path':str(path),'sha256':report.analysis.sha(path)}
 
 def tree(root):
     return {str(p.relative_to(root)):p.read_bytes() for p in root.rglob('*') if p.is_file()}
+
+
+def compiler_evidence(task,parent,result_path):
+    """Actual producer-shaped positive witness, with no compiler invocation."""
+    import level2_failure_classification as classifier
+    stage=report.analysis.load(result_path)
+    source=parent/'op/op_kernel/maximum.asc'
+    source.parent.mkdir(parents=True,exist_ok=True);source.write_text('void broken() { missing_api(); }\n')
+    build=parent/'build'
+    def execution(argv,code=0,error=None):
+        return dict(argv=list(map(str,argv)),started_at=1,ended_at=2,exit_status=code,
+                    status='passed' if code==0 else 'failed',error=error)
+    save(build/'configure-execution/execution.json',execution(['cmake','-S',build,'-B',build/'build']))
+    save(build/'build-execution/execution.json',execution(['cmake','--build',build/'build','-j2'],2,stage['error']['message']))
+    (build/'build-execution/stdout.log').write_text('')
+    (build/'build-execution/stderr.log').write_text(f"{source}:1:1: error: use of undeclared identifier 'missing_api'\n")
+    result=classifier.classify_failure(task,parent,stage=stage)
+    assert result['status']=='source_attempt_failed',result
+    return result
 
 
 def partial(tmp_path):
@@ -72,14 +93,18 @@ def fake_registered_failure(run,task,manifest,monkeypatch):
     proposal=save(parent/'proposal.json',dict(operator='maximum',candidate_id=cid,implementation_source_hash=ptr(source)['sha256'],
         optimization_stage='execution',dispatch_selections=[dict(case_id=1,tiling_key=10,kernel_entry='entry',group_id='generic')],
         architecture_profile_ref='sha256:'+'a'*64,parallel_plan_ref='sha256:'+'b'*64,dispatch_plan_ref='sha256:'+'c'*64))
-    feedback={'status':'source_attempt_failed','source_hash':ptr(source)['sha256']}
+    error=dict(type='RuntimeError',message='process failed (2): cmake')
+    result=save(parent/'stages/build/result.json',dict(stage_id=cid+'-build',candidate_id=cid,kind='build',
+                status='failed',native_started=False,error=error))
+    feedback={'status':'source_attempt_failed','source_hash':ptr(source)['sha256'],
+        'stages':[dict(stage_id=cid+'-build',kind='build',status='failed',error=error,result=ptr(result))],
+        'failure_classification':compiler_evidence(task,parent,result)}
     feedback_path=save(task/'feedback'/f'{cid}.json',feedback)
-    result=save(parent/'stages/build/result.json',dict(status='failed',native_started=False))
     item=dict(candidate_id=cid,source_hash=ptr(source)['sha256'],source_parent=dict(candidate_id=None,source_hash=manifest['baseline']['sha256']),
         decision_basis=[],feedback_closed=True,current_round_started=True,inherited=False,observation_ids=['feedback1'],
         artifacts=dict(proposal=ptr(proposal),source=ptr(source)))
     state=dict(candidates={cid:item},observations={'feedback1':dict(close_feedback=True,report_ref=ptr(feedback_path)['sha256'],feedback=feedback)},
-        stages={'build':dict(stage_id='build',candidate_id=cid,kind='build',plan={},attempts=[dict(outcome='build_failed',native_started=False,formal_samples=0,start_order=1,evidence={'result':ptr(result)})])})
+        stages={cid+'-build':dict(stage_id=cid+'-build',candidate_id=cid,kind='build',plan={},attempts=[dict(outcome='build_failed',native_started=False,formal_samples=0,start_order=1,evidence={'result':ptr(result)})])})
     ledger=SimpleNamespace(config={'schema_version':report.campaign.FRESH_SCHEMA,'tasks':{'maximum':{'baseline_source_hash':manifest['baseline']['sha256']}}},
         state={'tasks':{'maximum':state}},verify=lambda:{'valid':True})
     monkeypatch.setattr(report.campaign,'Campaign',lambda path:ledger)
@@ -197,10 +222,28 @@ def closed_roster(tmp_path, monkeypatch, *, statuses=('measured',)*3, frozen=Tru
         nonlocal order
         order+=1;sid=(cid or 'baseline')+'-'+group
         parent=task/'candidates'/cid if cid else task
-        result=save(parent/'stages'/group/'result.json',dict(status='passed' if outcome=='success' else 'failed',
-                    kind=kind,native_started=kind!='build'))
-        state['stages'][sid]=dict(stage_id=sid,candidate_id=cid,kind=kind,plan=copy.deepcopy(plan or {}),
+        source=state['candidates'][cid]['source_hash'] if cid else baseline
+        if plan is None:plan={'source_hash':source,'case_ids':report.campaign.ALL_CASES}
+        result=save(parent/'stages'/group/'result.json',dict(stage_id=sid,candidate_id=cid,
+                    status='passed' if outcome=='success' else 'failed',kind=kind,native_started=kind!='build',
+                    error=None if outcome=='success' else dict(type='RuntimeError',message='process failed (2): cmake')))
+        state['stages'][sid]=dict(stage_id=sid,candidate_id=cid,kind=kind,plan=copy.deepcopy(plan),
             attempts=[dict(start_order=order,outcome=outcome,native_started=kind!='build',evidence={'result':ptr(result)})])
+        evidence=state['stages'][sid]['attempts'][0]['evidence']
+        if kind=='correctness' and outcome=='success':evidence['prepared_output_checked']=True
+        if kind=='runtime' and outcome=='success':
+            from run_msprof_exploration_stage import successful_correctness_binding
+            binding=successful_correctness_binding(SimpleNamespace(state={'tasks':{'maximum':state}}),'maximum',cid,parent,source)
+            correctness=Path(binding['correctness_directory'])
+            save(correctness/'completion.json',dict(status='passed',completed=[dict(case_id=c) for c in report.campaign.ALL_CASES]))
+            native=[]
+            for case in report.campaign.ALL_CASES:
+                path=save(correctness/f'case_{case:02d}/native.json',dict(exit_code=0,stream_destroyed=True,context_destroyed=True,finalized=True))
+                native.append(ptr(path))
+            standalone=save(correctness.parent/'standalone/completion.json',dict(status='passed',passed_count=20))
+            runtime=save(parent/'stages'/group/'runtime.json',dict(status='passed',native_results=[*native,ptr(standalone)],
+                correctness=ptr(correctness/'completion.json'),correctness_stage_result=binding['correctness_result']))
+            evidence['runtime']=ptr(runtime)
         return sid
     for kind in ('build','correctness','runtime'):stage(None,kind,kind)
     script=task/'agent/boundary_guard.py';script.parent.mkdir();script.write_text('# immutable boundary guard')
@@ -244,6 +287,10 @@ def closed_roster(tmp_path, monkeypatch, *, statuses=('measured',)*3, frozen=Tru
         else:
             stage(cid,'build','build','build_failed');measured[cid]=[]
         feedback=dict(operator='maximum',candidate_id=cid,status=status,source_hash=item['source_hash'],semantic_guards=guard_ref)
+        if status=='source_attempt_failed':
+            path=parent/'stages/build/result.json';value=report.analysis.load(path)
+            feedback['stages']=[{k:value[k] for k in ('stage_id','kind','status','error')}|{'result':ptr(path)}]
+            feedback['failure_classification']=compiler_evidence(task,parent,path)
         # Recovery names are immutable and need not be exactly <candidate>.json.
         path=save(task/'feedback'/f'{cid}-observation.json',feedback)
         state['observations'][cid+'-observation']=dict(close_feedback=True,report_ref=ptr(path)['sha256'],feedback=feedback)
@@ -339,3 +386,113 @@ def test_final_evaluations_without_explicit_source_selection_remain_unfinished(t
     value=report.build_report(run)
     assert value['operators'][0]['final_evaluation']=='complete'
     assert value['operators'][0]['final_selection']['status']=='pending' and value['status']!='complete'
+
+
+@pytest.mark.parametrize('mutation',['changed_semantic_log','missing_diagnostic','unproven_tool_error'])
+def test_classification_proof_changes_block_report_completion_without_rewriting(tmp_path,monkeypatch,mutation):
+    run,task,_,_,_=closed_roster(tmp_path,monkeypatch,statuses=('source_attempt_failed',)*3,finals=())
+    assert report.build_report(run)['status']=='complete'
+    log=task/'candidates/maximum001/build/build-execution/stderr.log'
+    if mutation=='changed_semantic_log':log.write_text(log.read_text().replace('missing_api','other_api'))
+    elif mutation=='missing_diagnostic':log.unlink()
+    else:log.write_text('No such file or directory: asc compiler\n')
+    before=tree(run);value=report.build_report(run)
+    assert value['status']=='blocked' and value['completed_rounds']==2
+    assert 'classification' in value['operators'][0]['rounds'][0]['issues'][0]
+    assert tree(run)==before
+
+
+def test_every_failure_classification_dependency_is_in_evidence_index(tmp_path,monkeypatch):
+    run,task,ledger,_,_=closed_roster(tmp_path,monkeypatch,statuses=('source_attempt_failed',)*3,finals=())
+    value=report.build_report(run)
+    indexed={(row['path'],row['sha256']):row['roles'] for row in value['evidence_index']}
+    for observed in ledger.state['tasks']['maximum']['observations'].values():
+        for ref in observed['feedback']['failure_classification']['evidence']:
+            assert 'source_failure_classification' in indexed[ref['path'],ref['sha256']]
+    assert any('source_failure_classifier' in row['roles'] for row in value['evidence_index'])
+
+
+def test_failed_status_without_classifier_is_not_a_completed_source_round(tmp_path,monkeypatch):
+    run,task,ledger,_,_=closed_roster(tmp_path,monkeypatch,statuses=('source_attempt_failed',)*3,finals=())
+    observed=ledger.state['tasks']['maximum']['observations']['maximum001-observation']
+    feedback=copy.deepcopy(observed['feedback']);feedback.pop('failure_classification')
+    path=task/'feedback/maximum001-observation.json';save(path,feedback)
+    observed.update(feedback=feedback,report_ref=ptr(path)['sha256'])
+    value=report.build_report(run)
+    assert value['status']=='blocked' and value['completed_rounds']==2
+
+
+def test_report_and_finalizer_agree_when_real_ledger_failure_proof_changes(tmp_path,monkeypatch):
+    """Real source archives + real append-only ledger reproduce the integration bug."""
+    from test_level2_finalize import Fixture
+    import level2_finalize as finalizer
+    from msprof_exploration_execute import save as exclusive_save, pointer
+    root=tmp_path/'campaign';original=report.campaign.Campaign.register
+    def register(self,**kwargs):
+        parent=root/'train/tasks/maximum/candidates'/kwargs['candidate_id']
+        path=parent/'proposal.json'
+        exclusive_save(path,dict(operator='maximum',candidate_id=kwargs['candidate_id'],
+            implementation_source_hash=kwargs['source_hash'],optimization_stage='execution',dispatch_selections=[],
+            architecture_profile_ref='sha256:'+'a'*64,parallel_plan_ref='sha256:'+'b'*64,dispatch_plan_ref='sha256:'+'c'*64))
+        return original(self,**dict(kwargs,artifacts={'proposal':pointer(path),'source':pointer(parent/'source.tar')}))
+    monkeypatch.setattr(report.campaign.Campaign,'register',register)
+    fixture=Fixture(root,monkeypatch,failed=(1,2,3))
+    save(fixture.task/'manifest.json',dict(version=report.campaign.FRESH_PROTOCOL,operator='maximum',split='train',source_split='train',
+        run_id=root.name,task_dir=str(fixture.task),baseline=pointer(fixture.task/'baseline-source.tar')))
+    save(root/'campaign-manifest.json',dict(version=report.campaign.FRESH_SCHEMA,operators={'train':['maximum']}))
+    save(root/'final-selection.json',dict(version='level2_final_selection_v1',selections={
+        'maximum':dict(candidate_id='baseline',source_hash=fixture.baseline,reason='retain tested original',evidence=[])}))
+    closed=finalizer.finalize(root,'maximum')
+    assert closed['status']=='closed_no_qualified_candidates',closed
+    assert report.build_report(root)['status']=='complete'
+    log=fixture.task/'candidates/maximum001/build/build-execution/stderr.log'
+    log.write_text(log.read_text().replace('bad_api','different_bad_api'))
+    before=tree(root)
+    assert finalizer.finalize(root,'maximum')['status']=='unfinished'
+    result=report.build_report(root)
+    assert result['status']=='blocked' and result['completed_rounds']==2 and tree(root)==before
+
+
+@pytest.mark.parametrize('candidate',['baseline','maximum002'])
+@pytest.mark.parametrize('relative',['evidence/case_20/native.json','standalone/completion.json','evidence/completion.json'])
+def test_unchanged_runtime_summary_cannot_hide_changed_lower_level_evidence(tmp_path,monkeypatch,candidate,relative):
+    run,task,_,_,_=closed_roster(tmp_path,monkeypatch)
+    assert report.build_report(run)['status']=='complete'
+    parent=task if candidate=='baseline' else task/'candidates'/candidate
+    summary=(parent/'stages/runtime/runtime.json').read_bytes()
+    path=parent/'stages/correctness'/relative
+    value=report.analysis.load(path)
+    if relative.endswith('native.json'):value['finalized']=False
+    elif relative.startswith('standalone'):value['passed_count']=19
+    else:value['completed']=value['completed'][:-1]
+    save(path,value)
+    before=tree(run);result=report.build_report(run);row=result['operators'][0]
+    assert result['status']=='blocked' and row['final_selection']['current_safe'] is (candidate!='baseline')
+    if candidate=='baseline':assert row['baseline']['current_safe'] is False
+    else:assert row['rounds'][1]['qualified_current'] is False and row['completed_rounds']==2
+    assert summary==(parent/'stages/runtime/runtime.json').read_bytes() and tree(run)==before
+
+
+def test_runtime_index_contains_baseline_and_all_candidate_native_closures(tmp_path,monkeypatch):
+    run,task,_,_,_=closed_roster(tmp_path,monkeypatch)
+    result=report.build_report(run)
+    assert result['status']=='complete'
+    indexed={(r['path'],r['sha256']):r['roles'] for r in result['evidence_index']}
+    for parent in [task,*[task/'candidates'/f'maximum{i:03d}' for i in range(1,4)]]:
+        runtime=report.analysis.load(parent/'stages/runtime/runtime.json')
+        for ref in [*runtime['native_results'],runtime['correctness'],runtime['correctness_stage_result']]:
+            assert 'runtime_native_evidence' in indexed[ref['path'],ref['sha256']]
+
+
+def test_report_and_finalizer_agree_on_real_candidate_runtime_tamper(tmp_path,monkeypatch):
+    from test_level2_finalize import Fixture
+    import level2_finalize as finalizer
+    fixture=Fixture(tmp_path/'campaign',monkeypatch)
+    ledger=report.campaign.Campaign(fixture.run/'train/ledger');state=ledger.state['tasks']['maximum']
+    item=state['candidates']['maximum001'];feedback=report.analysis.load(fixture.task/'feedback/maximum001.json')
+    assert report.qualified_source(fixture.task,state,item,feedback,report.Evidence(),ledger=ledger)
+    path=fixture.task/'candidates/maximum001/stages/correctness/evidence/case_20/native.json'
+    value=report.analysis.load(path);value['finalized']=False;save(path,value)
+    with pytest.raises(ValueError,match='dependency pointer hash differs'):
+        report.qualified_source(fixture.task,state,item,feedback,report.Evidence(),ledger=ledger)
+    assert finalizer.finalize(fixture.run,'maximum',prepare_only=True)['status']=='unfinished'

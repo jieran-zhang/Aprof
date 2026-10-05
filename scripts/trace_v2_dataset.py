@@ -344,6 +344,96 @@ def import_memories(parent, serial, evidence):
     return memories
 
 
+LESSON_PLANNING_CONTRACT = 'fresh_lesson_stage_bindings_v1'
+LESSON_PLANNING_FIELDS = ('architecture_profile_ref', 'parallel_plan_ref', 'dispatch_plan_ref',
+    'graph_hash', 'plan_basis_source_hash', 'implementation_source_hash', 'dispatch_selections', 'source_split')
+
+
+def lesson_planning_bindings(body, memories):
+    """Derive stage and per-memory plan/key context from actual sealed memories.
+
+    Different plans, architectures and keys may be compared within one stage.
+    A cross-stage comparison must be written as separate operator lessons; method
+    and infrastructure lessons retain their historical representation.
+    """
+    if body.get('kind') != 'operator_optimization':
+        return None
+    refs = body.get('memory_refs', [])
+    if not refs or len({r['id'] for r in refs}) != len(refs):
+        raise ValueError('stage-scoped operator lesson needs distinct real memory references')
+    contexts, stages = [], set()
+    for ref in refs:
+        memory = memories.get(ref['id'])
+        if (memory is None or memory['record_kind'] != 'optimization_memory'
+                or memory['record_hash'] != ref['record_hash']):
+            raise ValueError('lesson planning memory identity differs')
+        identity = memory['body']['identity']
+        if identity['operator'] != body.get('operator') or identity['split'] != body['split']:
+            raise ValueError('lesson planning operator/split differs from memory')
+        attrs = memory['body']['intervention']['attributes']
+        stage = attrs.get('optimization_stage')
+        if stage not in ('algorithm_parallel', 'execution'):
+            raise ValueError('lesson memory has no explicit optimization stage')
+        if any(key not in attrs for key in LESSON_PLANNING_FIELDS):
+            raise ValueError('lesson memory lacks planning context')
+        if attrs['implementation_source_hash'] != memory['body']['sources']['candidate']:
+            raise ValueError('lesson memory implementation differs from actual source')
+        stages.add(stage)
+        contexts.append({'memory_id': ref['id'], 'memory_record_hash': ref['record_hash'],
+            'source_attempt_id': identity['candidate_id'],
+            **{key: copy.deepcopy(attrs[key]) for key in LESSON_PLANNING_FIELDS}})
+    if len(stages) != 1:
+        raise ValueError('operator lesson mixes algorithm_parallel and execution memories')
+    return {'optimization_stage': stages.pop(), 'planning_contexts': contexts}
+
+
+def verify_lesson_planning(body, memories):
+    binding = lesson_planning_bindings(body, memories)
+    if binding is None:
+        return
+    attrs = body['intervention']['attributes']
+    if any(canonical(attrs.get(key)) != canonical(value) for key, value in binding.items()):
+        raise ValueError('lesson stage or planning contexts differ from real memories')
+    facts = [body['intervention'], *body['diagnosis']['symptoms'], *body['diagnosis']['hypotheses'],
+             *body['effective_conditions'], *body['ineffective_conditions'], *body['counterexamples'], *body['claims']]
+    for fact in facts:
+        scoped = fact['attributes']
+        if 'optimization_stage' in scoped and scoped['optimization_stage'] != binding['optimization_stage']:
+            raise ValueError('lesson fact optimization stage contradicts its memories')
+        contexts = binding['planning_contexts']
+        if 'cases' in scoped and (not isinstance(scoped['cases'], list)
+                or any(type(cid) is not int or cid < 0 for cid in scoped['cases'])
+                or scoped['cases'] != fact['case_ids']):
+            raise ValueError('lesson direct cases scope differs from canonical case_ids')
+        if 'planning_contexts' in scoped and fact is not body['intervention']:
+            declared = scoped['planning_contexts']
+            if (not isinstance(declared, list) or not declared
+                    or any(not isinstance(ctx, dict) or not any(canonical(ctx) == canonical(real) for real in contexts) for ctx in declared)
+                    or len({ctx['memory_id'] for ctx in declared}) != len(declared)):
+                raise ValueError('lesson condition planning_contexts are absent from its memories')
+            contexts = declared
+        for key in LESSON_PLANNING_FIELDS:
+            if key in scoped and key != 'dispatch_selections':
+                contexts = [c for c in contexts if c[key] == scoped[key]]
+        if 'dispatch_selections' in scoped:
+            declared = scoped['dispatch_selections']
+            if not isinstance(declared, list) or not declared or any(not isinstance(row, dict) for row in declared):
+                raise ValueError('lesson condition dispatch_selections must be actual selected rows')
+            contexts = [ctx for ctx in contexts if all(any(canonical(row) == canonical(real)
+                        for real in ctx['dispatch_selections']) for row in declared)]
+        if not contexts:
+            raise ValueError('lesson condition plan/architecture/source/dispatch is absent from its memories')
+        selection_keys = ('tiling_key', 'kernel_entry', 'group_id')
+        conditions = {key: scoped[key] for key in selection_keys if key in scoped}
+        if conditions or fact['case_ids']:
+            selections = [row for ctx in contexts for row in ctx['dispatch_selections']
+                          if all(type(row.get(key)) is type(value) and row.get(key) == value for key, value in conditions.items())
+                          and ('dispatch_selections' not in scoped or any(canonical(row) == canonical(real)
+                               for real in scoped['dispatch_selections']))]
+            if not selections or any(cid not in {r.get('case_id') for r in selections} for cid in fact['case_ids']):
+                raise ValueError('lesson condition key/entry/case is absent from its memories')
+
+
 def normalize_lessons(items, memories, evidence):
     out = {}
     for item in items:
@@ -591,8 +681,13 @@ def verify(root, deep=False, prospective_pointer=None, *, evidence_paths=None, g
                 raise ValueError('baseline source mismatch')
         if len(body['machine_results']) != len(seen_evals) or {m['evaluation_id'] for m in body['machine_results']} != seen_evals:
             raise ValueError('machine evaluation binding')
+    lesson_contract = metadata.get('lesson_planning_contract')
+    if lesson_contract not in (None, LESSON_PLANNING_CONTRACT):
+        raise ValueError('unknown lesson planning contract')
     for row in lessons:
         body = row['body']; claim_ids = [c['id'] for c in body['claims']]
+        if lesson_contract == LESSON_PLANNING_CONTRACT:
+            verify_lesson_planning(body, memories)
         if len(claim_ids) != len(set(claim_ids)): raise ValueError('duplicate claims')
         for group in ('effective_conditions', 'ineffective_conditions', 'counterexamples'):
             for condition in body[group]:
@@ -601,6 +696,9 @@ def verify(root, deep=False, prospective_pointer=None, *, evidence_paths=None, g
             memory = memories.get(ref['id'])
             if not memory or memory['record_hash'] != ref['record_hash'] or memory['body']['identity']['split'] != body['split']: raise ValueError('lesson memory binding')
         for link in body['graph_links']:
+            if (lesson_contract == LESSON_PLANNING_CONTRACT and body['kind'] == 'operator_optimization'
+                    and link['graph_version'] != 'v0002'):
+                raise ValueError('stage-scoped operator lesson requires bound v0002 graph associations')
             def collect_ids(v):
                 if isinstance(v, dict):
                     if isinstance(v.get('id'), str): yield v['id']
@@ -623,6 +721,14 @@ def verify(root, deep=False, prospective_pointer=None, *, evidence_paths=None, g
                     graph = strict_loads(raw)
                     if graph.get('graph_version') != 'v0002' or digest_bytes(canonical(graph)[:-1]) != declaration.get('content_hash'):
                         raise ValueError('graph snapshot canonical identity')
+                    if lesson_contract == LESSON_PLANNING_CONTRACT and body['kind'] == 'operator_optimization':
+                        contexts = body['intervention']['attributes']['planning_contexts']
+                        if declaration['content_hash'] not in {ctx['graph_hash'] for ctx in contexts}:
+                            continue
+                        for transformation in graph.get('transformations', []):
+                            if (transformation['id'] == link['node_id'] and transformation.get('optimization_stage')
+                                    not in (body['intervention']['attributes']['optimization_stage'], 'any')):
+                                raise ValueError('lesson graph transformation belongs to a different optimization stage')
                     nodes.update(collect_ids(graph))
             else:
                 raise ValueError('unknown graph version')

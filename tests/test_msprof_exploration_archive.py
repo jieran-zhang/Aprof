@@ -562,6 +562,9 @@ def fresh_planning_run(run, monkeypatch):
 
 def test_fresh_test_origin_is_research_train_with_bound_planning_and_real_memory_refs(run, monkeypatch):
     fresh_planning_run(run, monkeypatch); stage(run)
+    proposal = archive.load(run['candidate']/'proposal.json')
+    proposal['optimization_stage'] = 'algorithm_parallel'
+    save(run['candidate']/'proposal.json', proposal)
     save(run['task']/'analysis/lessons.json', [dict(id='dispatch-lesson',kind='operator_optimization',operator='maximum',
         title='Workload dispatch observation',source_attempt_ids=['exp001'],
         graph_links=[{'graph_version':'v0002','node_id':'transformation.select_parallel_algorithm','basis':'Retrospective association, not a route'}],
@@ -569,7 +572,7 @@ def test_fresh_test_origin_is_research_train_with_bound_planning_and_real_memory
         evidence=[{'path':str(run['candidate']/'proposal.json')}])])
     result=archive.archive_split(run['root'],'train')
     rows,base=read_memory(run['root']);body=rows[0]['body']
-    assert body['intervention']['attributes']['optimization_stage']=='execution'
+    assert body['intervention']['attributes']['optimization_stage']=='algorithm_parallel'
     assert body['intervention']['attributes']['source_split']=='test'
     assert body['intervention']['attributes']['implementation_source_hash']==run['item']['source_hash']
     lessons=v2.load_rows(base/'train/lessons.jsonl')
