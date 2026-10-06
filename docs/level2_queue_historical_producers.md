@@ -1,0 +1,9 @@
+# Historical producer rosters for R1 queue handoff
+
+A queue's producer closure belongs to its frozen engineering epoch. Adding the candidate-bound GN guard helpers expanded the current closure from25 to27 scripts. This must not rewrite or invalidate the older queue01/02 evidence required by an explicit suffix handoff.
+
+The queue reader recognizes one explicit historical25-script roster. It is admitted only when `live_producers=False`, with the reviewed original queue or suffix-continuation producer hash paired with its original request version, and the reviewed historical provenance producer hash. Every member must still have its canonical repository origin and its exact hash in the immutable engineering manifest and source-CAS snapshot. Missing, added or duplicate members, unknown producer hashes and version substitutions are rejected. No subset rule or unrestricted source execution is used.
+
+Current/live admission still requires the complete current roster. Historical acceptance is evidence replay only; it never authorizes executing an old queue with newly changed code. To continue after a closed same-source recovery, retain all previous requests, states and receipts; freeze a new engineering manifest, then use `prepare-handoff` to publish the next numbered queue atomically. The new request uses current producers and retains the complete audited ancestor prefix. `run --max-new-operators N` may then execute the remaining suffix, with the original source-round, sample and cost budgets unchanged.
+
+This compatibility change does not bypass archived source, baseline calibration, original blocked child, closed recovery observation, schedule order or remaining-candidate checks. Any later blocker must be reported explicitly; an accepted producer roster alone does not mean the full handoff passed.

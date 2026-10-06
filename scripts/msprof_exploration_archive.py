@@ -146,7 +146,7 @@ def load(path):
 
 
 def sha(path):
-    return v2.digest_bytes(Path(path).read_bytes())
+    return analysis.verification_storage.fingerprint(path)['sha256']
 
 
 def native_tar_files(path):
@@ -507,7 +507,7 @@ class Archive:
         binding = storage.evidence_binding(path, expected)
         if binding is None:
             return None
-        binding.pop('bytes')
+        binding.pop('bytes',None)
         result = dict(binding['origin'])
         # Explicitly retain every archive/seal/producer and closed-state dependency.
         for key in ('seal', 'archive', 'producer'):
@@ -515,9 +515,9 @@ class Archive:
             self.pointer(ref['path'], owner, expected=ref['sha256'])
         for ref in binding['closed_evidence']['protected']:
             self.pointer(ref['path'], owner, expected=ref['sha256'])
-        event = binding['closed_evidence']['event_binding']
-        self.pointer(event['path'], owner, selector='line:'+str(event['sequence']+1))
-        self.document({'version': storage.VERSION, 'archive_mapping': {key:value for key,value in binding.items() if key!='origin'}})
+        for event in storage.event_bindings(binding['closed_evidence']):
+            self.pointer(event['path'], owner, selector='line:'+str(event['sequence']+1))
+        self.document({'version': binding.get('version',storage.VERSION), 'archive_mapping': {key:value for key,value in binding.items() if key!='origin'}})
         return result
 
     def pointer(self, path, owner=None, expected=None, selector=''):

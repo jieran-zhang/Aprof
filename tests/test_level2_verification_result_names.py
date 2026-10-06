@@ -30,6 +30,8 @@ def fixture(tmp_path,operator='apply_adam_w',actual_result='precision.json'):
  save(session/'native/journal.jsonl',{'type':'session_end','exit_code':0});save(session/'bindings.json',{})
  save(session/'validation.json',{'scope':'final_call_of_final_sample_per_case_config_role','outputs':[{'case_id':'1','buffer_config':'normal','role':r,'passed':True} for r in 'AB']})
  event(task,'stage_completed',{'result':store.raw_ref(stage/'result.json')})
+ from verification_authority_fixture import anchor
+ anchor(task,cohort)
  return task,session
 
 @pytest.mark.parametrize('operator,result',[('apply_adam_w','precision.json'),('maximum','result.json'),('arg_max','result.json'),('rms_norm','result.json'),('group_norm','result.json')])
@@ -39,7 +41,7 @@ def test_reviewed_names_and_repeat_retirement(tmp_path,operator,result):
  assert first['archived_files']==8
  assert store.prepare(session,writers_closed=True,retire=True)==first
  assert {p:store.read_bytes(p) for p in old}==old
- assert store.verified(session)['seal']['version']=='level2_closed_verification_storage_v1'
+ assert store.verified(session)['seal']['version']=='level2_closed_verification_storage_v2'
 
 @pytest.mark.parametrize('operator,result',[('apply_adam_w','result.json'),('maximum','precision.json'),('apply_adam_w','random.json')])
 def test_wrong_result_file_fails_before_any_unlink(tmp_path,operator,result):

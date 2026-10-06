@@ -31,6 +31,7 @@ sys.dont_write_bytecode = True
 from level2_adapters import OPERATORS, OUTPUT_KEYS
 from run_level1_serial import exclusive_host
 import level2_verification_storage as verification_storage
+import level2_native_output_storage as native_outputs
 
 VERSION = 'level2_output_dedup_v1'
 CHUNK = 8 * 1024 * 1024
@@ -117,6 +118,7 @@ class Inventory:
         self.run = safe(Path(os.path.abspath(run)), directory=True)
         self.scope = safe(Path(os.path.abspath(scope)), self.run, directory=True)
         self.kind, self.files, self.evidence = kind, {}, {}
+        self.archived_files = {}
         parts = self.scope.relative_to(self.run).parts
         require(len(parts) >= 5 and parts[0] in ('train','validation','test') and parts[1] == 'tasks', 'scope must belong to a Level2 task')
         self.task = self.run.joinpath(*parts[:3])
@@ -157,6 +159,12 @@ class Inventory:
         path = Path(path)
         require(path.is_absolute() and '..' not in path.parts and path.is_relative_to(self.run),
                 'index path escapes storage scope')
+        native = native_outputs.resolve(path)
+        if native is not None:
+            raw=native_outputs.read_bytes(path);value=native_outputs.digest(raw)
+            require(expected is None or value==expected,'native index hash differs')
+            self.evidence[str(path)]=value
+            return json.loads(raw)
         archived = verification_storage.resolve(path)
         if archived is not None:
             raw = archived['payloads'][str(path)]
@@ -179,6 +187,9 @@ class Inventory:
 
     def recheck_evidence(self):
         for path, value in self.evidence.items():
+            if native_outputs.resolve(Path(path)) is not None:
+                require(native_outputs.fingerprint(path)['sha256']==value,'archived native index changed')
+                continue
             archived = verification_storage.resolve(Path(path))
             if archived is None:
                 digest(path, value)
@@ -188,6 +199,17 @@ class Inventory:
 
     def add(self, path, expected):
         require(isinstance(expected,str) and DIGEST.fullmatch(expected), 'invalid indexed output hash')
+        path=Path(path)
+        require(path.is_absolute() and '..' not in path.parts and path.is_relative_to(self.scope),'output escapes storage scope')
+        archived=native_outputs.resolve(path)
+        if archived is not None:
+            row=archived['members'][str(path)]
+            require(row['sha256']==expected,'archived output hash differs')
+            require((archived['destination']/'compacted.json').is_file(),'native retirement incomplete; resume archive first')
+            require(str(path) not in self.files,'duplicate indexed output')
+            self.files[str(path)]={'path':str(path),'sha256':expected,'bytes':row['size_bytes']}
+            self.archived_files[str(path)]=archived['seal_ref']
+            return
         path = safe(path, self.scope)
         value, info = digest(path, expected)
         row = {'path':str(path), 'sha256':value, 'bytes':info['bytes']}
@@ -202,7 +224,7 @@ class Inventory:
         require(index.get('version') == 'level2_output_bundle_v1' and index.get('operator') == self.operator, 'bundle index identity differs')
         rows = index.get('outputs',[])
         require([r.get('name') for r in rows] == list(keys), 'bundle output names differ')
-        with path.open('rb') as stream:
+        with verification_storage.open_binary(path) as stream:
             for key,row in zip(keys,rows):
                 part = path.with_name(path.name+'.'+key)
                 require(row.get('path') == str(part), 'bundle part escapes fixed output filename')
@@ -211,7 +233,7 @@ class Inventory:
                 size = struct.unpack('<Q',header)[0]
                 require(type(row.get('bytes')) is int and row['bytes'] == size, 'bundle length differs')
                 self.add(part, row['sha256'])
-                with part.open('rb') as separate:
+                with verification_storage.open_binary(part) as separate:
                     remaining = size
                     while remaining:
                         block = stream.read(min(remaining,CHUNK))
@@ -610,7 +632,9 @@ class KnownOutputLinks:
                     tail[2] in ('cohort','direct_parent','original_baseline') and TOKEN.fullmatch(tail[3]) and tail[4] == 'native' and
                     any(re.fullmatch(r'([1-9]|1[0-9]|20)_(normal|swapped)_[AB]\.bin'+re.escape(s),tail[5]) for s in suffixes))
             require(valid, 'prior inventory contains a non-output artifact')
-            if not path.exists() and not path.is_symlink(): continue
+            if not path.exists() and not path.is_symlink():
+                require(native_outputs.resolve(path) is not None,'prior output missing without sealed retirement')
+                continue
             info = safe(path,inventory.run).stat()
             key = (info.st_dev,info.st_ino)
             self.counts[key] = self.counts.get(key,0)+1
@@ -719,6 +743,7 @@ def replace_one(row, pool, transaction, number, known_links):
     return result
 
 
+@verification_storage.reader_session()
 def deduplicate(run, scope, *, kind, writers_closed=False, apply=False):
     require(kind in ('pilot','cohort','stage'), 'unsupported output scope')
     require(writers_closed is True, 'coordinator must affirm that all selected output writers are closed')
@@ -726,6 +751,11 @@ def deduplicate(run, scope, *, kind, writers_closed=False, apply=False):
     # This is also the collector lock, not merely a dedup-vs-dedup lock.
     with exclusive_host():
         inventory = Inventory(run,scope,kind)
+        if inventory.archived_files:
+            require(len(inventory.archived_files)==len(inventory.files),'mixed archived/loose scope: deduplicate remaining cohorts explicitly')
+            refs={r['path']:r for r in inventory.archived_files.values()}
+            return {'version':VERSION,'status':'verified_archived','scope':str(inventory.scope),
+                    'seals':[refs[k] for k in sorted(refs)],'reclaimed_bytes':0,'evidence_bytes_deleted':0,'original_records_modified':False}
         plan = {'version':VERSION,'run':str(inventory.run),'scope':str(inventory.scope),'kind':kind,
                 'operator':inventory.operator,'writers_closed_attested':True,
                 'started_at':started,'host_exclusive_lock_held':True,

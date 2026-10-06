@@ -174,6 +174,19 @@ def external_evidence_bytes(path):
     return storage.read_bytes(path)
 
 
+def evidence_fingerprint(path, *, external=True):
+    if external:
+        try:
+            import level2_verification_storage as storage
+        except ModuleNotFoundError as error:
+            if error.name != 'level2_verification_storage':raise
+        else:return storage.fingerprint(path)
+    h=hashlib.sha256();size=0
+    with Path(path).open('rb') as stream:
+        while block:=stream.read(1024*1024):h.update(block);size+=len(block)
+    return {'sha256':'sha256:'+h.hexdigest(),'size_bytes':size}
+
+
 class Evidence:
     """Read-only legacy catalog plus content-deduplicated evidence selectors."""
     def __init__(self, runs=()):
@@ -194,9 +207,9 @@ class Evidence:
         return self.bytes_cache[path]
 
     def file(self, path, *, split='train', selector='', purpose='source evidence', expected=None):
-        path = str(Path(path).resolve()); data = self.read(path); h = digest_bytes(data)
+        path = str(Path(path).resolve()); fp=evidence_fingerprint(path);h=fp['sha256']
         if expected and expected != h: raise ValueError('evidence hash mismatch: ' + path)
-        return self._entry(h, path, len(data), split, selector, purpose)
+        return self._entry(h, path, fp['size_bytes'], split, selector, purpose)
 
     def hash(self, h, split, purpose='legacy artifact'):
         locations = self.locations.get((split, h), [])
@@ -782,8 +795,9 @@ def verify(root, deep=False, prospective_pointer=None, *, evidence_paths=None, g
         for entry in index.values():
             path = entry['path']; expected = entry['sha256']
             if path not in cache:
-                data = evidence_bytes(path); cache[path] = (digest_bytes(data), len(data))
-                if path in selector_paths: contents[path] = data
+                fp=evidence_fingerprint(evidence_path(path),external=evidence_paths is None)
+                cache[path]=(fp['sha256'],fp['size_bytes'])
+                if path in selector_paths:contents[path]=evidence_bytes(path)
             if cache[path] != (expected, entry['size_bytes']): raise ValueError('external evidence changed: ' + path)
             validate_selector(entry['selector'], evidence_path(path), contents.get(path), selector_cache)
             verified += 1

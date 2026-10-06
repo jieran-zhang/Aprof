@@ -304,6 +304,50 @@ def candidate_evidence(request, entry, *, allow_later=False, observation_id=None
             'classification': feedback.get('failure_classification'), 'observation_id': observation_id}
 
 
+# The pre-candidate-guard roster is an explicit historical protocol, never an
+# arbitrary subset of today's producers. Only these reviewed frozen queue and
+# provenance producer bytes define that roster. New/live queue admission always
+# requires the complete current set.
+LEGACY_PRODUCER_NAMES = frozenset({
+    'cannbench_msprof_timing.py', 'cannbench_shared_context.py',
+    'cannbench_shared_context_profile.py', 'level2_adapters.py',
+    'level2_boundaries.py', 'level2_campaign.py',
+    'level2_failure_classification.py', 'level2_finalize.py',
+    'level2_iteration.py', 'level2_pilot.py', 'level2_r1_queue.py',
+    'level2_raw_method.py', 'level2_storage.py', 'msprof_exploration_archive.py',
+    'msprof_exploration_campaign.py', 'msprof_exploration_execute.py',
+    'msprof_exploration_oracle.py', 'msprof_exploration_provenance.py',
+    'msprof_exploration_report.py', 'msprof_exploration_safety.py',
+    'msprof_exploration_standalone.py', 'msprof_raw_storage.py',
+    'prepare_trace_pilot.py', 'run_msprof_exploration_stage.py',
+    'shared_context_build.py',
+})
+LEGACY_QUEUE_ROSTERS = {
+    # Last original full queue and first immutable suffix continuation.
+    'sha256:f02258c805442d2752b43f0eb9758d684f368b077d22fac0142f0dca411f11f1': VERSION,
+    'sha256:181913d7615a783036d0e304eddc76e2b9c5b45c68b0391e0746064ac6476562': CONTINUATION_VERSION,
+}
+LEGACY_PROVENANCE_HASH = 'sha256:4fce29e17c97a815fbc49fbefd3e184bc86392a91d427d637a2cb9efb35fdfdc'
+
+
+def producer_names(request, *, live_producers):
+    current = FRESH_PRODUCERS | {'level2_r1_queue.py', 'run_msprof_exploration_stage.py', 'prepare_trace_pilot.py'}
+    refs = request['producers']
+    names = {Path(ref['path']).name for ref in refs}
+    require(len(refs) == len(names), 'duplicate queue producer identity')
+    if names == current:
+        return current
+    require(not live_producers and names == LEGACY_PRODUCER_NAMES,
+            'queue producer closure differs')
+    identities = {Path(ref['path']).name: ref['sha256'] for ref in refs}
+    require(LEGACY_QUEUE_ROSTERS.get(identities['level2_r1_queue.py']) == request['version']
+            and identities['msprof_exploration_provenance.py'] == LEGACY_PROVENANCE_HASH,
+            'unreviewed historical queue producer roster')
+    # request_identity below verifies every complete legacy identity against the
+    # immutable engineering manifest and its actual source-CAS bytes.
+    return LEGACY_PRODUCER_NAMES
+
+
 def request_identity(queue, state, request, *, live_producers=True):
     require(request['version'] == state['version']
             and request['version'] in (VERSION, CONTINUATION_VERSION, HANDOFF_VERSION) and request['settings'] == SETTINGS
@@ -328,7 +372,7 @@ def request_identity(queue, state, request, *, live_producers=True):
     require([e['operator'] for e in request['entries']] == expected_order
             and len(full_order) == len(set(full_order)) == 15
             and set(full_order) == set(iteration.OPERATORS) - {'maximum'}, 'queue order/scope changed')
-    expected_names = FRESH_PRODUCERS | {'level2_r1_queue.py', 'run_msprof_exploration_stage.py', 'prepare_trace_pilot.py'}
+    expected_names = producer_names(request, live_producers=live_producers)
     require({Path(r['path']).name for r in request['producers']} == expected_names
             and len(request['producers']) == len(expected_names), 'queue producer closure differs')
     frozen_files = {r['path']: r for r in engineering['files']}

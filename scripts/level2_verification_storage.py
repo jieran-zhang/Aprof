@@ -17,8 +17,10 @@ from pathlib import Path
 import re
 import stat
 import tarfile
+import level2_native_output_storage as native_outputs
 
 VERSION='level2_closed_verification_storage_v1'
+ANCHORED_VERSION='level2_closed_verification_storage_v2'
 NAMES={'metadata.json','execution.json','stdout.log','result.json'}
 # Reviewed original oracle contract: AdamW writes precision.json beside metadata.
 RESULT_FILE_BY_OPERATOR={'apply_adam_w':'precision.json'}
@@ -136,6 +138,106 @@ def closed_from_reader(session, read_bytes):
     return {'protected':[ref(p) for p in paths],'event_binding':binding},expected
 
 
+def report_authority(session,read_bytes):
+    """Find an already recorded ledger slot fixing the exact report bytes.
+
+    This is a narrow immutable-prefix proof, not campaign execution/recovery.
+    Archived producers are never loaded. No current report creates authority.
+    """
+    session=Path(session);parts=session.parts;i=parts.index('tasks')
+    task=Path(*parts[:i+2]);operator=task.name;ledger=task.parents[1]/'ledger'
+    cohort=session.parent;stage=cohort.parent;parent=stage.parent.parent
+    cid=None if parent==task else parent.name
+    sid=('baseline' if cid is None else cid)+'-'+stage.name
+    def read(path):return read_bytes(path)
+    def load(path):return json.loads(read(path))
+    def ref(path):return {'path':str(path),'sha256':digest(read(path))}
+    def packed(value):return json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=False,allow_nan=False).encode()
+    config=load(ledger/'config.json');config_hash=digest(packed(config))
+    require(config.get('schema_version')=='msprof_exploration_campaign_v2'
+            and config.get('tasks',{}).get(operator,{}).get('split')==parts[i-1], 'verification authority requires same fresh ledger task')
+    require(load(ledger/'config.sha256.json')=={'sha256':config_hash},'verification authority config identity differs')
+    target=ref(cohort/'report.json');result=ref(stage/'result.json');stage_plan=load(stage/'stage-plan.json')
+    report=load(cohort/'report.json');candidate_sources={};starts={};finishes={};ids=set()
+    previous='sha256:'+'0'*64;data=read(ledger/'events.jsonl')
+    require(data.endswith(b'\n'),'verification authority ledger has incomplete tail')
+    for number,line in enumerate(data.splitlines()):
+        row=json.loads(line);body={k:v for k,v in row.items() if k!='hash'}
+        require(set(row)=={'sequence','event_id','operation','arguments','recorded_at','previous_hash','config_hash','hash'}
+                and packed(row)==line and type(row['sequence']) is int and row['sequence']==number
+                and row['previous_hash']==previous and row['config_hash']==config_hash and row['hash']==digest(packed(body))
+                and isinstance(row['event_id'],str) and row['event_id'] and row['event_id'] not in ids
+                and isinstance(row['arguments'],dict),'verification authority ledger prefix differs')
+        previous=row['hash'];ids.add(row['event_id']);a=row['arguments'];operation=row['operation']
+        if number==0:
+            require(operation=='prepare' and row['event_id']=='genesis' and a=={},'verification authority genesis differs');continue
+        if a.get('workload')!=operator:continue
+        if operation=='register':candidate_sources[a['candidate_id']]=a['source_hash']
+        if operation=='start':starts[a['stage_id']]=a;finishes.pop(a['stage_id'],None)
+        elif operation=='finish':finishes[a['stage_id']]=a
+        own=starts.get(sid);finished=finishes.get(sid)
+        if not (own and finished and own.get('candidate_id')==cid and own.get('plan')==stage_plan
+                and finished.get('outcome')=='success' and finished.get('native_started') is True
+                and finished.get('evidence',{}).get('result')==result):continue
+        authority=None
+        if (operation=='start' and a.get('kind')=='timing' and a.get('candidate_id') in candidate_sources
+                and report.get('comparison_kind')=='aa' and own.get('kind')=='control'):
+            plan=a.get('plan',{});slots=[('plan.calibration_report',plan.get('calibration_report'))]
+            cohorts=plan.get('cohorts',[])
+            require(isinstance(cohorts,list) and all(isinstance(v,dict) and v.get('relation') in ('direct_parent','original_baseline') for v in cohorts)
+                    and len({v['relation'] for v in cohorts})==len(cohorts),'unknown/duplicate calibration relation')
+            slots.extend(('plan.cohorts['+str(n)+'].calibration_report',v.get('calibration_report')) for n,v in enumerate(cohorts))
+            matches=[name for name,value in slots if value==target]
+            if matches:authority={'kind':'ledger_timing_calibration_v1','slot':matches[0]}
+        elif (operation=='observe' and cid is not None and a.get('candidate_id')==cid
+                and a.get('close_feedback') is True and sid in a.get('stage_ids',[])):
+            feedback=a.get('feedback',{})
+            require(digest((json.dumps(feedback,ensure_ascii=False,sort_keys=True,allow_nan=False)+'\n').encode())==a.get('report_ref'),
+                    'closed feedback JSON differs from ledger report_ref')
+            if (feedback.get('version')=='level2_source_feedback_v1' and feedback.get('status')=='measured'
+                    and feedback.get('operator')==operator and feedback.get('candidate_id')==cid
+                    and feedback.get('source_hash')==candidate_sources.get(cid) and own.get('kind')=='timing'
+                    and report.get('comparison_kind')=='ab'
+                    and any(v.get('stage_id')==sid and v.get('status')=='passed' and v.get('result')==result for v in feedback.get('stages',[]))):
+                matches=[n for n,v in enumerate(feedback.get('comparisons',[])) if v.get('report')==target and v.get('relation')==cohort.name]
+                if matches:authority={'kind':'ledger_closed_feedback_report_v1','slot':'feedback.comparisons['+str(matches[0])+'].report'}
+        if authority:
+            return {**authority,'report':target,'ledger_event':{'path':str(ledger/'events.jsonl'),'sequence':number,'hash':row['hash']},
+                    'protected':[ref(ledger/'config.json'),ref(ledger/'config.sha256.json')]}
+    raise ValueError('no independent previously recorded report authority; new verification archive is blocked')
+
+
+def facts_for_version(session,read_bytes,version):
+    require(version in (VERSION,ANCHORED_VERSION),'unknown verification storage version')
+    facts,expected=closed_from_reader(session,read_bytes)
+    if version==ANCHORED_VERSION:
+        authority=report_authority(session,read_bytes)
+        session=Path(session);report=json.loads(read_bytes(session.parent/'report.json'))
+        group=json.loads(read_bytes(session.parent/'group-completion.json'))
+        directories=[v['directory'] for v in report['sessions']]
+        require(len(directories)==len(set(directories))==6 and directories==group['completed_sessions'],
+                'anchored report full process roster differs')
+        artifacts=next(v['artifacts'] for v in report['sessions'] if v['directory']==str(session))
+        for name in ('validation.json','bindings.json','completion.json','msprof.execution.json','native/journal.jsonl'):
+            path=session/name
+            require(artifacts.get(str(path))==digest(read_bytes(path)),
+                    'protected session metadata differs from independently anchored report: '+name)
+        bound_names={'metadata.json','execution.json','stdout.log'}
+        reported={path for path in artifacts if Path(path).is_relative_to(session/'verification') and Path(path).name in bound_names}
+        required={path for path in expected if Path(path).name in bound_names}
+        require(reported==required,'verification roster differs from complete anchored report')
+        facts['report_authority']=authority
+        known={p['path']:p for p in [*facts['protected'],*authority['protected']]}
+        facts['protected']=[known[k] for k in sorted(known)]
+    return facts,expected
+
+
+def event_bindings(facts):
+    result=[facts['event_binding']]
+    if facts.get('report_authority'):result.append(facts['report_authority']['ledger_event'])
+    return result
+
+
 def closed(session):
     return closed_from_reader(process_location(session),raw_read)
 
@@ -158,9 +260,9 @@ def verified(session,destination=None):
     signature=signatures([seal_path,archive]);key=(str(session),str(destination));cache=_CACHE.get()
     if cache is not None and key in cache and cache[key][0]==signature:return cache[key][1]
     seal=raw_json(seal_path)
-    require(seal.get('version')==VERSION and seal.get('session')==str(session)
+    require(seal.get('version') in (VERSION,ANCHORED_VERSION) and seal.get('session')==str(session)
             and seal.get('logical_root')==str(session/'verification') and seal.get('source_bytes_preserved') is True,'verification seal identity differs')
-    facts,expected=closed(session)
+    facts,expected=facts_for_version(session,raw_read,seal['version'])
     require(seal.get('closed_evidence')==facts,'closed verification evidence changed')
     require(seal.get('archive')==raw_ref(archive),'verification archive hash differs')
     producer=seal.get('producer',{});require(producer==raw_ref(destination/'producer.py'),'verification producer snapshot differs')
@@ -194,7 +296,7 @@ def verified(session,destination=None):
     completion=destination/'compacted.json'
     if completion.exists() or completion.is_symlink():
         receipt=raw_json(completion)
-        require(receipt=={'version':VERSION,'status':'complete','seal':raw_ref(seal_path),'source_bytes_preserved':True}
+        require(receipt=={'version':seal['version'],'status':'complete','seal':raw_ref(seal_path),'source_bytes_preserved':True}
                 and not loose_root.exists(),'verification completion changed or loose tree reappeared')
     value={'seal':seal,'seal_ref':raw_ref(seal_path),'payloads':payloads,'destination':str(destination)}
     if cache is not None:cache[key]=(signature,value)
@@ -202,6 +304,7 @@ def verified(session,destination=None):
 
 
 def reverify_cached():
+    native_outputs.reverify_cached()
     """Recheck every visited seal/protected proof before a caller publishes."""
     cache=_CACHE.get()
     if cache is None:return
@@ -220,7 +323,8 @@ def reader_session(overrides=None):
     token=_CACHE.set({}) if _CACHE.get() is None else None
     mapping_token=_OVERRIDES.set(mapped) if mapped is not None else None
     try:
-        yield
+        with native_outputs.reader_session():
+            yield
         if token is not None:
             # Detect mutation during a complete reader transaction before returning.
             reverify_cached()
@@ -230,10 +334,15 @@ def reader_session(overrides=None):
 
 
 def resolve(path):
-    session=location(path)
-    if session is None:return None
+    path=Path(path)
+    # Legacy oracle files can share these basenames outside a Level2 stage.
+    # Enforce the strict namespace only when an archive is actually declared.
+    if path.name not in ELIGIBLE_NAMES or not STEM.fullmatch(path.parent.name) or path.parent.parent.name!='verification':return None
+    session=path.parent.parent.parent
     destination=archive_dir(session)
-    if not destination.exists() and not destination.is_symlink():return None
+    declared=str(session) in (_OVERRIDES.get() or {})
+    if not declared and not destination.exists() and not destination.is_symlink():return None
+    require(location(path)==session,'declared verification archive path differs')
     value=verified(session,destination)
     require(str(path) in value['payloads'],'logical verification file not sealed')
     return value
@@ -241,21 +350,35 @@ def resolve(path):
 
 def read_bytes(path):
     path=Path(path);value=resolve(path)
-    return value['payloads'][str(path)] if value is not None else Path(path).read_bytes()
+    return value['payloads'][str(path)] if value is not None else native_outputs.read_bytes(path)
+
+
+@contextlib.contextmanager
+def open_binary(path):
+    value=resolve(Path(path))
+    if value is not None:
+        with io.BytesIO(value['payloads'][str(path)]) as stream:yield stream
+    else:
+        with native_outputs.open_binary(path) as stream:yield stream
+
+
+def fingerprint(path):
+    with open_binary(path) as stream:return native_outputs.fingerprint_stream(stream)
 
 
 def is_file(path):
     value=resolve(Path(path))
     if value is not None:return True
+    if native_outputs.resolve(Path(path)) is not None:return True
     return safe(path,exists=False).is_file()
 
 
 def evidence_binding(path,expected=None):
     value=resolve(Path(path))
-    if value is None:return None
+    if value is None:return native_outputs.evidence_binding(path,expected)
     data=value['payloads'][str(path)];actual=digest(data)
     require(expected is None or expected==actual,'logical verification hash differs')
-    return {'origin':{'path':str(path),'sha256':actual},'seal':value['seal_ref'],
+    return {'version':value['seal']['version'],'origin':{'path':str(path),'sha256':actual},'seal':value['seal_ref'],
             'archive':value['seal']['archive'],'producer':value['seal']['producer'],
             'closed_evidence':value['seal']['closed_evidence'],'bytes':data}
 
@@ -267,6 +390,7 @@ def logical_files(directory):
         session=marker.parent.parent;values.update(verified(session)['payloads'])
     for session,destination in (_OVERRIDES.get() or {}).items():
         if Path(session).is_relative_to(directory):values.update(verified(Path(session),Path(destination))['payloads'])
+    values.update(native_outputs.logical_files(directory))
     return sorted(values)
 
 
@@ -280,10 +404,14 @@ def prepare(session,destination=None,*,writers_closed=False,retire=False):
     require(retire or destination.is_relative_to(Path('/tmp')),'non-retiring shadow archive must be under /tmp')
     with exclusive_host():
         facts,expected=closed(session)
+        if not (destination/'seal.json').exists():facts,expected=facts_for_version(session,raw_read,ANCHORED_VERSION)
         if not destination.exists():safe(destination.parent,directory=True);destination.mkdir()
         safe(destination,directory=True)
         with storage_lock(destination):
-            if (destination/'seal.json').exists():value=verified(session,destination)
+            if (destination/'seal.json').exists():
+                value=verified(session,destination)
+                require(value['seal']['version']!=VERSION or not retire or (destination/'compacted.json').is_file(),
+                        'unretired v1 archive lacks new admission; preserve it and create separately reviewed anchored v2')
             else:
                 root=safe(session/'verification',directory=True)
                 paths=[p for p in root.rglob('*') if not p.is_dir()]
@@ -299,12 +427,12 @@ def prepare(session,destination=None,*,writers_closed=False,retire=False):
                         archive.addfile(member,io.BytesIO(data))
                 publish_archive(destination/'verification.tar',buffer.getvalue())
                 publish_archive(destination/'producer.py',raw_read(Path(__file__).resolve()))
-                seal={'version':VERSION,'session':str(session),'logical_root':str(root),'closed_evidence':facts,
+                seal={'version':ANCHORED_VERSION,'session':str(session),'logical_root':str(root),'closed_evidence':facts,
                       'archive':raw_ref(destination/'verification.tar'),'producer':raw_ref(destination/'producer.py'),
                       'members':rows,'source_bytes_preserved':True}
                 write_new(destination/'seal.json',seal);value=verified(session,destination)
             if retire:
-                require(closed(session)[0]==value['seal']['closed_evidence'],'verification evidence changed before retirement')
+                require(facts_for_version(session,raw_read,value['seal']['version'])[0]==value['seal']['closed_evidence'],'verification evidence changed before retirement')
                 for name in ('verification.tar','seal.json','producer.py'):
                     fd=os.open(safe(destination/name),os.O_RDONLY|os.O_NOFOLLOW)
                     try:os.fsync(fd)
@@ -320,11 +448,11 @@ def prepare(session,destination=None,*,writers_closed=False,retire=False):
                     for directory in sorted(root.iterdir()):safe(directory,directory=True);sync_directory(directory);directory.rmdir()
                     sync_directory(root)
                     root.rmdir();sync_directory(session)
-                receipt={'version':VERSION,'status':'complete','seal':raw_ref(destination/'seal.json'),'source_bytes_preserved':True}
+                receipt={'version':value['seal']['version'],'status':'complete','seal':raw_ref(destination/'seal.json'),'source_bytes_preserved':True}
                 if (destination/'compacted.json').exists():require(raw_json(destination/'compacted.json')==receipt,'verification receipt changed')
                 else:write_new(destination/'compacted.json',receipt)
                 verified(session,destination)
-            return {'version':VERSION,'status':'complete' if retire else 'sealed_shadow','session':str(session),
+            return {'version':value['seal']['version'],'status':'complete' if retire else 'sealed_shadow','session':str(session),
                     'seal':raw_ref(destination/'seal.json'),'archived_files':len(value['payloads']),'original_bytes_preserved':True}
 
 

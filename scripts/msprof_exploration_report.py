@@ -56,14 +56,7 @@ def digest(value):
 
 
 def sha(path):
-    archived = verification_storage.resolve(Path(path))
-    if archived is not None:
-        return verification_storage.digest(archived['payloads'][str(path)])
-    value = hashlib.sha256()
-    with Path(path).open('rb') as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b''):
-            value.update(block)
-    return 'sha256:' + value.hexdigest()
+    return verification_storage.fingerprint(path)['sha256']
 
 
 def _decode(text, opaque=False):

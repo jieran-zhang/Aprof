@@ -353,21 +353,22 @@ def input_paths(metadata):
 def verify_output_metadata(operator, metadata, output_bundle):
     """Read-only replay of a previously unpacked output bundle and its hashes."""
     import struct
+    import level2_verification_storage as evidence_storage
     result=dict(metadata);result.update(output_paths(operator,metadata,output_bundle))
     keys=OUTPUT_KEYS.get(operator,('output',))
     if len(keys)==1:return result
     bundle=Path(output_bundle)
-    manifest=json.loads(bundle.with_name(bundle.name+'.outputs.json').read_text())
+    manifest=json.loads(evidence_storage.read_bytes(bundle.with_name(bundle.name+'.outputs.json')))
     if manifest.get('version')!='level2_output_bundle_v1' or manifest.get('operator')!=operator:
         raise ValueError('output bundle manifest identity mismatch')
     if [r['name'] for r in manifest['outputs']]!=list(keys):raise ValueError('output bundle names differ')
-    with bundle.open('rb') as stream:
+    with evidence_storage.open_binary(bundle) as stream:
         for key,row in zip(keys,manifest['outputs']):
             header=stream.read(8)
             if len(header)!=8:raise ValueError('truncated output header')
             size=struct.unpack('<Q',header)[0]; h=hashlib.sha256()
             if row['bytes']!=size or row['path']!=result[key]:raise ValueError('output bundle size/path differs')
-            with Path(result[key]).open('rb') as separate:
+            with evidence_storage.open_binary(Path(result[key])) as separate:
                 remaining=size
                 while remaining:
                     block=stream.read(min(remaining,8*1024*1024))

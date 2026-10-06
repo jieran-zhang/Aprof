@@ -50,6 +50,8 @@ def fixture(tmp_path):
     save(session/'validation.json',{'scope':'final_call_of_final_sample_per_case_config_role','outputs':[
         {'case_id':'1','buffer_config':'normal','role':r,'passed':True} for r in 'AB']})
     event(task,'stage_completed',{'result':store.raw_ref(stage/'result.json')})
+    from verification_authority_fixture import anchor
+    anchor(task,cohort)
     return task,session,tmp_path/'shadow'
 
 
@@ -114,7 +116,7 @@ def test_strict_archive_and_full_path_identity(tmp_path,change):
 
 def test_mutation_after_cached_read_is_rejected_before_reader_returns(tmp_path):
     task,session,destination=fixture(tmp_path);store.prepare(session,destination,writers_closed=True)
-    with pytest.raises(ValueError,match='changed'):
+    with pytest.raises(ValueError,match='changed|protected session metadata differs'):
         with store.reader_session({session:destination}):
             store.read_bytes(session/'verification/1_normal_A/metadata.json')
             save(session/'bindings.json',{'mutated':True})
@@ -129,6 +131,15 @@ def test_unrelated_event_append_does_not_change_stage_prefix(tmp_path):
 def test_nonarchive_legacy_files_keep_normal_reader_behavior(tmp_path):
     p=save(tmp_path/'plain.json',{'hello':'world'});alias=tmp_path/'alias.json';alias.symlink_to(p)
     assert store.read_bytes(alias)==p.read_bytes() and store.resolve(alias) is None
+
+
+def test_legacy_oracle_path_is_strict_only_when_archive_declared(tmp_path):
+    session=tmp_path/'run/train/tasks/exp/session-01'
+    origin=save(session/'verification/1_normal_A/metadata.json',{'legacy':True})
+    assert store.resolve(origin) is None and store.read_bytes(origin)==origin.read_bytes()
+    (session/'verification-storage').mkdir()
+    with pytest.raises(ValueError,match='unsupported verification scope'):
+        store.read_bytes(origin)
 
 
 def test_shadow_cannot_retire_live_tree(tmp_path):
@@ -337,7 +348,7 @@ def test_trusted_verifier_must_not_execute_helper_from_untrusted_bundle(tmp_path
 def test_explicit_precommit_revalidation_rejects_mutation_before_publication(tmp_path):
     _,session,destination=fixture(tmp_path);store.prepare(session,destination,writers_closed=True)
     committed=False
-    with pytest.raises(ValueError,match='changed'):
+    with pytest.raises(ValueError,match='changed|protected session metadata differs'):
         with store.reader_session({session:destination}):
             store.read_bytes(session/'verification/1_normal_A/metadata.json')
             save(session/'bindings.json',{'changed':True})
@@ -368,7 +379,7 @@ def test_output_dedup_index_reader_retains_exact_archived_proof_and_rejects_chan
     inventory.recheck_evidence()
     with pytest.raises(ValueError,match='hash differs'):inventory.read(origin,'sha256:'+'0'*64)
     save(session/'bindings.json',{'changed':True})
-    with pytest.raises(ValueError,match='changed'):inventory.recheck_evidence()
+    with pytest.raises(ValueError,match='changed|protected session metadata differs'):inventory.recheck_evidence()
 
 
 def test_output_file_hashing_never_accepts_archive_substitution(tmp_path):
@@ -393,6 +404,8 @@ def test_closed_output_dedup_recover_and_known_aliases_after_full_verification_r
         sessions.append({'directory':str(session),'artifacts':artifacts})
     save(scope/'report.json',{'sessions':sessions})
     event(task,'stage_completed',{'result':store.raw_ref(stage/'result.json')})
+    from verification_authority_fixture import anchor
+    anchor(task,scope)
     before=level2_storage.deduplicate(run,stage,kind='stage',writers_closed=True,apply=True)
     assert before['status']=='passed'
     for row in sessions:store.prepare(Path(row['directory']),writers_closed=True,retire=True)
