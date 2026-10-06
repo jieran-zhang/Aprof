@@ -64,10 +64,13 @@ def check_timing_settings(plan, settings):
 
 def reclaim_outputs(run, task, parent, group):
     # The synchronous stage returned and has reaped all writers before this call.
-    from level2_storage import deduplicate
+    from level2_storage import deduplicate, compact_journals
     result = deduplicate(run, parent / "stages" / group, kind="stage", writers_closed=True, apply=True)
     event(task, "closed_outputs_deduplicated", {"manifest": pointer(result["manifest_path"]),
           "reclaimed_bytes": result["reclaimed_bytes"], "evidence_bytes_deleted": 0})
+    # Bind the original manifest publicly before retiring its loose journal entries.
+    # Synchronous failure propagates; no next collector may start during maintenance.
+    compact_journals(run, Path(result["transaction"]), writers_closed=True, apply=True)
 
 
 def checked_pointer(ref, label):
