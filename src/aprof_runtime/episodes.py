@@ -89,8 +89,8 @@ def finalize_episodes(
         )
     for draft in request.candidates:
         if graph_snapshot.get("planning_contract") == "architecture_parallel_dispatch_v1" and draft.transformation_id != "transformation.noop":
-            if context.workload.get("source_hash") != draft.source_hashes.baseline:
-                raise ContractError("v0002 draft baseline differs from planning source identity")
+            from .planning import validate_planning_admission
+            validate_planning_admission(context, draft)
         attest_route(
             context=context,
             recorded=draft.route,

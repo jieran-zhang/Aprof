@@ -288,10 +288,31 @@ def validate_planning_context(context, *, execution=False):
             raise ContractError("dispatch references an unknown parallel group")
         if not _supported(profile, entry["required_capabilities"]):
             raise ContractError("dispatch requires unsupported capabilities")
+    key = context.workload.get("tiling_key")
+    if type(key) is not int or not 0 <= key <= 2**64 - 1:
+        raise ContractError("workload tiling_key requires a uint64 integer, not bool or float")
     selected = select_dispatch(dispatch, context.workload.get("metadata"))
     if selected["tiling_key"] != context.workload.get("tiling_key") or selected["group_id"] != context.workload.get("workload_group"):
         raise ContractError("workload dispatch key/group binding mismatch")
     return profile, plan, dispatch
+
+
+def validate_planning_admission(context, draft):
+    """Bind a completed v2 attempt to its output plan and actual implementation.
+
+    Algorithm routing may start without a plan. Episode admission happens after
+    the attempt and requires its complete, replayable output bundle. Callers
+    retain legacy graphs and NOOP semantics by applying this only to v2 non-NOOP.
+    """
+    if context.workload.get("source_hash") != draft.source_hashes.baseline:
+        raise ContractError("v0002 draft baseline differs from planning source identity")
+    _, plan, dispatch = validate_planning_context(context, execution=True)
+    if dispatch["source_hash"] != draft.source_hashes.candidate:
+        raise ContractError("v0002 planning implementation differs from actual candidate source")
+    if draft.transformation_id == "transformation.select_parallel_algorithm":
+        if (draft.parameters.get("plan_id") != plan["plan_id"]
+                or draft.parameters.get("group_id") != context.workload.get("workload_group")):
+            raise ContractError("algorithm selection parameters differ from its output plan/group")
 
 
 def select_dispatch(plan, workload):
