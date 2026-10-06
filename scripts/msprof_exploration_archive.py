@@ -836,6 +836,29 @@ class Archive:
             observation=self.pointer(directory / 'observation.json', owner), native_process_count=1,
             calibration_eligible=False, attribution='verified_single_process_method_only', **POLICY))
 
+    def stage_result_groups(self, directory, task, cid, owner):
+        """Keep both immutable attempt results, but evaluate each cohort once."""
+        for original in sorted((directory/'stages').glob('*/result.json')):
+            original=self.safe(original,owner);value=load(original);sid=value['stage_id']
+            require(sid in task['stages'] and task['stages'][sid]['candidate_id']==cid,
+                    'stage result is not registered for this source')
+            record=task['stages'][sid]
+            if not record.get('prestart_recovery'):
+                yield [original],original
+                continue
+            from level2_stage_recovery import resolve_result
+            resolved=resolve_result(original.parent,record,analysis.verification_storage.read_bytes)
+            require(resolved['original_failed_result']==dict(path=str(original),sha256=sha(original))
+                    and resolved['qualification'] is not None,'archive recovery omitted original failed attempt')
+            for fixed in resolved['protected']:
+                self.pointer(fixed['path'],owner,expected=fixed['sha256'])
+            for binding in resolved['event_bindings']:
+                self.pointer(binding['path'],owner,selector='line:'+str(binding['sequence']+1))
+            current=self.safe(resolved['current_result']['path'],owner)
+            require(sha(current)==resolved['current_result']['sha256'],'archive selected recovery result differs')
+            history=[original] if current==original else [original,current]
+            yield history,current
+
     def stage(self, path, task, cid, owner):
         value = load(self.safe(path, owner))
         sid = value['stage_id']
@@ -917,10 +940,11 @@ class Archive:
             if (directory / filename).is_file():
                 self.pointer(directory / filename, owner)
         stages, comparisons, represented = [], [], set()
-        for path in sorted((directory / 'stages').glob('*/result.json')):
-            raw, record = self.stage(path, task, cid, owner)
-            represented.add(raw['stage_id'])
-            stages.append(record)
+        for history,path in self.stage_result_groups(directory,task,cid,owner):
+            for attempted in history:
+                raw,record=self.stage(attempted,task,cid,owner)
+                represented.add(raw['stage_id'])
+                stages.append(record)
             for label, source_tar in (('direct_parent', parent), ('original_baseline', baseline)):
                 cohort = path.parent / label
                 if (cohort / 'group-completion.json').is_file():
@@ -1058,9 +1082,12 @@ class Archive:
             self.files(directory / 'agent', owner)
             self.files(directory / 'build', owner)
             methods, represented = [], set()
-            for path in sorted((directory / 'stages').glob('*/result.json')):
-                value, record = self.stage(path, task, None, owner)
-                represented.add(value['stage_id'])
+            for history,path in self.stage_result_groups(directory,task,None,owner):
+                for attempted in history:
+                    value,record=self.stage(attempted,task,None,owner)
+                    represented.add(value['stage_id'])
+                    if attempted!=path:
+                        methods.append(dict(stage_id=value['stage_id'],status=value['status'],record=record['record']))
                 method = dict(stage_id=value['stage_id'], status=value['status'], record=record['record'])
                 stage_plan = task['stages'][value['stage_id']].get('plan', {})
                 if stage_plan.get('version') == 'level2_local_raw_method_qualification_v1':

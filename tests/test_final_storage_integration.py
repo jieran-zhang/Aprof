@@ -124,7 +124,10 @@ def original_raw_writer(monkeypatch):
     old_v=importlib.util.module_from_spec(v_spec);v_spec.loader.exec_module(old_v)
     spec=importlib.util.spec_from_file_location('original_43d_writer',base/'level2_raw_archive_storage.py')
     old=importlib.util.module_from_spec(spec);spec.loader.exec_module(old)
+    nspec=importlib.util.spec_from_file_location('level2_native_output_storage',FIXTURE_ROOT/'approved_v3/level2_native_output_storage.py')
+    old_n=importlib.util.module_from_spec(nspec);nspec.loader.exec_module(old_n)
     with monkeypatch.context() as m:
+        m.setitem(sys.modules,'level2_native_output_storage',old_n)
         m.setitem(sys.modules,'level2_verification_storage',old_v)
         m.setattr(old,'host_lock',lambda:contextlib.nullcontext())
         yield old
@@ -317,3 +320,46 @@ def test_partial_original_v1_retirement_resumes_without_rewriting_seal(tiny,monk
     assert result['version']==raw.LEGACY_VERSION and result['status']=='complete'
     assert sealpath.read_bytes()==before and raw.pointer(sealpath.with_name('raw.tar'))==original_tar
     assert load(sealpath.with_name('compacted.json'))['version']==raw.LEGACY_VERSION
+
+
+@contextlib.contextmanager
+def original_raw_v2_writer(monkeypatch):
+    base=FIXTURE_ROOT/'raw_v2'
+    expected={'level2_raw_archive_storage.py':'68742f237190c2c5869b2e0ed916f9e480abc3c3a45f72d9b531ee92662cc864',
+              'level2_verification_storage.py':'78ff7dfc3d7494c074b9dd6a2d3d316d35efe50d288584cee5f391cd84fae1eb',
+              'level2_native_output_storage.py':'a08bb1813cb7503b58ba95d9f1a780c61a433c955dbc8dd2254b66ac5985787c'}
+    with monkeypatch.context() as m:
+        for name in ('level2_native_output_storage','level2_verification_storage'):
+            source=base/(name+'.py');assert raw.fingerprint(source)['sha256']=='sha256:'+expected[source.name]
+            spec=importlib.util.spec_from_file_location(name,source);module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);m.setitem(sys.modules,name,module)
+        source=base/'level2_raw_archive_storage.py';assert raw.fingerprint(source)['sha256']=='sha256:'+expected[source.name]
+        spec=importlib.util.spec_from_file_location('original_687_writer',source);old=importlib.util.module_from_spec(spec);spec.loader.exec_module(old)
+        m.setattr(old,'host_lock',lambda:contextlib.nullcontext());yield old
+
+
+def test_real_687_v2_seal_replays_exactly_after_recovery_reader(tiny,tmp_path,monkeypatch):
+    _,sessions,*_=tiny;s=sessions[0];before=report.verify_observation(s)
+    with original_raw_v2_writer(monkeypatch) as old:
+        expected=old.cohort_facts(s);result=old.prepare(s,writers_closed=True,retire=True)
+    sealpath=Path(result['seal']['path']);receipt=sealpath.with_name('compacted.json');frozen=(sealpath.read_bytes(),receipt.read_bytes())
+    assert raw.cohort_facts(s,version=raw.PRE_RECOVERY_VERSION)==expected
+    assert expected['authority_producer_hashes']=={'level2_verification_storage.py':raw.PRE_RECOVERY_AUTHORITY_SHA,'level2_native_output_storage.py':raw.LEGACY_NATIVE_SHA}
+    assert raw.prepare(s,writers_closed=True,retire=True)==result
+    assert report.verify_observation(s)==before
+    assert (sealpath.read_bytes(),receipt.read_bytes())==frozen
+    ds=dataset_for(tmp_path/'v2-dataset',[s/'raw/unused/extra.bin']);bundle=tmp_path/'v2-bundle';portable.export(ds,bundle)
+    shutil.rmtree(s.parents[4]);shutil.rmtree(ds);assert portable.verify(bundle)['valid']
+
+
+def test_final_catalog_retains_new_v3_raw_before_final_seal(tiny,tmp_path,monkeypatch):
+    task,sessions,*_=tiny;prior=sessions[0];origin=prior/'raw/unused/extra.bin'
+    sealed=raw.prepare(prior,writers_closed=True,retire=True)
+    assert sealed['version']==raw.VERSION=='level2_closed_raw_storage_v3'
+    s,session,_=build_final(tmp_path/'v3-catalog-final',monkeypatch,origin)
+    raw.prepare(session,writers_closed=True,retire=True)
+    ds=dataset_for(tmp_path/'input',[session/'raw/unused/extra.bin']);bundle=tmp_path/'bundle'
+    portable.export(ds,bundle)
+    closure=load(bundle/'storage-verification/bindings.json')
+    assert len(closure['archives'])==2 and str(origin) in closure['dependencies']
+    shutil.rmtree(task.parents[2]);shutil.rmtree(s.run);shutil.rmtree(ds)
+    assert portable.verify(bundle)['valid']

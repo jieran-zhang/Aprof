@@ -50,6 +50,7 @@ ARGUMENTS = {
     "observe": {"workload", "observation_id", "candidate_id", "stage_ids", "feedback",
                 "close_feedback", "report_ref", "quality"},
     "freeze": {"workload", "candidate_ids", "final_plans", "reason"},
+    "qualify_prestart": {"workload", "stage_id", "source_hash", "plan_hash", "failed_result", "qualification", "reason"},
     "checkpoint": {"checkpoint_id", "reason", "next_action", "resources_released", "artifacts"},
     "resume": {"checkpoint_id", "reason"},
 }
@@ -301,6 +302,19 @@ def _transition(state, config, operation, arguments):
         task["used"]["source"] += 1
         task["new_source_attempts"] += 1
         return
+    if operation == "qualify_prestart":
+        require(set(a) == ARGUMENTS[operation], "prestart qualification fields differ")
+        require(config.get("schema_version") == FRESH_SCHEMA and task["frozen"]
+                and state["status"] == "active" and not _active(state),
+                "prestart qualification requires a quiescent frozen fresh task")
+        stage = task["stages"].get(a.get("stage_id"))
+        require(stage is not None and "prestart_recovery" not in stage,
+                "stage is missing or already qualified")
+        candidate = task["candidates"].get(stage["candidate_id"])
+        from level2_stage_recovery import validate_qualification
+        validate_qualification(stage, candidate, a)
+        stage["prestart_recovery"] = deepcopy(a)
+        return
     if operation == "start":
         require(state["status"] == "active" and not _active(state), "campaign paused or another host stage is active")
         sid, kind, cid = nonempty(a.get("stage_id"), "stage ID"), a.get("kind"), a.get("candidate_id")
@@ -348,7 +362,12 @@ def _transition(state, config, operation, arguments):
         if previous:
             require(previous["kind"] == kind and previous["candidate_id"] == cid and previous["plan"] == plan, "stage identity and plan are immutable")
             last = previous["attempts"][-1]
-            require(last["outcome"] == "prestart_failure" and last["native_started"] is False and last["formal_samples"] == 0,
+            qualified = previous.get("prestart_recovery")
+            if qualified is not None:
+                from level2_stage_recovery import validate_qualification
+                validate_qualification(previous, candidate, qualified)
+            require((last["outcome"] == "prestart_failure" or qualified is not None)
+                    and last["native_started"] is False and last["formal_samples"] == 0,
                     "only an evidenced native-not-started failure may recover")
             require(previous["recoveries"] == 0, "only one prestart recovery per stage")
             previous["recoveries"] += 1
@@ -368,6 +387,8 @@ def _transition(state, config, operation, arguments):
                 task["search_candidate_ids"].append(cid)
         previous["attempts"].append({"outcome": None, "native_started": None, "formal_samples": 0, "charged": charge,
                                      "start_order": sum(task["stage_starts"].values()) + 1})
+        if previous.get("prestart_recovery") is not None:
+            previous["attempts"][-1]["prestart_qualification"] = deepcopy(previous["prestart_recovery"]["qualification"])
         task["stage_starts"][kind] += 1
         if candidate:
             candidate["feedback_closed"] = False
@@ -385,6 +406,12 @@ def _transition(state, config, operation, arguments):
         samples = a.get("formal_samples", 0)
         require(type(samples) is int and samples >= 0, "invalid formal sample count")
         _evidence(a.get("evidence"))
+        qualified = stage["attempts"][-1].get("prestart_qualification")
+        if qualified is not None:
+            original = Path(stage["prestart_recovery"]["failed_result"]["path"])
+            require(a["evidence"].get("qualification") == qualified
+                    and a["evidence"].get("result", {}).get("path") == str(original.with_name("result.recovery-01.json")),
+                    "recovered finish must retain qualification and distinct result")
         if a["outcome"] != "success":
             nonempty(a.get("reason"), "failure reason")
         if not a["native_started"]:
@@ -704,6 +731,11 @@ class Campaign:
         return self._commit("register", event_id=event_id, workload=workload, candidate_id=candidate_id,
                             source_hash=source_hash, patch_hash=patch_hash, source_parent=source_parent,
                             decision_basis=decision_basis, probes=probes or [], artifacts=artifacts or {})
+
+    def qualify_prestart(self, *, event_id, workload, stage_id, source_hash, plan_hash, failed_result, qualification, reason):
+        return self._commit("qualify_prestart", event_id=event_id, workload=workload, stage_id=stage_id,
+                            source_hash=source_hash, plan_hash=plan_hash, failed_result=failed_result,
+                            qualification=qualification, reason=reason)
 
     def start(self, *, event_id, workload, stage_id, kind, plan, candidate_id=None):
         return self._commit("start", event_id=event_id, workload=workload, stage_id=stage_id, kind=kind, plan=plan, candidate_id=candidate_id)

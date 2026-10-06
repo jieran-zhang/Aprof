@@ -36,9 +36,10 @@ def no_hardware(monkeypatch):
     monkeypatch.setattr(dedup,'exclusive_host',lock)
 
 
-def fixture(tmp_path,operator='maximum',size=8,candidate=False):
+def fixture(tmp_path,operator='maximum',size=8,candidate=False,*,candidate_id=None,stage_name=None):
     task=tmp_path/'run/train/tasks'/operator
-    stage=task/'candidates'/(operator+'001')/'stages/search' if candidate else task/'stages/aa'
+    stage=(task/'candidates'/(candidate_id or operator+'001')/'stages'/(stage_name or 'search')
+           if candidate else task/'stages'/(stage_name or 'aa'))
     cohort=stage/('direct_parent' if candidate else 'cohort')
     schedule=[];observations=[];sessions=[];original={}
     for number in range(1,7):

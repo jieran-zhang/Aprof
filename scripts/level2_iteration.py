@@ -122,6 +122,11 @@ def stage(run, operator, candidate, kind, group, **kwargs):
         if (recorded is None or recorded["kind"] != kind or recorded["candidate_id"] != cid
                 or recorded["plan"] != plan or not recorded["attempts"]):
             raise ValueError("existing stage ledger identity or frozen plan differs")
+        if recorded.get("prestart_recovery") is not None:
+            from level2_stage_recovery import resolve_result
+            resolved = resolve_result(result.parent, recorded)
+            result = Path(resolved["current_result"]["path"])
+            value = load(result)
         attempt = recorded["attempts"][-1]
         if attempt["outcome"] is None:
             raise ValueError("incomplete stage ledger finish requires explicit evidence recovery")

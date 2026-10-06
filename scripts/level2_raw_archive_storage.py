@@ -17,8 +17,9 @@ import tarfile
 import tempfile
 
 LEGACY_VERSION='level2_closed_raw_storage_v1'
-VERSION='level2_closed_raw_storage_v2'
-VERSIONS=(LEGACY_VERSION,VERSION)
+PRE_RECOVERY_VERSION='level2_closed_raw_storage_v2'
+VERSION='level2_closed_raw_storage_v3'
+VERSIONS=(LEGACY_VERSION,PRE_RECOVERY_VERSION,VERSION)
 HASH=re.compile(r'sha256:[0-9a-f]{64}\Z')
 CHUNK=1024*1024
 TOP={'version','csv','csv_hash','target_tasks','warmup_tasks_excluded','other_tasks','samples'}
@@ -81,7 +82,7 @@ class RawArchive:
         require(self.version in VERSIONS,'unsupported raw storage version')
         group=self.session.parent.parent.name
         require(self.session.parent.name in {'cohort','direct_parent','original_baseline'}
-                and (group=='search' or re.fullmatch(r'aa-[A-Za-z0-9_-]+',group) or (self.version==VERSION and group=='final'))
+                and (group=='search' or re.fullmatch(r'aa-[A-Za-z0-9_-]+',group) or (self.version in (PRE_RECOVERY_VERSION,VERSION) and group=='final'))
                 and self.session.parent.parent.parent.name=='stages','unsupported/unanchored final scope')
         self.closed=cohort_facts(self.session,version=self.version)
         original=self.closed['original_report']
@@ -326,8 +327,10 @@ def parse_profile(raw,journal,build,cases,repeat,*,parser=None):
 
 # Authority implementation is a reviewed prerequisite, never chosen by a seal.
 LEGACY_AUTHORITY_SHA='sha256:452c479151a6d0a9be43df4388a68f6577f0212c2fbd005c4501dbd8f43d7594'
-AUTHORITY_SHA='sha256:78ff7dfc3d7494c074b9dd6a2d3d316d35efe50d288584cee5f391cd84fae1eb'
-NATIVE_SHA='sha256:a08bb1813cb7503b58ba95d9f1a780c61a433c955dbc8dd2254b66ac5985787c'
+PRE_RECOVERY_AUTHORITY_SHA='sha256:78ff7dfc3d7494c074b9dd6a2d3d316d35efe50d288584cee5f391cd84fae1eb'
+AUTHORITY_SHA='sha256:d1e13b642c9f90ba91f1332f0e79f02dcd5bee98e7a8e69cb06739c734475211'
+LEGACY_NATIVE_SHA='sha256:a08bb1813cb7503b58ba95d9f1a780c61a433c955dbc8dd2254b66ac5985787c'
+NATIVE_SHA='sha256:19e40f32d5fa8c66ea9e1b2bb3a66db57e4593206512092f22f8de9ce0b42ef9'
 CAPTURE_SHA='sha256:4d4f8d3f8d39d627bf6d5ead55d0a9e8d774a28be9f976384dc25584112e3b23'
 MAX_METADATA=16*1024*1024
 
@@ -396,7 +399,7 @@ LOCAL={'mode':'local_tmp_full_copyback_v1','scratch_root':'/tmp',
 def cohort_facts(session, read_bytes=None, *, version=VERSION):
     """Pure original authority replay when a complete logical byte reader is given."""
     session=Path(session);cohort=session.parent;stage=cohort.parent.name
-    require(version in VERSIONS and (stage=='search' or re.fullmatch(r'aa-[A-Za-z0-9_-]+',stage) or (version==VERSION and stage=='final')),'unsupported/unanchored final scope')
+    require(version in VERSIONS and (stage=='search' or re.fullmatch(r'aa-[A-Za-z0-9_-]+',stage) or (version in (PRE_RECOVERY_VERSION,VERSION) and stage=='final')),'unsupported/unanchored final scope')
     offline=read_bytes is not None
     authority=checked_authority(require_capture=not offline)
     if not offline:session=authority.process_location(session)
@@ -419,6 +422,7 @@ def cohort_facts(session, read_bytes=None, *, version=VERSION):
                 if Path(logical).name in {'metadata.json','execution.json','stdout.log'}:
                     ref=ptr(logical);require(ref['sha256']==digest,'original oracle bytes differ');oracle_refs.append(ref)
             require(value['report_authority']['kind']==('ledger_timing_calibration_v1' if stage.startswith('aa-') else 'retrospective_final_report_authority_v1' if stage=='final' else 'ledger_closed_feedback_report_v1'),'report authority kind/scope differs')
+            require(version==VERSION or 'stage_recovery' not in value,'historical raw storage cannot authorize newly recovered stages')
             facts.append({'session':str(current),'facts':value});observed={}
             for name in ('request.json','raw-storage.json','raw-storage.request.json','raw-storage.copyback.json'):
                 p=current/name;ref=ptr(p)
@@ -439,7 +443,7 @@ def cohort_facts(session, read_bytes=None, *, version=VERSION):
     return {'original_report':ptr(cohort/'report.json'),'sessions':facts,'raw_transport':transport_refs,
             'protected':[protected[k] for k in sorted(protected)],'event_bindings':[events[k] for k in sorted(events)],
             'report_authority':facts[0]['facts']['report_authority'],
-            'authority_producer_hashes':{'level2_verification_storage.py':LEGACY_AUTHORITY_SHA if version==LEGACY_VERSION else AUTHORITY_SHA,'level2_native_output_storage.py':NATIVE_SHA}}
+            'authority_producer_hashes':{'level2_verification_storage.py':LEGACY_AUTHORITY_SHA if version==LEGACY_VERSION else PRE_RECOVERY_AUTHORITY_SHA if version==PRE_RECOVERY_VERSION else AUTHORITY_SHA,'level2_native_output_storage.py':NATIVE_SHA if version==VERSION else LEGACY_NATIVE_SHA}}
 
 
 def validate_archive(session, seal, archive, read_bytes):

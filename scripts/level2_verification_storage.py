@@ -107,7 +107,17 @@ def closed_from_reader(session, read_bytes):
     paths=[stage/'result.json',stage/'stage-plan.json',cohort/'plan.json',cohort/'report.json',
            cohort/'group-completion.json',session/'completion.json',session/'msprof.execution.json',
            session/'native/journal.jsonl',session/'validation.json',session/'bindings.json']
-    stage_result=load(paths[0]);group=load(paths[4]);completion=load(paths[5]);execution=load(paths[6])
+    stage_result=load(paths[0]);recovery=None
+    if stage_result.get('status')!='passed' and stage.name=='final':
+        # Historical ordinary seals retain their exact original facts and need
+        # no new helper. A failed canonical final result can only be superseded
+        # by the separately qualified, append-only recovery protocol.
+        from level2_stage_recovery import resolve_from_reader
+        recovery=resolve_from_reader(stage,read_bytes,require_success=True)
+        paths[0]=Path(recovery['current_result']['path'])
+        require(ref(paths[0])==recovery['current_result'],'recovery result changed during closure')
+        stage_result=load(paths[0])
+    group=load(paths[4]);completion=load(paths[5]);execution=load(paths[6])
     require(stage_result.get('status')=='passed' and stage_result.get('error') is None
             and stage_result.get('ended_at') is not None,'stage is not terminal passed')
     require(group.get('status')=='passed' and group.get('error') is None and str(session) in group.get('completed_sessions',[])
@@ -139,7 +149,15 @@ def closed_from_reader(session, read_bytes):
         if row.get('kind')=='stage_completed' and row.get('value',{}).get('result')==stage_ref:
             binding={'path':str(event_path),'sequence':number,'hash':previous};break
     require(binding is not None,'no public completed stage binding')
-    return {'protected':[ref(p) for p in paths],'event_binding':binding},expected
+    facts={'protected':[ref(p) for p in paths],'event_binding':binding}
+    if recovery is not None:
+        require(recovery['qualification'] is not None and recovery['original_failed_result'] is not None,
+                'failed final result lacks explicit recovery qualification')
+        protected={p['path']:p for p in [*facts['protected'],*recovery['protected']]}
+        facts['protected']=[protected[k] for k in sorted(protected)]
+        facts['stage_recovery']={k:recovery[k] for k in
+            ('current_result','original_failed_result','qualification','event_bindings')}
+    return facts,expected
 
 
 def report_authority(session,read_bytes,*,allow_final=False):
@@ -251,6 +269,8 @@ def facts_for_version(session,read_bytes,version):
 
 def event_bindings(facts):
     result=[facts['event_binding']]
+    if facts.get('stage_recovery'):
+        result.extend(facts['stage_recovery']['event_bindings'])
     if facts.get('report_authority'):
         authority=facts['report_authority']
         if authority.get('kind')=='retrospective_final_report_authority_v1':

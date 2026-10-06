@@ -18,10 +18,12 @@ TIMING = 'retrospective_audit_now_not_original_measurement'
 CLAIM = 'Retained evidence and saved final reports were consistent at this retrospective audit; no earlier report authority is asserted.'
 # Explicit review boundary. A later writer needs its own reviewed immutable row.
 APPROVED_WRITERS = {
+    'sha256:ad40092950da21cefbe9a35bd9f27e7dff690caee904e0a923cda9611283de1e': VERSION,
     'sha256:de18e5fed791d14dcc3a4db979a274b40c7ad8da79cf1da023fc244f6ca3d832': VERSION,
     'sha256:9deebeb3d3246d778aa58476792198ba2079f25b21133bee175c64121cc86227': VERSION,
 }
 APPROVED_PROFILE_HASHES = {
+    'sha256:ad40092950da21cefbe9a35bd9f27e7dff690caee904e0a923cda9611283de1e': 'sha256:35683c778eb0f97b9633ec64855bd905e8a3ac42d1a7010193eb1a1e00a24d99',
     'sha256:de18e5fed791d14dcc3a4db979a274b40c7ad8da79cf1da023fc244f6ca3d832': 'sha256:e3d04146c58a4002ba709b29afffe87ca334739a499efcf94c12d244e8719928',
     'sha256:9deebeb3d3246d778aa58476792198ba2079f25b21133bee175c64121cc86227': 'sha256:0e4aaea5fc12539c241cf0a3a63486195fef8485e03db5297226a52c13be69bd',
 }
@@ -141,8 +143,8 @@ def ledger_events(data, config_hash):
 def projection(rows, operator):
     """Only the immutable source/stage/observation/freeze identities, no executor."""
     registered = {}; starts = {}; finishes = {}; counts = {}; observed = {}; freeze = None
-    open_stages = set(); seen_counts = {}; frozen_candidates = None
-    for row in rows[1:]:
+    open_stages = set(); seen_counts = {}; frozen_candidates = None; qualified_recoveries = set()
+    for position,row in enumerate(rows[1:],1):
         a = row['arguments']; op = row['operation']
         if a.get('workload') != operator:
             continue
@@ -154,10 +156,27 @@ def projection(rows, operator):
             sid = a['stage_id']
             require(sid not in open_stages, 'stage starts while still active')
             if sid in starts:
-                require(starts[sid] == a and finishes[sid].get('outcome') == 'prestart_failure'
-                        and finishes[sid].get('native_started') is False and counts[sid] == 1,
-                        'unsupported stage identity/retry')
+                if sid in qualified_recoveries:
+                    from level2_stage_recovery import project_stage
+                    projected=project_stage(rows[:position+1],operator,sid)
+                    require(starts[sid]==a and counts[sid]==1 and len(projected['attempts'])==2
+                            and projected.get('prestart_recovery') is not None,'unsupported qualified final retry')
+                else:
+                    require(starts[sid] == a and finishes[sid].get('outcome') == 'prestart_failure'
+                            and finishes[sid].get('native_started') is False and counts[sid] == 1,
+                            'unsupported stage identity/retry')
             starts[sid] = a; finishes.pop(sid, None); counts[sid] = counts.get(sid, 0) + 1; open_stages.add(sid)
+        elif op == 'qualify_prestart':
+            sid=a['stage_id']
+            require(freeze is not None and sid in starts and sid in finishes and sid not in open_stages
+                    and sid not in qualified_recoveries and counts[sid]==1
+                    and starts[sid]['kind']=='timing' and starts[sid]['plan'].get('purpose')=='final'
+                    and starts[sid]['candidate_id'] in freeze['candidate_ids'],
+                    'prestart qualification is outside the frozen final stage')
+            from level2_stage_recovery import project_stage
+            projected=project_stage(rows[:position+1],operator,sid)
+            require(projected.get('prestart_recovery')==a,'qualified recovery projection differs')
+            qualified_recoveries.add(sid)
         elif op == 'finish':
             sid = a['stage_id']; require(sid in open_stages, 'finish without active original stage')
             finishes[sid] = a; open_stages.remove(sid)
@@ -212,7 +231,7 @@ def storage_catalog(value, evidence):
         require(set(row) == {'version', 'seal', 'archive', 'producer', 'closed_evidence_ref'}
                 and row['version'] in ('level2_closed_verification_storage_v1', 'level2_closed_verification_storage_v2',
                                        'level2_closed_verification_storage_v3', 'level2_closed_native_outputs_v1',
-                                       'level2_closed_raw_storage_v1', 'level2_closed_raw_storage_v2')
+                                       'level2_closed_raw_storage_v1', 'level2_closed_raw_storage_v2', 'level2_closed_raw_storage_v3')
                 and pointer(row['seal'])['sha256'] == sha and row['closed_evidence_ref'] in value['closed_evidence'], 'invalid compact archive')
         pointer(row['archive']); pointer(row['producer'])
     require(set(value['closed_evidence']) == {v['closed_evidence_ref'] for v in value['archives'].values()}, 'orphan/dropped nested proof')
@@ -373,14 +392,25 @@ def authority(session, read_bytes):
             and completion['evaluation_candidate_ids'] == freeze['candidate_ids']
             and completion['status'] == 'final_evaluations_completed'
             and [r['candidate_id'] for r in completion['comparisons']] == freeze['candidate_ids'], 'final completion not closed')
-    jobs = []; comparisons = []; calibrations = {}
+    jobs = []; comparisons = []; calibrations = {}; recovery_events=[]
     for cid, completed in zip(freeze['candidate_ids'], completion['comparisons']):
         parent = task / 'candidates' / cid
         plan = reader.checked(original['final_plans'][cid]); sid = cid + '-final'
         require(plan == freeze['final_plans'][cid] == starts[sid]['plan'] == reader.document(parent / 'stages/final/stage-plan.json')
                 and starts[sid]['candidate_id'] == cid and starts[sid]['kind'] == 'timing'
                 and plan['purpose'] == 'final' and plan['case_ids'] == ALL_CASES and plan['processes'] == 6, 'final plan identity differs')
-        result = reader.ref(parent / 'stages/final/result.json'); result_value = reader.checked(result)
+        stage_directory=parent/'stages/final'
+        result = reader.ref(stage_directory/'result.json'); result_value = reader.checked(result)
+        if result_value.get('status')!='passed':
+            from level2_stage_recovery import project_stage,resolve_result
+            resolved=resolve_result(stage_directory,project_stage(rows,operator,sid),
+                                    lambda p:reader.raw(p,protect=False),require_success=True)
+            require(resolved['original_failed_result']==result and resolved['qualification'] is not None,
+                    'final recovery omitted original failed result')
+            for fixed in resolved['protected']:reader.raw(fixed['path'],fixed)
+            result=resolved['current_result'];result_value=reader.checked(result)
+            for binding in resolved['event_bindings']:
+                if binding not in recovery_events:recovery_events.append(binding)
         require(finishes[sid]['outcome'] == 'success' and finishes[sid]['native_started'] is True
                 and finishes[sid]['evidence']['result'] == result == completed['result']
                 and result_value['status'] == 'passed' and result_value.get('error') is None, 'final stage not successfully closed')
@@ -461,7 +491,8 @@ def authority(session, read_bytes):
     return {'kind': KIND, 'slot': 'attestation.comparisons[' + str(report_slot) + '].report', 'report': target,
             'authority_timing': TIMING, 'historical_report_authority': False,
             'event_bindings': [{'path': str(event_path), 'sequence': event['sequence'], 'hash': event['hash']},
-                               {'path': str(ledger / 'events.jsonl'), 'sequence': len(rows)-1, 'hash': rows[-1]['hash']}],
+                               {'path': str(ledger / 'events.jsonl'), 'sequence': len(rows)-1, 'hash': rows[-1]['hash']},
+                               *recovery_events],
             'protected': [reader.protected[k] for k in sorted(reader.protected)],
             'storage_catalog': catalog}
 

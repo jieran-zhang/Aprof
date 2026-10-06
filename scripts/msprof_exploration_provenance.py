@@ -17,6 +17,7 @@ PRODUCERS = {
     'msprof_exploration_provenance.py',
 }
 FRESH_PRODUCERS = PRODUCERS | {
+    "level2_stage_recovery.py", "level2_prestart_recovery.py",
     'level2_adapters.py', 'level2_pilot.py', 'level2_campaign.py',
     'level2_iteration.py', 'level2_boundaries.py', 'level2_finalize.py',
     'level2_guard_contract.py', 'level2_candidate_guard.py',
@@ -107,6 +108,11 @@ def closed_observation_code(origin, expected, evidence_path):
     paths={'completion':directory/'completion.json','bindings':directory/'bindings.json',
            'request':directory/'request.json','execution':directory/'msprof.execution.json',
            'stage_result':stage/'result.json','group_completion':cohort/'group-completion.json'}
+    recovery = None
+    if load(paths['stage_result']).get('status') != 'passed' and stage.name == 'final':
+        from level2_stage_recovery import resolve_from_reader
+        recovery = resolve_from_reader(stage, require_success=True)
+        paths['stage_result'] = Path(recovery['current_result']['path'])
     require(all(p.is_file() and not p.is_symlink() and p==p.resolve() for p in paths.values()),'closed observation proof is missing or aliased')
     documents={key:load(path) for key,path in paths.items()}
     completion=documents['completion'];execution=documents['execution'];stage_result=documents['stage_result'];group=documents['group_completion']
@@ -121,7 +127,9 @@ def closed_observation_code(origin, expected, evidence_path):
             and str(directory) in group.get('completed_sessions',[]) and len(set(group['completed_sessions']))==len(group['completed_sessions'])==6,
             'observation code fallback requires a terminal six-process cohort')
     require(documents['bindings'].get(str(origin))==expected,'producer was not bound by this exact observation')
-    return {key:{'path':str(path),'sha256':sha(path)} for key,path in paths.items()}
+    proof = {key:{'path':str(path),'sha256':sha(path)} for key,path in paths.items()}
+    if recovery is not None:proof['stage_recovery'] = recovery
+    return proof
 
 
 def frozen_producer(origin, expected, *, evidence_path, semantic_path):

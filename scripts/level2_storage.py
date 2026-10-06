@@ -134,6 +134,17 @@ class Inventory:
             require(len(stage_tail) == (2 if kind == 'stage' else 3) and stage_tail[0] == 'stages' and TOKEN.fullmatch(stage_tail[1]), 'scope must use a fixed stage directory')
             stage = self.scope if kind == 'stage' else self.scope.parent
             result = self.read(stage/'result.json')
+            if result.get('status')!='passed' and stage.name=='final':
+                from level2_stage_recovery import resolve_from_reader
+                recovered=resolve_from_reader(stage,verification_storage.read_bytes)
+                if recovered['qualification'] is not None:
+                    # Keep all three immutable metadata identities in the prior
+                    # dedup inventory. Journal prefixes/engineering/CAS are
+                    # authenticated by the resolver, never hash a mutable journal
+                    # into a timeless output authority index.
+                    for key in ('original_failed_result','qualification','current_result'):
+                        self.read_pointer(recovered[key])
+                    result=self.read_pointer(recovered['current_result'])
             require(result.get('status') in ('passed','failed') and isinstance(result.get('ended_at'), (int,float)), 'stage still open or lacks terminal result')
             require(result.get('kind') in ('control','timing'), 'only timing/control stage outputs are indexed')
             plan = self.read(stage/'stage-plan.json')

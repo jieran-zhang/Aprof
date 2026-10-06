@@ -7,7 +7,12 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import sys
 import time
+
+# Direct CLI execution has scripts/ on sys.path, but needs canonical src/ too.
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
 
 from msprof_exploration_execute import (ALL_CASES, PROTOCOL, bootstrap_task, build_operator,
     canonical, cohort_plan, collect_cohort, comparison_manifest, diagnostic_group, event,
@@ -537,6 +542,83 @@ def run_stage(run, operator, candidate, kind, group, cases=None, plan_path=None,
     event(task, 'stage_completed', {'candidate_id': cid, 'stage': stage_id, 'result': pointer(out / 'result.json')})
     print(json.dumps(result_record), flush=True)
     return result_record
+
+
+def run_qualified_timing_recovery(run, qualification_path, qualification_sha256):
+    """Explicit second attempt; never overwrites or retries the canonical result.
+
+    The caller authorizes this action separately. Collector processes retain their
+    own host locks; only this one-shot recovery request lock is held across them.
+    """
+    import fcntl
+    import os
+    import level2_prestart_recovery as recovery
+    facts = recovery.execution_audit(run, qualification_path, qualification_sha256)
+    lock_path = recovery.safe(facts['directory'] / '.execute.lock')
+    fd = os.open(lock_path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, 'r+b') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        facts = recovery.execution_audit(run, qualification_path, qualification_sha256)
+        out, plan, task, ledger = facts['stage'], facts['plan'], facts['task'], facts['ledger']
+        qualifier = facts['qualification']; previous = pointer(out / 'result.json')
+        stage_id, cid = recovery.STAGE, recovery.CANDIDATE
+        recovery.save(facts['directory']/'execution-started.json', {
+            'version':'level2_final_prestart_execution_v1', 'qualification':qualifier,
+            'previous_result':previous, 'stage_id':stage_id, 'automatic_retry':False,
+            'python_import_paths':facts['python_import_paths']})
+        started=time.time();error=None;committed=False
+        try:
+            # Complete all ordinary frozen identity checks before start/native.
+            from msprof_exploration_execute import preflight_cohort
+            calibration_ref=plan.get('calibration_report')
+            calibration_path=calibration_ref['path'] if calibration_ref else task/'stages/aa-initial/cohort/report.json'
+            if calibration_ref and sha(calibration_path)!=calibration_ref['sha256']:
+                raise ValueError('frozen calibration report changed')
+            calibration=load(calibration_path) if calibration_ref or any(not c.get('calibration_report') for c in plan['cohorts']) else None
+            resolved=[]
+            for cohort in plan['cohorts']:
+                if sha(cohort['plan']['path'])!=cohort['plan']['sha256']:raise ValueError('cohort plan changed')
+                selected=calibration
+                if cohort.get('calibration_report'):
+                    ref=cohort['calibration_report']
+                    if sha(ref['path'])!=ref['sha256']:raise ValueError('frozen cohort calibration report changed')
+                    selected=load(ref['path'])
+                frozen=load(cohort['plan']['path']);validate_calibration_storage(frozen,selected)
+                preflight_cohort(frozen)
+                if (out/cohort['relation']).exists():raise ValueError('recovery cohort already exists')
+                resolved.append((cohort,frozen,selected))
+            ledger.start(event_id=recovery.OPERATOR+'-'+stage_id+'-recovery-01-start',
+                         workload=recovery.OPERATOR,candidate_id=cid,stage_id=stage_id,kind='timing',plan=plan)
+            committed=True
+            event(task,'stage_started',{'candidate_id':cid,'stage':stage_id,'kind':'timing',
+                  'plan':pointer(out/'stage-plan.json'),'qualification':qualifier,'attempt':2})
+            for cohort,frozen,selected in resolved:
+                collect_cohort(frozen,out/cohort['relation'],selected)
+        except BaseException as exc:
+            error={'type':type(exc).__name__,'message':str(exc)}
+        if not committed:
+            recovery.save(facts['directory']/'execution-failure.json',{
+                'version':'level2_final_prestart_execution_v1','status':'failed_before_second_start',
+                'qualification':qualifier,'error':error,'automatic_retry':False})
+            raise ValueError('explicit recovery invocation failed before second start: '+str(error))
+        recovery.check_execution_identity(qualifier)
+        costs=actual_costs(out);costs['wall_seconds']=int(time.time()-started)
+        native_started=bool(native_started_in(out)) or costs['native_processes_started']>0
+        result={'status':'failed' if error else 'passed','kind':'timing','stage_id':stage_id,'candidate_id':cid,
+                'started_at':started,'ended_at':time.time(),'error':error,'native_started':native_started,
+                'actual_costs':costs,'cost_scope':'Confirmed lower bounds; incomplete native sections remain unknown. formal_target_kernel_launches excludes warmup.',
+                'formal_admission':'not_evaluated','graph_policy_eligible':False,'episode_ref':None,
+                'prestart_recovery':{'qualification':qualifier,'previous_result':previous,'attempt':2}}
+        if pointer(out/'result.json')!=previous or load(out/'stage-plan.json')!=plan:
+            raise ValueError('original failed stage changed during recovery; preserve incomplete execution')
+        result_path=out/'result.recovery-01.json';recovery.save(result_path,result)
+        ledger.finish(event_id=recovery.OPERATOR+'-'+stage_id+'-recovery-01-finish',workload=recovery.OPERATOR,
+                      stage_id=stage_id,outcome='failed' if error else 'success',
+                      evidence={'result':pointer(result_path),'qualification':qualifier},native_started=native_started,
+                      formal_samples=costs['role_samples'],actual_costs=costs,reason=json.dumps(error) if error else None)
+        event(task,'stage_completed',{'candidate_id':cid,'stage':stage_id,'result':pointer(result_path),
+              'qualification':qualifier,'attempt':2})
+        return result
 
 
 def main():

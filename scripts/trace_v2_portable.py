@@ -201,9 +201,15 @@ def verify_storage_closure(bundle, manifest, index):
                     and producer==binding['producer'] and nested_seal.get('closed_evidence')==binding['closed_evidence'],
                     'retrospective catalog full archive proof differs')
 
-        if seal.get('version') in ('level2_closed_raw_storage_v1','level2_closed_raw_storage_v2'):
+        closed=seal.get('closed_evidence',{})
+        recovered=closed.get('stage_recovery') or any(row.get('facts',{}).get('stage_recovery') for row in closed.get('sessions',[]))
+        if recovered:
+            require('verifier/level2_stage_recovery.py' in manifest['files'],'portable recovered stage reader missing')
+            sibling=Path(__file__).resolve().with_name('level2_stage_recovery.py')
+            require(sibling.is_file() and not sibling.is_symlink(),'trusted recovered stage reader missing')
+        if seal.get('version') in ('level2_closed_raw_storage_v1','level2_closed_raw_storage_v2','level2_closed_raw_storage_v3'):
             require(closure['version'] in ('level2_storage_portable_v4','level2_storage_portable_v5'),'raw storage needs explicit closure v4+')
-            if seal['version']=='level2_closed_raw_storage_v2':require(closure['version']=='level2_storage_portable_v5','new raw storage needs closure v5')
+            if seal['version'] in ('level2_closed_raw_storage_v2','level2_closed_raw_storage_v3'):require(closure['version']=='level2_storage_portable_v5','new raw storage needs closure v5')
             for filename in ('level2_raw_archive_storage.py','level2_verification_storage.py','level2_native_output_storage.py'):
                 require('verifier/'+filename in manifest['files'],'portable raw reader missing')
             trusted=Path(__file__).resolve().with_name('level2_raw_archive_storage.py')
@@ -411,10 +417,10 @@ def export(dataset, destination):
             if parent not in existing['parents']:existing['parents'].append(parent);existing['parents'].sort()
         if binding.get('version')=='level2_closed_native_outputs_v1' and storage_closure['version'] not in ('level2_storage_portable_v3','level2_storage_portable_v4','level2_storage_portable_v5'):
             storage_closure['version']='level2_storage_portable_v2'
-        if binding.get('version') in ('level2_closed_raw_storage_v1','level2_closed_raw_storage_v2'):
+        if binding.get('version') in ('level2_closed_raw_storage_v1','level2_closed_raw_storage_v2','level2_closed_raw_storage_v3'):
             if storage_closure['version']!='level2_storage_portable_v5':storage_closure['version']='level2_storage_portable_v4'
             storage_closure.setdefault('dependencies',{})
-        if binding.get('version') in ('level2_closed_raw_storage_v2','level2_closed_verification_storage_v3'):
+        if binding.get('version') in ('level2_closed_raw_storage_v2','level2_closed_raw_storage_v3','level2_closed_verification_storage_v3'):
             storage_closure['version']='level2_storage_portable_v5';storage_closure.setdefault('dependencies',{})
         if key in storage_closure['archives']:return
         locations={};storage_closure['archives'][key]={'seal':binding['seal'],'files':locations}
@@ -438,7 +444,7 @@ def export(dataset, destination):
 
     for row in index.values():
         binding=storage_binding(row['path'],row['sha256'])
-        if binding is not None and binding.get('version') in ('level2_closed_raw_storage_v1','level2_closed_raw_storage_v2'):
+        if binding is not None and binding.get('version') in ('level2_closed_raw_storage_v1','level2_closed_raw_storage_v2','level2_closed_raw_storage_v3'):
             logical=Path(binding['origin']['path']);seal=v2.strict_loads(Path(binding['seal']['path']).read_bytes())
             name={'archive':binding['seal']['sha256'],'relative_path':logical.relative_to(seal['logical_root']).as_posix()}
         else:name = 'evidence/sha256/' + row['sha256'][7:]
@@ -458,6 +464,8 @@ def export(dataset, destination):
         modules.extend([Path(verification_storage.__file__).resolve(),Path(raw_storage.__file__).resolve()])
         import level2_final_report_authority as final_authority
         modules.append(Path(final_authority.__file__).resolve())
+        import level2_stage_recovery as stage_recovery
+        modules.append(Path(stage_recovery.__file__).resolve())
     for module in modules:
         copy(module, 'verifier/' + module.name)
     # v1 graph associations use the legacy immutable repository snapshot.

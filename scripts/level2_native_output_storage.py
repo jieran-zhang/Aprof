@@ -96,10 +96,12 @@ def closed_from_reader(cohort,read_bytes):
     require(len(schedule)==len(sessions)==6 and len(set(sessions))==6,'exactly six unique sessions required')
     require(sessions==[str(cohort/row['name']) for row in schedule],'scheduled output session coverage differs')
     require([row['directory'] for row in report['sessions']]==sessions,'reported output session coverage differs')
-    protected={};event_binding=None;expected={};bundles=[];case_ids=None
-    for directory,entry,observed in zip(sessions,schedule,report['sessions']):
+    protected={};event_binding=None;expected={};bundles=[];case_ids=None;stage_recovery=None
+    for number,(directory,entry,observed) in enumerate(zip(sessions,schedule,report['sessions'])):
         session=Path(directory)
         facts,oracle_roster=verification.closed_from_reader(session,read)
+        if number==0:stage_recovery=facts.get('stage_recovery')
+        else:require(stage_recovery==facts.get('stage_recovery'),'recovery identity differs across native sessions')
         for p in facts['protected']:protected[p['path']]=p
         require(event_binding in (None,facts['event_binding']),'stage event identity differs');event_binding=facts['event_binding']
         request=load(session/'request.json');require(request==entry['request'],'session request differs')
@@ -172,6 +174,9 @@ def closed_from_reader(cohort,read_bytes):
                         and (row['size_bytes'] is None or row['size_bytes']==declared['bytes']),'original dedup output length differs')
                 row['size_bytes']=declared['bytes']
         mandatory={str(cohort/'plan.json'),str(cohort/'group-completion.json'),str(cohort.parent/'result.json'),str(cohort.parent/'stage-plan.json')}
+        if stage_recovery is not None:
+            mandatory.update(stage_recovery[key]['path'] for key in
+                             ('current_result','original_failed_result','qualification'))
         mandatory.update(str(Path(directory)/name) for directory in sessions for name in
                          ('request.json','completion.json','validation.json','msprof.execution.json','native/journal.jsonl'))
         require(mandatory<=set(index),'dedup authority lacks original closed-state hashes')
@@ -184,8 +189,10 @@ def closed_from_reader(cohort,read_bytes):
         protected[str(path)]=pointer
         authority={'path':str(event_path),'sequence':number,'hash':h};break
     require(authority is not None,'no previously event-bound passed output-dedup authority; archive is blocked')
-    return {'protected':[protected[k] for k in sorted(protected)],'event_binding':authority,
-            'stage_event_binding':event_binding,'authority':'closed_outputs_deduplicated_v1'},expected,bundles
+    facts={'protected':[protected[k] for k in sorted(protected)],'event_binding':authority,
+            'stage_event_binding':event_binding,'authority':'closed_outputs_deduplicated_v1'}
+    if stage_recovery is not None:facts['stage_recovery']=stage_recovery
+    return facts,expected,bundles
 
 class SliceReader(io.RawIOBase):
     def __init__(self,path,offset,size):

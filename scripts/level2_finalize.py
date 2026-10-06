@@ -345,6 +345,8 @@ def _finalize(run, operator, *, prepare_only, timing_options):
                "selected_candidate_id": None, "formal_admission": "not_evaluated",
                "graph_policy_eligible": False, "episode_ref": None}
     if request_path.exists():
+        from level2_stage_recovery import frozen_request_producers
+        request["producers"] = frozen_request_producers(task, load(request_path), state, request["producers"])
         require(load(request_path) == request, "frozen finalization request or evidence changed")
     else:
         require(not state["frozen"], "frozen ledger has no finalization request")
@@ -366,7 +368,11 @@ def _finalize(run, operator, *, prepare_only, timing_options):
         parent = task / "candidates" / cid
         result = iteration.stage(run, operator, cid, "timing", GROUP, plan_path=refs[cid]["path"])
         require(result["status"] == "passed", "final stage failed; retained without retry: " + cid)
-        results.append({"candidate_id": cid, "result": pointer(parent / "stages" / GROUP / "result.json"),
+        current_ledger = campaign.Campaign(run / split / "ledger")
+        current_stage = current_ledger.state["tasks"][operator]["stages"][cid + "-" + GROUP]
+        from level2_stage_recovery import resolve_result
+        selected = resolve_result(parent / "stages" / GROUP, current_stage, require_success=True)
+        results.append({"candidate_id": cid, "result": selected["current_result"],
                         "comparisons": final_reports(parent, plans[cid])})
     completion = {**base, "status": "final_evaluations_completed" if qualified else "closed_no_qualified_candidates",
                   "final_measurements_complete": True, "comparisons": results,

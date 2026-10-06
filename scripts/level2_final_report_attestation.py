@@ -22,12 +22,12 @@ VERSION = 'level2_final_report_consistency_attestation_v2'
 EVENT = 'final_report_consistency_attested'
 ALL_CASES = list(range(1, 21))
 CLAIM = 'Retained evidence and saved final reports were consistent at this retrospective audit; no earlier report authority is asserted.'
-REVIEWED_STORAGE_PATCH = 'sha256:11208eed8ad7ed1171a7290b44a869df11338c95a7f6bbe820838d5b7df5ca13'
+REVIEWED_STORAGE_PATCH = 'sha256:8534f1244595e39a4d343a8e159c31af1ec2d67e9e5cf69323adf3cc05abe736'
 STORAGE_PRODUCERS = {
     'level2_evidence_storage.py': 'sha256:47fa961ac340bee5fd19129628b3063c67e30f93b06a5c83493e548661a67772',
-    'level2_raw_archive_storage.py': 'sha256:68742f237190c2c5869b2e0ed916f9e480abc3c3a45f72d9b531ee92662cc864',
-    'level2_verification_storage.py': 'sha256:78ff7dfc3d7494c074b9dd6a2d3d316d35efe50d288584cee5f391cd84fae1eb',
-    'level2_native_output_storage.py': 'sha256:a08bb1813cb7503b58ba95d9f1a780c61a433c955dbc8dd2254b66ac5985787c',
+    'level2_raw_archive_storage.py': 'sha256:e4ca7d9ee06ac7665ee2cde418c83a318c6008143e05012fafe5db8992957079',
+    'level2_verification_storage.py': 'sha256:d1e13b642c9f90ba91f1332f0e79f02dcd5bee98e7a8e69cb06739c734475211',
+    'level2_native_output_storage.py': 'sha256:19e40f32d5fa8c66ea9e1b2bb3a66db57e4593206512092f22f8de9ce0b42ef9',
     'msprof_exploration_report.py': 'sha256:e18685a42167217873b74b99450aab3e77049f662b243dd3bb9fb5bfd875b19f',
     'msprof_raw_storage.py': 'sha256:4d4f8d3f8d39d627bf6d5ead55d0a9e8d774a28be9f976384dc25584112e3b23',
     'cannbench_msprof_timing.py': 'sha256:c3d60d7a6fb8dae946e48781092e05a8335e192e1800de76a1fe0a5f1ca895c6',
@@ -109,7 +109,7 @@ class Runtime:
                'shared_context_build', 'run_msprof_exploration_stage',
                'level2_evidence_storage', 'level2_raw_archive_storage',
                'level2_verification_storage', 'level2_native_output_storage',
-               'level2_final_report_authority',
+               'level2_final_report_authority', 'level2_stage_recovery',
                'msprof_raw_storage', 'cannbench_msprof_timing', 'run_level1_serial')
 
     def __init__(self, repository):
@@ -380,8 +380,14 @@ def scope(runtime, run, operator, request_sha, evidence):
         require(evidence.pointer(comparison_manifest)['sha256'] == plan['manifest_ref']
                 and evidence.document(comparison_manifest) == {'candidate_id': cid, 'cohorts': plan['cohorts'], 'case_ids': ALL_CASES},
                 'final comparison manifest differs')
-        result_ref = evidence.pointer(parent / 'stages/final/result.json'); result = evidence.checked(result_ref)
         stage = state['stages'][cid + '-final']
+        if stage.get('prestart_recovery') is not None:
+            from level2_stage_recovery import resolve_result
+            recovery = resolve_result(parent / 'stages/final', stage, runtime.storage.read_bytes, require_success=True)
+            evidence.tree(recovery['protected'])
+            result_ref = recovery['current_result']
+        else:result_ref = evidence.pointer(parent / 'stages/final/result.json')
+        result = evidence.checked(result_ref)
         require(stage['kind'] == 'timing' and stage['candidate_id'] == cid and stage['plan'] == plan
                 and stage['attempts'][-1]['outcome'] == 'success' and stage['attempts'][-1]['evidence']['result'] == result_ref
                 and result['status'] == 'passed' and result.get('error') is None and completed['result'] == result_ref,

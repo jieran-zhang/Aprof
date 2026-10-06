@@ -305,3 +305,34 @@ def test_fresh_build_passes_profile_target_to_actual_builder(tmp_path, monkeypat
     result = stage.run_stage(tmp_path, 'exp', 'baseline', 'build', 'build')
     assert result['status'] == 'passed' and events == ['start','build','finish']
     assert stage.load(task / 'stages/build/build-target.json')['npu_arch'] == 'dav-3510'
+
+
+def test_direct_cli_bootstraps_canonical_runtime_without_pythonpath(tmp_path):
+    import os
+    import subprocess
+    script = Path(stage.__file__).resolve()
+    # Match direct-script sys.path[0], run its real --help path, then exercise the
+    # deferred runtime import which previously failed before native startup.
+    program = r"""
+import json, runpy, sys
+from pathlib import Path
+script = Path(sys.argv[1])
+sys.path.insert(0, str(script.parent))
+sys.argv = [str(script), '--help']
+try:
+    runpy.run_path(str(script), run_name='__main__')
+except SystemExit as error:
+    assert error.code == 0
+else:
+    raise AssertionError('CLI help must exit before any stage')
+import aprof_runtime
+expected = script.parents[1] / 'src/aprof_runtime/__init__.py'
+assert Path(aprof_runtime.__file__).resolve() == expected
+print(json.dumps({'runtime': str(expected), 'native_started': False}))
+"""
+    env = {key: value for key, value in os.environ.items() if key != 'PYTHONPATH'}
+    result = subprocess.run([sys.executable, '-I', '-B', '-c', program, str(script)],
+                            cwd=tmp_path, env=env, text=True, capture_output=True, timeout=30)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout.splitlines()[-1]) == {
+        'runtime': str(script.parents[1] / 'src/aprof_runtime/__init__.py'), 'native_started': False}
