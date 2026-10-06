@@ -174,7 +174,7 @@ def verify_storage_closure(bundle, manifest, index):
             for member in members:
                 row=rows[member.name];relative=Path(member.name);origin=str(logical/relative)
                 require(len(relative.parts)==2 and re.fullmatch(r'(?:[1-9]|1[0-9]|20)_(?:normal|swapped)_[AB]',relative.parts[0])
-                        and relative.name in {'metadata.json','execution.json','result.json','stdout.log'}
+                        and relative.name in storage.verification_names(session)
                         and member.isfile() and not member.issym() and not member.islnk() and row['path']==origin,
                         'portable tar member path differs')
                 data=stream.extractfile(member).read()

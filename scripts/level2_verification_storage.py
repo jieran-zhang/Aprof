@@ -20,6 +20,9 @@ import tarfile
 
 VERSION='level2_closed_verification_storage_v1'
 NAMES={'metadata.json','execution.json','stdout.log','result.json'}
+# Reviewed original oracle contract: AdamW writes precision.json beside metadata.
+RESULT_FILE_BY_OPERATOR={'apply_adam_w':'precision.json'}
+ELIGIBLE_NAMES=NAMES|set(RESULT_FILE_BY_OPERATOR.values())
 STEM=re.compile(r'(?:[1-9]|1[0-9]|20)_(?:normal|swapped)_[AB]\Z')
 HASH=re.compile(r'sha256:[0-9a-f]{64}\Z')
 _OVERRIDES=contextvars.ContextVar('verification_archive_overrides',default=None)
@@ -54,10 +57,16 @@ def raw_ref(path):return {'path':str(path),'sha256':digest(raw_read(path))}
 def raw_json(path):return json.loads(raw_read(path))
 
 
+def verification_names(session):
+    parts=Path(session).parts;index=parts.index('tasks')
+    result=RESULT_FILE_BY_OPERATOR.get(parts[index+1],'result.json')
+    return (NAMES-{'result.json'})|{result}
+
+
 def location(path, *, check_files=True):
     """Return a process for one exact eligible logical path, otherwise None."""
     path=Path(path)
-    if path.name not in NAMES or not STEM.fullmatch(path.parent.name) or path.parent.parent.name!='verification':return None
+    if path.name not in ELIGIBLE_NAMES or not STEM.fullmatch(path.parent.name) or path.parent.parent.name!='verification':return None
     require(path.is_absolute() and '..' not in path.parts,'canonical absolute verification path required')
     if check_files:path=safe(path,exists=False)
     session=path.parent.parent.parent;parts=session.parts
@@ -70,6 +79,7 @@ def location(path, *, check_files=True):
         require(len(tail)>2 and re.fullmatch(r'[A-Za-z0-9_-]+',tail[1]),'invalid candidate verification scope');tail=tail[2:]
     require(len(tail)==4 and tail[0]=='stages' and tail[2] in ('cohort','direct_parent','original_baseline')
             and all(re.fullmatch(r'[A-Za-z0-9_-]+',v) for v in tail[1:]),'unsupported verification scope')
+    require(path.name in verification_names(session),'filename differs from reviewed operator oracle contract')
     return session
 
 
@@ -107,11 +117,11 @@ def closed_from_reader(session, read_bytes):
     for row in rows['outputs']:
         stem=f"{row['case_id']}_{row['buffer_config']}_{row['role']}"
         require(STEM.fullmatch(stem) and row.get('passed') is True,'unclosed oracle result')
-        for name in NAMES:
+        for name in verification_names(session):
             logical=session/'verification'/stem/name
             require(str(logical) not in expected,'duplicate verification coverage')
             expected[str(logical)]=sessions[0]['artifacts'].get(str(logical))
-            if name!='result.json':require(HASH.fullmatch(expected[str(logical)] or ''),'verification file was not bound by the original report')
+            if name in {'metadata.json','execution.json','stdout.log'}:require(HASH.fullmatch(expected[str(logical)] or ''),'verification file was not bound by the original report')
     require(expected,'empty verification scope')
     # The existing public event binds the completed stage; later events can append.
     event_path=task/'events.jsonl';previous=None;binding=None;stage_ref=ref(paths[0])
