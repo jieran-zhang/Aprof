@@ -440,6 +440,10 @@ def materialize_candidate(run, operator, candidate_id):
             "parallel_plan": pointer(plan_path), "dispatch_plan": pointer(dispatch_path),
             "graph_snapshot": pointer(graph_root / "graph.json"), "dispatch_launch": pointer(parent / "dispatch-launch.json"),
             "planning_evidence": evidence}}
+    if draft.get('semantic_guard_draft') is not None:
+        from level2_guard_contract import materialize
+        proposal['artifacts']['semantic_guard_contract'] = materialize(
+            task, parent, draft['semantic_guard_draft'], implementation, pointer(dispatch_path))
     save(final, proposal)
     event(task, "candidate_identities_materialized", {"candidate_id": candidate_id, "proposal": pointer(final),
         "author_draft": pointer(draft_path), "implementation": pointer(preview), "source_changed_here": False})

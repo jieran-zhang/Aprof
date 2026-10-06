@@ -267,6 +267,13 @@ def register_proposal(run, operator, candidate_id, proposal_path):
             selections.append({'case_id': row['case_id'], 'metadata': metadata, **selected})
         if proposal.get('dispatch_selections') != selections:
             raise ValueError('declared dispatch selections differ from frozen workload metadata')
+    guard_ref = proposal.get('artifacts', {}).get('semantic_guard_contract')
+    if guard_ref is not None:
+        if ledger.config.get('schema_version') != 'msprof_exploration_campaign_v2':
+            raise ValueError('candidate guard revisions require fresh Level2 protocol')
+        from level2_guard_contract import resolve
+        resolve(task, parent, guard_ref, source_hash=sha(parent / 'source.tar'), oracle=True)
+        artifacts['semantic_guard_contract'] = guard_ref
     ledger.register(event_id=candidate_id + '-register', workload=operator, candidate_id=candidate_id,
                     source_hash=sha(parent / 'source.tar'), patch_hash=sha(patch_path),
                     source_parent={'candidate_id': parent_id, 'source_hash': control_hash},

@@ -227,8 +227,25 @@ def boundary_result(task, parent, operator, candidate_id):
     request = checked_pointer(value.get("request"), "boundary request")
     if request.get("operator") != operator or request.get("candidate") != candidate_id:
         raise ValueError("existing boundary request identity differs")
-    if request.get("script") != pointer(task / "agent/boundary_guard.py"):
+    from level2_guard_contract import resolve, REQUEST_VERSION
+    revision = resolve(task, parent, oracle=False)
+    expected_script = revision["script"] if revision else pointer(task / "agent/boundary_guard.py")
+    if request.get("script") != expected_script:
         raise ValueError("existing boundary guard source differs")
+    if revision:
+        from msprof_exploration_provenance import verify_pointer_tree
+        from level2_guard_contract import checked_execution
+        checked_execution(value.get("evidence_closure"), path.parent)
+        producer = request.get("producer")
+        if not isinstance(producer, dict) or producer.get("path") != str(Path(__file__).with_name("level2_guard_contract.py")):
+            raise ValueError("candidate guard helper producer differs")
+        verify_pointer_tree(request, evidence_path=path.parent / "request.json")
+        if (value.get("version") != REQUEST_VERSION or request.get("version") != REQUEST_VERSION
+                or request.get("semantic_guard_contract") != pointer(parent / "semantic-guards/contract.json")
+                or [row["name"] for row in value.get("cases", [])] != [row["name"] for row in revision["cases"]]):
+            raise ValueError("existing candidate guard revision/coverage differs")
+    elif request.get("semantic_guard_contract") is not None or request.get("version") == REQUEST_VERSION:
+        raise ValueError("undeclared candidate guard revision")
     if request.get("dispatch_plan") != pointer(parent / "dispatch_plan.json"):
         raise ValueError("existing boundary dispatch plan differs")
     binary = load(parent / "build/build_manifest.json")["standalone"]

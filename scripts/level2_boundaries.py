@@ -17,7 +17,10 @@ from run_level1_serial import exclusive_host
 def collect(run, operator, candidate, output=None):
     run, split, task, parent, source = task_paths(run, operator, candidate)
     out = Path(output).resolve() if output else parent / "boundary-validation"
-    script = task / "agent/boundary_guard.py"
+    from level2_guard_contract import resolve, pointer as guard_pointer, REQUEST_VERSION, ROOT as GUARD_ROOT
+    guard_contract = resolve(task, parent, oracle=True) if candidate != "baseline" else None
+    guard_ref = guard_pointer(parent / "semantic-guards/contract.json") if guard_contract else None
+    script = Path(guard_contract["script"]["path"]) if guard_contract else task / "agent/boundary_guard.py"
     build = load(parent / "build/build_manifest.json")
     binary = build["standalone"]
     if sha(binary["path"]) != binary["sha256"]:
@@ -29,21 +32,30 @@ def collect(run, operator, candidate, output=None):
     entries = ({row["tiling_key"]: row["kernel_entry"] for row in [*dispatch["entries"], dispatch["fallback"]]}
                if dispatch is not None else {})
     guard_args = ["--plan", plan_path] if plan_path is not None else []
+    if guard_contract:
+        guard_args += ["--repository", GUARD_ROOT, "--contract", guard_ref["path"]]
     started = time.time()
     with exclusive_host():
         out.mkdir(parents=True, exist_ok=False)
-        save(out / "request.json", {"version": "level2_semantic_guards_v1", "operator": operator,
+        save(out / "request.json", {"version": REQUEST_VERSION if guard_contract else "level2_semantic_guards_v1", "operator": operator,
              "candidate": candidate, "script": source_ref, "binary": binary, "performance_evaluated": False,
              "dispatch_plan": plan_ref,
-             "dispatch_logs_required": candidate != "baseline", "device": 0, "cpu": 8})
+             "dispatch_logs_required": candidate != "baseline", "device": 0, "cpu": 8,
+             **({"semantic_guard_contract": guard_ref, "producer": pointer(Path(__file__).with_name("level2_guard_contract.py"))} if guard_contract else {})})
         event(task, "boundary_validation_started", {"candidate": candidate, "request": pointer(out / "request.json")})
         rows, error, verification_error = [], None, None
         try:
             run_process([sys.executable, "-B", script, "--output", out / "inputs", *guard_args], task,
                         out / "prepare", cpu="40-43", timeout=600)
             commands = load(out / "inputs/coordinator_commands.json")
+            if guard_contract and [row["name"] for row in commands] != [row["name"] for row in guard_contract["cases"]]:
+                raise ValueError("candidate guard command coverage differs")
+            if guard_contract and resolve(task, parent, oracle=False) != guard_contract:
+                raise ValueError("candidate guard contract changed during preparation")
             health(out / "health-before.json")
             for command in commands:
+                if guard_contract and resolve(task, parent, oracle=False) != guard_contract:
+                    raise ValueError("candidate guard contract changed before native call")
                 directory = out / "executions" / command["name"]
                 argv = [binary["path"], *command["argv"]]
                 failure = None
@@ -80,6 +92,8 @@ def collect(run, operator, candidate, output=None):
                             out / "verify", cpu="40-43", timeout=600)
             except Exception as exc:
                 verification_error = {"type": type(exc).__name__, "message": str(exc)}
+            if guard_contract and resolve(task, parent, oracle=False) != guard_contract:
+                raise ValueError("candidate guard contract changed during execution")
             if sha(script) != source_ref["sha256"] or sha(binary["path"]) != binary["sha256"]:
                 raise ValueError("boundary source or executable changed during execution")
             if plan_ref is not None and sha(plan_path) != plan_ref["sha256"]:
@@ -91,13 +105,22 @@ def collect(run, operator, candidate, output=None):
                 health(out / "health-after.json")
             except BaseException as exc:
                 error = error or {"type": type(exc).__name__, "message": str(exc)}
+            guard_evidence = None
+            if guard_contract:
+                try:
+                    from level2_guard_contract import execution_files
+                    save(out / "evidence-closure.json", execution_files(out))
+                    guard_evidence = pointer(out / "evidence-closure.json")
+                except BaseException as exc:
+                    error = error or {"type": type(exc).__name__, "message": str(exc)}
             passed = not error and not verification_error and bool(rows) and all(
                 r["expected_process_passed"] and r["dispatch_log_passed"] for r in rows)
-            result = {"version": "level2_semantic_guards_v1", "operator": operator, "candidate": candidate,
+            result = {"version": REQUEST_VERSION if guard_contract else "level2_semantic_guards_v1", "operator": operator, "candidate": candidate,
                 "request": pointer(out / "request.json"),
                 "status": "passed" if passed else "failed", "cases": rows, "error": error,
                 "verification_error": verification_error, "elapsed_seconds": time.time() - started,
-                "performance_evaluated": False, "formal_admission": "not_evaluated"}
+                "performance_evaluated": False, "formal_admission": "not_evaluated",
+                **({"evidence_closure": guard_evidence} if guard_contract else {})}
             save(out / "completion.json", result)
             event(task, "boundary_validation_completed", {"candidate": candidate, "completion": pointer(out / "completion.json")})
     return result

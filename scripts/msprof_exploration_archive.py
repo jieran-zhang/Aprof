@@ -271,11 +271,31 @@ class Archive:
             require(current.name not in {'run-manifest.json', 'config.sha256.json'}, 'global manifest must be projected before archive')
         return resolved
 
+    def candidate_guard(self, owner, candidate, proposal):
+        """Close every frozen guard input and execution for portable replay."""
+        artifacts = candidate.get('artifacts', {})
+        guard_ref = artifacts.get('semantic_guard_contract')
+        if guard_ref is not None:
+            from level2_guard_contract import checked_contract
+            require(proposal.get('artifacts', {}).get('semantic_guard_contract') == guard_ref,
+                    'candidate guard proposal/ledger identity differs')
+            guard = checked_contract(guard_ref, source_hash=candidate['source_hash'],
+                                     dispatch_plan=artifacts.get('dispatch_plan'))
+            require(guard['task'] == str(self.task_root / owner) and guard['candidate_id'] == candidate['candidate_id'],
+                    'candidate guard archive owner differs')
+            self.audit_paths(guard, owner)
+            self.files(Path(guard_ref['path']).parent, owner)
+            validation = Path(guard_ref['path']).parent.parent / 'boundary-validation'
+            self.files(validation, owner)
+            for evidence in sorted(validation.rglob('*.json')):
+                self.audit_paths(load(evidence), owner, evidence_path=evidence)
+
     def planning(self, owner, candidate, declaration, proposal):
         """Bind predeclared plans and actual implementation lineage for fresh runs."""
         artifacts = candidate.get('artifacts', {})
         self.audit_paths(artifacts, owner)
         documents, pointers = {}, []
+        self.candidate_guard(owner, candidate, proposal)
         for kind in ('architecture_profile', 'parallel_plan', 'dispatch_plan'):
             pointer = artifacts.get(kind)
             require(isinstance(pointer, dict) and {'path', 'sha256'} <= pointer.keys(), f'fresh candidate lacks bound {kind}')
