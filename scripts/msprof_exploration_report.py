@@ -19,6 +19,7 @@ import statistics as st
 import sys
 
 import msprof_exploration_provenance as engineering_provenance
+import level2_verification_storage as verification_storage
 
 PROTOCOL = 'msprof_task_time_exploration_v1'
 ANALYSIS = 'msprof_exploration_analysis_v1'
@@ -55,6 +56,9 @@ def digest(value):
 
 
 def sha(path):
+    archived = verification_storage.resolve(Path(path))
+    if archived is not None:
+        return verification_storage.digest(archived['payloads'][str(path)])
     value = hashlib.sha256()
     with Path(path).open('rb') as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b''):
@@ -83,7 +87,7 @@ def _decode(text, opaque=False):
 
 
 def load(path, *, opaque=False):
-    return _decode(Path(path).read_text(), opaque)
+    return _decode(verification_storage.read_bytes(path).decode(), opaque)
 
 
 @contextlib.contextmanager
@@ -496,7 +500,7 @@ def verify_observation(directory, expected_request=None, *, provenance_out=None)
                 and oracle_argv[1:] == [str(Path(spec['verifier']).resolve()), '--metadata', execution_metadata_path]
                 and oracle.get('exit_code') == 0 and oracle.get('mode') == 'unchanged_import_safe_main'
                 and execution['ended_at'] <= oracle['started_at'] <= oracle['ended_at'], 'oracle execution evidence invalid')
-        require((vdir / 'stdout.log').is_file(), 'oracle stdout missing')
+        require(verification_storage.is_file(vdir / 'stdout.log'), 'oracle stdout missing')
     parsed = timing.parse_profile(directory / 'raw', directory / 'native/journal.jsonl', build, cases, 10)
     require(parsed == load(directory / 'samples.json'), 'saved samples differ from CSV/journal replay')
     # Device_id is normally the physical ID. A deployment with a documented
@@ -682,6 +686,7 @@ def _scope_evidence(scope, session):
             'limitation': 'Matching the declared epoch is conditional on unchanged external environment; absent versions are not inferred.'}
 
 
+@verification_storage.reader_session()
 def analyze_task_cohort(directories, plan, calibration=None, *, provenance_out=None):
     """Verify six processes, then return a new report without writing artifacts."""
     plan = validate_plan(plan)

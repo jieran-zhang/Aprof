@@ -30,6 +30,7 @@ import uuid
 sys.dont_write_bytecode = True
 from level2_adapters import OPERATORS, OUTPUT_KEYS
 from run_level1_serial import exclusive_host
+import level2_verification_storage as verification_storage
 
 VERSION = 'level2_output_dedup_v1'
 CHUNK = 8 * 1024 * 1024
@@ -111,6 +112,7 @@ def write_new(path, value):
 
 
 class Inventory:
+    @verification_storage.reader_session()
     def __init__(self, run, scope, kind):
         self.run = safe(Path(os.path.abspath(run)), directory=True)
         self.scope = safe(Path(os.path.abspath(scope)), self.run, directory=True)
@@ -152,7 +154,17 @@ class Inventory:
         self.recheck_evidence()
 
     def read(self, path, expected=None):
-        path = safe(Path(path), self.run)
+        path = Path(path)
+        require(path.is_absolute() and '..' not in path.parts and path.is_relative_to(self.run),
+                'index path escapes storage scope')
+        archived = verification_storage.resolve(path)
+        if archived is not None:
+            raw = archived['payloads'][str(path)]
+            value = 'sha256:' + hashlib.sha256(raw).hexdigest()
+            require(expected is None or value == expected, 'archived index hash differs')
+            self.evidence[str(path)] = value
+            return json.loads(raw)
+        path = safe(path, self.run)
         value, _ = digest(path, expected)
         with path.open('rb') as stream: raw = stream.read()
         require('sha256:'+hashlib.sha256(raw).hexdigest() == value, 'index changed while reading')
@@ -166,7 +178,13 @@ class Inventory:
         return self.read(path, ref['sha256'])
 
     def recheck_evidence(self):
-        for path, value in self.evidence.items(): digest(path, value)
+        for path, value in self.evidence.items():
+            archived = verification_storage.resolve(Path(path))
+            if archived is None:
+                digest(path, value)
+            else:
+                require('sha256:' + hashlib.sha256(archived['payloads'][path]).hexdigest() == value,
+                        'archived storage index evidence changed')
 
     def add(self, path, expected):
         require(isinstance(expected,str) and DIGEST.fullmatch(expected), 'invalid indexed output hash')

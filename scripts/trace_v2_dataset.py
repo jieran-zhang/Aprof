@@ -8,7 +8,9 @@ closed. Old source archives remain read-only and are addressed by content hash.
 from __future__ import annotations
 import argparse
 import copy
+import contextlib
 import fcntl
+import functools
 import hashlib
 import json
 import math
@@ -137,6 +139,41 @@ def validate_record(value):
         raise ValueError('record hash mismatch')
 
 
+@contextlib.contextmanager
+def external_evidence_session():
+    try:
+        import level2_verification_storage as storage
+    except ModuleNotFoundError as error:
+        if error.name != 'level2_verification_storage':
+            raise
+        yield
+    else:
+        with storage.reader_session():
+            yield
+
+
+def external_evidence_reader(function):
+    @functools.wraps(function)
+    def run(*args, **kwargs):
+        if kwargs.get('evidence_paths') is not None:
+            # Portable maps are complete and must not import an original-store resolver.
+            return function(*args, **kwargs)
+        with external_evidence_session():
+            return function(*args, **kwargs)
+    return run
+
+
+def external_evidence_bytes(path):
+    """Read exact historical logical bytes; explicit portable maps bypass this resolver."""
+    try:
+        import level2_verification_storage as storage
+    except ModuleNotFoundError as error:
+        if error.name != 'level2_verification_storage':
+            raise
+        return Path(path).read_bytes()
+    return storage.read_bytes(path)
+
+
 class Evidence:
     """Read-only legacy catalog plus content-deduplicated evidence selectors."""
     def __init__(self, runs=()):
@@ -153,7 +190,7 @@ class Evidence:
 
     def read(self, path):
         path = str(Path(path).resolve())
-        if path not in self.bytes_cache: self.bytes_cache[path] = Path(path).read_bytes()
+        if path not in self.bytes_cache: self.bytes_cache[path] = external_evidence_bytes(path)
         return self.bytes_cache[path]
 
     def file(self, path, *, split='train', selector='', purpose='source evidence', expected=None):
@@ -573,6 +610,7 @@ def publish(root, memory_bodies, lesson_builder, evidence, metadata):
         return {'root': str(root.resolve()), 'revision': revision, **manifest['counts']}
 
 
+@external_evidence_reader
 def verify(root, deep=False, prospective_pointer=None, *, evidence_paths=None, graph_root=None):
     """Pure reader: no store constructors, gate replay, registrations or writes."""
     root = Path(root); pointer = prospective_pointer or strict_loads((root/'current.json').read_bytes())
@@ -598,6 +636,8 @@ def verify(root, deep=False, prospective_pointer=None, *, evidence_paths=None, g
             raise ValueError('invalid portable evidence location')
     def evidence_path(original):
         return Path(original if evidence_paths is None else evidence_paths[original])
+    def evidence_bytes(original):
+        return external_evidence_bytes(original) if evidence_paths is None else evidence_path(original).read_bytes()
     entry_schema = obj({'sha256': H, 'path': S, 'size_bytes': I, 'split': {'enum': ['train', 'validation']},
                         'selector': S, 'purposes': REFS})
     for key, entry in index.items():
@@ -716,7 +756,7 @@ def verify(root, deep=False, prospective_pointer=None, *, evidence_paths=None, g
                     entry = index.get(declaration.get('evidence_id'))
                     if not entry or entry['split'] != body['split'] or entry['selector']:
                         raise ValueError('graph snapshot evidence binding')
-                    raw = evidence_path(entry['path']).read_bytes()
+                    raw = evidence_bytes(entry['path'])
                     if digest_bytes(raw) != entry['sha256']: raise ValueError('graph snapshot changed')
                     graph = strict_loads(raw)
                     if graph.get('graph_version') != 'v0002' or digest_bytes(canonical(graph)[:-1]) != declaration.get('content_hash'):
@@ -742,7 +782,7 @@ def verify(root, deep=False, prospective_pointer=None, *, evidence_paths=None, g
         for entry in index.values():
             path = entry['path']; expected = entry['sha256']
             if path not in cache:
-                data = evidence_path(path).read_bytes(); cache[path] = (digest_bytes(data), len(data))
+                data = evidence_bytes(path); cache[path] = (digest_bytes(data), len(data))
                 if path in selector_paths: contents[path] = data
             if cache[path] != (expected, entry['size_bytes']): raise ValueError('external evidence changed: ' + path)
             validate_selector(entry['selector'], evidence_path(path), contents.get(path), selector_cache)
@@ -755,7 +795,7 @@ def validate_selector(selector, path, data=None, cache=None):
     if not selector: return
     line = re.fullmatch(r'line[: ](\d+)(?: (/.+))?', selector)
     lines = re.fullmatch(r'lines (\d+)-(end|\d+)', selector)
-    if data is None: data = path.read_bytes()
+    if data is None: data = external_evidence_bytes(path)
     if cache is None: cache = {}
     if lines:
         count = len(data.splitlines()); start = int(lines[1]); end = count if lines[2] == 'end' else int(lines[2])

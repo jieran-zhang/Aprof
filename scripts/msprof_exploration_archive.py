@@ -502,14 +502,41 @@ class Archive:
             self.observation_producer_bindings[key] = binding
             self.document({'closed_observation_producer_binding': binding})
 
+    def verification_snapshot(self, path, owner, expected):
+        import level2_verification_storage as storage
+        binding = storage.evidence_binding(path, expected)
+        if binding is None:
+            return None
+        binding.pop('bytes')
+        result = dict(binding['origin'])
+        # Explicitly retain every archive/seal/producer and closed-state dependency.
+        for key in ('seal', 'archive', 'producer'):
+            ref = binding[key]
+            self.pointer(ref['path'], owner, expected=ref['sha256'])
+        for ref in binding['closed_evidence']['protected']:
+            self.pointer(ref['path'], owner, expected=ref['sha256'])
+        event = binding['closed_evidence']['event_binding']
+        self.pointer(event['path'], owner, selector='line:'+str(event['sequence']+1))
+        self.document({'version': storage.VERSION, 'archive_mapping': {key:value for key,value in binding.items() if key!='origin'}})
+        return result
+
     def pointer(self, path, owner=None, expected=None, selector=''):
         path = self.safe(path, owner)
-        require(path.is_file(), 'missing archive evidence: ' + str(path))
         key = str(path), expected, selector
         if key in self.pointer_cache:
             result = self.pointer_cache[key]
             require(expected is None or result['sha256'] == expected, 'evidence hash differs: ' + str(path))
             return result
+        snapshot = self.verification_snapshot(path, owner, expected)
+        if snapshot is not None:
+            result = {**snapshot}
+            if selector:
+                v2.validate_selector(selector, Path(result['path']), analysis.verification_storage.read_bytes(result['path']))
+                result['selector'] = selector
+            self.artifacts[v2.digest(result)] = result
+            self.pointer_cache[key] = result
+            return result
+        require(path.is_file(), 'missing archive evidence: ' + str(path))
         result = dict(path=str(path), sha256=sha(path))
         if expected is not None and result['sha256'] != expected:
             binding = getattr(self, 'observation_producer_bindings', {}).get((str(path), expected))
@@ -547,6 +574,9 @@ class Archive:
             require(not path.is_symlink(), 'symlink inside artifact closure')
             if path.is_file():
                 self.pointer(path, owner)
+        import level2_verification_storage as storage
+        for path in storage.logical_files(directory):
+            self.pointer(path, owner)
 
     def audit_paths(self, value, owner, *, evidence_path=None):
         """Check referenced absolute paths before the report reader can open them."""
@@ -647,6 +677,7 @@ class Archive:
         self.pointer(path, owner, expected=source_hash)
         return path
 
+    @analysis.verification_storage.reader_session()
     def cohort(self, directory, owner, control_tar, candidate_tar, calibration_ref=None):
         directory = self.safe(directory, owner)
         completion = load(self.safe(directory / 'group-completion.json', owner))
@@ -970,6 +1001,7 @@ class Archive:
                         evidence=[proposal_ref, sources['patch'], *planning_evidence]),
                     evaluations=comparisons, timeline=timeline, actual_reads=reads, next_decision=decision)
 
+    @analysis.verification_storage.reader_session()
     def prepare(self, lessons_paths=None):
         attempts, checkpoints, lessons = [], [], []
         paths = [] if lessons_paths is None else list(lessons_paths)
@@ -1101,6 +1133,7 @@ class Archive:
         v2.verify(output, deep=True, prospective_pointer=pointer)
         v2.write_synced(output / 'current.json', v2.canonical(pointer))
 
+    @analysis.verification_storage.reader_session()
     def publish(self, config):
         manifest = Path(self.document(config)['path'])
         recorder = FrozenRecorder(manifest, self.output)
@@ -1193,6 +1226,7 @@ class Archive:
                           inherited_source_attempts=metadata['inherited_source_attempts'],
                           task_checkpoints=len(checkpoints), hardware_executed=False)
             # All publication/validation work finishes before the sole public commit.
+            analysis.verification_storage.reverify_cached()
             os.replace(staging / 'current.json', current)
             return result
 
