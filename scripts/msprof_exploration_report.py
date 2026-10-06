@@ -190,10 +190,23 @@ def validate_plan(plan):
     return json.loads(canonical(plan))
 
 
+class ObservationBindings(dict):
+    """Original logical hashes plus separately verified historical code provenance."""
+    def __init__(self, value, evidence_path):
+        super().__init__(value)
+        self.evidence_path=evidence_path
+        self.producer_bindings=[]
+
+
 def _bound_file(bindings, path):
     path = str(path)
     require(path in bindings, 'unbound evidence: ' + path)
-    require(sha(path) == bindings[path], 'bound evidence changed: ' + path)
+    if sha(path) != bindings[path]:
+        proof = (engineering_provenance.frozen_producer(Path(path),bindings[path],
+            evidence_path=bindings.evidence_path,semantic_path=('observation_binding',))
+            if isinstance(bindings,ObservationBindings) else None)
+        require(proof is not None, 'bound evidence changed: ' + path)
+        if proof not in bindings.producer_bindings:bindings.producer_bindings.append(proof)
 
 
 def _opaque_equal(a, b):
@@ -326,8 +339,10 @@ def verify_observation(directory, expected_request=None, *, provenance_out=None)
             'collection failed or incomplete')
     bindings = load(directory / 'bindings.json')
     require(isinstance(bindings, dict) and bindings, 'missing evidence bindings')
-    for path, expected_hash in bindings.items():
-        require(Path(path).is_absolute() and sha(path) == expected_hash, 'bound evidence changed: ' + path)
+    bindings=ObservationBindings(bindings,directory/'completion.json')
+    for path in bindings:
+        require(Path(path).is_absolute(),'bound evidence path must be absolute')
+        _bound_file(bindings,path)
     timing, build, runner = _build_identity(request, bindings)
     require(any(Path(p).name == 'cannbench_msprof_timing.py' for p in bindings), 'collector producer hash missing')
     require(any(Path(p).suffix == '.json' and p not in (request['role_build'], request['runner_build'])
@@ -550,6 +565,8 @@ def verify_observation(directory, expected_request=None, *, provenance_out=None)
         provenance_out.extend(binding for binding in producer_bindings if binding not in provenance_out)
     artifacts[parsed['csv']] = parsed['csv_hash']
     if 'auxiliary_csv' in parsed:artifacts[parsed['auxiliary_csv']]=parsed['auxiliary_csv_hash']
+    if provenance_out is not None:
+        provenance_out.extend(proof for proof in bindings.producer_bindings if proof not in provenance_out)
     dispatch_hits=[dict(case_id=row['case_id'],buffer_config=row['buffer_config'],role=row['role'],pair_id=row['pair_id'],**row['verified_dispatch']) for row in parsed['samples'] if 'verified_dispatch' in row]
     return {'session_id': directory.name, 'directory': str(directory), 'host': start['host'], 'pid': start['pid'],
             'started_at': start['started_at'], 'ended_at': end['ended_at'], 'load_order': request['load_order'],

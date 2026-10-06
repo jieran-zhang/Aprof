@@ -218,6 +218,7 @@ class Archive:
         self.artifacts = {}
         self.pointer_cache = {}
         self.engineering_bindings = {}
+        self.observation_producer_bindings = {}
         self.pointer_hash_normalizations = {}
         self.preparation_relocations = {}
         self.history = {}
@@ -483,6 +484,24 @@ class Archive:
         self.preparation_relocations[v2.digest(binding)] = binding
         return snapshot
 
+    def bind_closed_observation_producers(self, session, owner):
+        """Register attested code snapshots before auditing original binding paths."""
+        from msprof_exploration_provenance import frozen_producer
+        for origin, expected in load(session / 'bindings.json').items():
+            path = self.safe(origin, owner)
+            if sha(path) == expected:
+                continue
+            binding = frozen_producer(path, expected, evidence_path=session / 'completion.json',
+                                      semantic_path=('observation_binding',))
+            # Unknown/data identities still fail in the ordinary strict pointer audit.
+            if binding is None:
+                continue
+            for ref in [binding['snapshot'], binding['frozen_manifest'], *binding['closed_observation'].values()]:
+                self.pointer(ref['path'], owner, expected=ref['sha256'])
+            key = (str(path), expected)
+            self.observation_producer_bindings[key] = binding
+            self.document({'closed_observation_producer_binding': binding})
+
     def pointer(self, path, owner=None, expected=None, selector=''):
         path = self.safe(path, owner)
         require(path.is_file(), 'missing archive evidence: ' + str(path))
@@ -493,7 +512,8 @@ class Archive:
             return result
         result = dict(path=str(path), sha256=sha(path))
         if expected is not None and result['sha256'] != expected:
-            snapshot = self.frozen_engineering(path, expected, result['sha256'], owner)
+            binding = getattr(self, 'observation_producer_bindings', {}).get((str(path), expected))
+            snapshot = binding['snapshot'] if binding else self.frozen_engineering(path, expected, result['sha256'], owner)
             if snapshot is None:
                 snapshot = self.relocated_preparation(path, expected, owner)
             if snapshot is not None:
@@ -649,6 +669,7 @@ class Archive:
                 ref = self.safe(request[field], owner)
                 self.audit_paths(load(ref), owner, evidence_path=ref)
                 self.files(ref.parent, owner)
+            self.bind_closed_observation_producers(path, owner)
             self.audit_paths(load(path / 'bindings.json'), owner)
             build = load(self.safe(request['role_build'], owner))
             for role, source_tar in (('A', control_tar), ('B', candidate_tar)):

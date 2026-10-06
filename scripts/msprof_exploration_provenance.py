@@ -86,12 +86,54 @@ def campaign_root(evidence_path):
     return None
 
 
+def closed_observation_code(origin, expected, evidence_path):
+    """Authorize only known code identities actually bound by a closed fresh session."""
+    directory=Path(evidence_path).parent
+    if Path(evidence_path).name!='completion.json' or directory!=directory.resolve():
+        return None
+    run=campaign_root(evidence_path)
+    if run is None or fresh_task_manifest(run,evidence_path) is None:
+        return None
+    scripts=ENGINEERING_SCRIPTS.resolve()
+    eligible=(origin.parent==scripts and origin.name in FRESH_PRODUCERS) or origin==scripts.parent/'src/aprof_runtime/planning.py'
+    if not eligible or origin.is_symlink() or origin!=origin.resolve():
+        return None
+    relative=directory.relative_to(run).parts
+    tail=relative[3:]
+    if tail[:1]==('candidates',):tail=tail[2:]
+    if not (len(tail)==4 and tail[0]=='stages' and tail[2] in ('cohort','direct_parent','original_baseline')):
+        return None
+    stage=directory.parent.parent;cohort=directory.parent
+    paths={'completion':directory/'completion.json','bindings':directory/'bindings.json',
+           'request':directory/'request.json','execution':directory/'msprof.execution.json',
+           'stage_result':stage/'result.json','group_completion':cohort/'group-completion.json'}
+    require(all(p.is_file() and not p.is_symlink() and p==p.resolve() for p in paths.values()),'closed observation proof is missing or aliased')
+    documents={key:load(path) for key,path in paths.items()}
+    completion=documents['completion'];execution=documents['execution'];stage_result=documents['stage_result'];group=documents['group_completion']
+    require(documents['request'].get('version')=='msprof_kernel_time_study_v2'
+            and completion.get('version')==documents['request']['version'] and completion.get('status')=='passed'
+            and completion.get('error') is None and completion.get('formal_admission')=='not_evaluated',
+            'observation code fallback requires a passed v2 session')
+    require(execution.get('exit_code')==0 and execution.get('error') is None and execution.get('ended_at') is not None,
+            'observation code fallback requires a completed native execution')
+    require(stage_result.get('status')=='passed' and stage_result.get('error') is None
+            and stage_result.get('ended_at') is not None and group.get('status')=='passed' and group.get('error') is None
+            and str(directory) in group.get('completed_sessions',[]) and len(set(group['completed_sessions']))==len(group['completed_sessions'])==6,
+            'observation code fallback requires a terminal six-process cohort')
+    require(documents['bindings'].get(str(origin))==expected,'producer was not bound by this exact observation')
+    return {key:{'path':str(path),'sha256':sha(path)} for key,path in paths.items()}
+
+
 def frozen_producer(origin, expected, *, evidence_path, semantic_path):
     """Return an attested old producer; never substitute a native/input identity."""
     run = campaign_root(evidence_path)
     task_manifest = fresh_task_manifest(run, evidence_path) if run else None
     producers = FRESH_PRODUCERS if task_manifest else PRODUCERS
-    if (run is None or semantic_path not in (('producer',), ('campaign_build', 'generator'))
+    observation=None
+    if semantic_path==('observation_binding',):
+        observation=closed_observation_code(origin,expected,evidence_path)
+        if observation is None:return None
+    elif (run is None or semantic_path not in (('producer',), ('campaign_build', 'generator'))
             or origin.parent != ENGINEERING_SCRIPTS.resolve() or origin.name not in producers
             or origin.is_symlink()):
         return None
@@ -117,7 +159,8 @@ def frozen_producer(origin, expected, *, evidence_path, semantic_path):
         return {'origin': {'path': str(origin), 'sha256': expected},
                 'snapshot': {'path': str(target), 'sha256': expected},
                 'frozen_manifest': {'path': str(manifest), 'sha256': sha(manifest)},
-                'binding_mode': 'frozen_engineering_snapshot'}
+                'binding_mode': 'frozen_engineering_snapshot',
+                **({'closed_observation':observation} if observation is not None else {})}
     return None
 
 
