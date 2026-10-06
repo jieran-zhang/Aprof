@@ -839,6 +839,176 @@ def boundary_numeric_failure(e, task, parent, guard):
     return 'original_boundary_oracle_numeric_mismatch', 'Retained successful native GN records, bound dispatch and original-golden CPU replay consistently show a numeric mismatch; historical raw outputs and verification were not individually presealed.'
 
 
+REVIEWED_RMS_GUARD = 'sha256:888272f3b4f4138584d1ad0ceb0751defdf76951c44b4ce7c9a8c436c523fe29'
+REVIEWED_RMS_SPEC = 'sha256:028abfe282135dcf42309da65e52441c5b15574c16008882a6db36e1a5ac286e'
+REVIEWED_RMS_VERIFIER = 'sha256:5dc773c336cef836e2173b584c2b20399eb073347722dba321126f3c03821955'
+RMS_BENIGN_STDERR = ('/usr/local/python3.11.15/lib/python3.11/site-packages/redis/connection.py:77: UserWarning: redis-py works best with hiredis. Please consider installing\n'
+                     '  warnings.warn(msg)\n')
+
+
+def rms_boundary_events(e, task, parent, request_ref, completion_ref):
+    path=e.path(task/'events.jsonl');previous=None;start=None
+    for index,raw in enumerate(path.read_bytes().splitlines()):
+        row=json.loads(raw);payload={k:v for k,v in row.items() if k!='hash'}
+        h='sha256:'+hashlib.sha256((json.dumps(payload,ensure_ascii=False,sort_keys=True,allow_nan=False)+'\n').encode()).hexdigest()
+        require(row.get('sequence')==index and row.get('previous_hash')==previous and row.get('hash')==h,'RMS guard event prefix differs')
+        previous=h
+        if row.get('kind')=='boundary_validation_started' and row.get('value',{}).get('candidate')==parent.name:
+            require(start is None and row['value'].get('request')==request_ref,'RMS guard start differs');start=row
+        if row.get('kind')=='boundary_validation_completed' and row.get('value',{}).get('candidate')==parent.name:
+            require(start and row['value'].get('completion')==completion_ref,'RMS guard completion event differs')
+            e.event_bindings=[{'journal_path':str(path),'sequence':r['sequence'],'event_hash':r['hash'],'kind':r['kind']} for r in (start,row)]
+            return
+    raise Unproven('RMS guard public completion absent')
+
+
+def rms_registered_build(e,task,parent,request,source_ref,build_result):
+    from msprof_exploration_campaign import Campaign
+    ledger=Campaign(task.parents[1]/'ledger');state=ledger.state['tasks'][task.name]
+    candidate=state.get('candidates',{}).get(parent.name)
+    require(isinstance(candidate,dict) and candidate.get('source_hash')==source_ref['sha256'] and candidate.get('artifacts',{}).get('source')==source_ref and candidate['artifacts'].get('dispatch_plan')==request['dispatch_plan'],'RMS registered source/dispatch differs')
+    stage_id=parent.name+'-build';stage=state.get('stages',{}).get(stage_id,{})
+    require(stage.get('candidate_id')==parent.name and stage.get('kind')=='build' and stage.get('plan',{}).get('source_hash')==source_ref['sha256'] and stage.get('attempts'),'RMS registered build stage differs')
+    attempt=stage['attempts'][-1];evidence=attempt.get('evidence',{})
+    require(attempt.get('outcome')=='success' and evidence.get('build')==e.file(parent/'build/build_manifest.json') and evidence.get('result')==e.file(parent/'stages/build/result.json'),'RMS successful build evidence differs from ledger')
+    bindings=[]
+    for row in ledger.events:
+        args=row['arguments']
+        if args.get('workload')!=task.name:continue
+        if (row['operation']=='register' and args.get('candidate_id')==parent.name) or (row['operation']=='finish' and args.get('stage_id')==stage_id and args.get('evidence')==evidence):
+            bindings.append({key:row[key] for key in ('config_hash','event_id','sequence','hash','operation')})
+    require(len(bindings)==2,'RMS source/build ledger evidence is ambiguous or absent')
+    # Raw global ledger bytes are projected separately by the archive. Stable
+    # event identities permit later appends without changing this classification.
+    e.ledger_bindings=bindings
+
+
+def rms_boundary_numeric_failure(e, task, parent, guard):
+    """Only the reviewed ten-case RMS oracle and nonfinite-mask failure.
+
+    Neither arbitrary exit1 nor a stricter guard tolerance is positive evidence.
+    Every deterministic input/reference is reconstructed without executing the
+    task's Python. The original functional.rms_norm must independently reject
+    the actual special-value masks. Existing GN and compiler rules are unchanged.
+    """
+    require(task.name=='rms_norm','unreviewed RMS operator')
+    root=parent/'boundary-validation'
+    require(e.read(root/'completion.json')==guard and guard.get('version')=='level2_semantic_guards_v1' and not guard.get('error'),'RMS guard completion/infrastructure differs')
+    request=e.bound(guard.get('request'),root/'request.json')
+    require(request.get('operator')=='rms_norm' and request.get('candidate')==parent.name and request.get('dispatch_logs_required') is True and request.get('version')=='level2_semantic_guards_v1','RMS guard request differs')
+    script=task/'agent/boundary_guard.py';e.bound(request.get('script'),script,text=True)
+    require(request['script']['sha256']==REVIEWED_RMS_GUARD,'unreviewed RMS guard source')
+    require(e.file(task/'agent/boundary_cases.json')['sha256']==REVIEWED_RMS_SPEC,'unreviewed RMS guard roster')
+    require(e.file(task/'baseline/scripts/verify_result.py')['sha256']==REVIEWED_RMS_VERIFIER,'unreviewed original RMS verifier')
+    plan=e.bound(request.get('dispatch_plan'),parent/'dispatch_plan.json')
+    build = e.read(parent / 'build/build_manifest.json')
+    require(build.get('operator') == 'rms_norm' and request.get('binary') == build.get('standalone'),
+            'numeric guard binary differs from operator build')
+    e.bound(request.get('binary'), parent / 'build/build/standalone', binary=True)
+    build_result = e.read(parent / 'stages/build/result.json')
+    require(build_result.get('status') == 'passed' and build_result.get('candidate_id') == parent.name
+            and build_result.get('kind') == 'build' and not build_result.get('error'), 'candidate build was not successful')
+    build_plan = e.read(parent / 'stages/build/stage-plan.json')
+    source_ref = e.file(parent / 'source.tar')
+    require(build_plan.get('source_hash') == source_ref['sha256'] == plan.get('source_hash'),
+            'numeric guard source/dispatch/build archive differs')
+    native_files = {}
+    with tarfile.open(parent / 'source.tar') as archive:
+        names = set()
+        for member in archive.getmembers():
+            path = Path(member.name)
+            require(not path.is_absolute() and '..' not in path.parts and member.name not in names
+                    and (member.isfile() or member.isdir()), 'unsafe frozen numeric guard source member')
+            names.add(member.name)
+            parts = path.parts[1:] if path.parts and path.parts[0] == 'source' else path.parts
+            if member.isfile() and parts and parts[0] in ('op_host', 'op_kernel'):
+                relative = Path(*parts); source = parent / 'op' / relative
+                require(str(relative) not in native_files, 'duplicate normalized original source')
+                data = archive.extractfile(member).read(); e.file(source)
+                require(source.read_bytes() == data, 'numeric guard original source differs from archive')
+                native_files[str(relative)] = data
+    actual_files = {str(p.relative_to(parent / 'op')) for name in ('op_host', 'op_kernel')
+                    for p in (parent / 'op' / name).rglob('*') if p.is_file()}
+    require(native_files and set(native_files) == actual_files, 'numeric guard native file set differs')
+    native_hash = hashlib.sha256()
+    for name, data in sorted(native_files.items()):
+        native_hash.update(name.encode() + b'\0' + data + b'\0')
+    require(set(build.get('roles', {})) == {'A', 'B'} and all(
+        role.get('source_sha256') == native_hash.hexdigest()
+        and role.get('source_dir') == str(parent / 'op') for role in build['roles'].values()),
+        'numeric guard source identity differs from built roles')
+    rms_registered_build(e,task,parent,request,source_ref,build_result)
+    health(e,root)
+    prepare=e.read(root/'prepare/execution.json');process(prepare)
+    verify=e.read(root/'verify/execution.json');process(verify,1)
+    argv=verify.get('argv',[])
+    require(isinstance(argv,list) and len(argv)==8 and Path(argv[0]).is_absolute() and Path(argv[0]).name.startswith('python') and argv[1:]==['-B',str(script),'--output',str(root/'inputs'),'--verify','--plan',str(parent/'dispatch_plan.json')],'RMS verify argv differs')
+    error=f'process failed (1): {argv[0]}'
+    require(verify.get('error')==error and guard.get('verification_error')=={'type':'RuntimeError','message':error},'RMS verifier failure is not normal exit1')
+    require(prepare.get('argv')==[argv[0],'-B',str(script),'--output',str(root/'inputs'),'--plan',str(parent/'dispatch_plan.json')],'RMS prepare argv differs')
+    for label,record in [('prepare',prepare),('verify',verify)]:
+        require(record.get('cwd')==str(task) and record.get('environment_overrides')=={},'RMS CPU process environment differs')
+        stderr=e.read(root/label/'stderr.log',text=True)
+        require(stderr in ('',RMS_BENIGN_STDERR),'RMS CPU stderr contains an unreviewed error/warning')
+        if stderr:e.file(Path('/usr/local/python3.11.15/lib/python3.11/site-packages/redis/connection.py'))
+        boundary_execution_wrapper(e,record,'40-43')
+    spec=e.read(task/'agent/boundary_cases.json');commands=e.read(root/'inputs/coordinator_commands.json')
+    verified=e.read(root/'inputs/verification.json');prepared=e.read(root/'inputs/cpu_preparation.json')
+    rows=guard.get('cases',[]);cases=spec.get('cases',[]);results=verified.get('results',[]);pre=prepared.get('results',[])
+    require(spec.get('operator')==verified.get('operator')==prepared.get('operator')=='rms_norm' and verified.get('hardware_executed_by_this_script') is False and prepared.get('hardware_executed_by_this_script') is False and len(rows)==len(cases)==len(results)==len(pre)==len(commands)==10,'RMS reviewed ten-case coverage differs')
+    rms_boundary_events(e,task,parent,e.file(root/'request.json'),e.file(root/'completion.json'))
+    require(json.loads(e.read(root/'prepare/stdout.log',text=True))=={'operator':'rms_norm','cases':10,'mode':'cpu_only','passed':True},'RMS prepare stdout contradicts record')
+    require(json.loads(e.read(root/'verify/stdout.log',text=True))=={'operator':'rms_norm','cases':10,'mode':'verify_existing_outputs','passed':False},'RMS verify stdout contradicts record')
+    try:
+        import torch
+        import numpy as np
+        from aprof_runtime.planning import select_dispatch
+        from level2_adapters import workload_metadata
+    except ImportError as exc:raise Unproven('RMS CPU replay unavailable: '+str(exc)) from exc
+    for path in (torch.__file__,torch._C.__file__,torch.nn.functional.__file__,np.__file__):e.file(path)
+    mismatch=False
+    def bytes_of(tensor):return tensor.contiguous().view(torch.uint8).numpy().tobytes()
+    for case,row,command,result,before in zip(cases,rows,commands,results,pre):
+        name=case['name'];shape=case['shape'];dtype=case['dtype'];dt=getattr(torch,dtype);dest=root/'inputs'/name
+        require(all(r.get('name')==name for r in (row,command,result,before)),'RMS case ordering differs')
+        n=math.prod(shape);require(0<n<=1_000_000 and dtype in ('float16','float32','bfloat16'),'unsupported RMS guard shape/dtype')
+        values=case.get('values')
+        if values is not None:
+            values=[{'nan':float('nan'),'inf':float('inf'),'-inf':-float('inf')}.get(v,v) if isinstance(v,str) else v for v in values]
+            x=torch.tensor(values,dtype=dt).reshape(shape)
+        else:x=(((torch.arange(n,dtype=torch.int64)*17%31)-15).float()/8).to(dt).reshape(shape)
+        gamma=torch.linspace(.75,1.25,shape[-1]).to(dt)
+        expected=(x.float()*torch.rsqrt((x.float()*x.float()).mean(dim=-1,keepdim=True)+case['epsilon'])*gamma.float()).to(dt)
+        for filename,tensor in [('input.bin',x),('gamma.bin',gamma),('expected.bin',expected)]:
+            e.file(dest/filename);require((dest/filename).read_bytes()==bytes_of(tensor),'RMS deterministic input/reference bytes differ')
+        output=dest/'output.bin';e.file(output);storage={'float16':np.float16,'float32':np.float32,'bfloat16':np.uint16}[dtype]
+        require(output.stat().st_size==n*np.dtype(storage).itemsize,'RMS output byte size differs')
+        raw=torch.from_numpy(np.fromfile(output,storage).copy());actual=(raw.view(torch.bfloat16) if dtype=='bfloat16' else raw).reshape(shape)
+        selected=select_dispatch(plan,workload_metadata('rms_norm',{'shape':shape,'dtype':dtype}))
+        expected_args=['--shape',','.join(map(str,shape)),'--x',str(dest/'input.bin'),'--gamma',str(dest/'gamma.bin'),'--epsilon',str(case['epsilon']),'--dtype',dtype,'--output',str(output),'--device','0']
+        require(command=={'name':name,'argv':expected_args,'expected_key':selected['tiling_key'],'reference':str(dest/'expected.bin')},'RMS command/dispatch differs')
+        before_expected={'name':name,'dispatch':selected,'expected_shape':shape,'status':'cpu_reference_prepared_not_hardware_verified'}
+        require(before==before_expected,'RMS CPU preparation differs')
+        native=e.bound(row.get('execution'),root/'executions'/name/'execution.json');process(native)
+        require(native.get('argv')==[request['binary']['path'],*expected_args] and native.get('cwd')==str(parent/'op') and native.get('environment_overrides')=={} and row.get('error') is None and row.get('expected_process_passed') is True,'RMS native identity or process differs')
+        boundary_execution_wrapper(e,native,'8')
+        stdout=e.read(root/'executions'/name/'stdout.log',text=True)
+        require(not e.read(root/'executions'/name/'stderr.log',text=True).strip(),'RMS native stderr not empty')
+        logs=[json.loads(line.split('APROF_DISPATCH_JSON:',1)[1]) for line in stdout.splitlines() if line.startswith('APROF_DISPATCH_JSON:')]
+        require(logs==row.get('dispatch_logs')==[{'tiling_key':selected['tiling_key'],'kernel_entry':selected['kernel_entry']}] and row.get('dispatch_log_passed') is True,'RMS actual dispatch differs')
+        special=lambda a,b:all(torch.equal(fn(a),fn(b)) for fn in (torch.isnan,torch.isposinf,torch.isneginf))
+        masks=special(actual,expected);finite=expected.isfinite();threshold={'float16':2**-10,'float32':2**-13,'bfloat16':2**-7}[dtype]
+        rel=(actual[finite].float()-expected[finite].float()).abs()/(expected[finite].float().abs()+1e-7)
+        passed=bool(masks and (not finite.any() or (rel.double().mean()<threshold and rel.max()<10*threshold)))
+        require(result=={**before_expected,'passed':passed,'status':'hardware_output_verified' if passed else 'hardware_output_failed'},'RMS verifier result does not replay')
+        original=torch.nn.functional.rms_norm(x,(shape[-1],),gamma,eps=case['epsilon'])
+        if not passed:
+            require(not masks and special(expected,original) and not special(actual,original),'RMS positive rule requires original-oracle special-value mismatch, not stricter guard tolerance')
+            mismatch=True
+    require(mismatch,'RMS guard has no original-oracle special-value mismatch')
+    return 'original_rms_boundary_nonfinite_mismatch', 'All ten retained successful native RMS guard processes and dispatch logs agree with deterministic reviewed input/reference replay; actual output special-value masks disagree with the original functional.rms_norm oracle. Historical output/verification bytes were not individually presealed; this is retained-artifact consistency attribution, not proof of an unrecorded runtime environment or a specific instruction cause.'
+
+
 def classify_failure(task, parent, stage=None, guard=None):
     """Return a deterministic evidence-bound classification; never execute or write.
 
@@ -863,7 +1033,7 @@ def classify_failure(task, parent, stage=None, guard=None):
         else:
             require(guard is not None and guard.get('status') == 'failed', 'no failed stage or guard')
             if guard.get('verification_error') is not None:
-                rule, reason = boundary_numeric_failure(e, task, parent, guard)
+                rule, reason = (rms_boundary_numeric_failure(e, task, parent, guard) if task.name == 'rms_norm' else boundary_numeric_failure(e, task, parent, guard))
             else:
                 rule, reason = dispatch_failure(e, task, parent, guard)
         status = 'source_attempt_failed'
@@ -873,4 +1043,6 @@ def classify_failure(task, parent, stage=None, guard=None):
               'evidence': [e.refs[k] for k in sorted(e.refs)]}
     if hasattr(e, 'event_bindings'):
         result['event_bindings'] = e.event_bindings
+    if hasattr(e, 'ledger_bindings'):
+        result['ledger_bindings'] = e.ledger_bindings
     return result
