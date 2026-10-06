@@ -180,6 +180,79 @@ def final_selection(selection, baseline_hash, rounds, evidence):
     return {**selection,'status':'selected_measured_candidate'}
 
 
+
+def selection_reconsiderations(task, evidence):
+    """Honor explicit public acceptance holds without rerunning numeric proof.
+
+    Only small decision metadata is opened. This is a conservative readiness
+    gate, not a source-failure classifier, selection writer or resolution API.
+    An unrelated event or edited winner cannot clear a recorded hold.
+    """
+    def canonical_path(path):
+        path=Path(path)
+        require(path.is_absolute() and '..' not in path.parts and path==path.resolve()
+                and not any(p.is_symlink() for p in (path,*path.parents)), 'noncanonical selection hold evidence')
+        return path
+    def document(ref, role):
+        path=canonical_path(ref['path'])
+        require(path.suffix=='.json' and path.is_relative_to(task/'finalization')
+                and path.stat().st_size<=1024*1024, 'selection hold must bind small task finalization metadata')
+        return evidence.read(ref,role)[0]
+    def decode(line):
+        def pairs(items):
+            value={}
+            for key,item in items:
+                require(key not in value, 'duplicate public event JSON key');value[key]=item
+            return value
+        return json.loads(line,object_pairs_hook=pairs)
+    task=canonical_path(task);journal=task/'events.jsonl'
+    if not journal.exists():
+        require(not journal.is_symlink(), 'dangling public event journal')
+        return []
+    canonical_path(journal)
+    data=journal.read_bytes();require(not data or data.endswith(b'\n'), 'partial public event journal')
+    previous=None;holds=[]
+    for i,line in enumerate(data.splitlines()):
+        row=decode(line);body={k:v for k,v in row.items() if k!='hash'}
+        payload=(json.dumps(body,ensure_ascii=False,sort_keys=True,allow_nan=False)+'\n').encode()
+        require(row.get('sequence')==i and type(row['sequence']) is int and row.get('previous_hash')==previous
+                and row.get('hash')=='sha256:'+hashlib.sha256(payload).hexdigest(), 'public event chain differs')
+        previous=row['hash']
+        if row.get('kind')!='final_selection_reconsideration_required': continue
+        value=row['value']
+        require(isinstance(value,dict) and set(value)=={'reconsideration','numeric_proof','selection_unchanged'},
+                'invalid selection reconsideration event')
+        note=document(value['reconsideration'],'selection_reconsideration')
+        original=document(value['selection_unchanged'],'held_original_selection')
+        proof=document(value['numeric_proof'],'selection_reconsideration_numeric_metadata')
+        require(note.get('version')=='level2_final_selection_reconsideration_v1'
+                and note.get('operator')==task.name and note.get('status')=='selected_source_fails_additional_legal_workload'
+                and note.get('original_selection')==value['selection_unchanged']
+                and note.get('numeric_proof')==value['numeric_proof'], 'selection reconsideration identity differs')
+        require(proof.get('operator')==task.name and proof.get('original_selection')==value['selection_unchanged']
+                and proof.get('original_source_hash')==original.get('source_hash'), 'held numeric metadata source differs')
+        holds.append({'event_binding':{'journal_path':str(journal),'sequence':i,'event_hash':row['hash'],
+                      'kind':row['kind']},**value,'candidate_id':original.get('candidate_id'),
+                      'source_hash':original.get('source_hash'),'required_resolution':note.get('required_resolution')})
+    if holds:
+        # This report snapshot records its read journal, while each durable hold
+        # remains identified by a prefix event hash, not a timeless full-file hash.
+        evidence.add(journal,expected='sha256:'+hashlib.sha256(data).hexdigest(),role='selection_readiness_journal_snapshot')
+    return holds
+
+
+def withhold_unresolved_selection(record, task, evidence):
+    holds=selection_reconsiderations(task,evidence)
+    if not holds: return record
+    selected=record['final_selection']
+    selected['declared_selection_status']=selected['status']
+    selected.update(status='reconsideration_required',current_safe=False,acceptance_ready=False)
+    record['selection_readiness']={'status':'reconsideration_required','acceptance_ready':False,
+        'unresolved':holds,'automatic_resolution_supported':False}
+    record['issues'].append('Final acceptance withheld: explicit selection reconsideration requires a reviewed append-only resolution.')
+    record['status']='blocked'
+    return record
+
 def runtime_closure(task, ledger, cid, evidence):
     """Reuse the finalizer's read-only lifecycle audit, including baseline."""
     import level2_finalize as finalizer
@@ -305,7 +378,7 @@ def task_report(run, split, operator, task, manifest, ledger, selection, evidenc
     if ledger is None:
         record['pending_reason']='ledger_not_created; preflight and draft candidates do not count as formal rounds'
         record['final_selection']=final_selection(selection,baseline_hash,[],evidence)
-        return record
+        return withhold_unresolved_selection(record,task,evidence)
     require(ledger.config['schema_version']==campaign.FRESH_SCHEMA,'report requires a fresh campaign ledger')
     state = ledger.state['tasks'][operator]
     require(ledger.config['tasks'][operator]['baseline_source_hash']==baseline_hash,'ledger baseline differs from manifest')
@@ -377,7 +450,7 @@ def task_report(run, split, operator, task, manifest, ledger, selection, evidenc
     if record['issues'] or any(r['status']=='blocked' for r in record['rounds']): record['status']='blocked'
     elif record['completed_rounds']==3 and record['final_evaluation']=='complete' and selected_safe: record['status']='complete'
     elif record['final_evaluation']=='failed' or any(r['status']=='failed' for r in record['rounds']): record['status']='failed'
-    return record
+    return withhold_unresolved_selection(record,task,evidence)
 
 
 def build_report(run):

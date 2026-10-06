@@ -184,8 +184,8 @@ Retained campaign proof:
 SHA256 `f1e6ed15f43dc16a3c8ebbf58d8f3e9413a61280507fb29e929ae9c897cd5dcb`.
 The complete qualification archive has SHA256
 `217e023ed906b0ecaff7070007a6378188b8b66a6488033aabe86b84ae3025df`.
-The earlier engineering020 shadow failed because its reader omitted the parser
-'s boolean `fallback` field; all six failed shadows and their original request
+The earlier engineering020 shadow failed because its reader omitted the parser's
+boolean `fallback` field; all six failed shadows and their original request
 remain preserved. See `raw_archive_dispatch_schema_fix.md`.
 
 After qualification, a separately frozen48-session AA/search maintenance
