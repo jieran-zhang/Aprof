@@ -142,9 +142,9 @@ def validate_record(value):
 @contextlib.contextmanager
 def external_evidence_session():
     try:
-        import level2_verification_storage as storage
+        import level2_evidence_storage as storage
     except ModuleNotFoundError as error:
-        if error.name != 'level2_verification_storage':
+        if error.name != 'level2_evidence_storage':
             raise
         yield
     else:
@@ -166,9 +166,9 @@ def external_evidence_reader(function):
 def external_evidence_bytes(path):
     """Read exact historical logical bytes; explicit portable maps bypass this resolver."""
     try:
-        import level2_verification_storage as storage
+        import level2_evidence_storage as storage
     except ModuleNotFoundError as error:
-        if error.name != 'level2_verification_storage':
+        if error.name != 'level2_evidence_storage':
             raise
         return Path(path).read_bytes()
     return storage.read_bytes(path)
@@ -177,14 +177,45 @@ def external_evidence_bytes(path):
 def evidence_fingerprint(path, *, external=True):
     if external:
         try:
-            import level2_verification_storage as storage
+            import level2_evidence_storage as storage
         except ModuleNotFoundError as error:
-            if error.name != 'level2_verification_storage':raise
+            if error.name != 'level2_evidence_storage':raise
         else:return storage.fingerprint(path)
     h=hashlib.sha256();size=0
     with Path(path).open('rb') as stream:
         while block:=stream.read(1024*1024):h.update(block);size+=len(block)
     return {'sha256':'sha256:'+h.hexdigest(),'size_bytes':size}
+
+
+class EvidenceSlice:
+    """Bounded immutable evidence bytes inside an independently validated tar.
+
+    The portable verifier derives offsets from the complete raw member validator;
+    this reader independently hashes the selected byte range against the signed
+    evidence index. It never falls back to the original logical path.
+    """
+    def __init__(self,archive,offset,size_bytes):
+        self.archive=Path(archive);self.offset=offset;self.size_bytes=size_bytes
+        if type(offset) is not int or type(size_bytes) is not int or offset<0 or size_bytes<0:
+            raise ValueError('invalid portable member range')
+        if offset+size_bytes>self.archive.stat().st_size:raise ValueError('portable member outside archive')
+
+    def blocks(self):
+        with self.archive.open('rb') as stream:
+            stream.seek(self.offset);remaining=self.size_bytes
+            while remaining:
+                block=stream.read(min(1024*1024,remaining))
+                if not block:raise ValueError('truncated portable member')
+                remaining-=len(block);yield block
+
+    def read_bytes(self):
+        if self.size_bytes>16*1024*1024:raise ValueError('portable metadata member too large')
+        return b''.join(self.blocks())
+
+    def fingerprint(self):
+        h=hashlib.sha256();size=0
+        for block in self.blocks():h.update(block);size+=len(block)
+        return {'sha256':'sha256:'+h.hexdigest(),'size_bytes':size}
 
 
 class Evidence:
@@ -645,12 +676,15 @@ def verify(root, deep=False, prospective_pointer=None, *, evidence_paths=None, g
     if evidence_paths is not None:
         if not isinstance(evidence_paths, dict) or set(evidence_paths) != {v['path'] for v in index.values()}:
             raise ValueError('portable evidence map must cover exactly the evidence index')
-        if any(not isinstance(v, (str, Path)) for v in evidence_paths.values()):
+        if any(not isinstance(v, (str, Path, EvidenceSlice)) for v in evidence_paths.values()):
             raise ValueError('invalid portable evidence location')
     def evidence_path(original):
-        return Path(original if evidence_paths is None else evidence_paths[original])
+        value=original if evidence_paths is None else evidence_paths[original]
+        return Path(original) if isinstance(value,EvidenceSlice) else Path(value)
     def evidence_bytes(original):
-        return external_evidence_bytes(original) if evidence_paths is None else evidence_path(original).read_bytes()
+        if evidence_paths is None:return external_evidence_bytes(original)
+        value=evidence_paths[original]
+        return value.read_bytes() if isinstance(value,EvidenceSlice) else Path(value).read_bytes()
     entry_schema = obj({'sha256': H, 'path': S, 'size_bytes': I, 'split': {'enum': ['train', 'validation']},
                         'selector': S, 'purposes': REFS})
     for key, entry in index.items():
@@ -795,7 +829,8 @@ def verify(root, deep=False, prospective_pointer=None, *, evidence_paths=None, g
         for entry in index.values():
             path = entry['path']; expected = entry['sha256']
             if path not in cache:
-                fp=evidence_fingerprint(evidence_path(path),external=evidence_paths is None)
+                value=evidence_paths[path] if evidence_paths is not None else None
+                fp=value.fingerprint() if isinstance(value,EvidenceSlice) else evidence_fingerprint(evidence_path(path),external=evidence_paths is None)
                 cache[path]=(fp['sha256'],fp['size_bytes'])
                 if path in selector_paths:contents[path]=evidence_bytes(path)
             if cache[path] != (expected, entry['size_bytes']): raise ValueError('external evidence changed: ' + path)

@@ -503,7 +503,7 @@ class Archive:
             self.document({'closed_observation_producer_binding': binding})
 
     def verification_snapshot(self, path, owner, expected):
-        import level2_verification_storage as storage
+        import level2_evidence_storage as storage
         binding = storage.evidence_binding(path, expected)
         if binding is None:
             return None
@@ -574,7 +574,7 @@ class Archive:
             require(not path.is_symlink(), 'symlink inside artifact closure')
             if path.is_file():
                 self.pointer(path, owner)
-        import level2_verification_storage as storage
+        import level2_evidence_storage as storage
         for path in storage.logical_files(directory):
             self.pointer(path, owner)
 

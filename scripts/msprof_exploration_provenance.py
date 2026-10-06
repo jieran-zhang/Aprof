@@ -21,6 +21,7 @@ FRESH_PRODUCERS = PRODUCERS | {
     'level2_iteration.py', 'level2_boundaries.py', 'level2_finalize.py',
     'level2_guard_contract.py', 'level2_candidate_guard.py',
     'level2_native_output_storage.py', 'level2_verification_storage.py',
+    'level2_raw_archive_storage.py', 'level2_evidence_storage.py',
     'level2_storage.py', 'level2_failure_classification.py', 'level2_raw_method.py', 'msprof_raw_storage.py',
     'cannbench_msprof_timing.py', 'cannbench_shared_context.py',
     'cannbench_shared_context_profile.py', 'shared_context_build.py',

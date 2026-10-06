@@ -19,7 +19,7 @@ import statistics as st
 import sys
 
 import msprof_exploration_provenance as engineering_provenance
-import level2_verification_storage as verification_storage
+import level2_evidence_storage as verification_storage
 
 PROTOCOL = 'msprof_task_time_exploration_v1'
 ANALYSIS = 'msprof_exploration_analysis_v1'
@@ -323,6 +323,7 @@ def _resources(rows, case_ids):
     return resources
 
 
+@verification_storage.reader_session()
 def verify_observation(directory, expected_request=None, *, provenance_out=None):
     """Replay one completed native observation; never execute its verifier."""
     directory = Path(directory).resolve()
@@ -440,7 +441,7 @@ def verify_observation(directory, expected_request=None, *, provenance_out=None)
                 and row['raw_duration'] > 0 and math.isclose(row['ns_per_call'], row['raw_duration'] * 1000000 / case_repeats[row['case_id']], rel_tol=1e-10),
                 'event units/repeat conversion differs')
     execution = load(directory / 'msprof.execution.json')
-    from msprof_raw_storage import verify as verify_raw_storage
+    verify_raw_storage = verification_storage.verify_raw_storage
     actual_raw, raw_evidence, storage_environment = verify_raw_storage(request,directory,execution)
     if 'capture_storage' in request:
         import msprof_raw_storage
@@ -494,12 +495,13 @@ def verify_observation(directory, expected_request=None, *, provenance_out=None)
                 and oracle.get('exit_code') == 0 and oracle.get('mode') == 'unchanged_import_safe_main'
                 and execution['ended_at'] <= oracle['started_at'] <= oracle['ended_at'], 'oracle execution evidence invalid')
         require(verification_storage.is_file(vdir / 'stdout.log'), 'oracle stdout missing')
-    parsed = timing.parse_profile(directory / 'raw', directory / 'native/journal.jsonl', build, cases, 10)
+    parsed = verification_storage.parse_profile(directory / 'raw', directory / 'native/journal.jsonl', build, cases, 10)
     require(parsed == load(directory / 'samples.json'), 'saved samples differ from CSV/journal replay')
     # Device_id is normally the physical ID. A deployment with a documented
     # profiler namespace can freeze csv_device_id explicitly in its request.
     import csv
-    with Path(parsed['csv']).open(newline='', encoding='utf-8-sig') as stream:
+    import io
+    with verification_storage.open_binary(parsed['csv']) as binary, io.TextIOWrapper(binary, newline='', encoding='utf-8-sig') as stream:
         target_lines = {line for row in parsed['samples'] for line in row['csv_rows']}
         csv_rows = [row for i, row in enumerate(csv.DictReader(stream), 2) if i in target_lines]
     require({row['Device_id'] for row in csv_rows} == {str(request.get('csv_device_id', request['device']))}, 'CSV physical device mapping differs')

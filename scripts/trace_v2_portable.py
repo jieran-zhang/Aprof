@@ -22,7 +22,8 @@ import tempfile
 sys.dont_write_bytecode = True
 import trace_v2_dataset as v2
 
-VERSION = 'optimization_trace_portable_v2'
+VERSION = 'optimization_trace_portable_v3'
+PRIOR_VERSION = 'optimization_trace_portable_v2'
 LEGACY_VERSION = 'optimization_trace_portable_v1'
 
 
@@ -70,7 +71,7 @@ def files(root):
 def synced_copy(source, target, expected=None):
     source, target = Path(source), Path(target)
     if not source.is_file():
-        import level2_verification_storage as storage
+        import level2_evidence_storage as storage
         original=storage.fingerprint(source)
         if target.exists():
             require(fingerprint(target)==original,'conflicting archived evidence member')
@@ -108,9 +109,9 @@ def sync_directory(path):
 
 def storage_binding(path, expected):
     try:
-        import level2_verification_storage as storage
+        import level2_evidence_storage as storage
     except ModuleNotFoundError as error:
-        if error.name != 'level2_verification_storage': raise
+        if error.name != 'level2_evidence_storage': raise
         return None
     return storage.evidence_binding(path, expected)
 
@@ -121,13 +122,13 @@ def verify_storage_closure(bundle, manifest, index):
     declared=manifest.get('storage_closure')
     if declared is None:
         require(name not in manifest['files'],'undeclared portable storage closure')
-        return
+        return {}
     require(declared=={'path':name,'sha256':manifest['files'].get(name,{}).get('sha256')}
             and name in manifest['files'],'portable storage closure binding differs')
     closure=v2.strict_loads(inside(bundle,name).read_bytes())
-    nested=closure.get('version')=='level2_storage_portable_v3'
+    nested=closure.get('version') in ('level2_storage_portable_v3','level2_storage_portable_v4')
     require(set(closure)==({'version','origins','archives','dependencies'} if nested else {'version','origins','archives'})
-            and closure['version'] in ('level2_verification_portable_v1','level2_storage_portable_v2','level2_storage_portable_v3'),
+            and closure['version'] in ('level2_verification_portable_v1','level2_storage_portable_v2','level2_storage_portable_v3','level2_storage_portable_v4'),
             'invalid portable verification closure')
     signed={row['path']:row['sha256'] for row in index.values()}
     require(set(closure['origins'])<=set(signed),'portable verification origin is outside signed evidence')
@@ -152,6 +153,7 @@ def verify_storage_closure(bundle, manifest, index):
     require(set(closure['archives'])==reachable==roots|{d['seal'] for d in dependencies.values()},
             'portable verification archive coverage differs')
     logical_archives={**closure['origins'],**{p:d['seal'] for p,d in dependencies.items()}}
+    virtual={}
     for key,entry in closure['archives'].items():
         require(set(entry)=={'seal','files'},'invalid portable verification archive entry')
         def read(ref):
@@ -165,8 +167,37 @@ def verify_storage_closure(bundle, manifest, index):
             return data
         seal=v2.strict_loads(read(entry['seal']))
         require(entry['seal']['sha256']==key and seal.get('source_bytes_preserved') is True,'portable storage seal differs')
+        if seal.get('version')=='level2_closed_raw_storage_v1':
+            require(closure['version']=='level2_storage_portable_v4','raw storage needs explicit closure v4')
+            for filename in ('level2_raw_archive_storage.py','level2_verification_storage.py','level2_native_output_storage.py'):
+                require('verifier/'+filename in manifest['files'],'portable raw reader missing')
+            trusted=Path(__file__).resolve().with_name('level2_raw_archive_storage.py')
+            require(trusted.is_file() and not trusted.is_symlink(),'trusted raw reader missing')
+            spec=importlib.util.spec_from_file_location('_trusted_portable_raw_reader',trusted)
+            raw=importlib.util.module_from_spec(spec);spec.loader.exec_module(raw)
+            def read_logical(path):
+                origin=str(path);target=entry['files'].get(origin)
+                require(isinstance(target,str) and target in manifest['files'],'missing portable raw closed proof')
+                return read({'path':origin,'sha256':manifest['files'][target]['sha256']})
+            archive_ref=seal['archive'];target=entry['files'].get(archive_ref['path'])
+            require(target=='evidence/sha256/'+archive_ref['sha256'][7:] and target in manifest['files'],'missing portable full raw archive')
+            snapshot=seal['producer_snapshot'];read(snapshot)
+            require(snapshot['sha256']==seal['producer']['sha256'],'raw inert producer differs')
+            session=Path(seal['logical_root']).parent
+            rows=raw.validate_archive(session,seal,inside(bundle,target),read_logical)
+            required={entry['seal']['path'],archive_ref['path'],snapshot['path'],
+                      *[r['path'] for r in seal['closed_evidence']['protected']],
+                      *[r['path'] for r in seal['closed_evidence']['event_bindings']]}
+            require(set(entry['files'])==required,'portable raw complete proof roster differs')
+            for origin,value in logical_archives.items():
+                if value==key:require(origin in rows and rows[origin]['sha256']==logical_hashes[origin],'portable raw logical mapping differs')
+            for origin,row in rows.items():
+                require(origin not in virtual,'ambiguous portable raw origin')
+                virtual[origin]={'archive':key,'relative_path':row['relative_path'],
+                                 'source':v2.EvidenceSlice(inside(bundle,target),row['offset'],row['size_bytes'])}
+            continue
         if seal.get('version')=='level2_closed_native_outputs_v1':
-            require(closure['version'] in ('level2_storage_portable_v2','level2_storage_portable_v3'),'native storage needs explicit closure v2')
+            require(closure['version'] in ('level2_storage_portable_v2','level2_storage_portable_v3','level2_storage_portable_v4'),'native storage needs explicit closure v2')
             for filename in ('level2_native_output_storage.py','level2_verification_storage.py'):
                 require('verifier/'+filename in manifest['files'],'portable native reader missing')
             trusted=Path(__file__).resolve().with_name('level2_native_output_storage.py')
@@ -228,6 +259,8 @@ def verify_storage_closure(bundle, manifest, index):
         for origin,value in logical_archives.items():
             if value==key:require(payloads.get(origin)==logical_hashes[origin],'portable logical mapping differs from signed evidence')
 
+    return virtual
+
 
 def verify(bundle):
     bundle = Path(bundle).absolute()
@@ -235,13 +268,18 @@ def verify(bundle):
     manifest_path = inside(bundle, 'bundle.json')
     manifest = v2.strict_loads(manifest_path.read_bytes())
     require(set(manifest) == ({'version', 'revision', 'manifest_hash', 'files', 'evidence_map'}
-            | ({'storage_closure'} if manifest.get('version')==VERSION else set())),
+            | ({'storage_closure'} if manifest.get('version') in (VERSION,PRIOR_VERSION) else set())),
             'invalid portable manifest fields')
-    require(manifest['version'] in (VERSION,LEGACY_VERSION) and isinstance(manifest['files'], dict)
+    require(manifest['version'] in (VERSION,PRIOR_VERSION,LEGACY_VERSION) and isinstance(manifest['files'], dict)
             and isinstance(manifest['evidence_map'], dict), 'unsupported portable bundle')
     require(files(bundle) == set(manifest['files']) | {'bundle.json'}, 'bundle file closure differs')
+    signatures={}
+    def signature(path):
+        st=path.stat();return (st.st_dev,st.st_ino,st.st_size,st.st_mtime_ns,st.st_ctime_ns)
     for name, expected in manifest['files'].items():
-        require(fingerprint(inside(bundle, name)) == expected, 'bundle file hash differs: ' + name)
+        path=inside(bundle,name);before=signature(path)
+        require(fingerprint(path) == expected and signature(path)==before, 'bundle file hash differs: ' + name)
+        signatures[name]=before
     root = inside(bundle, 'dataset')
     pointer = v2.strict_loads((root / 'current.json').read_bytes())
     require(isinstance(pointer, dict) and set(pointer) == {'revision', 'manifest_hash'}
@@ -272,16 +310,25 @@ def verify(bundle):
     index = v2.strict_loads((base / 'evidence_index.json').read_bytes())
     require(set(manifest['evidence_map']) == {row['path'] for row in index.values()},
             'portable evidence map must cover exactly the evidence index')
+    virtual=verify_storage_closure(bundle,manifest,index)
     mapping = {}
     for row in index.values():
         name = manifest['evidence_map'][row['path']]
-        require(name == 'evidence/sha256/' + row['sha256'][7:], 'evidence CAS path differs')
-        require(manifest['files'].get(name) == {key: row[key] for key in ('sha256', 'size_bytes')},
-                'portable evidence hash differs from signed index')
-        mapping[row['path']] = inside(bundle, name)
-    verify_storage_closure(bundle,manifest,index)
+        if isinstance(name,dict):
+            value=virtual.get(row['path'])
+            require(manifest['version']==VERSION and value is not None and name=={k:value[k] for k in ('archive','relative_path')},'portable raw member mapping differs')
+            mapping[row['path']]=value['source']
+        else:
+            require(row['path'] not in virtual,'raw member must stay inside full archive')
+            require(name == 'evidence/sha256/' + row['sha256'][7:], 'evidence CAS path differs')
+            require(manifest['files'].get(name) == {key: row[key] for key in ('sha256', 'size_bytes')},
+                    'portable evidence hash differs from signed index')
+            mapping[row['path']] = inside(bundle, name)
     result = v2.verify(root, deep=True, evidence_paths=mapping,
                        graph_root=inside(bundle, 'skillgraph/versions'))
+    for name,before in signatures.items():require(signature(inside(bundle,name))==before,'bundle changed during verification')
+    for archive in {v['source'].archive for v in virtual.values()}:
+        require(fingerprint(archive)==manifest['files'][archive.relative_to(bundle).as_posix()],'full raw archive changed during verification')
     return {**result, 'portable': True, 'bundle_version': manifest['version'],
             'original_evidence_locations_accessed': False}
 
@@ -320,18 +367,20 @@ def export(dataset, destination):
         key=binding['seal']['sha256']
         if parent is None:storage_closure['origins'][origin]=key
         else:
-            storage_closure['version']='level2_storage_portable_v3'
+            if storage_closure['version']!='level2_storage_portable_v4':storage_closure['version']='level2_storage_portable_v3'
             dependencies=storage_closure.setdefault('dependencies',{})
             value={'seal':key,'sha256':binding['origin']['sha256'],'parents':[]}
             existing=dependencies.setdefault(origin,value)
             require(existing['seal']==key and existing['sha256']==value['sha256'],'conflicting nested archive identity')
             if parent not in existing['parents']:existing['parents'].append(parent);existing['parents'].sort()
-        if binding.get('version')=='level2_closed_native_outputs_v1' and storage_closure['version']!='level2_storage_portable_v3':
+        if binding.get('version')=='level2_closed_native_outputs_v1' and storage_closure['version'] not in ('level2_storage_portable_v3','level2_storage_portable_v4'):
             storage_closure['version']='level2_storage_portable_v2'
+        if binding.get('version')=='level2_closed_raw_storage_v1':
+            storage_closure['version']='level2_storage_portable_v4';storage_closure.setdefault('dependencies',{})
         if key in storage_closure['archives']:return
         locations={};storage_closure['archives'][key]={'seal':binding['seal'],'files':locations}
         refs=[binding[k] for k in ('seal','archive','producer')]+binding['closed_evidence']['protected']
-        import level2_verification_storage as closed_storage
+        import level2_evidence_storage as closed_storage
         for event in closed_storage.event_bindings(binding['closed_evidence']):
             event_path=event['path'];refs.append({'path':event_path,'sha256':fingerprint(event_path)['sha256']})
         for ref in refs:
@@ -343,19 +392,25 @@ def export(dataset, destination):
                 if nested is not None:collect_storage(nested,ref['path'],key)
 
     for row in index.values():
-        name = 'evidence/sha256/' + row['sha256'][7:]
+        binding=storage_binding(row['path'],row['sha256'])
+        if binding is not None and binding.get('version')=='level2_closed_raw_storage_v1':
+            logical=Path(binding['origin']['path']);seal=v2.strict_loads(Path(binding['seal']['path']).read_bytes())
+            name={'archive':binding['seal']['sha256'],'relative_path':logical.relative_to(seal['logical_root']).as_posix()}
+        else:name = 'evidence/sha256/' + row['sha256'][7:]
         require(row['path'] not in mapping or mapping[row['path']] == name,
                 'one original path has conflicting evidence hashes')
         mapping[row['path']] = name
-        copy(row['path'], name, {key: row[key] for key in ('sha256', 'size_bytes')})
-        binding=storage_binding(row['path'],row['sha256'])
+        if isinstance(name,str):copy(row['path'], name, {key: row[key] for key in ('sha256', 'size_bytes')})
         if binding is not None:collect_storage(binding,row['path'])
     modules=[Path(__file__).resolve(), Path(v2.__file__).resolve()]
     if storage_closure['origins']:
-        import level2_verification_storage as storage
+        import level2_evidence_storage as storage
         modules.append(Path(storage.__file__).resolve())
         import level2_native_output_storage as native_storage
         modules.append(Path(native_storage.__file__).resolve())
+        import level2_verification_storage as verification_storage
+        import level2_raw_archive_storage as raw_storage
+        modules.extend([Path(verification_storage.__file__).resolve(),Path(raw_storage.__file__).resolve()])
     for module in modules:
         copy(module, 'verifier/' + module.name)
     # v1 graph associations use the legacy immutable repository snapshot.
@@ -377,7 +432,7 @@ def export(dataset, destination):
     sync_directory(staging)
     require(not destination.exists() and not destination.is_symlink(), 'destination appeared during export')
     if storage_closure['origins']:
-        import level2_verification_storage as active_storage
+        import level2_evidence_storage as active_storage
         active_storage.reverify_cached()
     os.rename(staging, destination)
     sync_directory(destination.parent)
