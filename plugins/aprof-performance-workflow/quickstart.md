@@ -37,9 +37,13 @@ become a dependency or prior of the production workflow.
 
 ```bash
 python3 scripts/sync_aprof_registry.py check
-python3 scripts/compile_seed_graph.py --check
-aprofctl graph validate --graph skillgraph/versions/v0001
+python3 scripts/compile_graph_v2.py --check
+aprofctl graph validate --graph skillgraph/versions/v0002
 ```
+
+New stage-aware runs use `v0002`. The historical `v0001` snapshot remains
+immutable; validate its stored files with `aprofctl graph validate` when auditing
+old records, rather than rebuilding it from the current skill text.
 
 ## Invoke in Codex
 
@@ -157,8 +161,19 @@ After editing the local plugin, replace its cachebuster, reinstall it, and
 start a new Codex thread:
 
 ```bash
-python3 /root/.codex/skills/.system/plugin-creator/scripts/update_plugin_cachebuster.py \
-  plugins/aprof-performance-workflow
+python3 scripts/sync_aprof_registry.py write
+python3 - <<'PY'
+import json
+from pathlib import Path
+from uuid import uuid4
+
+registry = json.loads(Path("skillgraph/registry.json").read_text())
+path = Path("plugins/aprof-performance-workflow/.codex-plugin/plugin.json")
+manifest = json.loads(path.read_text())
+manifest["version"] = registry["workflow_plugin"]["version"] + "+codex." + uuid4().hex
+path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
+PY
+python3 scripts/sync_aprof_registry.py check
 codex plugin add aprof-performance-workflow@aprof
 ```
 
@@ -178,7 +193,8 @@ codex plugin marketplace remove aprof
 
 ## Runtime sequence
 
-1. Validate the task context and evidence drafts.
+1. Validate the architecture profile, algorithm parallel plan and metadata
+   dispatch plan, then bind them and `optimization_stage` into the task context.
 2. Route on an immutable graph/policy pair and retain the complete candidate
    distribution and hard masks.
 3. Apply one atomic transformation in an isolated candidate tree.
@@ -189,12 +205,14 @@ codex plugin marketplace remove aprof
    ```bash
    aprofctl episode finalize --context .aprof/context.json \
      --request .aprof/gate-request.json \
-     --graph skillgraph/versions/v0001 \
+     --graph skillgraph/versions/v0002 \
      --store .aprof/episodes.sqlite
    ```
 
 Runtime state is written under `<op_dir>/.aprof/`. A build or correctness
-failure is a valid typed negative episode; it does not require timing samples.
+failure can produce a typed negative episode only through a compatible formal
+gate and its CAS evidence; research failures remain trace records until that
+admission exists. Negative episodes do not require timing samples.
 
 For the first trace study, keep a `handler_attempt` JSON beside each episode
 and validate its shape with:
@@ -206,7 +224,7 @@ aprofctl contract validate --kind handler_attempt --input <handler-attempt.json>
 This sidecar is not part of the strict v1 episode, is not CAS-attested, and is
 not consumed by the current policy trainer. From the AProf checkout root, run
 `python3 scripts/audit_skillgraph_decisions.py --graph
-skillgraph/versions/v0001` before making claims about graph learning.
+skillgraph/versions/v0002` before making claims about graph learning.
 
 ## Boundaries
 

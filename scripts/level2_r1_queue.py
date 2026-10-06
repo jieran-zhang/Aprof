@@ -29,6 +29,7 @@ from prepare_trace_pilot import create_source_snapshot
 
 VERSION = 'level2_r1_serial_queue_v2'
 CONTINUATION_VERSION = 'level2_r1_serial_queue_suffix_v1'
+HANDOFF_VERSION = 'level2_r1_serial_queue_handoff_v1'
 SETTINGS = {'epoch': 'local-raw-01', 'capture_storage': LOCAL}
 GROUP = 'aa-local-01'
 ROOT = Path(__file__).resolve().parents[1]
@@ -305,17 +306,25 @@ def candidate_evidence(request, entry, *, allow_later=False, observation_id=None
 
 def request_identity(queue, state, request, *, live_producers=True):
     require(request['version'] == state['version']
-            and request['version'] in (VERSION, CONTINUATION_VERSION) and request['settings'] == SETTINGS
+            and request['version'] in (VERSION, CONTINUATION_VERSION, HANDOFF_VERSION) and request['settings'] == SETTINGS
             and request['calibration_group'] == GROUP and request['deduplicate_outputs'] is True,
             'queue protocol identity differs')
     schedule = checked(request['schedule']); engineering = checked(request['engineering'])
     expected_order = schedule['scheduling']['after_current_recommended_new_operator_order']
     full_order = expected_order
     if request['version'] == CONTINUATION_VERSION:
+        require('handoff' not in request, 'legacy continuation cannot declare handoff')
         require(full_order[:3] == ['apply_adam_w', 'group_norm', 'rms_norm'], 'unsupported continuation prefix')
         expected_order = full_order[2:]
+    elif request['version'] == HANDOFF_VERSION:
+        inheritance = request.get('handoff')
+        require(isinstance(inheritance, dict) and 'continuation' not in request, 'handoff proof missing or ambiguous')
+        prefix = inheritance.get('completed_prefix')
+        require(isinstance(prefix, list) and 3 <= len(prefix) < len(full_order)
+                and prefix == full_order[:len(prefix)], 'handoff completed prefix differs')
+        expected_order = full_order[len(prefix):]
     else:
-        require('continuation' not in request, 'legacy queue cannot declare continuation')
+        require('continuation' not in request and 'handoff' not in request, 'legacy queue cannot declare continuation')
     require([e['operator'] for e in request['entries']] == expected_order
             and len(full_order) == len(set(full_order)) == 15
             and set(full_order) == set(iteration.OPERATORS) - {'maximum'}, 'queue order/scope changed')
@@ -345,6 +354,12 @@ def request_state(queue):
     state = load(queue / 'state.json'); request = checked(state['request'])
     require(state['request'] == pointer(queue / 'request.json'), 'queue request location differs')
     request_identity(queue, state, request)
+    inherited_request_evidence(queue, request)
+    return state, request
+
+
+def inherited_request_evidence(queue, request):
+    """Replay a frozen ancestor chain without requiring its old producers live."""
     if request['version'] == CONTINUATION_VERSION:
         inheritance = request.get('continuation')
         require(isinstance(inheritance, dict), 'continuation proof missing')
@@ -356,7 +371,18 @@ def request_state(queue):
                     'inherited queue evidence changed')
         require(request['schedule'] == inheritance['schedule']
                 and request['entries'] == inheritance['remaining_entries'], 'continuation suffix differs')
-    return state, request
+    elif request['version'] == HANDOFF_VERSION:
+        inheritance = request.get('handoff')
+        require(isinstance(inheritance, dict), 'handoff proof missing')
+        previous = canonical_path(inheritance['previous_queue'])
+        require(queue == previous.with_name('r1-queue-%02d' % (queue_number(previous) + 1)),
+                'handoff queue location differs')
+        with (previous / 'queue.lock').open('rb') as historical_lock:
+            fcntl.flock(historical_lock, fcntl.LOCK_SH | fcntl.LOCK_NB)
+            require(handoff_evidence(previous, inheritance['observation_id']) == inheritance,
+                    'inherited handoff evidence changed')
+        require(request['schedule'] == inheritance['schedule']
+                and request['entries'] == inheritance['remaining_entries'], 'handoff suffix differs')
 
 
 def inherited_child(previous, request, entry, phase, *, finished):
@@ -528,6 +554,125 @@ def prepare_continuation(previous, engineering, output, observation_id):
             'inherited_prefix':['apply_adam_w','group_norm'], 'no_child_executed':True}
 
 
+def queue_number(queue):
+    """Monotonic names prevent cycles or substitution of unrelated queues."""
+    suffix = queue.name.removeprefix('r1-queue-')
+    require(queue.parent.name == 'preflight' and suffix.isascii() and suffix.isdigit()
+            and 1 <= int(suffix) <= 15 and queue.name == 'r1-queue-%02d' % int(suffix),
+            'unsupported numbered queue')
+    return int(suffix)
+
+
+def handoff_evidence(previous, observation_id):
+    """Audit an exited candidate block and its complete inherited prefix.
+
+    Callers hold the predecessor lock. Ancestors retain their original bytes,
+    requests and engineering epochs; this function only replays their evidence.
+    """
+    previous = canonical_path(previous)
+    require(queue_number(previous) >= 2, 'handoff requires a suffix predecessor')
+    state_ref, request_ref = pointer(previous / 'state.json'), pointer(previous / 'request.json')
+    state, request = checked(state_ref), checked(request_ref)
+    require(state.get('request') == request_ref and request.get('version') in (CONTINUATION_VERSION, HANDOFF_VERSION),
+            'handoff predecessor must be a bound suffix queue')
+    request_identity(previous, state, request, live_producers=False)
+    inherited_request_evidence(previous, request)
+    entries = request['entries']; operators = state.get('operators', {})
+    require(state.get('status') == 'blocked' and set(operators) == {e['operator'] for e in entries},
+            'handoff predecessor is not blocked with its exact operator set')
+    blocked_indices = [i for i, entry in enumerate(entries)
+                       if operators[entry['operator']].get('status') == 'infrastructure_blocked']
+    require(len(blocked_indices) == 1, 'handoff needs exactly one blocked operator')
+    index = blocked_indices[0]; entry = entries[index]; op = entry['operator']
+    remaining = entries[index + 1:]
+    require(remaining, 'handoff has no remaining operators')
+    for pending in remaining:
+        require(operators[pending['operator']] == {'status':'pending'}
+                and not (previous / pending['operator']).exists(), 'handoff suffix already has queue work')
+    blocked_ref = operators[op].get('blocked'); blocked = checked(blocked_ref)
+    require(blocked_ref['path'] == str(previous / op / 'blocked.json')
+            and blocked.get('request') == request_ref and blocked.get('operator') == op
+            and blocked.get('phase') == 'candidate', 'handoff block is not the original candidate exit')
+    receipts, checkpoints = {}, []
+    for completed in entries[:index]:
+        name = completed['operator']
+        require(operators[name].get('status') in ('measured', 'source_attempt_failed'), 'handoff prefix is unfinished')
+        for phase in ('baseline', 'candidate'):
+            receipts[name + '/' + phase] = inherited_child(previous, request, completed, phase, finished=True)
+        checkpoint_ref = operators[name].get('checkpoint'); checkpoint = checked(checkpoint_ref)
+        require(checkpoint_ref['path'] == str(previous / name / 'checkpoint.json')
+                and checkpoint == {'operator':name, 'phase':'candidate', 'status':operators[name]['status'],
+                                   'finished':receipts[name + '/candidate']['finished.json']},
+                'handoff completed checkpoint differs')
+        checkpoints.append(checkpoint_ref)
+    receipts[op + '/baseline'] = inherited_child(previous, request, entry, 'baseline', finished=True)
+    child = inherited_child(previous, request, entry, 'candidate', finished=False)
+    require(blocked.get('evidence') == child, 'handoff block does not bind unchanged exited child')
+    checkpoint_ref = pointer(previous / op / 'checkpoint.json'); checkpoint = checked(checkpoint_ref)
+    require(checkpoint == {'operator':op,'phase':'candidate','status':'running','started':child['started.json']},
+            'handoff blocked checkpoint differs')
+    checkpoints.append(checkpoint_ref)
+    recovered = recovered_guard_evidence(previous, request, entry, observation_id, child)
+    full_order = checked(request['schedule'])['scheduling']['after_current_recommended_new_operator_order']
+    prefix = full_order[:-len(remaining)]
+    require([row['operator'] for row in remaining] == full_order[len(prefix):]
+            and prefix[-1] == op, 'handoff would skip or reorder scheduled operators')
+    return {'version':'level2_queue_prefix_handoff_v1', 'previous_queue':str(previous),
+            'previous_request':request_ref, 'previous_state':state_ref, 'previous_blocked':blocked_ref,
+            'previous_inheritance':request.get('handoff', request.get('continuation')),
+            'schedule':request['schedule'], 'checkpoints':checkpoints, 'completed_children':receipts,
+            'blocked_child':child, 'recovered_candidate':recovered, 'observation_id':observation_id,
+            'completed_prefix':prefix, 'remaining_entries':remaining,
+            'scope':'unchanged original R1 suffix; all prior queues retained and reaudited',
+            'native_reexecuted':False, 'source_attempt_added':False}
+
+
+def prepare_handoff(previous, engineering, output, observation_id):
+    """Atomically publish a fresh producer epoch after explicit feedback recovery."""
+    previous, engineering, output = map(canonical_path, (previous, engineering, output))
+    require(output == previous.with_name('r1-queue-%02d' % (queue_number(previous) + 1))
+            and queue_number(output) >= 3, 'handoff must advance exactly one numbered queue')
+    require(not output.exists(), 'fresh handoff directory required')
+    with (previous / 'queue.lock').open('rb') as old_lock:
+        fcntl.flock(old_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        require(not output.exists(), 'fresh handoff directory required')
+        inherited = handoff_evidence(previous, observation_id)
+        old_request = checked(inherited['previous_request']); run = canonical_path(old_request['run'])
+        frozen = load(engineering)
+        require(engineering.parent == run / 'bootstrap' and engineering != Path(old_request['engineering']['path'])
+                and frozen.get('version') == 'level2_frozen_engineering_v1', 'fresh engineering manifest required')
+        identities = {row['path']:row for row in frozen['files']}
+        names = sorted(FRESH_PRODUCERS | {'level2_r1_queue.py','run_msprof_exploration_stage.py','prepare_trace_pilot.py'})
+        producers = []
+        for name in names:
+            path = ROOT / 'scripts' / name; identity = identities.get(str(path))
+            require(identity is not None and sha(path) == identity['sha256']
+                    and sha(canonical_path(identity['snapshot'])) == identity['sha256'], 'new engineering producer differs: '+name)
+            producers.append(pointer(path))
+        for entry in inherited['remaining_entries']:
+            check_entry(entry)
+        request = {'version':HANDOFF_VERSION, 'run':str(run), 'schedule':inherited['schedule'],
+            'engineering':pointer(engineering), 'producers':producers, 'python':str(Path(sys.executable).resolve()),
+            'settings':SETTINGS, 'calibration_group':GROUP, 'deduplicate_outputs':True,
+            'entries':inherited['remaining_entries'], 'handoff':inherited,
+            'scope':'R1 suffix only; immutable ancestor chain; no authoring, retries, cost reset or new source attempt'}
+        require(handoff_evidence(previous, observation_id) == inherited, 'predecessor changed during handoff preparation')
+        with tempfile.TemporaryDirectory(prefix='.' + output.name + '-staging-', dir=output.parent) as temporary:
+            staging = Path(temporary)
+            atomic(staging / 'request.json', request, exclusive=True)
+            request_ref = {'path':str(output / 'request.json'), 'sha256':sha(staging / 'request.json')}
+            state = {'version':HANDOFF_VERSION, 'request':request_ref, 'status':'prepared',
+                     'operators':{entry['operator']:{'status':'pending'} for entry in request['entries']}}
+            request_identity(output, state, request)
+            atomic(staging / 'state.json', state)
+            sync_dir(staging)
+            require(not output.exists(), 'fresh handoff directory required')
+            os.rename(staging, output)
+            sync_dir(output.parent)
+    return {'status':'prepared','queue':str(output),'operators':[e['operator'] for e in request['entries']],
+            'inherited_prefix':inherited['completed_prefix'], 'no_child_executed':True}
+
+
 def execute(queue, *, max_new_operators=None):
     require(max_new_operators is None or (type(max_new_operators) is int and max_new_operators > 0),
             'max_new_operators must be a positive integer')
@@ -546,7 +691,7 @@ def execute(queue, *, max_new_operators=None):
                 require(not allow_later or (queue / op / 'baseline/finished.json').is_file(), 'completed R1 lacks baseline receipt')
                 check_entry(entry, allow_later=allow_later)
                 for phase, auditor in [('baseline', baseline_evidence), ('candidate', candidate_evidence)]:
-                    if request['version'] == CONTINUATION_VERSION:
+                    if request['version'] in (CONTINUATION_VERSION, HANDOFF_VERSION):
                         request_state(queue)
                     directory = queue / op / phase
                     finished = directory / 'finished.json'
@@ -692,6 +837,10 @@ def main():
     for name in ('previous-queue', 'engineering', 'output'):
         continuation.add_argument('--' + name, type=Path, required=True)
     continuation.add_argument('--observation-id', required=True)
+    handoff = commands.add_parser('prepare-handoff')
+    for name in ('previous-queue', 'engineering', 'output'):
+        handoff.add_argument('--' + name, type=Path, required=True)
+    handoff.add_argument('--observation-id', required=True)
     start = commands.add_parser('run'); start.add_argument('--queue', type=Path, required=True)
     start.add_argument('--max-new-operators', type=int,
         help='Stop successfully after N newly completed operator checkpoints; completed receipts are reaudited and do not count.')
@@ -700,7 +849,8 @@ def main():
     reconcile.add_argument('--operator', required=True, choices=iteration.OPERATORS)
     reconcile.add_argument('--reason', required=True)
     args = parser.parse_args()
-    result = (prepare_continuation(args.previous_queue, args.engineering, args.output, args.observation_id)
+    result = (prepare_handoff(args.previous_queue, args.engineering, args.output, args.observation_id)
+              if args.command == 'prepare-handoff' else prepare_continuation(args.previous_queue, args.engineering, args.output, args.observation_id)
               if args.command == 'prepare-continuation' else prepare(args.run, args.schedule, args.engineering, args.output)
               if args.command == 'prepare' else recover(args.queue, args.operator, args.reason)
               if args.command == 'recover' else execute(args.queue, max_new_operators=args.max_new_operators))

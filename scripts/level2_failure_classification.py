@@ -191,26 +191,8 @@ def stage_location(e, parent, stage):
     return directory
 
 
-def kernel_type_failure(e, parent, stage, configure, execution, stdout, stderr):
-    """A narrow linker proof for original, frozen, scalar-only kernel entries.
-
-    CMake's successful configuration alone is not enough. Bind both failed role
-    symbols to the same unchanged original definition, the emitted rename and
-    source digest, and the recorded ASC compiler/compile recipe. Any extra
-    diagnostic, unsupported source syntax, or incomplete proof stays blocked.
-    """
-    require(execution.get('exit_status') == 2, 'kernel-type proof requires build exit 2')
-    matches = [KERNEL_TYPE_DIAGNOSTIC.fullmatch(line) for line in stderr.splitlines()]
-    failures = [m for m in matches if m]
-    require(failures and {m[2] for m in failures} == {'A', 'B'}, 'both role kernel-type diagnostics are required')
-    # Parallel compiler drivers can interleave their harmless failure prefixes.
-    for line, match in zip(stderr.splitlines(), matches):
-        if match or not line.strip():
-            continue
-        require(re.fullmatch(r'(?:bisheng|: |error: )*ld\.lld command failed with exit code 1 \(use -v to see invocation\)', line)
-                or re.fullmatch(r'gmake(?:\[\d+\])?: \*\*\* (?:\[[^\n]+\] Error [12]|Waiting for unfinished jobs\.{3,4})', line),
-                'additional linker/compiler diagnostic prevents kernel-type attribution')
-    require(not re.search(r'\b(?:error|fatal)\s*:', stdout, re.I), 'additional stdout compiler error')
+def reviewed_original_role_build(e, parent, stage, configure, execution):
+    """Replay frozen original source, both exact adapters and retained ASC recipes."""
     build = parent / 'build'
     config_out = e.read(build / 'configure-execution/stdout.log', text=True)
     config_err = e.read(build / 'configure-execution/stderr.log', text=True)
@@ -295,6 +277,59 @@ def kernel_type_failure(e, parent, stage, configure, execution, stdout, stderr):
             e.file(path)
             expected = generated.encode() if name == 'op_host/' + manifest['operator'] + '.asc' else data
             require(path.read_bytes() == expected, 'copied role source differs from replayed original source')
+    for role in ('A', 'B'):
+        identity = manifest['roles'][role]
+        flags = e.read(build / 'build/CMakeFiles' / f'role_{role}.dir/flags.make', text=True)
+        recipe = e.read(build / 'build/CMakeFiles' / f'role_{role}.dir/build.make', text=True)
+        clean_lines = lambda text: [line for line in text.splitlines() if line.strip() and not line.startswith('#')]
+        role_dir = f'CMakeFiles/role_{role}.dir/'
+        require(re.findall(r'^include (.+)$', recipe, re.M) == [role_dir + name for name in
+                    ('depend.make', 'compiler_depend.make', 'progress.make', 'flags.make')],
+                'unreviewed make include changes object command authority')
+        for name in ('depend.make', 'compiler_depend.make', 'compiler_depend.ts'):
+            require(not clean_lines(e.read(build / 'build' / role_dir / name, text=True)),
+                    'nonempty generated make dependencies require review')
+        require(clean_lines(e.read(build / 'build' / role_dir / 'progress.make', text=True))
+                == [f'CMAKE_PROGRESS_1 = {1 if role == "A" else 3}',
+                    f'CMAKE_PROGRESS_2 = {2 if role == "A" else 4}'], 'unreviewed make progress variables')
+        require(re.findall(r'^CMAKE_COMMAND\s*[:+?!]?=\s*(.*)$', recipe, re.M) == ['/usr/bin/cmake']
+                and re.findall(r'^SHELL\s*[:+?!]?=\s*(.*)$', recipe, re.M) == ['/bin/sh'],
+                'unreviewed make command or shell executable')
+        assignments = re.findall(r'^(ASC_[A-Z_]+) = (.*)$', flags, re.M)
+        expected_flags = {'ASC_DEFINES': f'-Drole_{role}_EXPORTS',
+            'ASC_INCLUDES': ' '.join('-I' + str(p) for p in (build / role / 'op_host', build / role / 'op_kernel', harness)),
+            'ASC_FLAGS': '--npu-arch=' + identity.get('npu_arch', '')}
+        require(f'# compile ASC with {compiler}' in flags and len(assignments) == len(expected_flags)
+                and clean_lines(flags) == [key + ' = ' + value for key, value in expected_flags.items()]
+                and dict(assignments) == expected_flags
+                and effective_make_lines(recipe) == effective_make_lines(
+                    reviewed_role_makefile(build, role, manifest['operator'], compiler)),
+                'retained role Make variables, targets or commands differ from the reviewed complete recipe')
+    return {'build': build, 'sdk': sdk, 'compiler': compiler, 'native': native, 'source_hash': source_hash, 'manifest': manifest, 'expected_hosts': expected_hosts}
+
+
+def kernel_type_failure(e, parent, stage, configure, execution, stdout, stderr):
+    """A narrow linker proof for original, frozen, scalar-only kernel entries.
+
+    CMake's successful configuration alone is not enough. Bind both failed role
+    symbols to the same unchanged original definition, the emitted rename and
+    source digest, and the recorded ASC compiler/compile recipe. Any extra
+    diagnostic, unsupported source syntax, or incomplete proof stays blocked.
+    """
+    require(execution.get('exit_status') == 2, 'kernel-type proof requires build exit 2')
+    matches = [KERNEL_TYPE_DIAGNOSTIC.fullmatch(line) for line in stderr.splitlines()]
+    failures = [m for m in matches if m]
+    require(failures and {m[2] for m in failures} == {'A', 'B'}, 'both role kernel-type diagnostics are required')
+    # Parallel compiler drivers can interleave their harmless failure prefixes.
+    for line, match in zip(stderr.splitlines(), matches):
+        if match or not line.strip():
+            continue
+        require(re.fullmatch(r'(?:bisheng|: |error: )*ld\.lld command failed with exit code 1 \(use -v to see invocation\)', line)
+                or re.fullmatch(r'gmake(?:\[\d+\])?: \*\*\* (?:\[[^\n]+\] Error [12]|Waiting for unfinished jobs\.{3,4})', line),
+                'additional linker/compiler diagnostic prevents kernel-type attribution')
+    require(not re.search(r'\b(?:error|fatal)\s*:', stdout, re.I), 'additional stdout compiler error')
+    proof = reviewed_original_role_build(e, parent, stage, configure, execution)
+    build, native, source_hash, manifest, expected_hosts = (proof[k] for k in ('build', 'native', 'source_hash', 'manifest', 'expected_hosts'))
     by_role = {role: {m[4] for m in failures if m[2] == role} for role in ('A', 'B')}
     require(by_role['A'] == by_role['B'] and all(m[3] == source_hash[:12] for m in failures),
             'failed role symbols do not identify the same original source')
@@ -333,33 +368,46 @@ def kernel_type_failure(e, parent, stage, configure, execution, stdout, stderr):
                     'generated adapter declares a kernel or does not include its original definition')
             copied = e.read(build / role / definitions[0], text=True)
             require(copied.encode() == native[definitions[0]], 'generated role changed original kernel implementation')
-            flags = e.read(build / 'build/CMakeFiles' / f'role_{role}.dir/flags.make', text=True)
-            recipe = e.read(build / 'build/CMakeFiles' / f'role_{role}.dir/build.make', text=True)
-            clean_lines = lambda text: [line for line in text.splitlines() if line.strip() and not line.startswith('#')]
-            role_dir = f'CMakeFiles/role_{role}.dir/'
-            require(re.findall(r'^include (.+)$', recipe, re.M) == [role_dir + name for name in
-                        ('depend.make', 'compiler_depend.make', 'progress.make', 'flags.make')],
-                    'unreviewed make include changes object command authority')
-            for name in ('depend.make', 'compiler_depend.make', 'compiler_depend.ts'):
-                require(not clean_lines(e.read(build / 'build' / role_dir / name, text=True)),
-                        'nonempty generated make dependencies require review')
-            require(clean_lines(e.read(build / 'build' / role_dir / 'progress.make', text=True))
-                    == [f'CMAKE_PROGRESS_1 = {1 if role == "A" else 3}',
-                        f'CMAKE_PROGRESS_2 = {2 if role == "A" else 4}'], 'unreviewed make progress variables')
-            require(re.findall(r'^CMAKE_COMMAND\s*[:+?!]?=\s*(.*)$', recipe, re.M) == ['/usr/bin/cmake']
-                    and re.findall(r'^SHELL\s*[:+?!]?=\s*(.*)$', recipe, re.M) == ['/bin/sh'],
-                    'unreviewed make command or shell executable')
-            assignments = re.findall(r'^(ASC_[A-Z_]+) = (.*)$', flags, re.M)
-            expected_flags = {'ASC_DEFINES': f'-Drole_{role}_EXPORTS',
-                'ASC_INCLUDES': ' '.join('-I' + str(p) for p in (build / role / 'op_host', build / role / 'op_kernel', harness)),
-                'ASC_FLAGS': '--npu-arch=' + identity.get('npu_arch', '')}
-            require(f'# compile ASC with {compiler}' in flags and len(assignments) == len(expected_flags)
-                    and clean_lines(flags) == [key + ' = ' + value for key, value in expected_flags.items()]
-                    and dict(assignments) == expected_flags
-                    and effective_make_lines(recipe) == effective_make_lines(
-                        reviewed_role_makefile(build, role, manifest['operator'], compiler)),
-                    'retained role Make variables, targets or commands differ from the reviewed complete recipe')
     return 'original_source_kernel_type_inference', 'Retained completed ASC logs and fully replayed source/adapter/Make artifacts consistently attribute both role diagnostics to one original kernel; inherited Make environment and pre-execution recipe hashes were not recorded.'
+
+
+# Finite reviewed RMS001 witness, not a general tolerance for generated-path errors.
+# The log has interleaved A/B lines followed by complete diagnostics for each role.
+# Only exact build/SDK prefixes and whitespace are normalized. Unknown shapes stay
+# blocked; literal op_host/../ paths are never passed into Evidence/read/resolve.
+RMS_ADDS_NATIVE_SHA256 = 'bb2469fd7529049a87a534210a0f0e79547f8ac4e5a9297a2eaff980b067e9b7'
+RMS_ADDS_STDERR_SHA256 = 'b944ce7a28e9b1cef90393ee8320611ab289cf0c8a5287a840f2a9406a15e9b4'
+
+
+def rms_adds_scalar_failure(e, parent, stage, configure, execution, stdout, stderr):
+    require(parent.parent.parent.name == 'rms_norm' and execution.get('exit_status') == 2,
+            'RMS scalar proof requires the reviewed task and build exit 2')
+    require(stage.get('native_started') is False, 'RMS compile proof must precede native execution')
+    proof = reviewed_original_role_build(e, parent, stage, configure, execution)
+    require(proof['source_hash'] == RMS_ADDS_NATIVE_SHA256,
+            'RMS scalar diagnostic source is outside the reviewed finite witness')
+    build, sdk = proof['build'], proof['sdk']
+    # Two roles must report the unchanged original line, not a generated helper.
+    original = proof['native']['op_kernel/rms_norm_kernel.asc'].decode().splitlines()
+    require(original[179] == '            AscendC::PipeBarrier<PIPE_V>(); AscendC::Adds(mean, mean, t_->epsilon, paddedRows);',
+            'reviewed RMS Adds expression differs')
+    for role in ('A', 'B'):
+        identity = proof['manifest']['roles'][role]
+        require(identity.get('npu_arch') == 'dav-2201' and identity.get('source_dir') == str(parent / 'op')
+                and identity.get('adapter_sha256') == hashlib.sha256(proof['expected_hosts'][role].encode()).hexdigest(),
+                'RMS role architecture/source/adapter identity differs')
+        host = proof['expected_hosts'][role]
+        require(host.splitlines()[14] == '#include "../op_kernel/rms_norm_kernel.asc"',
+                'RMS diagnostic include line differs from replayed adapter')
+        diagnostic = str(build / role) + "/op_host/../op_kernel/rms_norm_kernel.asc:180:45: error: no matching function for call to 'Adds'"
+        require(diagnostic in stderr, 'each role needs a complete original-line diagnostic')
+    normalized = ' '.join(stderr.replace(str(build), '$BUILD').replace(str(sdk), '$SDK').split())
+    require(hashlib.sha256(normalized.encode()).hexdigest() == RMS_ADDS_STDERR_SHA256,
+            'RMS diagnostic has extra errors, paths or an unreviewed interleaving')
+    require(sorted(stdout.splitlines()) == sorted(
+        f'[ 25%] Building ASC object CMakeFiles/role_{role}.dir/{role}/op_host/rms_norm.asc.o' for role in ('A', 'B')),
+        'RMS compiler stdout differs from the reviewed two-role build')
+    return 'original_source_rms_adds_gm_scalar_conflict', ('Retained completed ASC diagnostics, frozen original RMS source and fully replayed role/Make artifacts consistently attribute both role failures to Adds receiving a __gm__ float scalar against LocalTensor<float>; inherited Make environment and pre-execution recipe hashes were not recorded.')
 
 
 def compiler_failure(e, parent, stage):
@@ -379,6 +427,8 @@ def compiler_failure(e, parent, stage):
     stdout, stderr = (e.read(build / ('build-execution/' + f), text=True) for f in ('stdout.log', 'stderr.log'))
     logs = stdout + '\n' + stderr
     require(not INFRA_LOG.search(logs), 'build logs contain an infrastructure/tool failure')
+    if parent.parent.parent.name == 'rms_norm' and "no matching function for call to 'Adds'" in stderr:
+        return rms_adds_scalar_failure(e, parent, stage, configure, execution, stdout, stderr)
     if any(KERNEL_TYPE_DIAGNOSTIC.fullmatch(line) for line in stderr.splitlines()):
         return kernel_type_failure(e, parent, stage, configure, execution, stdout, stderr)
     for line in logs.splitlines():

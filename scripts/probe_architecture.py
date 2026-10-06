@@ -156,7 +156,7 @@ def main():
     try:
         if args.device is not None:
             raw.update(device_soc(sdk, args.device))
-        if not re.fullmatch(r"[A-Za-z0-9_]+", raw["soc_name"] or ""):
+        if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", raw["soc_name"] or ""):
             raise RuntimeError("missing or invalid SDK SoC name")
         cpp = artifacts / "platform_probe.cpp"
         cpp.write_text(CPP)

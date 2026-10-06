@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from copy import deepcopy
 import math
-import re
 from typing import Any
 
 from jsonschema import Draft202012Validator
@@ -100,17 +99,69 @@ def _validate(shape, value, label):
         raise ContractError(f"{label}.{path}: {error.message}")
 
 
-def architecture_id(soc_name):
-    """Never infer A3/910C from the ambiguous SocVersion enum or arch 2201."""
-    name = (soc_name or "").lower()
-    if re.fullmatch(r"ascend910_93[a-z0-9_]*", name) or name.startswith("ascend910c"):
-        return "910c"
-    if re.fullmatch(r"ascend910b[1-4][a-z0-9_]*", name):
-        return "910b"
-    if name.startswith("ascend950") or name.startswith("ascend910_95"):
-        return "950"
-    return "unknown"
+# Exact SoC identities reviewed in CANN 9.0.0 platform_config on 2026-10-05.
+# This table classifies identities only; no resource or feature defaults follow.
+# New SDK names stay unknown until reviewed. Ascend910B (without a SKU suffix)
+# is an ambiguous older product name and is deliberately absent.
+SOC_FAMILIES = {
+    "910b": frozenset(name.lower() for name in (
+        "Ascend910B1",
+        "Ascend910B2",
+        "Ascend910B2C",
+        "Ascend910B3",
+        "Ascend910B4-1",
+        "Ascend910B4",
+    )),
+    "910c": frozenset(name.lower() for name in (
+        "Ascend910_9362",
+        "Ascend910_9372",
+        "Ascend910_9381",
+        "Ascend910_9382",
+        "Ascend910_9391",
+        "Ascend910_9392",
+        "Ascend910C",  # Explicit legacy label; never a prefix match.
+    )),
+    "950": frozenset(name.lower() for name in (
+        "Ascend950DT_950x",
+        "Ascend950DT_950y",
+        "Ascend950DT_9571",
+        "Ascend950DT_9572",
+        "Ascend950DT_9573",
+        "Ascend950DT_9574",
+        "Ascend950DT_9575",
+        "Ascend950DT_9576",
+        "Ascend950DT_9577",
+        "Ascend950DT_9578",
+        "Ascend950DT_9581",
+        "Ascend950DT_9582",
+        "Ascend950DT_9583",
+        "Ascend950DT_9584",
+        "Ascend950DT_9585",
+        "Ascend950DT_9586",
+        "Ascend950DT_9587",
+        "Ascend950DT_9588",
+        "Ascend950DT_9591",
+        "Ascend950DT_9592",
+        "Ascend950DT_9595",
+        "Ascend950DT_9596",
+        "Ascend950DT_95A1",
+        "Ascend950DT_95A2",
+        "Ascend950PR_950z",
+        "Ascend950PR_9579",
+        "Ascend950PR_957b",
+        "Ascend950PR_957c",
+        "Ascend950PR_957d",
+        "Ascend950PR_9589",
+        "Ascend950PR_958b",
+        "Ascend950PR_9599",
+    )),
+}
 
+
+def architecture_id(soc_name):
+    """Match reviewed exact names, never the shared 2201 ISA or a prefix."""
+    name = (soc_name or "").lower()
+    return next((family for family, names in SOC_FAMILIES.items() if name in names), "unknown")
 
 def validate_planning_contract(kind, value):
     if kind not in SCHEMAS:
