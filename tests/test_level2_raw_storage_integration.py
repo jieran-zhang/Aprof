@@ -90,7 +90,7 @@ def test_nested_verification_raw_closure_offline(tiny,tmp_path,monkeypatch):
     origin=s/'raw/unused/extra.bin';ds=dataset_for(tmp_path,[origin]);bundle=tmp_path/'portable'
     portable.export(ds,bundle)
     closure=json.loads((bundle/'storage-verification/bindings.json').read_bytes())
-    assert closure['version']=='level2_storage_portable_v4' and closure['dependencies']
+    assert closure['version']=='level2_storage_portable_v5' and closure['dependencies']
     assert len(closure['archives'])==2
     shutil.rmtree(s.parents[4]);shutil.rmtree(ds)
     assert portable.verify(bundle)['valid']
@@ -186,7 +186,7 @@ def test_three_storage_layers_and_all_dependencies_verify_offline(tiny,tmp_path,
     paths=[s/'raw/unused/extra.bin',s/'native/1_normal_A.bin',s/'verification/1_normal_A/metadata.json']
     ds=dataset_for(tmp_path,paths);bundle=tmp_path/'portable';portable.export(ds,bundle)
     closure=json.loads((bundle/'storage-verification/bindings.json').read_bytes())
-    assert closure['version']=='level2_storage_portable_v4' and len(closure['archives'])==8
+    assert closure['version']=='level2_storage_portable_v5' and len(closure['archives'])==8
     shutil.rmtree(task.parents[2]);shutil.rmtree(ds)
     assert portable.verify(bundle)['valid']
     result=subprocess.run([sys.executable,'-B',str(bundle/'verifier/trace_v2_portable.py'),'verify','--bundle',str(bundle)],cwd='/tmp',capture_output=True,text=True)

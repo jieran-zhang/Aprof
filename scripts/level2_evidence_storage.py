@@ -7,6 +7,8 @@ from __future__ import annotations
 import contextlib
 import contextvars
 import io
+import hashlib
+import importlib.util
 from pathlib import Path
 import level2_verification_storage as prior
 import level2_raw_archive_storage as raw
@@ -90,7 +92,19 @@ def is_file(path):return resolve_raw(path) is not None or prior.is_file(path)
 
 def evidence_binding(path,expected=None):
     value=resolve_raw(path)
-    return value.evidence_binding(path,expected or value.fingerprint(path)['sha256']) if value is not None else prior.evidence_binding(path,expected)
+    result=value.evidence_binding(path,expected or value.fingerprint(path)['sha256']) if value is not None else prior.evidence_binding(path,expected)
+    if result is not None and 'bytes' in result:
+        raw.require(result.get('version') in (prior.VERSION,prior.ANCHORED_VERSION,prior.FINAL_VERSION)
+                    and isinstance(result['bytes'],bytes)
+                    and 'sha256:'+hashlib.sha256(result['bytes']).hexdigest()==result['origin']['sha256'],
+                    'verification payload differs from metadata binding')
+        # The legacy verification API includes cached bytes. Catalogs carry only
+        # exact logical identities; the complete tar is retained separately.
+        result={k:v for k,v in result.items() if k!='bytes'}
+    if result is not None:
+        raw.require(set(result)=={'version','origin','seal','archive','producer','closed_evidence'},
+                    'unknown storage metadata binding fields')
+    return result
 
 
 def event_bindings(facts):return facts['event_bindings'] if 'event_bindings' in facts else prior.event_bindings(facts)
@@ -122,3 +136,33 @@ def parse_profile(directory,journal,build,cases,repeat):
     if value is not None:return raw.parse_profile(value,journal,build,cases,repeat)
     import cannbench_msprof_timing as timing
     return timing.parse_profile(directory,journal,build,cases,repeat)
+
+
+def catalog_bindings(facts):
+    """Reconstruct only the explicit retrospective authority catalog slots.
+
+    This is metadata reconstruction, not archive validation. Callers must copy
+    and validate every returned archive and origin using the trusted readers.
+    Archived producer snapshots remain inert.
+    """
+    authorities=[]
+    value=facts.get('report_authority')
+    if isinstance(value,dict) and value.get('kind')=='retrospective_final_report_authority_v1':authorities.append(value)
+    for row in facts.get('sessions',[]):
+        value=row.get('facts',{}).get('report_authority')
+        if isinstance(value,dict) and value.get('kind')=='retrospective_final_report_authority_v1':authorities.append(value)
+    archives={};origins={}
+    if not authorities:return {'archives':archives,'origins':origins}
+    trusted=Path(__file__).resolve().with_name('level2_final_report_authority.py')
+    raw.require(trusted.is_file() and not trusted.is_symlink(),'trusted final catalog reader missing')
+    spec=importlib.util.spec_from_file_location('_trusted_final_catalog_reader',trusted)
+    final_authority=importlib.util.module_from_spec(spec);spec.loader.exec_module(final_authority)
+    for value in authorities:
+        result=final_authority.reconstruct_catalog(value)
+        for key,binding in result['archives'].items():
+            raw.require(key not in archives or archives[key]==binding,'conflicting authority catalog archive')
+            archives[key]=binding
+        for origin,row in result['origins'].items():
+            raw.require(origin not in origins or origins[origin]==row,'conflicting authority catalog origin')
+            origins[origin]=row
+    return {'archives':archives,'origins':origins}

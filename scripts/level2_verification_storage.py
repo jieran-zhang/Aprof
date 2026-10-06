@@ -11,6 +11,7 @@ import contextlib
 import contextvars
 import hashlib
 import io
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -21,6 +22,7 @@ import level2_native_output_storage as native_outputs
 
 VERSION='level2_closed_verification_storage_v1'
 ANCHORED_VERSION='level2_closed_verification_storage_v2'
+FINAL_VERSION='level2_closed_verification_storage_v3'
 NAMES={'metadata.json','execution.json','stdout.log','result.json'}
 # Reviewed original oracle contract: AdamW writes precision.json beside metadata.
 RESULT_FILE_BY_OPERATOR={'apply_adam_w':'precision.json'}
@@ -29,6 +31,8 @@ STEM=re.compile(r'(?:[1-9]|1[0-9]|20)_(?:normal|swapped)_[AB]\Z')
 HASH=re.compile(r'sha256:[0-9a-f]{64}\Z')
 _OVERRIDES=contextvars.ContextVar('verification_archive_overrides',default=None)
 _CACHE=contextvars.ContextVar('verification_archive_cache',default=None)
+_LOOKUPS=contextvars.ContextVar('verification_logical_lookup_cache',default=None)
+_LOOKUP_ENABLED=contextvars.ContextVar('verification_logical_lookup_enabled',default=False)
 
 
 def require(value,message):
@@ -138,7 +142,7 @@ def closed_from_reader(session, read_bytes):
     return {'protected':[ref(p) for p in paths],'event_binding':binding},expected
 
 
-def report_authority(session,read_bytes):
+def report_authority(session,read_bytes,*,allow_final=False):
     """Find an already recorded ledger slot fixing the exact report bytes.
 
     This is a narrow immutable-prefix proof, not campaign execution/recovery.
@@ -149,6 +153,14 @@ def report_authority(session,read_bytes):
     cohort=session.parent;stage=cohort.parent;parent=stage.parent.parent
     cid=None if parent==task else parent.name
     sid=('baseline' if cid is None else cid)+'-'+stage.name
+    if stage.name=='final':
+        require(allow_final,'final report needs explicit retrospective authority protocol v3')
+        # Only this installed sibling is executable; attestation snapshots are data.
+        trusted=Path(__file__).resolve().with_name('level2_final_report_authority.py')
+        require(trusted.is_file() and not trusted.is_symlink(),'trusted final authority reader missing')
+        spec=importlib.util.spec_from_file_location('_trusted_final_report_authority',trusted)
+        final_authority=importlib.util.module_from_spec(spec);spec.loader.exec_module(final_authority)
+        return final_authority.authority(session,read_bytes)
     def read(path):return read_bytes(path)
     def load(path):return json.loads(read(path))
     def ref(path):return {'path':str(path),'sha256':digest(read(path))}
@@ -207,11 +219,16 @@ def report_authority(session,read_bytes):
     raise ValueError('no independent previously recorded report authority; new verification archive is blocked')
 
 
+def admission_version(session):
+    return FINAL_VERSION if Path(session).parent.parent.name=='final' else ANCHORED_VERSION
+
+
 def facts_for_version(session,read_bytes,version):
-    require(version in (VERSION,ANCHORED_VERSION),'unknown verification storage version')
+    require(version in (VERSION,ANCHORED_VERSION,FINAL_VERSION),'unknown verification storage version')
+    require(version!=FINAL_VERSION or admission_version(session)==FINAL_VERSION,'v3 is reserved for explicit final audits')
     facts,expected=closed_from_reader(session,read_bytes)
-    if version==ANCHORED_VERSION:
-        authority=report_authority(session,read_bytes)
+    if version in (ANCHORED_VERSION,FINAL_VERSION):
+        authority=report_authority(session,read_bytes,allow_final=version==FINAL_VERSION)
         session=Path(session);report=json.loads(read_bytes(session.parent/'report.json'))
         group=json.loads(read_bytes(session.parent/'group-completion.json'))
         directories=[v['directory'] for v in report['sessions']]
@@ -234,7 +251,12 @@ def facts_for_version(session,read_bytes,version):
 
 def event_bindings(facts):
     result=[facts['event_binding']]
-    if facts.get('report_authority'):result.append(facts['report_authority']['ledger_event'])
+    if facts.get('report_authority'):
+        authority=facts['report_authority']
+        if authority.get('kind')=='retrospective_final_report_authority_v1':
+            require(authority.get('historical_report_authority') is False,'final audit claims capture-time authority')
+            result.extend(authority['event_bindings'])
+        else:result.append(authority['ledger_event'])
     return result
 
 
@@ -260,7 +282,7 @@ def verified(session,destination=None):
     signature=signatures([seal_path,archive]);key=(str(session),str(destination));cache=_CACHE.get()
     if cache is not None and key in cache and cache[key][0]==signature:return cache[key][1]
     seal=raw_json(seal_path)
-    require(seal.get('version') in (VERSION,ANCHORED_VERSION) and seal.get('session')==str(session)
+    require(seal.get('version') in (VERSION,ANCHORED_VERSION,FINAL_VERSION) and seal.get('session')==str(session)
             and seal.get('logical_root')==str(session/'verification') and seal.get('source_bytes_preserved') is True,'verification seal identity differs')
     facts,expected=facts_for_version(session,raw_read,seal['version'])
     require(seal.get('closed_evidence')==facts,'closed verification evidence changed')
@@ -275,7 +297,9 @@ def verified(session,destination=None):
         members=stream.getmembers();require(len(members)==len(rows) and {m.name for m in members}==set(by_name),'verification tar coverage differs')
         for member in members:
             row=by_name[member.name];logical=Path(row['path'])
-            require(location(logical)==session and member.name==logical.relative_to(session/'verification').as_posix()
+            # Tar members are virtual paths. Real session ancestors were checked
+            # above; every existing loose descendant is checked separately below.
+            require(location(logical,check_files=False)==session and member.name==logical.relative_to(session/'verification').as_posix()
                     and member.isfile() and not member.issym() and not member.islnk()
                     and member.size==row['size_bytes'] and member.mode==row['mode']
                     and member.uid==row['uid'] and member.gid==row['gid'] and member.mtime==row['mtime_ns']//1000000000,
@@ -285,6 +309,7 @@ def verified(session,destination=None):
                     'verification original bytes differ')
             payloads[str(logical)]=data
     loose_root=session/'verification'
+    require(not loose_root.is_symlink(),'symlink loose verification root')
     if loose_root.exists():
         safe(loose_root,directory=True)
         expected_dirs={Path(p).parent.name for p in payloads}
@@ -304,32 +329,66 @@ def verified(session,destination=None):
 
 
 def reverify_cached():
-    native_outputs.reverify_cached()
     """Recheck every visited seal/protected proof before a caller publishes."""
+    lookups=_LOOKUPS.get()
+    if lookups is not None:
+        require(not lookups['failed'],'verification reader transaction already failed')
+        lookups['members'].clear()
     cache=_CACHE.get()
-    if cache is None:return
-    values=list(cache.keys());token=_CACHE.set(None)
+    values=list(cache.items()) if cache is not None else []
+    enabled_token=_LOOKUP_ENABLED.set(False)
+    token=_CACHE.set(None)
     try:
-        for session,destination in values:verified(Path(session),Path(destination))
-    finally:_CACHE.reset(token)
+        native_outputs.reverify_cached()
+        for (session,destination),(_,before) in values:
+            current=verified(Path(session),Path(destination))
+            if lookups is not None:
+                require(current['seal_ref']==before['seal_ref'],
+                        'verification seal changed during reader transaction')
+    except BaseException:
+        if lookups is not None:lookups['failed']=True
+        raise
+    finally:
+        _CACHE.reset(token)
+        _LOOKUP_ENABLED.reset(enabled_token)
+
+
+def lookup_cache_enabled():
+    """Read-only helpers may inherit an explicitly audited caller's policy."""
+    return _LOOKUP_ENABLED.get()
 
 
 @contextlib.contextmanager
-def reader_session(overrides=None):
+def reader_session(overrides=None, *, cache_verified_bytes=False):
+    require(type(cache_verified_bytes) is bool,'explicit verification lookup cache boolean required')
     mapped=None
     if overrides is not None:
         require(_OVERRIDES.get() is None,'nested shadow archive replacement prohibited')
         mapped={str(process_location(Path(k))):str(safe(v,directory=True)) for k,v in overrides.items()}
     token=_CACHE.set({}) if _CACHE.get() is None else None
+    lookup_token=_LOOKUPS.set({'members':{},'failed':False}) if cache_verified_bytes and _LOOKUPS.get() is None else None
+    suspending=_LOOKUP_ENABLED.get() and not cache_verified_bytes
+    enabled_token=_LOOKUP_ENABLED.set(cache_verified_bytes)
     mapping_token=_OVERRIDES.set(mapped) if mapped is not None else None
     try:
         with native_outputs.reader_session():
+            if suspending:
+                # A legacy writer must not inherit an unvalidated positive
+                # snapshot. Check before its body can publish or remove files.
+                reverify_cached()
             yield
-        if token is not None:
+        if token is not None or lookup_token is not None or suspending:
             # Detect mutation during a complete reader transaction before returning.
             reverify_cached()
+    except BaseException:
+        lookups=_LOOKUPS.get()
+        if lookups is not None:
+            lookups['members'].clear();lookups['failed']=True
+        raise
     finally:
         if mapping_token is not None:_OVERRIDES.reset(mapping_token)
+        _LOOKUP_ENABLED.reset(enabled_token)
+        if lookup_token is not None:_LOOKUPS.reset(lookup_token)
         if token is not None:_CACHE.reset(token)
 
 
@@ -340,11 +399,29 @@ def resolve(path):
     if path.name not in ELIGIBLE_NAMES or not STEM.fullmatch(path.parent.name) or path.parent.parent.name!='verification':return None
     session=path.parent.parent.parent
     destination=archive_dir(session)
+    # Only previously validated in-memory bytes are cached. Unknown paths and
+    # missing archive declarations always use the original physical checks.
+    lookups=_LOOKUPS.get() if _CACHE.get() is not None else None
+    lookup_key=(str(path),str(destination))
+    if lookups is not None:
+        require(not lookups['failed'],'verification reader transaction already failed')
+        cached=lookups['members'].get(lookup_key) if lookup_cache_enabled() else None
+        if cached is not None:
+            require(location(path,check_files=False)==session,'cached verification scope differs')
+            return cached
     declared=str(session) in (_OVERRIDES.get() or {})
     if not declared and not destination.exists() and not destination.is_symlink():return None
     require(location(path)==session,'declared verification archive path differs')
     value=verified(session,destination)
     require(str(path) in value['payloads'],'logical verification file not sealed')
+    if lookups is not None and lookup_cache_enabled():
+        # Populate the full sealed roster so the first read of a different
+        # member does not repeat all FUSE ancestor walks. No absence is cached.
+        for logical in value['payloads']:
+            key=(logical,str(destination));previous=lookups['members'].get(key)
+            require(previous is None or previous['seal_ref']==value['seal_ref'],
+                    'conflicting verification lookup identity')
+            lookups['members'][key]=value
     return value
 
 
@@ -404,7 +481,7 @@ def prepare(session,destination=None,*,writers_closed=False,retire=False):
     require(retire or destination.is_relative_to(Path('/tmp')),'non-retiring shadow archive must be under /tmp')
     with exclusive_host():
         facts,expected=closed(session)
-        if not (destination/'seal.json').exists():facts,expected=facts_for_version(session,raw_read,ANCHORED_VERSION)
+        if not (destination/'seal.json').exists():facts,expected=facts_for_version(session,raw_read,admission_version(session))
         if not destination.exists():safe(destination.parent,directory=True);destination.mkdir()
         safe(destination,directory=True)
         with storage_lock(destination):
@@ -427,7 +504,7 @@ def prepare(session,destination=None,*,writers_closed=False,retire=False):
                         archive.addfile(member,io.BytesIO(data))
                 publish_archive(destination/'verification.tar',buffer.getvalue())
                 publish_archive(destination/'producer.py',raw_read(Path(__file__).resolve()))
-                seal={'version':ANCHORED_VERSION,'session':str(session),'logical_root':str(root),'closed_evidence':facts,
+                seal={'version':admission_version(session),'session':str(session),'logical_root':str(root),'closed_evidence':facts,
                       'archive':raw_ref(destination/'verification.tar'),'producer':raw_ref(destination/'producer.py'),
                       'members':rows,'source_bytes_preserved':True}
                 write_new(destination/'seal.json',seal);value=verified(session,destination)

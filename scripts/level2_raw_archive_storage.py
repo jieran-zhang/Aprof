@@ -16,7 +16,9 @@ import stat
 import tarfile
 import tempfile
 
-VERSION='level2_closed_raw_storage_v1'
+LEGACY_VERSION='level2_closed_raw_storage_v1'
+VERSION='level2_closed_raw_storage_v2'
+VERSIONS=(LEGACY_VERSION,VERSION)
 HASH=re.compile(r'sha256:[0-9a-f]{64}\Z')
 CHUNK=1024*1024
 TOP={'version','csv','csv_hash','target_tasks','warmup_tasks_excluded','other_tasks','samples'}
@@ -74,19 +76,22 @@ class RawArchive:
     def __init__(self,session,seal_ref,closed_report_ref=None,*,shadow=False):
         self.session=Path(session);self.logical=self.session/'raw'
         require(self.session.is_absolute() and '..' not in self.session.parts,'invalid session')
+        self.seal=load_ref(seal_ref)
+        self.version=self.seal.get('version')
+        require(self.version in VERSIONS,'unsupported raw storage version')
         group=self.session.parent.parent.name
         require(self.session.parent.name in {'cohort','direct_parent','original_baseline'}
-                and (group=='search' or re.fullmatch(r'aa-[A-Za-z0-9_-]+',group))
+                and (group=='search' or re.fullmatch(r'aa-[A-Za-z0-9_-]+',group) or (self.version==VERSION and group=='final'))
                 and self.session.parent.parent.parent.name=='stages','unsupported/unanchored final scope')
-        self.closed=cohort_facts(self.session)
+        self.closed=cohort_facts(self.session,version=self.version)
         original=self.closed['original_report']
         require(closed_report_ref is None or closed_report_ref==original,'external report anchor differs')
         closed_report_ref=original
         self.seal_ref=seal_ref;self.report_ref=closed_report_ref
-        self.seal=load_ref(seal_ref);report=load_ref(closed_report_ref)
+        report=load_ref(closed_report_ref)
         require(set(self.seal)=={'version','logical_root','archive','original_report','closed_evidence','producer','producer_snapshot','source_bytes_preserved'}
                 and self.seal['source_bytes_preserved'] is True,'unknown/incomplete raw seal schema')
-        require(self.seal.get('version')==VERSION and self.seal.get('logical_root')==str(self.logical),'seal scope differs')
+        require(self.seal.get('version')==self.version and self.seal.get('logical_root')==str(self.logical),'seal scope differs')
         require(self.seal.get('original_report')==closed_report_ref,'external report anchor differs')
         require(self.seal.get('closed_evidence')==self.closed,'closed authority differs')
         snapshot=Path(seal_ref['path']).parent/'producer.py'
@@ -155,7 +160,7 @@ class RawArchive:
         self._check_loose(complete=shadow)
         receipt=Path(seal_ref['path']).parent/'compacted.json'
         if receipt.exists() or receipt.is_symlink():
-            require(load_ref(pointer(receipt))==completion(self.seal_ref) and not self.logical.exists(),'retirement receipt differs or raw tree reappeared')
+            require(load_ref(pointer(receipt))==completion(self.seal_ref,self.version) and not self.logical.exists(),'retirement receipt differs or raw tree reappeared')
             self.protected.append(pointer(receipt))
         self.signatures={p['path']:signature(p['path']) for p in self.protected+[self.seal['archive']]}
         self.reverify_cached()  # No authority may change between its first read and cache publication.
@@ -167,12 +172,19 @@ class RawArchive:
         for path,before in self.signatures.items():require(signature(path)==before,'protected storage evidence changed')
 
     def reverify_cached(self):
+        authority=checked_authority()
+        # The opt-in byte lookup defers physical checks until an explicit
+        # boundary. Raw writers call this before unlink and receipt publication;
+        # ordinary readers retain the verifier's default eager behavior.
         self._unchanged()
         # Frozen signatures are only a fast mutation guard; exact hashes anchor each opening.
         for ref in self.protected:require(pointer(Path(ref['path']))==ref,'protected evidence hash differs')
         require(pointer(self.archive)==self.seal['archive'],'archive hash changed')
-        require(cohort_facts(self.session)==self.closed,'closed authority changed')
+        require(cohort_facts(self.session,version=self.version)==self.closed,'closed authority changed')
         self._check_loose()
+        # The final logical read must precede the physical check, so a changed
+        # oracle cannot escape until the next post-unlink boundary.
+        if authority.lookup_cache_enabled():authority.reverify_cached()
 
     def _check_loose(self,complete=False):
         files,dirs=loose_inventory(self.logical)
@@ -217,7 +229,7 @@ class RawArchive:
     def evidence_binding(self,path,expected):
         n=self.name(path);require(expected==self.files[n]['sha256'],'expected logical digest differs')
         self._unchanged()
-        return {'version':VERSION,'origin':{'path':str(path),'sha256':expected},'seal':self.seal_ref,
+        return {'version':self.version,'origin':{'path':str(path),'sha256':expected},'seal':self.seal_ref,
                 'archive':self.seal['archive'],'producer':self.seal['producer_snapshot'],
                 'closed_evidence':self.closed}
 
@@ -313,7 +325,8 @@ def parse_profile(raw,journal,build,cases,repeat,*,parser=None):
         return value
 
 # Authority implementation is a reviewed prerequisite, never chosen by a seal.
-AUTHORITY_SHA='sha256:452c479151a6d0a9be43df4388a68f6577f0212c2fbd005c4501dbd8f43d7594'
+LEGACY_AUTHORITY_SHA='sha256:452c479151a6d0a9be43df4388a68f6577f0212c2fbd005c4501dbd8f43d7594'
+AUTHORITY_SHA='sha256:78ff7dfc3d7494c074b9dd6a2d3d316d35efe50d288584cee5f391cd84fae1eb'
 NATIVE_SHA='sha256:a08bb1813cb7503b58ba95d9f1a780c61a433c955dbc8dd2254b66ac5985787c'
 CAPTURE_SHA='sha256:4d4f8d3f8d39d627bf6d5ead55d0a9e8d774a28be9f976384dc25584112e3b23'
 MAX_METADATA=16*1024*1024
@@ -380,10 +393,10 @@ LOCAL={'mode':'local_tmp_full_copyback_v1','scratch_root':'/tmp',
        'inventory':'all_regular_files_sha256_and_directories','local_filesystem_required':True}
 
 
-def cohort_facts(session, read_bytes=None):
+def cohort_facts(session, read_bytes=None, *, version=VERSION):
     """Pure original authority replay when a complete logical byte reader is given."""
     session=Path(session);cohort=session.parent;stage=cohort.parent.name
-    require(stage=='search' or re.fullmatch(r'aa-[A-Za-z0-9_-]+',stage),'unsupported/unanchored final scope')
+    require(version in VERSIONS and (stage=='search' or re.fullmatch(r'aa-[A-Za-z0-9_-]+',stage) or (version==VERSION and stage=='final')),'unsupported/unanchored final scope')
     offline=read_bytes is not None
     authority=checked_authority(require_capture=not offline)
     if not offline:session=authority.process_location(session)
@@ -397,14 +410,15 @@ def cohort_facts(session, read_bytes=None):
     sessions=report.get('sessions',[]);directories=[row['directory'] for row in sessions]
     require(len(directories)==len(set(directories))==6 and str(session) in directories,'six original sessions required')
     facts=[];transport_refs=[];oracle_refs=[]
-    with (contextlib.nullcontext() if offline else authority.reader_session()):
+    with (contextlib.nullcontext() if offline else authority.reader_session(cache_verified_bytes=authority.lookup_cache_enabled())):
         for row in sessions:
             current=Path(row['directory']);require(current.parent==cohort,'foreign report session')
-            value,expected=authority.facts_for_version(current,read,authority.ANCHORED_VERSION)
+            proof_version=authority.FINAL_VERSION if stage=='final' else authority.ANCHORED_VERSION
+            value,expected=authority.facts_for_version(current,read,proof_version)
             for logical,digest in expected.items():
                 if Path(logical).name in {'metadata.json','execution.json','stdout.log'}:
                     ref=ptr(logical);require(ref['sha256']==digest,'original oracle bytes differ');oracle_refs.append(ref)
-            require(value['report_authority']['kind']==('ledger_timing_calibration_v1' if stage.startswith('aa-') else 'ledger_closed_feedback_report_v1'),'report authority kind/scope differs')
+            require(value['report_authority']['kind']==('ledger_timing_calibration_v1' if stage.startswith('aa-') else 'retrospective_final_report_authority_v1' if stage=='final' else 'ledger_closed_feedback_report_v1'),'report authority kind/scope differs')
             facts.append({'session':str(current),'facts':value});observed={}
             for name in ('request.json','raw-storage.json','raw-storage.request.json','raw-storage.copyback.json'):
                 p=current/name;ref=ptr(p)
@@ -425,14 +439,14 @@ def cohort_facts(session, read_bytes=None):
     return {'original_report':ptr(cohort/'report.json'),'sessions':facts,'raw_transport':transport_refs,
             'protected':[protected[k] for k in sorted(protected)],'event_bindings':[events[k] for k in sorted(events)],
             'report_authority':facts[0]['facts']['report_authority'],
-            'authority_producer_hashes':{'level2_verification_storage.py':AUTHORITY_SHA,'level2_native_output_storage.py':NATIVE_SHA}}
+            'authority_producer_hashes':{'level2_verification_storage.py':LEGACY_AUTHORITY_SHA if version==LEGACY_VERSION else AUTHORITY_SHA,'level2_native_output_storage.py':NATIVE_SHA}}
 
 
 def validate_archive(session, seal, archive, read_bytes):
     """Offline streaming raw archive validator; reads only caller-mapped evidence."""
-    session=Path(session);logical=session/'raw';facts=cohort_facts(session,read_bytes)
+    session=Path(session);logical=session/'raw';facts=cohort_facts(session,read_bytes,version=seal.get('version'))
     require(set(seal)=={'version','logical_root','archive','original_report','closed_evidence','producer','producer_snapshot','source_bytes_preserved'}
-            and seal['version']==VERSION and seal['source_bytes_preserved'] is True
+            and seal['version'] in VERSIONS and seal['source_bytes_preserved'] is True
             and seal['logical_root']==str(logical) and seal['closed_evidence']==facts
             and seal['original_report']==facts['original_report'],'portable raw closed authority differs')
     require(fingerprint(archive)['sha256']==seal['archive']['sha256'],'portable raw archive hash differs')
@@ -507,7 +521,7 @@ def publish_bytes(path,data):
 
 
 def canonical(value):return (json.dumps(value,sort_keys=True,allow_nan=False)+'\n').encode()
-def completion(seal):return {'version':VERSION,'status':'complete','seal':seal,'source_bytes_preserved':True}
+def completion(seal,version=VERSION):return {'version':version,'status':'complete','seal':seal,'source_bytes_preserved':True}
 def default_destination(session):return Path(session)/'raw-archive-storage'
 
 
@@ -587,8 +601,11 @@ def prepare(session,destination=None,*,writers_closed=False,retire=False):
     session=Path(session);destination=Path(destination) if destination is not None else default_destination(session)
     require(not retire or destination==default_destination(session),'shadow archives cannot retire originals')
     require(destination==default_destination(session) or destination.is_relative_to('/tmp'),'shadow destination must be local /tmp')
-    with host_lock():
-        closed=cohort_facts(session)
+    authority=checked_authority()
+    with host_lock(), authority.reader_session(cache_verified_bytes=True):
+        existing=destination/'seal.json'
+        version=load_ref(pointer(existing))['version'] if existing.exists() or existing.is_symlink() else VERSION
+        closed=cohort_facts(session,version=version)
         with directory_fd(destination.parent) as parent:
             try:os.mkdir(destination.name,0o700,dir_fd=parent);os.fsync(parent)
             except FileExistsError:pass
@@ -603,12 +620,13 @@ def prepare(session,destination=None,*,writers_closed=False,retire=False):
                 inventory=manifest['archive_inventory']
                 validate_tar(destination/'raw.tar',{r['relative_path']:r for r in inventory['files']},set(inventory['directories']))
                 publish_bytes(destination/'producer.py',small_read(Path(__file__).resolve()))
-                value={'version':VERSION,'logical_root':str(session/'raw'),'archive':pointer(destination/'raw.tar'),
+                value={'version':version,'logical_root':str(session/'raw'),'archive':pointer(destination/'raw.tar'),
                        'original_report':closed['original_report'],'closed_evidence':closed,
                        'producer':pointer(Path(__file__).resolve()),'producer_snapshot':pointer(destination/'producer.py'),
                        'source_bytes_preserved':True}
                 # Recheck the authority after streaming; no deletion has occurred.
-                require(cohort_facts(session)==closed,'authority changed during archive')
+                require(cohort_facts(session,version=version)==closed,'authority changed during archive')
+                authority.reverify_cached()
                 publish_bytes(seal_path,canonical(value))
             reader=RawArchive(session,pointer(seal_path))
             if retire:
@@ -624,9 +642,9 @@ def prepare(session,destination=None,*,writers_closed=False,retire=False):
                 remove_directory(reader.logical)
                 require(not reader.logical.exists() and not reader.logical.is_symlink(),'raw tree remains after retirement')
                 reader.reverify_cached()
-                publish_bytes(destination/'compacted.json',canonical(completion(pointer(seal_path))))
+                publish_bytes(destination/'compacted.json',canonical(completion(pointer(seal_path),reader.version)))
             else:reader.reverify_cached()
-            return {'version':VERSION,'status':'complete' if retire else 'sealed_shadow','seal':pointer(seal_path),
+            return {'version':reader.version,'status':'complete' if retire else 'sealed_shadow','seal':pointer(seal_path),
                     'files':len(reader.files),'directories':len(reader.dirs),'source_bytes_preserved':True}
 
 

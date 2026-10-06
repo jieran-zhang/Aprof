@@ -217,9 +217,9 @@ def test_archive_corruption_with_rehashed_seal_rejected_by_original_member_hash(
     with pytest.raises(ValueError,match='member bytes'):raw.RawArchive(s,raw.pointer(destination/'seal.json'))
 
 
-def test_final_scope_is_excluded_before_any_write(tiny):
+def test_unanchored_final_scope_is_excluded_before_any_write(tiny):
     _,sessions,*_,destination=tiny;s=sessions[0]
-    with pytest.raises(ValueError):raw.prepare(s.parent.parent.parent/'final/cohort/p01',destination,writers_closed=True)
+    with pytest.raises((ValueError,FileNotFoundError)):raw.prepare(s.parent.parent.parent/'final/cohort/p01',destination,writers_closed=True)
     assert not destination.exists()
 
 

@@ -509,16 +509,44 @@ class Archive:
             return None
         binding.pop('bytes',None)
         result = dict(binding['origin'])
-        # Explicitly retain every archive/seal/producer and closed-state dependency.
-        for key in ('seal', 'archive', 'producer'):
-            ref = binding[key]
-            self.pointer(ref['path'], owner, expected=ref['sha256'])
-        for ref in binding['closed_evidence']['protected']:
-            self.pointer(ref['path'], owner, expected=ref['sha256'])
-        for event in storage.event_bindings(binding['closed_evidence']):
-            self.pointer(event['path'], owner, selector='line:'+str(event['sequence']+1))
-        self.document({'version': binding.get('version',storage.VERSION), 'archive_mapping': {key:value for key,value in binding.items() if key!='origin'}})
+        self.retain_storage_binding(binding, owner)
         return result
+
+    def retain_storage_binding(self, binding, owner):
+        """Keep complete catalog archives once, never materialize their members."""
+        import level2_evidence_storage as storage
+        seen = getattr(self, '_retained_storage_bindings', None)
+        if seen is None:
+            seen = self._retained_storage_bindings = {}
+            self._retaining_storage_bindings = set()
+        key = binding['seal']['sha256']
+        proof = {name: value for name, value in binding.items() if name != 'origin'}
+        if key in seen:
+            require(seen[key] == proof, 'conflicting retained archive proof')
+            return
+        require(key not in self._retaining_storage_bindings, 'cyclic storage authority')
+        self._retaining_storage_bindings.add(key)
+        try:
+            for name in ('seal', 'archive', 'producer'):
+                ref = binding[name]
+                self.pointer(ref['path'], owner, expected=ref['sha256'])
+            for ref in binding['closed_evidence']['protected']:
+                self.pointer(ref['path'], owner, expected=ref['sha256'])
+            for event in storage.event_bindings(binding['closed_evidence']):
+                self.pointer(event['path'], owner, selector='line:'+str(event['sequence']+1))
+            self.document({'version': binding.get('version', storage.VERSION), 'archive_mapping': proof})
+            catalog = storage.catalog_bindings(binding['closed_evidence'])
+            for origin, row in catalog['origins'].items():
+                expected = {**catalog['archives'][row['seal']],
+                            'origin': {'path': origin, 'sha256': row['sha256']}}
+                actual = storage.evidence_binding(origin, row['sha256'])
+                require(actual == expected, 'retrospective catalog differs from actual archived origin')
+                self.retain_storage_binding(actual, owner)
+                ref = dict(expected['origin'])
+                self.artifacts[v2.digest(ref)] = ref
+            seen[key] = proof
+        finally:
+            self._retaining_storage_bindings.remove(key)
 
     def pointer(self, path, owner=None, expected=None, selector=''):
         path = self.safe(path, owner)
