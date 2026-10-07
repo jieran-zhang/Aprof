@@ -1,0 +1,459 @@
+--- parent/op_host/group_norm.asc
++++ candidate/op_host/group_norm.asc
+@@ -8,4 +8,25 @@
+ #include "group_norm_tiling.h"
+ #include "../op_kernel/group_norm_kernel.asc"
+ namespace{void C(aclError r,const char*w){if(r!=ACL_SUCCESS)throw std::runtime_error(std::string(w)+": "+std::to_string(r));}std::string A(int c,char**v,const std::string&n,const std::string&d=""){for(int i=1;i+1<c;++i)if(v[i]==n)return v[i+1];return d;}std::vector<uint64_t>S(const std::string&s){std::vector<uint64_t>o;std::stringstream q(s);std::string z;while(std::getline(q,z,','))o.push_back(std::stoull(z));return o;}uint32_t D(const std::string&s){if(s=="float16")return GN_FLOAT16;if(s=="float32")return GN_FLOAT32;if(s=="bfloat16")return GN_BFLOAT16;throw std::invalid_argument("dtype");}size_t I(uint32_t d){return d==GN_FLOAT32?4:2;}}
+-int main(int ac,char**av){int dev=0;aclrtStream st=nullptr;void *hx=nullptr,*hg=nullptr,*hb=nullptr,*hy=nullptr,*dx=nullptr,*dg=nullptr,*db=nullptr,*dy=nullptr,*dt=nullptr;bool ai=false,ds=false;try{auto sh=S(A(ac,av,"--shape"));auto d=D(A(ac,av,"--dtype"));auto t=ComputeGroupNormTiling(sh,std::stoul(A(ac,av,"--groups")),d,std::stof(A(ac,av,"--epsilon")));size_t xb=t.totalLength*I(d),pb=t.C*I(d);dev=std::stoi(A(ac,av,"--device","0"));C(aclInit(nullptr),"init");ai=true;C(aclrtSetDevice(dev),"device");ds=true;C(aclrtCreateStream(&st),"stream");C(aclrtMallocHost(&hx,xb),"hx");C(aclrtMallocHost(&hg,pb),"hg");C(aclrtMallocHost(&hb,pb),"hb");C(aclrtMallocHost(&hy,xb),"hy");C(aclrtMalloc(&dx,xb,ACL_MEM_MALLOC_HUGE_FIRST),"dx");C(aclrtMalloc(&dg,pb,ACL_MEM_MALLOC_HUGE_FIRST),"dg");C(aclrtMalloc(&db,pb,ACL_MEM_MALLOC_HUGE_FIRST),"db");C(aclrtMalloc(&dy,xb,ACL_MEM_MALLOC_HUGE_FIRST),"dy");C(aclrtMalloc(&dt,sizeof(t),ACL_MEM_MALLOC_HUGE_FIRST),"dt");if(!ReadFile(A(ac,av,"--x"),hx,xb)||!ReadFile(A(ac,av,"--gamma"),hg,pb)||!ReadFile(A(ac,av,"--beta"),hb,pb))throw std::runtime_error("read");C(aclrtMemcpy(dx,xb,hx,xb,ACL_MEMCPY_HOST_TO_DEVICE),"x");C(aclrtMemcpy(dg,pb,hg,pb,ACL_MEMCPY_HOST_TO_DEVICE),"g");C(aclrtMemcpy(db,pb,hb,pb,ACL_MEMCPY_HOST_TO_DEVICE),"b");C(aclrtMemcpy(dt,sizeof(t),&t,sizeof(t),ACL_MEMCPY_HOST_TO_DEVICE),"t");group_norm_kernel<<<t.blockNum,nullptr,st>>>(static_cast<uint8_t*>(dx),static_cast<uint8_t*>(dg),static_cast<uint8_t*>(db),static_cast<uint8_t*>(dy),static_cast<uint8_t*>(dt));C(aclrtSynchronizeStream(st),"kernel");C(aclrtMemcpy(hy,xb,dy,xb,ACL_MEMCPY_DEVICE_TO_HOST),"out");if(!WriteFile(A(ac,av,"--output"),hy,xb))throw std::runtime_error("write");std::cout<<"group_norm completed numel="<<t.totalLength<<" groups="<<t.groupCount<<" group_elements="<<t.groupElements<<"\n";aclrtFree(dt);aclrtFree(dy);aclrtFree(db);aclrtFree(dg);aclrtFree(dx);aclrtFreeHost(hy);aclrtFreeHost(hb);aclrtFreeHost(hg);aclrtFreeHost(hx);aclrtDestroyStream(st);aclrtResetDevice(dev);aclFinalize();return 0;}catch(const std::exception&e){std::cerr<<"group_norm failed: "<<e.what()<<"\n";if(dt)aclrtFree(dt);if(dy)aclrtFree(dy);if(db)aclrtFree(db);if(dg)aclrtFree(dg);if(dx)aclrtFree(dx);if(hy)aclrtFreeHost(hy);if(hb)aclrtFreeHost(hb);if(hg)aclrtFreeHost(hg);if(hx)aclrtFreeHost(hx);if(st)aclrtDestroyStream(st);if(ds)aclrtResetDevice(dev);if(ai)aclFinalize();return 1;}}
++int main(int ac,char**av){int dev=0;aclrtStream st=nullptr;void *hx=nullptr,*hg=nullptr,*hb=nullptr,*hy=nullptr,*dx=nullptr,*dg=nullptr,*db=nullptr,*dy=nullptr,*dt=nullptr;bool ai=false,ds=false;try{auto sh=S(A(ac,av,"--shape"));auto d=D(A(ac,av,"--dtype"));auto t=ComputeGroupNormTiling(sh,std::stoul(A(ac,av,"--groups")),d,std::stof(A(ac,av,"--epsilon")));ConfigureExactGroupNorm(t,std::stod(A(ac,av,"--epsilon")));size_t xb=t.totalLength*I(d),pb=t.C*I(d);dev=std::stoi(A(ac,av,"--device","0"));C(aclInit(nullptr),"init");ai=true;C(aclrtSetDevice(dev),"device");ds=true;C(aclrtCreateStream(&st),"stream");C(aclrtMallocHost(&hx,xb),"hx");C(aclrtMallocHost(&hg,pb),"hg");C(aclrtMallocHost(&hb,pb),"hb");C(aclrtMallocHost(&hy,xb),"hy");C(aclrtMalloc(&dx,xb,ACL_MEM_MALLOC_HUGE_FIRST),"dx");C(aclrtMalloc(&dg,pb,ACL_MEM_MALLOC_HUGE_FIRST),"dg");C(aclrtMalloc(&db,pb,ACL_MEM_MALLOC_HUGE_FIRST),"db");C(aclrtMalloc(&dy,xb,ACL_MEM_MALLOC_HUGE_FIRST),"dy");C(aclrtMalloc(&dt,sizeof(t),ACL_MEM_MALLOC_HUGE_FIRST),"dt");if(!ReadFile(A(ac,av,"--x"),hx,xb)||!ReadFile(A(ac,av,"--gamma"),hg,pb)||!ReadFile(A(ac,av,"--beta"),hb,pb))throw std::runtime_error("read");C(aclrtMemcpy(dx,xb,hx,xb,ACL_MEMCPY_HOST_TO_DEVICE),"x");C(aclrtMemcpy(dg,pb,hg,pb,ACL_MEMCPY_HOST_TO_DEVICE),"g");C(aclrtMemcpy(db,pb,hb,pb,ACL_MEMCPY_HOST_TO_DEVICE),"b");C(aclrtMemcpy(dt,sizeof(t),&t,sizeof(t),ACL_MEMCPY_HOST_TO_DEVICE),"t");const uint64_t tilingKey=SelectGroupNormKey(t);
++if(tilingKey==33){
++std::cout<<"APROF_DISPATCH_JSON:{\"tiling_key\":33,\"kernel_entry\":\"group_norm_exact_small\"}\n";
++group_norm_exact_small<<<t.blockNum,nullptr,st>>>(static_cast<uint8_t*>(dx),static_cast<uint8_t*>(dg),static_cast<uint8_t*>(db),static_cast<uint8_t*>(dy),static_cast<uint8_t*>(dt));
++}
++else if(tilingKey==30){
++std::cout<<"APROF_DISPATCH_JSON:{\"tiling_key\":30,\"kernel_entry\":\"group_norm_small_group\"}\n";
++group_norm_small_group<<<t.blockNum,nullptr,st>>>(static_cast<uint8_t*>(dx),static_cast<uint8_t*>(dg),static_cast<uint8_t*>(db),static_cast<uint8_t*>(dy),static_cast<uint8_t*>(dt));
++}
++else if(tilingKey==31){
++std::cout<<"APROF_DISPATCH_JSON:{\"tiling_key\":31,\"kernel_entry\":\"group_norm_many_groups\"}\n";
++group_norm_many_groups<<<t.blockNum,nullptr,st>>>(static_cast<uint8_t*>(dx),static_cast<uint8_t*>(dg),static_cast<uint8_t*>(db),static_cast<uint8_t*>(dy),static_cast<uint8_t*>(dt));
++}
++else if(tilingKey==32){
++std::cout<<"APROF_DISPATCH_JSON:{\"tiling_key\":32,\"kernel_entry\":\"group_norm_few_groups\"}\n";
++group_norm_few_groups<<<t.blockNum,nullptr,st>>>(static_cast<uint8_t*>(dx),static_cast<uint8_t*>(dg),static_cast<uint8_t*>(db),static_cast<uint8_t*>(dy),static_cast<uint8_t*>(dt));
++}
++else{
++std::cout<<"APROF_DISPATCH_JSON:{\"tiling_key\":0,\"kernel_entry\":\"group_norm_generic\"}\n";
++group_norm_generic<<<t.blockNum,nullptr,st>>>(static_cast<uint8_t*>(dx),static_cast<uint8_t*>(dg),static_cast<uint8_t*>(db),static_cast<uint8_t*>(dy),static_cast<uint8_t*>(dt));
++}
++C(aclrtSynchronizeStream(st),"kernel");C(aclrtMemcpy(hy,xb,dy,xb,ACL_MEMCPY_DEVICE_TO_HOST),"out");if(!WriteFile(A(ac,av,"--output"),hy,xb))throw std::runtime_error("write");std::cout<<"group_norm completed numel="<<t.totalLength<<" groups="<<t.groupCount<<" group_elements="<<t.groupElements<<"\n";aclrtFree(dt);aclrtFree(dy);aclrtFree(db);aclrtFree(dg);aclrtFree(dx);aclrtFreeHost(hy);aclrtFreeHost(hb);aclrtFreeHost(hg);aclrtFreeHost(hx);aclrtDestroyStream(st);aclrtResetDevice(dev);aclFinalize();return 0;}catch(const std::exception&e){std::cerr<<"group_norm failed: "<<e.what()<<"\n";if(dt)aclrtFree(dt);if(dy)aclrtFree(dy);if(db)aclrtFree(db);if(dg)aclrtFree(dg);if(dx)aclrtFree(dx);if(hy)aclrtFreeHost(hy);if(hb)aclrtFreeHost(hb);if(hg)aclrtFreeHost(hg);if(hx)aclrtFreeHost(hx);if(st)aclrtDestroyStream(st);if(ds)aclrtResetDevice(dev);if(ai)aclFinalize();return 1;}}
+--- parent/op_kernel/exact_rstd_bits.h
++++ candidate/op_kernel/exact_rstd_bits.h
+@@ -0,0 +1,105 @@
++#ifndef APROF_GN_EXACT_RSTD_BITS_H
++#define APROF_GN_EXACT_RSTD_BITS_H
++#include <stdint.h>
++#ifndef GN_RSTD_FN
++#define GN_RSTD_FN inline
++#endif
++// RN-even binary64 add -> RN-even binary64 sqrt -> RN-even binary64 reciprocal
++// -> RN-even binary32. Integer operations only. Canonical NaN, no FP flags.
++namespace GnExactRstd {
++static constexpr uint64_t SIGN=0x8000000000000000ULL, INF=0x7ff0000000000000ULL;
++static constexpr uint64_t FRAC=0x000fffffffffffffULL, HIDDEN=0x0010000000000000ULL;
++static constexpr uint64_t QNAN=0x7ff8000000000000ULL;
++GN_RSTD_FN uint32_t Bits32(uint32_t v){
++ uint32_t n=0;if(v>=0x10000U){v>>=16;n+=16;}if(v>=0x100U){v>>=8;n+=8;}
++ if(v>=16){v>>=4;n+=4;}if(v>=4){v>>=2;n+=2;}if(v>=2){v>>=1;n+=1;}return n+(v!=0);
++}
++GN_RSTD_FN uint32_t Bits64(uint64_t v){return v>>32 ? 32U+Bits32(uint32_t(v>>32)):Bits32(uint32_t(v));}
++GN_RSTD_FN uint32_t Word(const uint32_t*a,uint32_t n,uint32_t i){return i<n?a[i]:0U;}
++GN_RSTD_FN uint32_t Right32(const uint32_t*a,uint32_t n,uint32_t bit){
++ uint32_t i=bit>>5,s=bit&31U,v=Word(a,n,i)>>s;return s?v|(Word(a,n,i+1)<<(32U-s)):v;
++}
++GN_RSTD_FN uint64_t Right64(const uint32_t*a,uint32_t n,uint32_t bit){return uint64_t(Right32(a,n,bit))|(uint64_t(Right32(a,n,bit+32))<<32);}
++GN_RSTD_FN bool AnyBelow(const uint32_t*a,uint32_t n,uint32_t bit){
++ uint32_t whole=bit>>5,tail=bit&31U;for(uint32_t i=0;i<n&&i<whole;++i)if(a[i])return true;
++ return tail&&whole<n&&(a[whole]&((1U<<tail)-1U));
++}
++GN_RSTD_FN void Put32(uint32_t*a,uint32_t n,uint32_t x,uint32_t bit){
++ uint32_t i=bit>>5,s=bit&31U;if(i<n)a[i]|=x<<s;if(s&&i+1<n)a[i+1]|=x>>(32U-s);
++}
++GN_RSTD_FN uint64_t RoundArray64(const uint32_t*a,uint32_t n,int base,uint64_t sign){
++ while(n&&a[n-1]==0)--n;if(!n)return sign;
++ int top=int((n-1)*32U+Bits32(a[n-1])-1U),e=base+top;if(e>1023)return sign|INF;
++ int shift=e>=-1022?top-52:-1074-base;uint64_t q;
++ if(shift<=0)q=Right64(a,n,0)<<uint32_t(-shift);
++ else {q=Right64(a,n,uint32_t(shift));uint32_t guard=Right32(a,n,uint32_t(shift-1))&1U;
++  if(guard&&(AnyBelow(a,n,uint32_t(shift-1))||(q&1ULL)))++q;}
++ if(e<-1022)return sign|q;
++ if(q==2ULL*HIDDEN){q>>=1;++e;}if(e>1023)return sign|INF;
++ return sign|(uint64_t(e+1023)<<52)|(q&FRAC);
++}
++GN_RSTD_FN uint64_t Add64(uint64_t a,uint64_t b){
++ uint64_t aa=a&~SIGN,bb=b&~SIGN,sa=a&SIGN,sb=b&SIGN;
++ if(aa>INF||bb>INF)return QNAN;
++ if(aa==INF||bb==INF){if(aa==INF&&bb==INF&&sa!=sb)return QNAN;return aa==INF?a:b;}
++ if(aa==0&&bb==0)return sa==sb?sa:0ULL;if(aa==0)return b;if(bb==0)return a;
++ uint32_t ea=uint32_t(aa>>52),eb=uint32_t(bb>>52);
++ uint64_t ma=(aa&FRAC)|(ea?HIDDEN:0ULL),mb=(bb&FRAC)|(eb?HIDDEN:0ULL);
++ int pa=ea?int(ea)-1075:-1074,pb=eb?int(eb)-1075:-1074,base=pa<pb?pa:pb;
++ uint32_t as=uint32_t(pa-base),bs=uint32_t(pb-base),at=as+Bits64(ma),bt=bs+Bits64(mb);
++ uint32_t n=((at>bt?at:bt)+1U+31U)>>5;
++ // Worst finite64 exponent span:2098bits pluscarry, at most66words.
++ uint32_t x[68],y[68];for(uint32_t i=0;i<n;++i){x[i]=0;y[i]=0;}
++ Put32(x,n,uint32_t(ma),as);Put32(x,n,uint32_t(ma>>32),as+32U);
++ Put32(y,n,uint32_t(mb),bs);Put32(y,n,uint32_t(mb>>32),bs+32U);
++ if(sa==sb){uint32_t carry=0;for(uint32_t i=0;i<n;++i){uint32_t s=x[i]+y[i],c0=s<x[i],t=s+carry,c1=t<s;x[i]=t;carry=c0|c1;}return RoundArray64(x,n,base,sa);}
++ int cmp=0;for(uint32_t i=n;i>0;--i)if(x[i-1]!=y[i-1]){cmp=x[i-1]>y[i-1]?1:-1;break;}
++ if(cmp==0)return 0ULL;uint32_t*big=cmp>0?x:y;const uint32_t*small=cmp>0?y:x;
++ uint32_t borrow=0;for(uint32_t i=0;i<n;++i){uint32_t s=big[i]-small[i],b0=big[i]<small[i],t=s-borrow,b1=s<borrow;big[i]=t;borrow=b0|b1;}
++ return RoundArray64(big,n,base,cmp>0?sa:sb);
++}
++GN_RSTD_FN void DecodePositive(uint64_t u,uint64_t& m,int& e){
++ uint32_t be=uint32_t(u>>52);m=(u&FRAC)|(be?HIDDEN:0ULL);e=be?int(be)-1023:-1022;
++ while(m<HIDDEN){m<<=1;--e;}
++}
++GN_RSTD_FN uint64_t Sqrt64(uint64_t u){
++ uint64_t a=u&~SIGN;if(a>INF)return QNAN;if(a==0)return u;if(u&SIGN)return QNAN;if(a==INF)return INF;
++ uint64_t m;int e;DecodePositive(a,m,e);if(e%2!=0){m<<=1;--e;}
++ uint64_t q=0,rem=0;
++ // Restoring square root of the106bit integer m<<52, consumed2bits/step.
++ for(int j=52;j>=0;--j){uint32_t bit=uint32_t(j*2);uint64_t pair=bit>=52?((m>>(bit-52))&3ULL):0ULL;
++  rem=(rem<<2)|pair;uint64_t trial=(q<<2)|1ULL;
++  if(rem>=trial){rem-=trial;q=(q<<1)|1ULL;}else q<<=1;}
++ // N-q^2=rem. Midpoint square is q^2+q+1/4, so integer rem>q rounds up.
++ if(rem>q)++q;int out=e/2;if(q==2ULL*HIDDEN){q>>=1;++out;}
++ return (uint64_t(out+1023)<<52)|(q&FRAC);
++}
++GN_RSTD_FN uint64_t Reciprocal64(uint64_t u){
++ uint64_t a=u&~SIGN,sign=u&SIGN;if(a>INF)return QNAN;if(a==0)return sign|INF;if(a==INF)return sign;
++ uint64_t m;int e;DecodePositive(a,m,e);uint64_t q=HIDDEN,rem=0;int out=-e;
++ if(m!=HIDDEN){out=-e-1;rem=2ULL*HIDDEN-m;for(int bit=51;bit>=0;--bit){rem<<=1;if(rem>=m){rem-=m;q|=1ULL<<bit;}}}
++ if(out<-1022){int shift=-1022-out;if(shift>53)return sign;
++  uint64_t guard=(q>>(shift-1))&1ULL;bool sticky=(q&((1ULL<<(shift-1))-1ULL))||rem;
++  q>>=shift;if(guard&&(sticky||(q&1ULL)))++q;return sign|q;}
++ if((rem<<1)>m||((rem<<1)==m&&(q&1ULL)))++q;
++ if(q==2ULL*HIDDEN){q>>=1;++out;}if(out>1023)return sign|INF;
++ return sign|(uint64_t(out+1023)<<52)|(q&FRAC);
++}
++GN_RSTD_FN uint64_t From32(uint32_t u){
++ uint64_t sign=uint64_t(u>>31)<<63;uint32_t a=u&0x7fffffffU,be=a>>23,m=a&0x7fffffU;
++ if(be==255U)return m?QNAN:sign|INF;if(a==0)return sign;int e;
++ if(be){m|=0x800000U;e=int(be)-127;}else {e=-126;while(m<0x800000U){m<<=1;--e;}}
++ return sign|(uint64_t(e+1023)<<52)|(uint64_t(m&0x7fffffU)<<29);
++}
++GN_RSTD_FN uint32_t To32(uint64_t u){
++ uint64_t a=u&~SIGN;uint32_t sign=uint32_t(u>>63)<<31;if(a>INF)return 0x7fc00000U;if(a==INF)return sign|0x7f800000U;if(a==0)return sign;
++ uint64_t m;int e;DecodePositive(a,m,e);if(e>127)return sign|0x7f800000U;
++ int shift=e>=-126?29:-97-e;if(shift>53)return sign;
++ uint64_t q=m>>shift,rem=m&((1ULL<<shift)-1ULL),half=1ULL<<(shift-1);
++ if(rem>half||(rem==half&&(q&1ULL)))++q;if(e<-126)return sign|uint32_t(q);
++ if(q==0x1000000ULL){q>>=1;++e;}if(e>127)return sign|0x7f800000U;
++ return sign|(uint32_t(e+127)<<23)|(uint32_t(q)&0x7fffffU);
++}
++GN_RSTD_FN uint32_t RstdBits(uint32_t variance,uint64_t epsilon){return To32(Reciprocal64(Sqrt64(Add64(From32(variance),epsilon))));}
++}
++#endif
+--- parent/op_kernel/gn_numeric.h
++++ candidate/op_kernel/gn_numeric.h
+@@ -0,0 +1,84 @@
++#pragma once
++#include <stdint.h>
++#ifndef GN_DEVICE
++#define GN_DEVICE inline
++#endif
++#ifndef APROF_SFMA_FN
++#define APROF_SFMA_FN GN_DEVICE
++#endif
++#include "soft_fma_bits.h"
++
++// Pure integer, CPU/device-shared binary32 arithmetic. No floating contraction,
++// vector FMA, reciprocal, sqrt, float conversions, or denormal ISA assumption.
++namespace GnNumeric {
++GN_DEVICE uint32_t Add(uint32_t a,uint32_t b){return AprofSoftFma::FmaBits(a,0x3f800000U,b);}
++GN_DEVICE uint32_t Sub(uint32_t a,uint32_t b){return Add(a,b^0x80000000U);}
++GN_DEVICE uint32_t Mul(uint32_t a,uint32_t b){return AprofSoftFma::FmaBits(a,b,(a^b)&0x80000000U);}
++GN_DEVICE uint32_t Fma(uint32_t a,uint32_t b,uint32_t c){return AprofSoftFma::FmaBits(a,b,c);}
++GN_DEVICE uint32_t Div(uint32_t a,uint32_t b){
++ const uint32_t sign=(a^b)&0x80000000U;uint32_t ax=a&0x7fffffffU,bx=b&0x7fffffffU;
++ if(ax>0x7f800000U||bx>0x7f800000U||(ax==0&&bx==0)||(ax==0x7f800000U&&bx==0x7f800000U))return 0x7fc00000U;
++ if(ax==0x7f800000U||bx==0)return sign|0x7f800000U;
++ if(ax==0||bx==0x7f800000U)return sign;
++ int ea=int(ax>>23),eb=int(bx>>23);uint32_t ma=ax&0x7fffffU,mb=bx&0x7fffffU;
++ if(ea){ma|=0x800000U;ea-=127;}else{ea=-126;while(ma<0x800000U){ma<<=1;--ea;}}
++ if(eb){mb|=0x800000U;eb-=127;}else{eb=-126;while(mb<0x800000U){mb<<=1;--eb;}}
++ int exponent=ea-eb;if(ma<mb){ma<<=1;--exponent;}
++ uint32_t q=0x800000U,rem=ma-mb;
++ for(int bit=22;bit>=0;--bit){rem<<=1;if(rem>=mb){rem-=mb;q|=uint32_t(1)<<bit;}}
++ if(exponent<-126){int shift=-126-exponent;if(shift>24)return sign;
++  const uint32_t guard=(q>>(shift-1))&1U;const bool sticky=(q&((uint32_t(1)<<(shift-1))-1U))!=0||rem!=0;
++  q>>=shift;if(guard&&(sticky||(q&1U)))++q;return sign|q;
++ }
++ if((rem<<1)>mb||((rem<<1)==mb&&(q&1U)))++q;
++ if(q==0x1000000U){q>>=1;++exponent;}if(exponent>127)return sign|0x7f800000U;
++ return sign|(uint32_t(exponent+127)<<23)|(q&0x7fffffU);
++}
++GN_DEVICE uint32_t FromCount(uint64_t n){
++ if(!n)return 0;int e=0;uint64_t tmp=n;while(tmp>>=1)++e;
++ uint64_t q=e<=23?n<<(23-e):n>>(e-23);
++ if(e>23){int shift=e-23;uint64_t rem=n&((uint64_t(1)<<shift)-1),half=uint64_t(1)<<(shift-1);
++  if(rem>half||(rem==half&&(q&1)))++q;if(q==(uint64_t(1)<<24)){q>>=1;++e;}}
++ return (uint32_t(e+127)<<23)|(uint32_t(q)&0x7fffffU);
++}
++struct Moment{uint64_t count;uint32_t mean[8],square[8];};
++GN_DEVICE void Clear(Moment& value){value.count=0;for(int k=0;k<8;++k){value.mean[k]=0;value.square[k]=0;}}
++GN_DEVICE void Merge(Moment& a,uint64_t count,const uint32_t* mean,const uint32_t* square){
++ const uint64_t total=a.count+count;const uint32_t coefficient=total?Div(FromCount(count),FromCount(total)):0;
++ for(int k=0;k<8;++k){const uint32_t delta=Sub(mean[k],a.mean[k]);
++  const uint32_t sum=Add(a.square[k],square[k]),weighted=Mul(coefficient,delta),old_delta=Mul(delta,FromCount(a.count));
++  a.mean[k]=Add(a.mean[k],weighted);a.square[k]=Fma(old_delta,weighted,sum);}
++ a.count=total;
++}
++GN_DEVICE uint32_t Depth(uint64_t chunks){uint32_t depth=0;uint64_t power=1;while(power<chunks){power<<=1;++depth;}return depth;}
++template<class Reader>GN_DEVICE void Chunk(const Reader& input,uint32_t vectors,uint32_t K,uint32_t* record){
++ for(uint32_t i=0;i<2*K;++i)record[i]=0;
++ for(uint32_t j=0;j<vectors;++j){const uint32_t coefficient=Div(0x3f800000U,FromCount(j+1));
++  for(uint32_t half=0;half<K/8;++half)for(uint32_t lane=0;lane<8;++lane){
++   uint32_t* mean=record+half*16;uint32_t* square=mean+8;const uint32_t value=input.Get(j*K+half*8+lane),delta=Sub(value,mean[lane]);
++   mean[lane]=Fma(coefficient,delta,mean[lane]);square[lane]=Fma(delta,Sub(value,mean[lane]),square[lane]);}}
++}
++template<class State>GN_DEVICE void Consume(State& state,uint64_t chunk,uint32_t depth,uint32_t count,uint32_t K,const uint32_t* record){
++ Moment current;state.Read(0,current);
++ for(uint32_t half=0;half<K/8;++half)Merge(current,count,record+half*16,record+half*16+8);
++ state.Write(0,current);
++ uint64_t mask=chunk+1;
++ for(uint32_t j=1;j<depth&&(mask&1U)==0;++j){Moment previous;state.Read(j-1,previous);state.Read(j,current);
++  Merge(current,previous.count,previous.mean,previous.square);state.Write(j,current);Clear(previous);state.Write(j-1,previous);mask>>=1;}
++}
++struct Stats{uint32_t mean,variance;};
++template<class State,class Reader>GN_DEVICE Stats Finish(State& state,const Reader& tail,uint64_t length,uint32_t K){
++ const uint64_t vectors=length/K,chunks=(vectors+15)/16;const uint32_t depth=Depth(chunks);
++ Moment merged;state.Read(0,merged);
++ for(uint32_t j=1;j<depth;++j){Moment previous;state.Read(j,previous);Merge(merged,previous.count,previous.mean,previous.square);}
++ uint64_t count=0;uint32_t mean=0,variance=0;
++ for(uint32_t i=0;i<length%K;++i){uint32_t value=tail.Get(i),delta=Sub(value,mean);++count;
++  mean=Add(mean,Div(delta,FromCount(count)));variance=Fma(delta,Sub(value,mean),variance);}
++ const uint64_t lane_count=vectors*K/8;
++ for(uint32_t lane=0;lane<8;++lane){uint64_t total=count+lane_count;uint32_t coefficient=total?Div(FromCount(lane_count),FromCount(total)):0;
++  const uint32_t delta=Sub(merged.mean[lane],mean);mean=Fma(coefficient,delta,mean);
++  variance=Add(variance,Fma(Mul(Mul(delta,delta),coefficient),FromCount(count),merged.square[lane]));count=total;}
++ return {mean,Div(variance,FromCount(length))};
++}
++
++} // namespace GnNumeric
+--- parent/op_kernel/group_norm_exact_small.h
++++ candidate/op_kernel/group_norm_exact_small.h
+@@ -0,0 +1,67 @@
++#pragma once
++#define GN_DEVICE __aicore__ inline
++#include "gn_numeric.h"
++#define GN_RSTD_FN __aicore__ inline
++#include "exact_rstd_bits.h"
++
++class GroupNormExactSmall {
++public:
++ __aicore__ inline void Init(GM_ADDR x,GM_ADDR gamma,GM_ADDR beta,GM_ADDR y,const __gm__ GroupNormTilingData* tiling){
++  t_=tiling;x_.SetGlobalBuffer(reinterpret_cast<__gm__ uint32_t*>(x),t_->totalLength);
++  gamma_.SetGlobalBuffer(reinterpret_cast<__gm__ uint32_t*>(gamma),t_->C);beta_.SetGlobalBuffer(reinterpret_cast<__gm__ uint32_t*>(beta),t_->C);
++  y_.SetGlobalBuffer(reinterpret_cast<__gm__ uint32_t*>(y),t_->totalLength);
++  pipe_.InitBuffer(x_queue_,1,512);pipe_.InitBuffer(y_queue_,1,512);
++ }
++ __aicore__ inline void Process(){
++  if(t_->dtype!=GN_FLOAT32||t_->groupElements<1||t_->groupElements>128)return;
++  const uint64_t first=uint64_t(AscendC::GetBlockIdx())*t_->exactGroupsPerBlock;
++  const uint64_t end=first+t_->exactGroupsPerBlock<t_->groupCount?first+t_->exactGroupsPerBlock:t_->groupCount;
++  for(uint64_t group=first;group<end;++group)One(group);
++ }
++private:
++ struct Reader{AscendC::LocalTensor<uint32_t> values;uint32_t offset;
++  __aicore__ inline uint32_t Get(uint32_t i)const{return values.GetValue(offset+i);}
++ };
++ struct State{GnNumeric::Moment value;
++  __aicore__ inline void Read(uint32_t,GnNumeric::Moment& out)const{out=value;}
++  __aicore__ inline void Write(uint32_t,const GnNumeric::Moment& in){value=in;}
++ };
++ __aicore__ inline void One(uint64_t group){
++  const uint32_t length=static_cast<uint32_t>(t_->groupElements),vectors=length/8;
++  const uint64_t base=group*t_->groupElements;
++  const AscendC::DataCopyExtParams copy{1,length*4,0,0,0};
++  auto input=x_queue_.AllocTensor<uint32_t>();
++  AscendC::DataCopyPad(input,x_[base],copy,AscendC::DataCopyPadExtParams<uint32_t>{true,0,0,0});
++  x_queue_.EnQue(input);input=x_queue_.DeQue<uint32_t>();
++  const event_t input_ready=static_cast<event_t>(pipe_.FetchEventID(AscendC::HardEvent::MTE2_S));
++  AscendC::SetFlag<AscendC::HardEvent::MTE2_S>(input_ready);AscendC::WaitFlag<AscendC::HardEvent::MTE2_S>(input_ready);
++  State state;GnNumeric::Clear(state.value);uint32_t partial[16];
++  if(vectors){Reader whole{input,0};GnNumeric::Chunk(whole,vectors,8,partial);GnNumeric::Consume(state,0,0,vectors,8,partial);}
++  Reader tail{input,vectors*8};const GnNumeric::Stats stats=GnNumeric::Finish(state,tail,length,8);
++  const uint32_t rstd=GnExactRstd::RstdBits(stats.variance,t_->epsilonBits);
++  auto output=y_queue_.AllocTensor<uint32_t>();
++  const uint32_t first_channel=static_cast<uint32_t>(group%t_->numGroups)*t_->channelsPerGroup;
++  uint32_t previous_channel=UINT32_MAX,scale=0,bias=0;
++  for(uint32_t i=0;i<length;++i){
++   const uint32_t channel=first_channel+static_cast<uint32_t>(uint64_t(i)/t_->spatial);
++   if(channel!=previous_channel){scale=GnNumeric::Mul(rstd,gamma_.GetValue(channel));bias=GnNumeric::Fma(scale^0x80000000U,stats.mean,beta_.GetValue(channel));previous_channel=channel;}
++   output.SetValue(i,GnNumeric::Fma(scale,input.GetValue(i),bias));
++  }
++  const event_t scalar_ready=static_cast<event_t>(pipe_.FetchEventID(AscendC::HardEvent::S_MTE3));
++  AscendC::SetFlag<AscendC::HardEvent::S_MTE3>(scalar_ready);AscendC::WaitFlag<AscendC::HardEvent::S_MTE3>(scalar_ready);
++  y_queue_.EnQue(output);output=y_queue_.DeQue<uint32_t>();
++  AscendC::DataCopyPad(y_[base],output,copy);
++  const event_t output_done=static_cast<event_t>(pipe_.FetchEventID(AscendC::HardEvent::MTE3_S));
++  AscendC::SetFlag<AscendC::HardEvent::MTE3_S>(output_done);AscendC::WaitFlag<AscendC::HardEvent::MTE3_S>(output_done);
++  y_queue_.FreeTensor(output);x_queue_.FreeTensor(input);
++ }
++ const __gm__ GroupNormTilingData* t_;AscendC::TPipe pipe_;
++ AscendC::GlobalTensor<uint32_t> x_,gamma_,beta_,y_;
++ AscendC::TQue<AscendC::TPosition::VECIN,1> x_queue_;
++ AscendC::TQue<AscendC::TPosition::VECOUT,1> y_queue_;
++};
++
++extern "C" __global__ __aicore__ __attribute__((aiv)) void group_norm_exact_small(GM_ADDR x,GM_ADDR gamma,GM_ADDR beta,GM_ADDR y,GM_ADDR tiling){
++ const __gm__ GroupNormTilingData* t=reinterpret_cast<const __gm__ GroupNormTilingData*>(tiling);
++ GroupNormExactSmall kernel;kernel.Init(x,gamma,beta,y,t);kernel.Process();
++}
+--- parent/op_kernel/group_norm_kernel.asc
++++ candidate/op_kernel/group_norm_kernel.asc
+@@ -16,3 +16,13 @@
+  const __gm__ GroupNormTilingData*t_;AscendC::TPipe pipe_;AscendC::GlobalTensor<T>x_,g_,b_,y_;AscendC::TQue<AscendC::TPosition::VECIN,1>xQ_;AscendC::TQue<AscendC::TPosition::VECOUT,1>yQ_;AscendC::TBuf<AscendC::TPosition::VECCALC>xFpBuf_,yFpBuf_,reduceBuf_,sumBuf_,scalarBuf_,invBuf_;
+ };
+ extern "C" __global__ __aicore__ __attribute__((aiv)) void group_norm_kernel(GM_ADDR x,GM_ADDR g,GM_ADDR b,GM_ADDR y,GM_ADDR taddr){const __gm__ GroupNormTilingData*t=reinterpret_cast<const __gm__ GroupNormTilingData*>(taddr);if(t->dtype==GN_FLOAT16){KernelGroupNorm<half>o;o.Init(x,g,b,y,t);o.Process();}else if(t->dtype==GN_FLOAT32){KernelGroupNorm<float>o;o.Init(x,g,b,y,t);o.Process();}else{KernelGroupNorm<bfloat16_t>o;o.Init(x,g,b,y,t);o.Process();}}
++
++#include "group_norm_exact_small.h"
++
++extern "C" __global__ __aicore__ __attribute__((aiv)) void group_norm_small_group(GM_ADDR x,GM_ADDR g,GM_ADDR b,GM_ADDR y,GM_ADDR taddr){const __gm__ GroupNormTilingData*t=reinterpret_cast<const __gm__ GroupNormTilingData*>(taddr);if(t->dtype==GN_FLOAT16){KernelGroupNorm<half>o;o.Init(x,g,b,y,t);o.Process();}else if(t->dtype==GN_FLOAT32){KernelGroupNorm<float>o;o.Init(x,g,b,y,t);o.Process();}else{KernelGroupNorm<bfloat16_t>o;o.Init(x,g,b,y,t);o.Process();}}
++
++extern "C" __global__ __aicore__ __attribute__((aiv)) void group_norm_many_groups(GM_ADDR x,GM_ADDR g,GM_ADDR b,GM_ADDR y,GM_ADDR taddr){const __gm__ GroupNormTilingData*t=reinterpret_cast<const __gm__ GroupNormTilingData*>(taddr);if(t->dtype==GN_FLOAT16){KernelGroupNorm<half>o;o.Init(x,g,b,y,t);o.Process();}else if(t->dtype==GN_FLOAT32){KernelGroupNorm<float>o;o.Init(x,g,b,y,t);o.Process();}else{KernelGroupNorm<bfloat16_t>o;o.Init(x,g,b,y,t);o.Process();}}
++
++extern "C" __global__ __aicore__ __attribute__((aiv)) void group_norm_few_groups(GM_ADDR x,GM_ADDR g,GM_ADDR b,GM_ADDR y,GM_ADDR taddr){const __gm__ GroupNormTilingData*t=reinterpret_cast<const __gm__ GroupNormTilingData*>(taddr);if(t->dtype==GN_FLOAT16){KernelGroupNorm<half>o;o.Init(x,g,b,y,t);o.Process();}else if(t->dtype==GN_FLOAT32){KernelGroupNorm<float>o;o.Init(x,g,b,y,t);o.Process();}else{KernelGroupNorm<bfloat16_t>o;o.Init(x,g,b,y,t);o.Process();}}
++
++extern "C" __global__ __aicore__ __attribute__((aiv)) void group_norm_generic(GM_ADDR x,GM_ADDR g,GM_ADDR b,GM_ADDR y,GM_ADDR taddr){const __gm__ GroupNormTilingData*t=reinterpret_cast<const __gm__ GroupNormTilingData*>(taddr);if(t->dtype==GN_FLOAT16){KernelGroupNorm<half>o;o.Init(x,g,b,y,t);o.Process();}else if(t->dtype==GN_FLOAT32){KernelGroupNorm<float>o;o.Init(x,g,b,y,t);o.Process();}else{KernelGroupNorm<bfloat16_t>o;o.Init(x,g,b,y,t);o.Process();}}
+--- parent/op_kernel/group_norm_tiling.h
++++ candidate/op_kernel/group_norm_tiling.h
+@@ -2,7 +2,28 @@
+ #include <cstdint>
+ #include <stdexcept>
+ #include <vector>
++#include <cstring>
++#include <algorithm>
+ enum GroupNormDType:uint32_t{GN_FLOAT16=0,GN_FLOAT32=1,GN_BFLOAT16=2};
+-struct GroupNormTilingData{uint64_t totalLength,spatial,groupElements,groupCount;uint32_t N,C,numGroups,channelsPerGroup,blockNum,dtype,tileElements;float epsilon,invGroupElements;};
++struct GroupNormTilingData{uint64_t totalLength,spatial,groupElements,groupCount;uint32_t N,C,numGroups,channelsPerGroup,blockNum,dtype,tileElements;float epsilon,invGroupElements;uint64_t exactGroupsPerBlock,epsilonBits;};
+ inline GroupNormTilingData ComputeGroupNormTiling(const std::vector<uint64_t>&s,uint32_t groups,uint32_t dtype,float eps){
+  if(s.size()<2||s.size()>8||groups==0||s[1]%groups||!(eps>0))throw std::invalid_argument("invalid group norm shape/attrs");GroupNormTilingData t{};t.N=s[0];t.C=s[1];t.numGroups=groups;t.channelsPerGroup=t.C/groups;t.spatial=1;for(size_t i=2;i<s.size();++i)t.spatial*=s[i];t.groupElements=static_cast<uint64_t>(t.channelsPerGroup)*t.spatial;t.groupCount=static_cast<uint64_t>(t.N)*groups;t.totalLength=t.groupCount*t.groupElements;t.dtype=dtype;t.epsilon=eps;t.invGroupElements=1.0f/static_cast<float>(t.groupElements);t.blockNum=static_cast<uint32_t>(t.groupCount<32?t.groupCount:32);t.tileElements=4096;return t;}
++
++// Only the exact small-FP32 entry uses these extra fields. Baseline fields and
++// schedule for every other route retain the original Compute function values.
++inline uint64_t GnExactGcd(uint64_t a,uint64_t b){while(b){uint64_t r=a%b;a=b;b=r;}return a;}
++inline uint64_t SelectGroupNormKey(const GroupNormTilingData&t){
++ if(t.dtype==GN_FLOAT32&&t.groupElements>=1&&t.groupElements<=128)return 33;
++ if(t.groupElements>128&&t.groupElements<=4096)return 30;
++ if(t.groupElements>4096)return t.groupCount>=48?31:32;
++ return 0;
++}
++inline void ConfigureExactGroupNorm(GroupNormTilingData&t,double epsilon){
++ if(t.N==0||t.C==0||t.groupElements==0||t.groupCount==0)throw std::invalid_argument("empty group norm input unsupported");
++ std::memcpy(&t.epsilonBits,&epsilon,8);
++ if(SelectGroupNormKey(t)!=33)return;
++ const uint64_t alignment=64/GnExactGcd(t.groupElements*4,64);
++ const uint64_t cores=std::min<uint64_t>(t.groupCount,32),average=(t.groupCount+cores-1)/cores;
++ t.exactGroupsPerBlock=((average+alignment-1)/alignment)*alignment;
++ t.blockNum=static_cast<uint32_t>((t.groupCount+t.exactGroupsPerBlock-1)/t.exactGroupsPerBlock);
++}
+--- parent/op_kernel/soft_fma_bits.h
++++ candidate/op_kernel/soft_fma_bits.h
+@@ -0,0 +1,114 @@
++#ifndef APROF_SOFT_FMA_BITS_H
++#define APROF_SOFT_FMA_BITS_H
++#include <stdint.h>
++#ifndef APROF_SFMA_FN
++#define APROF_SFMA_FN inline
++#endif
++// Binary32 round-to-nearest, ties-to-even result bits. All arithmetic below is
++// unsigned32 or bounded signed32; no FP instructions, uint64, or library calls.
++// NaNs return canonical quietNaN; exception flags/NaN payload propagation are not emulated.
++namespace AprofSoftFma {
++static constexpr uint32_t kWords = 18;
++APROF_SFMA_FN uint32_t Bits(uint32_t x) {
++    uint32_t n = 0;
++    if (x >= 0x10000U) { x >>= 16; n += 16; }
++    if (x >= 0x100U) { x >>= 8; n += 8; }
++    if (x >= 0x10U) { x >>= 4; n += 4; }
++    if (x >= 0x4U) { x >>= 2; n += 2; }
++    if (x >= 0x2U) { x >>= 1; n += 1; }
++    return n + (x != 0);
++}
++APROF_SFMA_FN void Put(uint32_t* a, uint32_t n, uint32_t x, uint32_t bit) {
++    const uint32_t i = bit >> 5, s = bit & 31U;
++    if (i < n) a[i] |= x << s;
++    if (s != 0 && i + 1 < n) a[i + 1] |= x >> (32U - s);
++}
++APROF_SFMA_FN uint32_t Word(const uint32_t* a, uint32_t n, uint32_t i) {
++    return i < n ? a[i] : 0U;
++}
++APROF_SFMA_FN uint32_t RightLow(const uint32_t* a, uint32_t n, uint32_t shift) {
++    const uint32_t i = shift >> 5, s = shift & 31U;
++    const uint32_t lo = Word(a,n,i) >> s;
++    return s == 0 ? lo : lo | (Word(a,n,i+1) << (32U-s));
++}
++APROF_SFMA_FN bool AnyBelow(const uint32_t* a, uint32_t n, uint32_t bit) {
++    const uint32_t whole = bit >> 5, tail = bit & 31U;
++    for (uint32_t i=0; i<n && i<whole; ++i) if (a[i] != 0) return true;
++    return tail != 0 && whole < n && (a[whole] & ((1U << tail)-1U)) != 0;
++}
++APROF_SFMA_FN uint32_t Round(const uint32_t* a, uint32_t n, int32_t base, uint32_t sign) {
++    while (n != 0 && a[n-1] == 0) --n;
++    if (n == 0) return sign;
++    const int32_t top = static_cast<int32_t>((n-1)*32U + Bits(a[n-1])-1U);
++    int32_t exp = base + top;
++    if (exp > 127) return sign | 0x7f800000U;
++    const int32_t shift = exp >= -126 ? top-23 : -149-base;
++    uint32_t q;
++    if (shift <= 0) {
++        // top-shift <=23, hence this exact left shift fits24bits and shift>=-23.
++        q = a[0] << static_cast<uint32_t>(-shift);
++    } else {
++        q = RightLow(a,n,static_cast<uint32_t>(shift));
++        const uint32_t guard = RightLow(a,n,static_cast<uint32_t>(shift-1)) & 1U;
++        if (guard != 0 && (AnyBelow(a,n,static_cast<uint32_t>(shift-1)) || (q & 1U))) ++q;
++    }
++    if (exp < -126) return sign | q; // q<=2^23: subnormal, zero, or smallest normal.
++    if (q == 0x01000000U) { q >>= 1; ++exp; }
++    if (exp > 127) return sign | 0x7f800000U;
++    return sign | (static_cast<uint32_t>(exp+127)<<23) | (q & 0x007fffffU);
++}
++APROF_SFMA_FN uint32_t FmaBits(uint32_t a, uint32_t b, uint32_t c) {
++    const uint32_t ea=(a>>23)&255U, eb=(b>>23)&255U, ec=(c>>23)&255U;
++    const uint32_t fa=a&0x007fffffU, fb=b&0x007fffffU, fc=c&0x007fffffU;
++    const uint32_t sp=(a^b)&0x80000000U, sc=c&0x80000000U;
++    if ((ea==255U && fa) || (eb==255U && fb) || (ec==255U && fc)) return 0x7fc00000U;
++    if (ea==255U || eb==255U) {
++        if ((ea==0 && fa==0) || (eb==0 && fb==0)) return 0x7fc00000U;
++        if (ec==255U && sp!=sc) return 0x7fc00000U;
++        return sp | 0x7f800000U;
++    }
++    if (ec==255U) return c;
++    const uint32_t ma=fa | (ea==0 ? 0U : 0x00800000U);
++    const uint32_t mb=fb | (eb==0 ? 0U : 0x00800000U);
++    const uint32_t mc=fc | (ec==0 ? 0U : 0x00800000U);
++    if (ma==0 || mb==0) return mc!=0 ? c : ((sp==sc) ? sp : 0U);
++    const int32_t pe=(ea==0 ? -149 : static_cast<int32_t>(ea)-150)
++                    +(eb==0 ? -149 : static_cast<int32_t>(eb)-150);
++    const int32_t ce=ec==0 ? -149 : static_cast<int32_t>(ec)-150;
++    // Exact24x24->48 multiplication using only32-bit operations.
++    const uint32_t a0=ma&65535U, a1=ma>>16, b0=mb&65535U, b1=mb>>16;
++    const uint32_t p0=a0*b0;
++    const uint32_t mid=(p0>>16)+a0*b1+a1*b0;
++    const uint32_t lo=(p0&65535U)|(mid<<16), hi=a1*b1+(mid>>16);
++    const int32_t base = mc==0 || pe<ce ? pe : ce;
++    const uint32_t ps=static_cast<uint32_t>(pe-base), cs=static_cast<uint32_t>(ce-base);
++    const uint32_t pt=ps+(hi==0 ? Bits(lo) : 32U+Bits(hi));
++    const uint32_t ct=mc==0 ? 0U : cs+Bits(mc);
++    // At most554 significant positions plus1carry;18limbs suffice.
++    const uint32_t n=((pt>ct ? pt : ct)+1U+31U)>>5;
++    uint32_t p[kWords], d[kWords];
++    for (uint32_t i=0; i<n; ++i) { p[i]=0; d[i]=0; }
++    Put(p,n,lo,ps); Put(p,n,hi,ps+32U); if (mc!=0) Put(d,n,mc,cs);
++    if (sp==sc || mc==0) {
++        uint32_t carry=0;
++        for (uint32_t i=0; i<n; ++i) {
++            const uint32_t sum=p[i]+d[i], c0=sum<p[i];
++            const uint32_t sum2=sum+carry, c1=sum2<sum;
++            p[i]=sum2; carry=c0|c1;
++        }
++        return Round(p,n,base,sp);
++    }
++    int32_t cmp=0;
++    for (uint32_t i=n; i>0; --i) if (p[i-1]!=d[i-1]) { cmp=p[i-1]>d[i-1] ? 1 : -1; break; }
++    if (cmp==0) return 0U; // Exact nonzero cancellation yields+0 in RN-even.
++    uint32_t* big=cmp>0 ? p : d; const uint32_t* small=cmp>0 ? d : p;
++    uint32_t borrow=0;
++    for (uint32_t i=0; i<n; ++i) {
++        const uint32_t diff=big[i]-small[i], b0=big[i]<small[i];
++        const uint32_t diff2=diff-borrow, b1=diff<borrow;
++        big[i]=diff2; borrow=b0|b1;
++    }
++    return Round(big,n,base,cmp>0 ? sp : sc);
++}
++}
++#endif
