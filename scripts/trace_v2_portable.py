@@ -127,6 +127,27 @@ def portable_catalog(facts,manifest):
     storage=importlib.util.module_from_spec(spec);spec.loader.exec_module(storage)
     return storage.catalog_bindings(facts)
 
+class _ParentSealCache:
+    """Decode each hash-bound parent once per verification; recheck before return."""
+    def __init__(self, bundle):
+        self.bundle = bundle
+        self.seals = {}
+
+    def read(self, target, expected):
+        require(target == 'evidence/sha256/' + expected[7:], 'parent seal location differs')
+        if expected not in self.seals:
+            data = inside(self.bundle, target).read_bytes()
+            require(v2.digest_bytes(data) == expected, 'nested parent seal changed')
+            self.seals[expected] = (target, v2.strict_loads(data))
+        require(self.seals[expected][0] == target, 'parent seal cache identity differs')
+        return self.seals[expected][1]
+
+    def reverify(self):
+        for expected, (target, _) in self.seals.items():
+            data = inside(self.bundle, target).read_bytes()
+            require(v2.digest_bytes(data) == expected, 'cached parent seal changed during verification')
+
+
 def verify_storage_closure(bundle, manifest, index):
     """Optional maintenance closure; never accesses original evidence locations."""
     name='storage-verification/bindings.json'
@@ -150,6 +171,7 @@ def verify_storage_closure(bundle, manifest, index):
     require(set(closure['origins'])<=set(signed),'portable verification origin is outside signed evidence')
     dependencies=closure.get('dependencies',{});logical_hashes=dict(signed)
     roots=set(closure['origins'].values());reachable=set(roots)
+    parent_seals = _ParentSealCache(bundle)
     for origin,dependency in dependencies.items():
         require(set(dependency)=={'seal','sha256','parents'} and dependency['parents']
                 and len(set(dependency['parents']))==len(dependency['parents'])
@@ -160,8 +182,7 @@ def verify_storage_closure(bundle, manifest, index):
             require(parent in closure['archives'] and parent!=dependency['seal'],'invalid nested storage parent')
             entry=closure['archives'][parent];ref=entry['seal'];target=entry['files'].get(ref['path'])
             require(target=='evidence/sha256/'+parent[7:] and target in manifest['files'],'nested parent seal missing')
-            data=inside(bundle,target).read_bytes();require(v2.digest_bytes(data)==parent,'nested parent seal changed')
-            seal=v2.strict_loads(data)
+            seal=parent_seals.read(target,parent)
             directly_bound={'path':origin,'sha256':dependency['sha256']} in seal['closed_evidence']['protected']
             catalog=catalog_for(parent,seal['closed_evidence'])
             catalog_bound=catalog['origins'].get(origin)=={'sha256':dependency['sha256'],'seal':dependency['seal']}
@@ -301,6 +322,7 @@ def verify_storage_closure(bundle, manifest, index):
         for origin,value in logical_archives.items():
             if value==key:require(payloads.get(origin)==logical_hashes[origin],'portable logical mapping differs from signed evidence')
 
+    parent_seals.reverify()
     return virtual
 
 
