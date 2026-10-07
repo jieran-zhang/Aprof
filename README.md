@@ -137,13 +137,24 @@ During local development, refresh Codex's cached plugin after changing plugin
 skills or metadata:
 
 ```bash
-python3 /root/.codex/skills/.system/plugin-creator/scripts/update_plugin_cachebuster.py \
-  plugins/aprof-performance-workflow
+python3 scripts/sync_aprof_registry.py write
+python3 - <<'PY'
+import json
+from pathlib import Path
+from uuid import uuid4
+
+registry = json.loads(Path("skillgraph/registry.json").read_text())
+path = Path("plugins/aprof-performance-workflow/.codex-plugin/plugin.json")
+manifest = json.loads(path.read_text())
+manifest["version"] = registry["workflow_plugin"]["version"] + "+codex." + uuid4().hex
+path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
+PY
+python3 scripts/sync_aprof_registry.py check
 codex plugin add aprof-performance-workflow@aprof
 ```
 
-Then start a new Codex thread. The helper replaces the single Codex cachebuster
-suffix; it does not require hand-editing the marketplace or Codex config.
+Then start a new Codex thread. This uses the repository's registry and Python's
+standard library to replace the cachebuster suffix; no external skill is needed.
 
 To remove only the plugin, and optionally the marketplace registration and
 runtime, run:
