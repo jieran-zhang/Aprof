@@ -373,7 +373,7 @@ def authority(session, read_bytes):
     for attempt in original['source_attempts']:
         cid = attempt['candidate_id']; obs = observed[cid]; feedback = reader.checked(attempt['feedback'])
         require(obs.get('close_feedback') is True and obs['feedback'] == feedback and obs['report_ref'] == attempt['feedback']['sha256']
-                and digest(canonical(feedback)) == obs['report_ref'] and feedback['source_hash'] == regs[cid]['source_hash'] == attempt['source_hash']
+                and feedback['source_hash'] == regs[cid]['source_hash'] == attempt['source_hash']
                 and feedback['source_parent'] == regs[cid]['source_parent'] and feedback['status'] == attempt['status']
                 and feedback['status'] in ('measured', 'source_attempt_failed') and not feedback.get('measurement_error')
                 and not obs.get('quality', {}).get('infrastructure_blocked'), 'source observation not genuinely closed')

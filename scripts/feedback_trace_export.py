@@ -46,9 +46,12 @@ or reusing a physical stage set under another id are rejected, not recounted.
 from __future__ import annotations
 import argparse
 import copy
+import hashlib
 import json
+import os
 from pathlib import Path
 import re
+import tempfile
 
 import trace_v2_dataset as v2
 
@@ -60,20 +63,70 @@ class Recorder:
         self.evidence = v2.Evidence()
         self.origins = {}
 
+    def freeze_physical(self, path, expected=None):
+        """Freeze physical evidence without holding its payload in memory.
+
+        Existing content identities and CAS layout are unchanged. Publish the
+        fully hashed temporary inode without replacing an existing object.
+        """
+        root = self.output / 'external_evidence'
+        root.mkdir(parents=True, exist_ok=True)
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(prefix='.freeze-', dir=root, delete=False) as stream:
+                temporary = Path(stream.name)
+                digest = hashlib.sha256()
+                with path.open('rb') as source:
+                    while block := source.read(1024 * 1024):
+                        digest.update(block)
+                        stream.write(block)
+                stream.flush()
+                os.fsync(stream.fileno())
+            h = 'sha256:' + digest.hexdigest()
+            if expected is not None and h != expected:
+                raise ValueError('evidence hash mismatch: ' + str(path))
+            frozen = v2.object_path(root, h)
+            frozen.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                os.link(temporary, frozen)
+            except FileExistsError:
+                if v2.evidence_fingerprint(frozen, external=False)['sha256'] != h:
+                    raise ValueError('CAS collision or corruption')
+            fd = os.open(frozen.parent, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+            return frozen, h
+        finally:
+            if temporary is not None:
+                temporary.unlink()
+
     def pointer(self, pointer, split='train', purpose='LIVE evidence'):
         if not isinstance(pointer, dict) or not isinstance(pointer.get('path'), str):
             raise ValueError('evidence requires a path')
         path = (self.manifest.parent / pointer['path']).resolve()
         purpose = pointer.get('purpose', purpose) + ' [' + path.name + ']'
-        data = path.read_bytes()
-        h = v2.digest_bytes(data)
-        if pointer.get('sha256', h) != h:
-            raise ValueError('evidence hash mismatch: ' + str(path))
+        try:
+            import level2_evidence_storage as storage
+        except ModuleNotFoundError as error:
+            if error.name != 'level2_evidence_storage':
+                raise
+            binding = None
+        else:
+            binding = storage.evidence_binding(path, pointer.get('sha256'))
+        if binding is not None:
+            # The current trusted reader verifies the complete archive and its
+            # original authority. Retain its logical member; the existing
+            # portable exporter carries the tar/proof closure once per seal.
+            origin = binding['origin']
+            if origin['path'] != str(path):
+                raise ValueError('archive evidence origin differs')
+            frozen, h = path, origin['sha256']
+        else:
+            frozen, h = self.freeze_physical(path, pointer.get('sha256'))
         selector = pointer.get('selector', '')
-        v2.validate_selector(selector, path, data)
-        # Freeze bytes, including the curator input itself, before publishing.
-        cas_hash = v2.store_bytes(self.output / 'external_evidence', data)
-        frozen = v2.object_path(self.output / 'external_evidence', cas_hash)
+        v2.validate_selector(selector, frozen)
         ref = self.evidence.file(frozen, split=split, selector=selector,
                                  purpose=purpose, expected=h)
         self.origins.setdefault(ref, set()).add(str(path))
@@ -82,7 +135,7 @@ class Recorder:
     def selected(self, pointer, split='train', purpose='recorded observation'):
         ref = self.pointer(pointer, split, purpose)
         entry = self.evidence.entries[ref]
-        data = Path(entry['path']).read_bytes()
+        data = v2.external_evidence_bytes(entry['path'])
         selector = entry['selector']
         line = re.fullmatch(r'line[: ](\d+)(?: (/.+))?', selector)
         if line:

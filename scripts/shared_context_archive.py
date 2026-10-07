@@ -53,8 +53,12 @@ class FrozenRecorder(export.Recorder):
         selector = pointer.get("selector", "")
         selected = (*key, selector)
         if selected not in self.selected_refs:
-            data = self.evidence.read(base["path"])
-            v2.validate_selector(selector, Path(base["path"]), data)
+            # Empty selectors bind the entire file by hash. Large tar/binary
+            # payloads must not enter the metadata bytes cache merely to reuse
+            # their already verified identity.
+            if selector:
+                data = self.evidence.read(base["path"])
+                v2.validate_selector(selector, Path(base["path"]), data)
             ref = self.evidence._entry(base["sha256"], base["path"], base["size_bytes"], split, selector, purpose)
             self.origins.setdefault(ref, set()).add(str(path))
             self.selected_refs[selected] = ref

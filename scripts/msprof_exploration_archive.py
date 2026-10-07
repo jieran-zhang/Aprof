@@ -496,7 +496,13 @@ class Archive:
             # Unknown/data identities still fail in the ordinary strict pointer audit.
             if binding is None:
                 continue
-            for ref in [binding['snapshot'], binding['frozen_manifest'], *binding['closed_observation'].values()]:
+            observation = binding['closed_observation']
+            for name, ref in observation.items():
+                if name == 'stage_recovery':
+                    self._retain_recovery_refs(ref, owner)
+                else:
+                    self.pointer(ref['path'], owner, expected=ref['sha256'])
+            for ref in [binding['snapshot'], binding['frozen_manifest']]:
                 self.pointer(ref['path'], owner, expected=ref['sha256'])
             key = (str(path), expected)
             self.observation_producer_bindings[key] = binding
@@ -512,6 +518,82 @@ class Archive:
         self.retain_storage_binding(binding, owner)
         return result
 
+    def _authenticated_authority_pointer(self, path, owner, *, expected=None, selector='', verified_source=None, event_binding=None):
+        """Retain fixed same-split authority only in an authenticated reader scope.
+
+        Ordinary evidence must still use safe()/pointer(), which reject ledger
+        paths. Closed storage proof needs its original config and event prefix
+        for offline validation; never admit a foreign or global ledger here.
+        """
+        path = Path(path)
+        ledger = 'ledger' in path.parts
+        if not ledger and event_binding is None:
+            return self.pointer(path, owner, expected=expected, selector=selector)
+        require(verified_source in getattr(self, '_active_ledger_authorities', set()),
+                'ledger authority requires an active authenticated reader closure')
+        if ledger:
+            require(path.parent == self.run / self.split / 'ledger'
+                    and path == path.resolve()
+                    and not any(p.is_symlink() for p in (path, *path.parents)),
+                    'storage authority ledger is outside the current run/split')
+        else:
+            path = self.safe(path, owner)
+        if event_binding is not None:
+            from level2_stage_recovery import ledger_events, task_events
+            require(set(event_binding) == {'path', 'sequence', 'hash'}
+                    and event_binding['path'] == str(path)
+                    and type(event_binding['sequence']) is int and event_binding['sequence'] >= 0
+                    and isinstance(event_binding['hash'], str) and v2.HASH_RE.fullmatch(event_binding['hash'])
+                    and path.name == 'events.jsonl' and expected is None
+                    and selector == 'line:' + str(event_binding['sequence'] + 1),
+                    'storage event requires its authenticated prefix binding')
+            data = analysis.verification_storage.read_bytes(path)
+            lines = data.splitlines()
+            require(len(lines) > event_binding['sequence'], 'storage event prefix is missing')
+            prefix = b'\n'.join(lines[:event_binding['sequence'] + 1]) + b'\n'
+            rows = (ledger_events(prefix, v2.strict_loads(lines[0])['config_hash'])
+                    if ledger else task_events(prefix))
+            require(rows[-1]['hash'] == event_binding['hash'], 'storage event prefix changed after authentication')
+            digest = v2.digest_bytes(data)
+            if not ledger:
+                return self.pointer(path, owner, expected=digest, selector=selector)
+        else:
+            require(ledger and path.name in {'config.json', 'config.sha256.json'} and not selector
+                    and isinstance(expected, str) and v2.HASH_RE.fullmatch(expected),
+                    'unsupported storage ledger authority file')
+            digest = sha(path)
+        result = dict(path=str(path), sha256=digest)
+        require(expected is None or result['sha256'] == expected, 'storage ledger authority bytes differ')
+        if selector:
+            v2.validate_selector(selector, path, data=data if event_binding is not None else None)
+            result['selector'] = selector
+        self.artifacts[v2.digest(result)] = result
+        return result
+
+    def _retain_recovery_refs(self, resolved, owner):
+        """Consume the fixed resolver result, not an arbitrary list of pointers."""
+        from level2_stage_recovery import resolve_from_reader
+        stage = Path(resolved['current_result']['path']).parent
+        require(owner is not None and stage.is_relative_to(self.run / self.split / 'tasks' / owner),
+                'recovery authority is outside the current run/split/task')
+        actual = resolve_from_reader(stage, analysis.verification_storage.read_bytes)
+        require(actual == resolved and actual['qualification'] is not None,
+                'recovery authority was not authenticated by the current resolver')
+        active = getattr(self, '_active_ledger_authorities', None)
+        if active is None:
+            active = self._active_ledger_authorities = set()
+        token = ('stage_recovery', v2.digest(actual))
+        require(token not in active, 'cyclic recovery authority')
+        active.add(token)
+        try:
+            for fixed in actual['protected']:
+                self._authenticated_authority_pointer(fixed['path'], owner, expected=fixed['sha256'], verified_source=token)
+            for event in actual['event_bindings']:
+                self._authenticated_authority_pointer(event['path'], owner,
+                    selector='line:'+str(event['sequence']+1), verified_source=token, event_binding=event)
+        finally:
+            active.remove(token)
+
     def retain_storage_binding(self, binding, owner):
         """Keep complete catalog archives once, never materialize their members."""
         import level2_evidence_storage as storage
@@ -525,15 +607,22 @@ class Archive:
             require(seen[key] == proof, 'conflicting retained archive proof')
             return
         require(key not in self._retaining_storage_bindings, 'cyclic storage authority')
+        require(storage.evidence_binding(binding['origin']['path'], binding['origin']['sha256']) == binding,
+                'storage authority was not authenticated by the current reader')
         self._retaining_storage_bindings.add(key)
+        active = getattr(self, '_active_ledger_authorities', None)
+        if active is None:
+            active = self._active_ledger_authorities = set()
+        token = ('closed_storage', key)
+        active.add(token)
         try:
             for name in ('seal', 'archive', 'producer'):
                 ref = binding[name]
                 self.pointer(ref['path'], owner, expected=ref['sha256'])
             for ref in binding['closed_evidence']['protected']:
-                self.pointer(ref['path'], owner, expected=ref['sha256'])
+                self._authenticated_authority_pointer(ref['path'], owner, expected=ref['sha256'], verified_source=token)
             for event in storage.event_bindings(binding['closed_evidence']):
-                self.pointer(event['path'], owner, selector='line:'+str(event['sequence']+1))
+                self._authenticated_authority_pointer(event['path'], owner, selector='line:'+str(event['sequence']+1), verified_source=token, event_binding=event)
             self.document({'version': binding.get('version', storage.VERSION), 'archive_mapping': proof})
             catalog = storage.catalog_bindings(binding['closed_evidence'])
             for origin, row in catalog['origins'].items():
@@ -546,6 +635,7 @@ class Archive:
                 self.artifacts[v2.digest(ref)] = ref
             seen[key] = proof
         finally:
+            active.remove(token)
             self._retaining_storage_bindings.remove(key)
 
     def pointer(self, path, owner=None, expected=None, selector=''):
@@ -850,10 +940,7 @@ class Archive:
             resolved=resolve_result(original.parent,record,analysis.verification_storage.read_bytes)
             require(resolved['original_failed_result']==dict(path=str(original),sha256=sha(original))
                     and resolved['qualification'] is not None,'archive recovery omitted original failed attempt')
-            for fixed in resolved['protected']:
-                self.pointer(fixed['path'],owner,expected=fixed['sha256'])
-            for binding in resolved['event_bindings']:
-                self.pointer(binding['path'],owner,selector='line:'+str(binding['sequence']+1))
+            self._retain_recovery_refs(resolved, owner)
             current=self.safe(resolved['current_result']['path'],owner)
             require(sha(current)==resolved['current_result']['sha256'],'archive selected recovery result differs')
             history=[original] if current==original else [original,current]
