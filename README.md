@@ -26,9 +26,12 @@ For organizing new optimization experiments, recording feedback, and extracting
 conditional lessons, start with the
 [experiment playbook (中文)](docs/optimization_experiment_playbook.md) and its
 [shared-context paired measurement specification](docs/shared_context_paired_protocol.md).
-The new measurement protocol is specified but not yet implemented or qualified;
-the documentation update does not start hardware. Existing CPU data tools are
-described in [trace collection v2](docs/optimization_trace_collection_v2.md).
+For the implemented shared-context msprof campaign, see the
+[execution and archive interfaces](docs/msprof_exploration_campaign.md) and
+[Level2 complete-call protocol](docs/level2_msprof_protocol_v2.md).
+Performance qualification is recorded per workload and calibration; research
+traces do not establish formal runtime admission. CPU data tools are described
+in [trace collection v2](docs/optimization_trace_collection_v2.md).
 
 For the historical bounded Level1 device experiments and local structured data, see the
 [hardware trace campaign](docs/level1_trace_campaign.md),
