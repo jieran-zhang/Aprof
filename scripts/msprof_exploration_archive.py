@@ -500,6 +500,8 @@ class Archive:
             for name, ref in observation.items():
                 if name == 'stage_recovery':
                     self._retain_recovery_refs(ref, owner)
+                elif name == 'cohort_continuation':
+                    self._retain_continuation_refs(ref, owner)
                 else:
                     self.pointer(ref['path'], owner, expected=ref['sha256'])
             for ref in [binding['snapshot'], binding['frozen_manifest']]:
@@ -588,6 +590,31 @@ class Archive:
         try:
             for fixed in actual['protected']:
                 self._authenticated_authority_pointer(fixed['path'], owner, expected=fixed['sha256'], verified_source=token)
+            for event in actual['event_bindings']:
+                self._authenticated_authority_pointer(event['path'], owner,
+                    selector='line:'+str(event['sequence']+1), verified_source=token, event_binding=event)
+        finally:
+            active.remove(token)
+
+    def _retain_continuation_refs(self, resolved, owner):
+        """Retain only the closed, reauthenticated partial-cohort authority."""
+        from level2_cohort_continuation import resolve
+        cohort = Path(resolved['cohort'])
+        require(owner is not None and cohort.is_relative_to(self.run / self.split / 'tasks' / owner),
+                'continuation authority is outside the current run/split/task')
+        actual = resolve(cohort, analysis.verification_storage.read_bytes, require_closed=True)
+        require(actual == resolved and actual['qualification'] is not None,
+                'continuation authority was not authenticated by the current resolver')
+        active = getattr(self, '_active_ledger_authorities', None)
+        if active is None:
+            active = self._active_ledger_authorities = set()
+        token = ('cohort_continuation', v2.digest(actual))
+        require(token not in active, 'cyclic continuation authority')
+        active.add(token)
+        try:
+            for fixed in actual['protected']:
+                self._authenticated_authority_pointer(fixed['path'], owner,
+                    expected=fixed['sha256'], verified_source=token)
             for event in actual['event_bindings']:
                 self._authenticated_authority_pointer(event['path'], owner,
                     selector='line:'+str(event['sequence']+1), verified_source=token, event_binding=event)
@@ -800,12 +827,23 @@ class Archive:
         directory = self.safe(directory, owner)
         completion = load(self.safe(directory / 'group-completion.json', owner))
         require(completion.get('status') in ('passed', 'failed'), 'cohort completion status missing')
+        resolve_continuation = analysis.engineering_provenance.resolve_continuation
+        continuation = resolve_continuation(directory, analysis.verification_storage.read_bytes,
+                                            require_closed=True)
+        continuation_annotation = None
+        if continuation is not None:
+            from level2_cohort_continuation import annotation
+            continuation_annotation = annotation(continuation)
+            self._retain_continuation_refs(continuation, owner)
         self.files(directory, owner)
         if completion['status'] != 'passed':
             return None
         plan = load(directory / 'plan.json')
         paths = [self.safe(path, owner) for path in completion['completed_sessions']]
         require(len(paths) == len(set(paths)) == 6 and all(path.parent == directory for path in paths), 'cohort session boundary differs')
+        if continuation is not None:
+            require([str(path) for path in paths] == continuation['directories'],
+                    'cohort sessions differ from the authenticated continuation')
         for item in completion.get('sessions', []):
             require(self.safe(item['directory'], owner) in paths, 'session pointer outside cohort')
             for key in ('completion', 'samples', 'journal'):
@@ -825,6 +863,8 @@ class Archive:
                 source = self.safe(build['roles'][role]['source_dir'], owner)
                 require(native_tar_hash(source_tar, source) == build['roles'][role]['source_sha256'], 'native source identity differs from source tar')
         saved = load(directory / 'report.json')
+        require(saved.get('continuation') == continuation_annotation,
+                'report continuation annotation differs from authenticated authority')
         if calibration_ref is not None:
             require(isinstance(calibration_ref, dict) and 'path' in calibration_ref and 'sha256' in calibration_ref,
                     'frozen cohort calibration pointer is required')
@@ -883,6 +923,12 @@ class Archive:
         # inserting old event timing arrays or a synthetic machine verdict.
         summary = {key: value for key, value in saved.items() if key not in ('sessions', 'results')}
         summary['native_process_count'] = len(actual['sessions'])
+        if continuation is not None:
+            require(resolve_continuation(directory, analysis.verification_storage.read_bytes,
+                                         require_closed=True) == continuation,
+                    'continuation authority changed during archive replay')
+            summary['actual_native_processes_including_failed'] = 7
+            summary['failed_actual_costs'] = continuation['failed_costs']
         return self.document(dict(summary=summary, cases=saved['results']))
 
     def single_process_method(self, directory, owner, plan, result):

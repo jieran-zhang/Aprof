@@ -692,11 +692,17 @@ def analyze_task_cohort(directories, plan, calibration=None, *, provenance_out=N
     require(len(directories) == 6, 'exactly six observed native processes required')
     paths = [Path(path).resolve() for path in directories]
     require(len(set(paths)) == 6, 'duplicate process directory')
+    resolve_continuation = engineering_provenance.resolve_continuation
+    continuation = resolve_continuation(paths[0].parent, verification_storage.read_bytes)
+    if continuation is not None:
+        from level2_cohort_continuation import annotation as continuation_annotation
+        require([str(p) for p in paths] == continuation['directories'], 'continuation session mapping differs')
+        require(plan == load(paths[0].parent / 'plan.json'), 'continuation must use its exact frozen cohort plan')
     sessions = []
     identities = set()
     previous_end = None
     for path, entry in zip(paths, plan['schedule']):
-        require(path.name == entry['name'], 'observation order/name differs from frozen schedule')
+        require(continuation is not None or path.name == entry['name'], 'observation order/name differs from frozen schedule')
         session = verify_observation(path, entry['request'], **({'provenance_out': provenance_out} if provenance_out is not None else {}))
         identity = (session['host'], session['pid'], session['started_at'])
         require(identity not in identities, 'duplicate native process identity')
@@ -779,6 +785,16 @@ def analyze_task_cohort(directories, plan, calibration=None, *, provenance_out=N
                              'Marginal case intervals are not simultaneous coverage guarantees.',
                              'Additive factor intervals use residual df=2; unmeasured interactions remain uncovered.',
                              'Task sums exclude host submission and inter-task gaps; they are not end-to-end latency.']}
+    if continuation is not None:
+        # Full original request checks above still run for each actual directory.
+        result['continuation'] = continuation_annotation(continuation)
+        result['limitations'].extend(continuation['interruption_limitations'])
+        for row in result['results']:
+            row['qualified_performance_eligible'] = False
+            row['measurement_quality'] = 'complete_with_caution'
+            row['limitations'].extend(continuation['interruption_limitations'])
+        require(resolve_continuation(paths[0].parent, verification_storage.read_bytes) == continuation,
+                'continuation changed during report replay')
     canonical(result)
     return result
 

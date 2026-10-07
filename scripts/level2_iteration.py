@@ -205,6 +205,14 @@ def comparison_reports(task, parent, operator, item, baseline_hash, *, required)
             continue
         report = load(report_path)
         completion = load(report_path.parent / "group-completion.json")
+        from msprof_exploration_provenance import resolve_continuation
+        continuation = resolve_continuation(report_path.parent, require_closed=True)
+        continuation_annotation = None
+        if continuation is not None:
+            from level2_cohort_continuation import annotation
+            continuation_annotation = annotation(continuation)
+        if report.get("continuation") != continuation_annotation:
+            raise ValueError("search continuation annotation differs from authenticated authority")
         if (completion.get("status") != "passed" or report.get("evidence_status") != "verified_complete"
                 or report.get("operator") != operator or report.get("comparison_kind") != "ab"
                 or report.get("plan_hash") != digest(frozen) or report.get("source_hashes") != source_hashes):
@@ -216,12 +224,19 @@ def comparison_reports(task, parent, operator, item, baseline_hash, *, required)
                 or set(report["suite"]) != {"normal", "swapped"}
                 or any({str(c) for c in suite["case_ids"]} != {str(c) for c in expected_cases} for suite in report["suite"].values())):
             raise ValueError("timing report case coverage differs from declared public scope")
+        limitations = list(report["limitations"])
+        if continuation is not None:
+            limitations.extend(value for value in continuation["interruption_limitations"] if value not in limitations)
         reports.append({"relation": relation, "control_candidate_id": control_id,
             "source_hashes": source_hashes, "report": pointer(report_path),
             "case_ids": report["case_ids"], "suite": report["suite"],
             "results": [{k: row[k] for k in ("case_id", "buffer_config", "speedup", "ci95", "latency_change",
                 "cv_status", "calibration_status", "coarse_observed_controls", "measurement_quality", "limitations")}
-                for row in report["results"]], "limitations": report["limitations"]})
+                for row in report["results"]], "limitations": limitations,
+            **({"continuation": continuation_annotation} if continuation is not None else {})})
+        if continuation is not None:
+            if resolve_continuation(report_path.parent, require_closed=True) != continuation:
+                raise ValueError("continuation authority changed before feedback projection")
     return reports
 
 

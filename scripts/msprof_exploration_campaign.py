@@ -50,6 +50,7 @@ ARGUMENTS = {
     "observe": {"workload", "observation_id", "candidate_id", "stage_ids", "feedback",
                 "close_feedback", "report_ref", "quality"},
     "freeze": {"workload", "candidate_ids", "final_plans", "reason"},
+    "qualify_continuation": {"workload", "stage_id", "source_hash", "plan_hash", "qualification", "reason"},
     "qualify_prestart": {"workload", "stage_id", "source_hash", "plan_hash", "failed_result", "qualification", "reason"},
     "checkpoint": {"checkpoint_id", "reason", "next_action", "resources_released", "artifacts"},
     "resume": {"checkpoint_id", "reason"},
@@ -302,6 +303,16 @@ def _transition(state, config, operation, arguments):
         task["used"]["source"] += 1
         task["new_source_attempts"] += 1
         return
+    if operation == "qualify_continuation":
+        require(config.get("schema_version") == FRESH_SCHEMA and not task["frozen"]
+                and state["status"] == "active" and _active(state) == [("dynamic_quant", "dynamic_quant001-search")],
+                "continuation requires only its exact original active stage")
+        stage = task["stages"].get(a.get("stage_id"))
+        candidate = task["candidates"].get("dynamic_quant001")
+        from level2_cohort_continuation import validate_qualification
+        validate_qualification(stage, candidate, a)
+        stage["continuation"] = deepcopy(a)
+        return
     if operation == "qualify_prestart":
         require(set(a) == ARGUMENTS[operation], "prestart qualification fields differ")
         require(config.get("schema_version") == FRESH_SCHEMA and task["frozen"]
@@ -429,6 +440,15 @@ def _transition(state, config, operation, arguments):
             require(a["evidence"].get("prepared_output_checked") is True, "correctness must bind prepared output validation")
         if a["outcome"] == "success" and stage["kind"] == "timing":
             require(samples == expected_samples(stage["plan"]), "timing success requires six processes and both configurations")
+        if stage.get("continuation") is not None:
+            require(a["evidence"].get("continuation") == stage["continuation"]["qualification"],
+                    "continuation finish must bind its exact certificate")
+            if a["outcome"] == "success":
+                c = a.get("actual_costs", {})
+                require(c.get("native_processes_started") == 7 and c.get("native_processes_completed") == 6
+                        and c.get("role_samples") == samples + 360 and c.get("timed_complete_calls") == 46800
+                        and c.get("warmup_complete_calls") == 1560,
+                        "continuation actual costs must include original failed p03")
         costs = _counters(a.get("actual_costs", {}))
         for key, amount in costs.items():
             task["actual_costs"][key] = task["actual_costs"].get(key, 0) + amount
@@ -731,6 +751,10 @@ class Campaign:
         return self._commit("register", event_id=event_id, workload=workload, candidate_id=candidate_id,
                             source_hash=source_hash, patch_hash=patch_hash, source_parent=source_parent,
                             decision_basis=decision_basis, probes=probes or [], artifacts=artifacts or {})
+
+    def qualify_continuation(self, *, event_id, workload, stage_id, source_hash, plan_hash, qualification, reason):
+        return self._commit("qualify_continuation", event_id=event_id, workload=workload, stage_id=stage_id,
+                            source_hash=source_hash, plan_hash=plan_hash, qualification=qualification, reason=reason)
 
     def qualify_prestart(self, *, event_id, workload, stage_id, source_hash, plan_hash, failed_result, qualification, reason):
         return self._commit("qualify_prestart", event_id=event_id, workload=workload, stage_id=stage_id,

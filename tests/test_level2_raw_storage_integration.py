@@ -50,14 +50,16 @@ def test_partial_unarchived_and_shadow_original_reports_stay_identical(tiny):
 
 
 def test_archive_collector_keeps_logical_raw_paths_without_member_cas(tiny,tmp_path):
-    _,sessions,*_=tiny;s=sessions[0];origin=s/'raw/unused/extra.bin';expected=raw.pointer(origin)
+    task,sessions,*_=tiny;s=sessions[0];origin=s/'raw/unused/extra.bin';expected=raw.pointer(origin)
     raw.prepare(s,writers_closed=True,retire=True)
     collector=archive.Archive.__new__(archive.Archive)
     collector.root=tmp_path/'collected';collector.artifacts={};collector.pointer_cache={};collector.safe=lambda p,owner=None:Path(p)
+    collector.run=task.parents[2];collector.split=task.parents[1].name
     with storage.reader_session():assert collector.pointer(origin,expected=expected['sha256'])==expected
     assert not (collector.root/'verification-bytes').exists()
     refs={r['path'] for r in collector.artifacts.values()}
     assert str(origin) in refs and str(s/'raw-archive-storage/raw.tar') in refs
+    assert str(collector.run/collector.split/'ledger/config.json') in refs
 
 
 def test_portable_keeps_entire_raw_tar_without_raw_member_cas_and_offline_replays(tiny,tmp_path):

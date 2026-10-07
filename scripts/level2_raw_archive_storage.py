@@ -332,7 +332,9 @@ AUTHORITY_SHA='sha256:d1e13b642c9f90ba91f1332f0e79f02dcd5bee98e7a8e69cb06739c734
 LEGACY_NATIVE_SHA='sha256:a08bb1813cb7503b58ba95d9f1a780c61a433c955dbc8dd2254b66ac5985787c'
 NATIVE_SHA='sha256:19e40f32d5fa8c66ea9e1b2bb3a66db57e4593206512092f22f8de9ce0b42ef9'
 CAPTURE_SHA='sha256:4d4f8d3f8d39d627bf6d5ead55d0a9e8d774a28be9f976384dc25584112e3b23'
-MAX_METADATA=16*1024*1024
+# Full20 final seals include all six sessions and their authenticated closure.
+# A real closed GN seal is 20.7 MB; keep a finite limit above that evidence.
+MAX_METADATA=64*1024*1024
 
 
 @contextlib.contextmanager
@@ -509,6 +511,7 @@ def sync_file(path):
 
 def publish_bytes(path,data):
     """Durable no-clobber publication; an existing identical file is idempotent."""
+    require(len(data)<=MAX_METADATA,'metadata limit exceeded before publication')
     path=Path(path)
     with directory_fd(path.parent) as parent:
         if path.exists() or path.is_symlink():

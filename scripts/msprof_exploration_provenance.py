@@ -17,7 +17,7 @@ PRODUCERS = {
     'msprof_exploration_provenance.py',
 }
 FRESH_PRODUCERS = PRODUCERS | {
-    "level2_stage_recovery.py", "level2_prestart_recovery.py",
+    "level2_stage_recovery.py", "level2_prestart_recovery.py", "level2_cohort_continuation.py", "level2_failed_capture_preservation.py",
     'level2_adapters.py', 'level2_pilot.py', 'level2_campaign.py',
     'level2_iteration.py', 'level2_boundaries.py', 'level2_finalize.py',
     'level2_guard_contract.py', 'level2_candidate_guard.py',
@@ -87,6 +87,17 @@ def campaign_root(evidence_path):
     return None
 
 
+
+def resolve_continuation(cohort, read_bytes=Path.read_bytes, *, require_closed=False):
+    """Ordinary cohorts must not import the optional continuation producers."""
+    cohort=Path(cohort)
+    if cohort.parts[-6:] != ('dynamic_quant','candidates','dynamic_quant001','stages','search','direct_parent'):return None
+    try:read_bytes(cohort/'continuation-01/qualification.json')
+    except FileNotFoundError:return None
+    from level2_cohort_continuation import resolve
+    return resolve(cohort, read_bytes, require_closed=require_closed)
+
+
 def closed_observation_code(origin, expected, evidence_path):
     """Authorize only known code identities actually bound by a closed fresh session."""
     directory=Path(evidence_path).parent
@@ -109,6 +120,15 @@ def closed_observation_code(origin, expected, evidence_path):
            'request':directory/'request.json','execution':directory/'msprof.execution.json',
            'stage_result':stage/'result.json','group_completion':cohort/'group-completion.json'}
     recovery = None
+    if not paths['stage_result'].exists():
+        # Only the explicitly certified original completed prefix may reuse old
+        # producer bytes while the same timing attempt remains ledger-active.
+        continuation = resolve_continuation(cohort)
+        if continuation is not None and str(directory) in continuation['directories'][:2]:
+            require(load(paths['bindings']).get(str(origin)) == expected, 'producer not bound by reused observation')
+            return {'completion': {'path': str(paths['completion']), 'sha256': sha(paths['completion'])},
+                    'cohort_continuation': continuation}
+        return None
     if load(paths['stage_result']).get('status') != 'passed' and stage.name == 'final':
         from level2_stage_recovery import resolve_from_reader
         recovery = resolve_from_reader(stage, require_success=True)
@@ -129,6 +149,8 @@ def closed_observation_code(origin, expected, evidence_path):
     require(documents['bindings'].get(str(origin))==expected,'producer was not bound by this exact observation')
     proof = {key:{'path':str(path),'sha256':sha(path)} for key,path in paths.items()}
     if recovery is not None:proof['stage_recovery'] = recovery
+    continuation = resolve_continuation(cohort, require_closed=True)
+    if continuation is not None:proof['cohort_continuation'] = continuation
     return proof
 
 
