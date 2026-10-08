@@ -208,3 +208,29 @@ def test_boundary_guard_is_exact_task_source_not_trusted_producer(frozen,monkeyp
     script.write_text('# changed guard\n')
     with pytest.raises(ValueError,match='dependency pointer hash differs'):
         provenance.verify_pointer_tree({'script':ref},evidence_path=value['task']/'boundary/request.json')
+
+
+@pytest.mark.parametrize('lite', [False, True])
+def test_closed_observation_fallback_requires_protocol_sized_cohort(frozen, monkeypatch, lite):
+    value = fresh_producer_fixture(frozen, monkeypatch)
+    stage = value['task'] / 'candidates/maximum002/stages/search'
+    cohort = stage / 'direct_parent'
+    directory = cohort / 'p01'
+    version = provenance.LITE_PRODUCER if lite else 'msprof_kernel_time_study_v2'
+    count = 2 if lite else 6
+    put(directory / 'completion.json', {'version': version, 'status': 'passed', 'error': None,
+                                      'formal_admission': 'not_evaluated'})
+    put(directory / 'request.json', {'version': version})
+    put(directory / 'bindings.json', {str(value['live']): value['expected']})
+    put(directory / 'msprof.execution.json', {'exit_code': 0, 'error': None, 'ended_at': 2})
+    put(stage / 'result.json', {'status': 'passed', 'error': None, 'ended_at': 3})
+    group = {'status': 'passed', 'error': None,
+             'protocol': provenance.LITE_PROTOCOL if lite else 'msprof_task_time_exploration_v2',
+             'completed_sessions': [str(cohort / f'p{i + 1:02d}') for i in range(count)]}
+    put(cohort / 'group-completion.json', group)
+    proof = provenance.closed_observation_code(value['live'], value['expected'], directory / 'completion.json')
+    assert proof['completion']['path'] == str(directory / 'completion.json')
+    group['completed_sessions'] = [str(cohort / f'p{i + 1:02d}') for i in range(6 if lite else 2)]
+    put(cohort / 'group-completion.json', group)
+    with pytest.raises(ValueError, match='protocol-sized cohort'):
+        provenance.closed_observation_code(value['live'], value['expected'], directory / 'completion.json')

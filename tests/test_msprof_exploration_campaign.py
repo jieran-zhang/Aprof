@@ -242,7 +242,7 @@ def test_six_processes_both_configurations_and_complete_call_accounting(ledger):
         with pytest.raises(ValueError, match="differs"):
             start(ledger, "bad-" + key, "timing", altered)
     start(ledger, "timing", "timing", value)
-    with pytest.raises(ValueError, match="both configurations"):
+    with pytest.raises(ValueError, match="frozen process, pair and configuration coverage"):
         finish(ledger, "timing", samples=campaign.expected_samples(value) // 2, native=True)
     finish(ledger, "timing", "incomplete", samples=10, native=True)
     assert ledger.state["tasks"]["mish"]["used"]["timing_groups"] == 1

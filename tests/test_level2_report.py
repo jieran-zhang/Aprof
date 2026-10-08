@@ -81,9 +81,31 @@ def test_key_aggregation_uses_six_process_units_and_keeps_configurations_separat
     bad=copy.deepcopy(rows);bad.pop()
     with pytest.raises(ValueError,match='coverage'):
         report.aggregate_effects(dict(evidence_status='verified_complete',case_ids=[1,2,3],results=bad),selections)
+
     bad=copy.deepcopy(rows);bad[0]['log_effects'].append(0)
     with pytest.raises(ValueError,match='six finite'):
         report.aggregate_effects(dict(evidence_status='verified_complete',case_ids=[1,2,3],results=bad),selections)
+
+
+def test_lite_key_aggregation_keeps_two_descriptive_processes_without_intervals():
+    selections=[dict(case_id=i,tiling_key=10,kernel_entry='entry',group_id='same') for i in (1,2)]
+    rows=[dict(case_id=i,buffer_config=config,**report.analysis.descriptive_effect([i*.1,i*.1+.02]))
+          for i in (1,2) for config in ('normal','swapped')]
+    value=dict(protocol=report.LITE_PROTOCOL,analysis_version=report.LITE_ANALYSIS,
+               evidence_status='verified_complete',case_ids=[1,2],results=rows)
+    result=report.aggregate_effects(value,selections)
+    for group in result['per_tiling_key']:
+        assert group['n_processes']==2 and group['df'] is None and group['ci95'] is None
+        assert group['log_effects']==pytest.approx([.15,.17])
+        assert group['observed_process_range']==pytest.approx([math.exp(.15),math.exp(.17)])
+        assert group['qualified_performance_eligible'] is False
+    assert all(row['qualified_performance_eligible'] is False for row in result['per_case'])
+    bad=copy.deepcopy(value);bad['results'][0]['ci95']=[1.1,1.2]
+    with pytest.raises(ValueError,match='confidence interval'):
+        report.aggregate_effects(bad,selections)
+    bad=copy.deepcopy(value);bad['results'][0]['log_effects']*=3
+    with pytest.raises(ValueError,match='two finite'):
+        report.aggregate_effects(bad,selections)
 
 
 def fake_registered_failure(run,task,manifest,monkeypatch):
@@ -189,6 +211,58 @@ def test_measurements_require_real_completed_stage_and_replay_bound_sources(tmp_
         report.measured_stages(task,state,item,proposal,report.Evidence())
     state['stages']['final']['attempts'][0]['outcome']='failed';calls.clear()
     assert report.measured_stages(task,state,item,proposal,report.Evidence())==[] and calls==[]
+
+
+def test_lite_search_replays_only_direct_parent_and_never_becomes_full_final(tmp_path,monkeypatch):
+    from prepare_trace_pilot import create_source_snapshot
+    from shared_context_build import source_hash
+    _,task,_=partial(tmp_path)
+    (task/'baseline-source.tar').unlink()
+    for name in ('baseline','maximum001','maximum002'):
+        source=task/'baseline' if name=='baseline' else task/'candidates'/name/'op'
+        (source/'op_host').mkdir(parents=True)
+        (source/'op_host/maximum.asc').write_text(name)
+        archive=task/'baseline-source.tar' if name=='baseline' else source.parent/'source.tar'
+        create_source_snapshot(source,archive,root_label=name)
+    parent=task/'candidates/maximum002'
+    control=task/'candidates/maximum001'
+    baseline_hash=report.analysis.sha(task/'baseline-source.tar')
+    item=dict(candidate_id='maximum002',source_hash=report.analysis.sha(parent/'source.tar'),
+              source_parent=dict(candidate_id='maximum001',source_hash=report.analysis.sha(control/'source.tar')))
+    frozen=save(parent/'plans/cohort.json',dict(protocol=report.LITE_PROTOCOL,analysis_version=report.LITE_ANALYSIS,
+                                             case_ids=[1],comparison_kind='ab'))
+    plan=dict(protocol=report.LITE_PROTOCOL,purpose='search',case_ids=[1],
+              comparisons=report.campaign.comparisons(item,baseline_hash,search_lite=True),
+              cohorts=[dict(relation='direct_parent',control_candidate_id='maximum001',plan=ptr(frozen))])
+    output=parent/'stages/search/direct_parent'
+    save(output.parent/'stage-plan.json',plan)
+    stage_result=save(output.parent/'result.json',dict(status='passed',native_started=True))
+    save(output/'group-completion.json',dict(status='passed',completed_sessions=['process1','process2'],sessions=[]))
+    raw=dict(protocol=report.LITE_PROTOCOL,analysis_version=report.LITE_ANALYSIS,operator='maximum',comparison_kind='ab',
+             case_ids=[1],evidence_status='verified_complete',source_hashes={'A':source_hash(control/'op'),'B':source_hash(parent/'op')},
+             results=[dict(case_id=1,buffer_config=config,**report.analysis.descriptive_effect([.1,.11]))
+                      for config in ('normal','swapped')])
+    save(output/'report.json',raw)
+    state=dict(stages={'search':dict(candidate_id='maximum002',kind='timing',plan=plan,
+                                   attempts=[dict(outcome='success',evidence={'result':ptr(stage_result)})])})
+    proposal=dict(operator='maximum',dispatch_selections=[dict(case_id=1,tiling_key=8,kernel_entry='entry',group_id='vector')])
+    calls=[]
+    def analyze(paths,value,**kwargs):
+        calls.append((paths,value));assert kwargs['calibration'] is None;return copy.deepcopy(raw)
+    monkeypatch.setattr(report.analysis,'analyze_task_cohort',analyze)
+    evidence=report.Evidence()
+    result=report.measured_stages(task,state,item,proposal,evidence)
+    assert len(calls)==1 and calls[0][0]==['process1','process2']
+    assert len(result)==1 and result[0]['relation']=='direct_parent' and result[0]['calibration'] is None
+    assert result[0]['protocol']==report.LITE_PROTOCOL and result[0]['per_tiling_key'][0]['ci95'] is None
+    assert not any('aa_calibration' in row['roles'] for row in evidence.rows.values())
+    plan['purpose']='final'
+    with pytest.raises(ValueError,match='cannot serve as final'):
+        report.measured_stages(task,state,item,proposal,report.Evidence())
+    plan['purpose']='search';plan['calibration_report']={'path':'/unread-aa.json','sha256':'sha256:'+'0'*64}
+    save(output.parent/'stage-plan.json',plan)
+    with pytest.raises(ValueError,match='must not reuse an A/A'):
+        report.measured_stages(task,state,item,proposal,report.Evidence())
 
 
 def test_open_native_stage_is_running_and_not_analyzed(tmp_path,monkeypatch):

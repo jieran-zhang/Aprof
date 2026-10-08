@@ -91,6 +91,13 @@ def test_archive_keeps_both_attempt_statuses_without_duplicate_comparison(run,mo
     resolved={'current_result':pointer(current),'original_failed_result':pointer(old),'qualification':pointer(qualification),
               'protected':[pointer(old),pointer(current),pointer(qualification)],'event_bindings':[]}
     monkeypatch.setattr(recovery,'resolve_result',lambda *a,**k:resolved)
+    # This test isolates projection of an already authenticated recovery. Both
+    # the initial result lookup and the archive's independent resolver boundary
+    # must see that same fixture; real certificate tampering is tested separately.
+    def authenticated(directory, reader):
+        assert directory == old.parent
+        return resolved
+    monkeypatch.setattr(recovery,'resolve_from_reader',authenticated)
     collector=archive.Archive(run['root'],'train');config=collector.prepare([]);collector.publish(config)
     rows,_=read_memory(run['root']);evaluations=rows[0]['body']['evaluations']
     assert len(evaluations)==1

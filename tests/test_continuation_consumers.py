@@ -17,6 +17,7 @@ import level2_cohort_continuation as continuation
 import msprof_exploration_archive as archive
 import msprof_exploration_campaign as campaign
 from shared_context_build import source_hash
+from test_level2_iteration_boundaries import close_reports_fixture
 
 
 def write(path, value):
@@ -61,6 +62,8 @@ def report_fixture(tmp_path, monkeypatch):
                        limitations=[],qualified_performance_eligible=False) for c in cases for k in ('normal','swapped')]}
     write(cohort/'report.json',report);write(cohort/'group-completion.json',{'status':'passed'})
     monkeypatch.setattr(iteration,'verify_source_snapshot',lambda *a:None)
+    ledger = close_reports_fixture(task, child, item)
+    monkeypatch.setattr(iteration, 'Campaign', lambda _: ledger)
     return task,child,item,baseline,cohort,report
 
 
@@ -82,6 +85,9 @@ def test_feedback_retains_authenticated_annotation_and_limitations(report_fixtur
         calls.append((path,require_closed));return deepcopy(p)
     monkeypatch.setattr(continuation,'resolve',resolve)
     report['continuation']=continuation.annotation(p);write(cohort/'report.json',report)
+    task, child, item, *_ = report_fixture
+    ledger = close_reports_fixture(task, child, item)
+    monkeypatch.setattr(iteration, 'Campaign', lambda _: ledger)
     row=projected(report_fixture)[0]
     assert row['continuation']==continuation.annotation(p)
     assert row['limitations']==report['limitations']+p['interruption_limitations']

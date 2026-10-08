@@ -6,6 +6,7 @@ recorder binds complete source tar bytes; native source hashes are checked
 separately against op_host/op_kernel members, never substituted for tar hashes.
 """
 from __future__ import annotations
+from msprof_storage_protocol import cohort_process_count
 import argparse
 from copy import deepcopy
 import fcntl
@@ -840,7 +841,9 @@ class Archive:
             return None
         plan = load(directory / 'plan.json')
         paths = [self.safe(path, owner) for path in completion['completed_sessions']]
-        require(len(paths) == len(set(paths)) == 6 and all(path.parent == directory for path in paths), 'cohort session boundary differs')
+        count = cohort_process_count(plan=plan)
+        require(count != 2 or directory.parent.name != 'final', 'search-lite cannot authorize final evaluation')
+        require(len(paths) == len(set(paths)) == count and all(path.parent == directory for path in paths), 'cohort session boundary differs')
         if continuation is not None:
             require([str(path) for path in paths] == continuation['directories'],
                     'cohort sessions differ from the authenticated continuation')
@@ -863,6 +866,7 @@ class Archive:
                 source = self.safe(build['roles'][role]['source_dir'], owner)
                 require(native_tar_hash(source_tar, source) == build['roles'][role]['source_sha256'], 'native source identity differs from source tar')
         saved = load(directory / 'report.json')
+        cohort_process_count(plan=plan, report=saved)
         require(saved.get('continuation') == continuation_annotation,
                 'report continuation annotation differs from authenticated authority')
         if calibration_ref is not None:

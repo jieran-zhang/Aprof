@@ -36,6 +36,13 @@ natural-language judgment alone.
 
 ## Training boundary
 
+For iterative research campaigns, use the bounded [search measurement workflow](references/search-measurement.md).
+New Level2 searches use two processes and six paired samples, compare directly
+with the selected parent, and retain all-case correctness. Reserve full
+calibration and six-process evaluation for frozen final comparisons. Reuse the
+maintained executor and verified session results; do not add per-round runners
+or repeated evidence-review packages. Keep historical protocols immutable.
+
 - Write runtime state under `<op_dir>/.aprof/`; never write learned state into
   `skills/` or `skillgraph/source/`.
 - Treat `skillgraph/versions/` as immutable. Update edge weights in a compatible

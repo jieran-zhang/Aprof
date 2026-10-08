@@ -97,25 +97,32 @@ def _evidence(value):
     canonical(value)
 
 
-def comparisons(candidate, baseline):
+def comparisons(candidate, baseline, *, search_lite=False):
     """One or two independent comparisons; equal parent/original share one."""
     baseline = identity(baseline)
     parent = candidate["source_parent"]["source_hash"]
     return [{"control_source_hash": control, "candidate_source_hash": candidate["source_hash"],
              "roles": ["child_vs_parent", "child_vs_original"] if parent == baseline else
                       ["child_vs_parent"] if control == parent else ["child_vs_original"]}
-            for control in dict.fromkeys((parent, baseline))]
+            for control in dict.fromkeys((parent,) if search_lite else (parent, baseline))]
 
 
 def timing_plan(candidate, baseline, *, purpose, manifest_ref, final_candidate_ids=None,
-                policy=None, repeat_by_case=None, **schedule):
+                policy=None, repeat_by_case=None, search_lite=False, **schedule):
     policy = POLICY if policy is None else policy
+    require(type(search_lite) is bool, "search_lite must be a boolean")
+    fresh = policy == FRESH_POLICY
+    if search_lite:
+        from msprof_search_protocol import LITE_PROTOCOL, LITE_PRODUCER
+        require(fresh and purpose == "search", "lite measurement is only for fresh Level2 search")
+        policy = {**policy, "protocol": LITE_PROTOCOL, "producer_protocol": LITE_PRODUCER,
+                  "processes": 2, "pairs_per_case": 6}
     plan = {"purpose": purpose, "manifest_ref": identity(manifest_ref),
             "case_ids": list(ALL_CASES) if purpose == "final" else list(SENTINELS) + [p["case_id"] for p in candidate["probes"]],
-            "comparisons": comparisons(candidate, baseline),
+            "comparisons": comparisons(candidate, baseline, search_lite=search_lite),
             **{k: deepcopy(policy[k]) for k in ("protocol", "producer_protocol", "metric", "profiler_mode",
                                                "processes", "configurations", "warmup", "repeat", "pairs_per_case")}}
-    if policy == FRESH_POLICY:
+    if fresh:
         _repeats(repeat_by_case)
         plan["repeat_by_case"] = {str(case): repeat_by_case[str(case)] for case in plan["case_ids"]}
     if purpose == "search":
@@ -131,7 +138,8 @@ def expected_samples(plan):
 
 
 def expected_complete_calls(plan):
-    if plan.get("protocol") == FRESH_PROTOCOL:
+    from msprof_search_protocol import LITE_PROTOCOL
+    if plan.get("protocol") in (FRESH_PROTOCOL, LITE_PROTOCOL):
         return (sum(plan["repeat_by_case"][str(case)] for case in plan["case_ids"])
                 * len(plan["comparisons"]) * plan["processes"]
                 * len(plan["configurations"]) * plan["pairs_per_case"] * 2)
@@ -141,9 +149,11 @@ def expected_complete_calls(plan):
 def _timing_plan(plan, candidate, baseline, *, policy=None, repeat_by_case=None):
     require(isinstance(plan, dict), "frozen timing plan required")
     require(plan.get("purpose") in {"search", "final"}, "timing purpose must be search or final")
+    from msprof_search_protocol import LITE_PROTOCOL
     expected = timing_plan(candidate, baseline, purpose=plan["purpose"], manifest_ref=plan.get("manifest_ref"),
                            final_candidate_ids=plan.get("final_candidate_ids"),
-                           policy=policy, repeat_by_case=repeat_by_case)
+                           policy=policy, repeat_by_case=repeat_by_case,
+                           search_lite=plan.get("protocol") == LITE_PROTOCOL)
     require(all(plan.get(key) == value for key, value in expected.items()), "timing plan differs from frozen cases, identities or protocol")
     if plan["purpose"] == "final":
         require("final_candidate_ids" not in plan, "final reservation belongs to search plan")
@@ -439,7 +449,7 @@ def _transition(state, config, operation, arguments):
         if a["outcome"] == "success" and stage["kind"] == "correctness":
             require(a["evidence"].get("prepared_output_checked") is True, "correctness must bind prepared output validation")
         if a["outcome"] == "success" and stage["kind"] == "timing":
-            require(samples == expected_samples(stage["plan"]), "timing success requires six processes and both configurations")
+            require(samples == expected_samples(stage["plan"]), "timing success requires the frozen process, pair and configuration coverage")
         if stage.get("continuation") is not None:
             require(a["evidence"].get("continuation") == stage["continuation"]["qualification"],
                     "continuation finish must bind its exact certificate")

@@ -34,18 +34,21 @@ def data(path, value=b'fixture'):
     return str(path)
 
 
-def setup_inputs(root, ids=(1,), multi=False, kind='aa'):
+def setup_inputs(root, ids=(1,), multi=False, kind='aa', search_lite=False):
     op = 'foreach_norm' if multi else 'exp'
     original = ROOT / 'benchmarks/cannbench/harness/shared_context/runner.cpp'
     runner_root = root / 'runner'
+    variant = {'per_case': True, 'search_lite': True} if search_lite else {}
+    producer = report.LITE_PRODUCER if search_lite else report.PRODUCER
     data(runner_root / 'original-runner.cpp', original.read_bytes())
-    data(runner_root / 'runner.cpp', timing.instrument(original.read_text(), 10).encode())
+    data(runner_root / 'runner.cpp', timing.instrument(original.read_text(), 10, **variant).encode())
     data(runner_root / 'abi.h', original.with_name('abi.h').read_bytes())
-    patch = ''.join(difflib.unified_diff(original.read_text().splitlines(True), timing.instrument(original.read_text(), 10).splitlines(True),
+    patch = ''.join(difflib.unified_diff(original.read_text().splitlines(True), timing.instrument(original.read_text(), 10, **variant).splitlines(True),
                                       fromfile='original-runner.cpp', tofile='runner.cpp'))
     data(runner_root / 'harness.patch', patch.encode())
     runner_binary = data(runner_root / 'runner', b'not executable: CPU evidence fixture')
-    runner_path = put(runner_root / 'build.json', {'version': report.PRODUCER, 'repeat': 10, 'pairs': 30, 'warmup': 10,
+    runner_path = put(runner_root / 'build.json', {'version': producer, 'repeat': 10, 'pairs': 6 if search_lite else 30, 'warmup': 10,
+                       **({'per_case_repeat': True} if search_lite else {}),
                        'runner': runner_binary, 'runner_hash': report.sha(runner_binary),
                        'source_hash': report.sha(runner_root / 'runner.cpp'), 'original_hash': report.sha(original),
                        'abi_hash': report.sha(runner_root / 'abi.h')})
@@ -81,19 +84,24 @@ def setup_inputs(root, ids=(1,), multi=False, kind='aa'):
         else:
             metadata.update(numel=17, base=-1, scale=1, shift=0)
         meta = put(directory / 'metadata.json', metadata)
-        cases.append({'case_id': case, 'metadata': meta, 'verifier': verifier})
-    request = {'version': report.PRODUCER, 'role_build': build_path, 'runner_build': runner_path, 'profiler_mode': report.MODE,
+        cases.append({'case_id': case, 'metadata': meta, 'verifier': verifier, **({'repeat': 10} if search_lite else {})})
+    request = {'version': producer, 'role_build': build_path, 'runner_build': runner_path, 'profiler_mode': report.MODE,
                'device': 0, 'cpu': 8, 'load_order': 'AB', 'first_order': 'AB', 'buffer_configs': 'normal,swapped', 'cases': cases}
     return request, build
 
 
 def make_session(root, request, build, number=0, ratio=1.0, task_variation=False, name=None, multi=False):
+    producer = request['version']
+    pair_count = 6 if producer == report.LITE_PRODUCER else 30
     directory = root / (name or f'session-{number + 1:02d}')
     directory.mkdir(parents=True)
     put(directory / 'request.json', request)
     original_request = put(root / 'requests' / (directory.name + '.json'), request)
     bindings = {path: report.sha(path) for path in [original_request, request['role_build'], request['runner_build'],
                 timing.__file__, report.load(request['runner_build'])['runner']]}
+    if producer == report.LITE_PRODUCER:
+        import msprof_search_protocol
+        bindings[msprof_search_protocol.__file__] = report.sha(msprof_search_protocol.__file__)
     cases = []
     tsv = []
     for spec in request['cases']:
@@ -116,7 +124,7 @@ def make_session(root, request, build, number=0, ratio=1.0, task_variation=False
     def emit(kind, **fields):
         row = {'session_id': directory.name, 'type': kind, **fields}
         if kind != 'session_end':
-            row['timing_protocol'] = report.PRODUCER
+            row['timing_protocol'] = producer
         records.append(row)
 
     def launches(case, role, calls, pair=None, config=None):
@@ -146,7 +154,7 @@ def make_session(root, request, build, number=0, ratio=1.0, task_variation=False
         case_id = case['case_id']
         for config in request['buffer_configs'].split(','):
             common = {'case_id': case_id, 'buffer_config': config}
-            emit('case_start', **common, case_index=case_index, warmup_per_role=10, pairs=30, repeat=10)
+            emit('case_start', **common, case_index=case_index, warmup_per_role=10, pairs=pair_count, repeat=10)
             for role in 'AB':
                 other = 'B' if role == 'A' else 'A'
                 buffers = []
@@ -158,7 +166,7 @@ def make_session(root, request, build, number=0, ratio=1.0, task_variation=False
                 for role in 'AB':
                     launches(case_id, role, 1)
             emit('warmup_complete', **common, calls_per_role=10)
-            for pair in range(30):
+            for pair in range(pair_count):
                 order = request['first_order'] if pair % 2 == 0 else request['first_order'][::-1]
                 for position, role in enumerate(order):
                     time_index += 1
@@ -172,7 +180,7 @@ def make_session(root, request, build, number=0, ratio=1.0, task_variation=False
                 stem = f'{case_id}_{config}_{role}'
                 output = data(directory / 'native' / (stem + '.bin'), b'correct output')
                 emit('output', **common, role=role, path=output, validation_scope='final_call_of_final_formal_sample',
-                     validation_status='pending_external_oracle', complete_calls_since_prepare=310)
+                     validation_status='pending_external_oracle', complete_calls_since_prepare=10+pair_count*10)
                 validations.append({**common, 'role': role, 'passed': True, 'output_hash': report.sha(output)})
                 spec = next(row for row in request['cases'] if str(row['case_id']) == case_id)
                 meta = report.load(spec['metadata']); meta['output'] = output
@@ -188,6 +196,13 @@ def make_session(root, request, build, number=0, ratio=1.0, task_variation=False
     with (raw / 'op_summary.csv').open('w', newline='') as stream:
         writer = csv.DictWriter(stream, fieldnames=list(csv_records[0]))
         writer.writeheader(); writer.writerows(csv_records)
+    if producer in (report.PRODUCER_V2, report.LITE_PRODUCER):
+        task_rows = [{'Device_id': r['Device_id'], 'kernel_name': r['Op Name'], 'kernel_type': r['Task Type'],
+                      'stream_id': r['Stream ID'], 'task_id': r['Task ID'], 'task_time(us)': r['Task Duration(us)'],
+                      'task_start(us)': r['Task Start Time(us)'],
+                      'task_stop(us)': str(Decimal(r['Task Start Time(us)']) + Decimal(r['Task Duration(us)']))} for r in csv_records]
+        with (raw / 'task_time.csv').open('w', newline='') as stream:
+            writer=csv.DictWriter(stream, fieldnames=list(task_rows[0])); writer.writeheader(); writer.writerows(task_rows)
     put(directory / 'validation.json', {'scope': 'final_call_of_final_sample_per_case_config_role', 'outputs': validations})
     runner = report.load(request['runner_build'])
     argv = ['taskset', '-c', str(request['cpu']), *timing.profiler_arguments(report.MODE, raw), runner['runner'],
@@ -202,7 +217,7 @@ def make_session(root, request, build, number=0, ratio=1.0, task_variation=False
         put(directory / name, {'exit_status': 0, 'no_device_processes': True})
     parsed = timing.parse_profile(raw, journal, build, cases, 10)
     put(directory / 'samples.json', parsed)
-    put(directory / 'completion.json', {'version': report.PRODUCER, 'status': 'passed', 'error': None, 'formal_admission': 'not_evaluated'})
+    put(directory / 'completion.json', {'version': producer, 'status': 'passed', 'error': None, 'formal_admission': 'not_evaluated'})
     return directory
 
 

@@ -194,6 +194,7 @@ def test_archive_pointer_keeps_logical_identity_without_per_member_cas(tmp_path)
     (session/'verification').rename(tmp_path/'preserved-loose-fixture')
     collector=archive.Archive.__new__(archive.Archive)
     collector.root=tmp_path/'archive';collector.artifacts={};collector.pointer_cache={}
+    collector.run=tmp_path/'run';collector.split='train'
     collector.safe=lambda path,owner=None:Path(path)
     with store.reader_session({session:destination}):actual=collector.pointer(origin,expected=expected['sha256'])
     assert actual==expected
@@ -250,6 +251,7 @@ def test_one_mapping_document_per_archive_not_per_logical_member(tmp_path):
     _,session,destination=fixture(tmp_path);store.prepare(session,destination,writers_closed=True)
     collector=archive.Archive.__new__(archive.Archive)
     collector.root=tmp_path/'archive';collector.artifacts={};collector.pointer_cache={}
+    collector.run=tmp_path/'run';collector.split='train'
     collector.safe=lambda path,owner=None:Path(path)
     with store.reader_session({session:destination}):
         for path in store.logical_files(session):collector.pointer(path)

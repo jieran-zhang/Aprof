@@ -22,6 +22,7 @@ import sys
 import tarfile
 import time
 from types import SimpleNamespace
+from msprof_search_protocol import LITE_PROTOCOL, LITE_ANALYSIS, LITE_PRODUCER, LITE_DESIGN
 
 ROOT = Path(__file__).resolve().parents[1]
 PROTOCOL = 'msprof_task_time_exploration_v1'
@@ -265,10 +266,16 @@ target_compile_options(standalone PRIVATE $<$<COMPILE_LANGUAGE:ASC>:--npu-arch={
     return manifest
 
 
-def build_tools(run, *, per_case=False):
+def build_tools(run, *, per_case=False, search_lite=False):
     timing, diagnostic, _ = execution_modules()
     root = Path(run).resolve() / 'tools'
     root.mkdir(exist_ok=True)
+    if search_lite:
+        timing.build_runner(root / 'timing-search-lite', 10, per_case=True, search_lite=True)
+        save(root / 'search-lite-completion.json', {'status': 'passed', 'completed_at': now(),
+             'protocol': LITE_PROTOCOL, 'candidate_budget_charge': False,
+             'cost_kind': 'fixed_measurement_harness_builds'})
+        return
     timing.build_runner(root / 'timing', 10, per_case=True) if per_case else timing.build_runner(root / 'timing', 10)
     diagnostic.build_runner(SimpleNamespace(output=str(root / 'diagnostic'), ascend_home=os.environ['ASCEND_HOME_PATH'], timeout=120))
     save(root / 'completion.json', {'status': 'passed', 'completed_at': now(), 'protocol': 'msprof_task_time_exploration_v2' if per_case else PROTOCOL,
@@ -285,7 +292,7 @@ def comparison_manifest(control_build, candidate_build, output):
     return result
 
 
-def cohort_plan(task, role_build, runner_build, case_ids, kind, name, epoch='epoch-01', *, capture_storage=None):
+def cohort_plan(task, role_build, runner_build, case_ids, kind, name, epoch='epoch-01', *, capture_storage=None, search_lite=False):
     task = Path(task)
     import cannbench_msprof_timing as timing
     inputs = load(task / 'input-bindings.json')
@@ -296,12 +303,16 @@ def cohort_plan(task, role_build, runner_build, case_ids, kind, name, epoch='epo
                'cases': [{'case_id': c, 'metadata': specs[c]['metadata']['path'], 'verifier': specs[c]['verifier']['path']} for c in case_ids]}
     manifest = load(task / 'manifest.json') if (task / 'manifest.json').is_file() else {}
     fresh = manifest.get('version') == 'msprof_task_time_exploration_v2'
+    if search_lite and not fresh:
+        raise ValueError('search-lite requires a Level2 v2 task with frozen per-case repeats')
     if fresh:
         measurement = load(task / 'measurement-policy.json')
         repeats = measurement['repeat_by_case']
         request['version'] = 'msprof_kernel_time_study_v2'
         for row in request['cases']: row['repeat'] = repeats[str(row['case_id'])]
         request['timeout'] = measurement['timing_timeout_seconds']
+    if search_lite:
+        request['version'] = LITE_PRODUCER
     if capture_storage is not None:
         import msprof_raw_storage
         from msprof_raw_storage import policy as storage_policy
@@ -309,7 +320,7 @@ def cohort_plan(task, role_build, runner_build, case_ids, kind, name, epoch='epo
         if capture_storage==msprof_raw_storage.LOCAL:request['capture_storage_producer']=pointer(msprof_raw_storage.__file__)
         storage_policy(request)
     environment = task.parents[2] / 'bootstrap/environment.json'
-    return {'protocol': 'msprof_task_time_exploration_v2' if fresh else PROTOCOL, 'analysis_version': 'msprof_exploration_analysis_v2' if fresh else 'msprof_exploration_analysis_v1', 'comparison_kind': kind,
+    return {'protocol': LITE_PROTOCOL if search_lite else 'msprof_task_time_exploration_v2' if fresh else PROTOCOL, 'analysis_version': LITE_ANALYSIS if search_lite else 'msprof_exploration_analysis_v2' if fresh else 'msprof_exploration_analysis_v1', 'comparison_kind': kind,
             'identity_bindings': {'role_build': pointer(role_build), 'runner_build': pointer(runner_build),
                                   'input_bindings': pointer(task / 'input-bindings.json'), 'producer': pointer(timing.__file__)},
             'case_ids': list(case_ids), 'calibration_scope': {**({'capture_storage':capture_storage} if capture_storage is not None else {}), **({'capture_storage_producer_hash':request['capture_storage_producer']['sha256']} if 'capture_storage_producer' in request else {}), 'epoch': epoch, 'host': socket.gethostname(), 'physical_device': 0,
@@ -317,7 +328,7 @@ def cohort_plan(task, role_build, runner_build, case_ids, kind, name, epoch='epo
                 'environment': pointer(environment) if environment.is_file() else {'status': 'not_recorded', 'reason': 'synthetic CPU test environment'},
                 'profiler_mode': 'task_time_l1_ai_core_off'},
             'schedule': [{'name': f'{name}-p{i + 1:02d}', 'request': dict(request, load_order=l, first_order=f, buffer_configs=c)}
-                         for i, (l, f, c) in enumerate(MATRIX)]}
+                         for i, (l, f, c) in enumerate(LITE_DESIGN if search_lite else MATRIX)]}
 
 
 def preflight_cohort(plan):
@@ -411,31 +422,51 @@ def preflight_cohort(plan):
 
 
 def collect_cohort(plan, out, calibration=None):
-    from msprof_exploration_report import validate_plan, verify_observation, analyze_task_cohort
+    from msprof_exploration_report import validate_plan, ObservationCache, analyze_task_cohort
+    started = time.monotonic()
     plan = validate_plan(plan)
     preflight = preflight_cohort(plan)
+    elapsed = {'identity_preflight': time.monotonic() - started,
+               'native_collection': 0.0, 'observation_verification': 0.0,
+               'report_analysis': 0.0, 'producer_summary': 0.0, 'sessions': []}
     timing, _, _ = execution_modules()
     out = Path(out); out.mkdir(parents=True, exist_ok=False)
     save(out / 'plan.json', plan)
     save(out / 'identity-preflight.json', preflight)
     provenance = list(preflight['producer_bindings'])
     completed = []
+    verified = ObservationCache()
     error = None
     try:
         for index, entry in enumerate(plan['schedule']):
             if index:
+                phase_start = time.monotonic()
                 provenance.extend(preflight_cohort(plan)['producer_bindings'])
+                elapsed['identity_preflight'] += time.monotonic() - phase_start
             request_path = out / (entry['name'] + '-request.json')
             save(request_path, entry['request'])
             directory = out / entry['name']
             print(json.dumps({'phase': 'native_process_start', 'session': entry['name'], 'time': now()}), flush=True)
+            phase_start = time.monotonic()
             timing.collect(request_path, directory)
-            verify_observation(directory, expected_request=entry['request'], provenance_out=provenance)
+            collection_seconds = time.monotonic() - phase_start
+            elapsed['native_collection'] += collection_seconds
+            phase_start = time.monotonic()
+            verified.verify(directory, entry['request'], provenance_out=provenance)
+            verification_seconds = time.monotonic() - phase_start
+            elapsed['observation_verification'] += verification_seconds
+            elapsed['sessions'].append({'session_id': entry['name'],
+                                        'native_collection': collection_seconds,
+                                        'observation_verification': verification_seconds})
             completed.append(str(directory))
             print(json.dumps({'phase': 'native_process_verified', 'session': entry['name'], 'time': now()}), flush=True)
-        report = analyze_task_cohort(completed, plan, calibration=calibration, provenance_out=provenance)
+        phase_start = time.monotonic()
+        report = analyze_task_cohort(completed, plan, calibration=calibration, provenance_out=provenance, _verified_sessions=verified)
+        elapsed['report_analysis'] = time.monotonic() - phase_start
         save(out / 'report.json', report)
+        phase_start = time.monotonic()
         save(out / 'producer-summary.json', timing.summarize(completed))
+        elapsed['producer_summary'] = time.monotonic() - phase_start
         return report
     except BaseException as exc:
         error = {'type': type(exc).__name__, 'message': str(exc)}
@@ -448,7 +479,10 @@ def collect_cohort(plan, out, calibration=None):
               'sessions': [{'directory': d, 'completion': pointer(Path(d) / 'completion.json'),
                             'samples': pointer(Path(d) / 'samples.json'),
                             'journal': pointer(Path(d) / 'native/journal.jsonl')} for d in completed],
-              'ended_at': now(), 'protocol': plan['protocol']})
+              'ended_at': now(), 'protocol': plan['protocol'],
+              **({'elapsed_seconds': {**elapsed, 'total': time.monotonic() - started},
+                  'elapsed_scope': 'collector phases; native_collection includes profiler, oracle and capture work; failed in-flight phase is included only in total'}
+                 if plan['protocol'] == LITE_PROTOCOL else {})})
 
 
 def native_started_in(directory):
@@ -482,6 +516,8 @@ def main(argv=None):
     p = sub.add_parser('bootstrap-task')
     for k in ['run', 'prior', 'operator']: p.add_argument('--' + k, required=True)
     p = sub.add_parser('build-tools'); p.add_argument('--run', required=True)
+    p.add_argument('--per-case', action='store_true', help='Build the full Level2 runner with frozen per-case repeat=1 or 10')
+    p.add_argument('--search-lite', action='store_true', help='Build the separate two-process search runner; implies --per-case')
     p = sub.add_parser('read')
     for k in ['task', 'path', 'purpose']: p.add_argument('--' + k, required=True)
     p = sub.add_parser('build-operator')
@@ -496,7 +532,8 @@ def main(argv=None):
         print(read_recorded(args.task, args.path, args.purpose))
         return
     if args.command == 'bootstrap-task': result = bootstrap_task(args.run, args.prior, args.operator)
-    elif args.command == 'build-tools': result = build_tools(args.run)
+    elif args.command == 'build-tools':
+        result = build_tools(args.run, per_case=args.per_case or args.search_lite, search_lite=args.search_lite)
     elif args.command == 'build-operator': result = build_operator(args.source, args.operator, args.output)
     elif args.command == 'cohort': result = collect_cohort(load(args.plan), args.output, load(args.calibration) if args.calibration else None)
     else: result = diagnostic_group(args.run, args.operator, args.candidate, args.stage, [int(x) for x in args.cases.split(',')], args.output)

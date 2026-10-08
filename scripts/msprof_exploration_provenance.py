@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 import re
 
+from msprof_search_protocol import LITE_PROTOCOL, LITE_PRODUCER
+
 REPOSITORY = Path(__file__).resolve().parents[1]
 ENGINEERING_SCRIPTS = REPOSITORY / 'scripts'
 CAMPAIGN_RUNS = REPOSITORY / '.aprof/runs'
@@ -14,7 +16,7 @@ PRODUCERS = {
     'msprof_exploration_standalone.py', 'msprof_exploration_oracle.py',
     'msprof_exploration_report.py', 'msprof_exploration_archive.py',
     'msprof_exploration_safety.py', 'msprof_exploration_campaign.py',
-    'msprof_exploration_provenance.py',
+    'msprof_exploration_provenance.py', 'msprof_search_protocol.py',
 }
 FRESH_PRODUCERS = PRODUCERS | {
     "level2_stage_recovery.py", "level2_prestart_recovery.py", "level2_cohort_continuation.py", "level2_failed_capture_preservation.py",
@@ -23,7 +25,7 @@ FRESH_PRODUCERS = PRODUCERS | {
     'level2_guard_contract.py', 'level2_candidate_guard.py',
     'level2_final_report_authority.py', 'level2_final_report_attestation.py',
     'level2_native_output_storage.py', 'level2_verification_storage.py',
-    'level2_raw_archive_storage.py', 'level2_evidence_storage.py',
+    'level2_raw_archive_storage.py', 'level2_evidence_storage.py', 'msprof_storage_protocol.py',
     'level2_storage.py', 'level2_failure_classification.py', 'level2_raw_method.py', 'msprof_raw_storage.py',
     'cannbench_msprof_timing.py', 'cannbench_shared_context.py',
     'cannbench_shared_context_profile.py', 'shared_context_build.py',
@@ -136,16 +138,20 @@ def closed_observation_code(origin, expected, evidence_path):
     require(all(p.is_file() and not p.is_symlink() and p==p.resolve() for p in paths.values()),'closed observation proof is missing or aliased')
     documents={key:load(path) for key,path in paths.items()}
     completion=documents['completion'];execution=documents['execution'];stage_result=documents['stage_result'];group=documents['group_completion']
-    require(documents['request'].get('version')=='msprof_kernel_time_study_v2'
+    lite = documents['request'].get('version') == LITE_PRODUCER
+    expected_processes = 2 if lite else 6
+    require(documents['request'].get('version') in ('msprof_kernel_time_study_v2', LITE_PRODUCER)
             and completion.get('version')==documents['request']['version'] and completion.get('status')=='passed'
             and completion.get('error') is None and completion.get('formal_admission')=='not_evaluated',
-            'observation code fallback requires a passed v2 session')
+            'observation code fallback requires a passed versioned session')
     require(execution.get('exit_code')==0 and execution.get('error') is None and execution.get('ended_at') is not None,
             'observation code fallback requires a completed native execution')
     require(stage_result.get('status')=='passed' and stage_result.get('error') is None
             and stage_result.get('ended_at') is not None and group.get('status')=='passed' and group.get('error') is None
-            and str(directory) in group.get('completed_sessions',[]) and len(set(group['completed_sessions']))==len(group['completed_sessions'])==6,
-            'observation code fallback requires a terminal six-process cohort')
+            and str(directory) in group.get('completed_sessions',[]) and len(set(group['completed_sessions']))==len(group['completed_sessions'])==expected_processes,
+            'observation code fallback requires a terminal protocol-sized cohort')
+    if lite:
+        require(group.get('protocol') == LITE_PROTOCOL, 'lite observation cohort protocol differs')
     require(documents['bindings'].get(str(origin))==expected,'producer was not bound by this exact observation')
     proof = {key:{'path':str(path),'sha256':sha(path)} for key,path in paths.items()}
     if recovery is not None:proof['stage_recovery'] = recovery

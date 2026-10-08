@@ -84,6 +84,20 @@ def test_partial_stage_is_not_reexecuted(stage_fixture):
         iteration.stage(run, 'gcd', 'gcd001', 'build', 'build')
 
 
+def close_reports_fixture(task, parent, item):
+    from run_msprof_exploration_stage import timing_report_bindings
+    plan = load(parent / 'stages/search/stage-plan.json')
+    reports = [load(parent / 'stages/search' / c['relation'] / 'report.json') for c in plan['cohorts']]
+    binding = timing_report_bindings(parent / 'stages/search', plan['cohorts'], reports)
+    result_path = parent / 'stages/search/result.json'
+    write(result_path, {'kind': 'timing', 'candidate_id': item['candidate_id'],
+        'stage_id': item['candidate_id'] + '-search', 'status': 'passed', 'report_bindings': binding})
+    return SimpleNamespace(state={'tasks': {task.name: {'candidates': {item['candidate_id']: item},
+        'stages': {item['candidate_id'] + '-search': {'kind': 'timing', 'candidate_id': item['candidate_id'],
+            'plan': plan, 'attempts': [{'outcome': 'success', 'evidence': {
+                'result': pointer(result_path), 'report_bindings': binding}}]}}}}})
+
+
 @pytest.fixture
 def reports_fixture(tmp_path, monkeypatch):
     task = tmp_path / 'train/tasks/gcd';parent = task / 'candidates/gcd002'
@@ -120,6 +134,8 @@ def reports_fixture(tmp_path, monkeypatch):
         save(out / 'report.json', report);save(out / 'group-completion.json', {'status': 'passed'})
     save(parent / 'stages/search/stage-plan.json', plan)
     monkeypatch.setattr(iteration, 'verify_source_snapshot', lambda *args: None)
+    ledger = close_reports_fixture(task, parent, item)
+    monkeypatch.setattr(iteration, 'Campaign', lambda _: ledger)
     return task, parent, item, baseline, plan
 
 
@@ -154,7 +170,7 @@ def test_mismatched_or_missing_comparison_cannot_be_measured(reports_fixture, mu
         iteration.comparison_reports(task, parent, 'gcd', item, baseline, required=True)
 
 
-def test_first_round_reuses_one_comparison_for_identical_parent_and_original(reports_fixture):
+def test_first_round_reuses_one_comparison_for_identical_parent_and_original(reports_fixture, monkeypatch):
     task, parent, item, baseline, plan = reports_fixture
     item['source_parent'] = {'candidate_id': None, 'source_hash': baseline}
     original = plan['cohorts'][1];original['relation'] = 'direct_parent'
@@ -162,6 +178,8 @@ def test_first_round_reuses_one_comparison_for_identical_parent_and_original(rep
     write(parent / 'stages/search/stage-plan.json', plan)
     for name in ('report.json', 'group-completion.json'):
         write(parent / 'stages/search/direct_parent' / name, load(parent / 'stages/search/original_baseline' / name))
+    ledger = close_reports_fixture(task, parent, item)
+    monkeypatch.setattr(iteration, 'Campaign', lambda _: ledger)
     reports = iteration.comparison_reports(task, parent, 'gcd', item, baseline, required=True)
     assert len(reports) == 1 and reports[0]['control_candidate_id'] == 'baseline'
 
@@ -271,8 +289,15 @@ def test_candidate_feedback_preserves_infrastructure_failures_without_closing_ro
         failed = kind == failure
         row = {'kind': kind, 'candidate_id': cid, 'stage_id': cid+'-'+group,
                'status': 'failed' if failed else 'passed', 'error': {'message': 'actual failure'} if failed else None}
-        save(parent / 'stages' / group / 'result.json', row)
-        state['stages'][row['stage_id']] = {'candidate_id': cid, 'attempts': [{'outcome': 'failed' if failed else 'success'}]}
+        path = parent / 'stages' / group / 'result.json'
+        if kind == 'timing' and not failed:
+            row['report_bindings'] = load(path)['report_bindings']
+        write(path, row)
+        evidence = {'result': pointer(path)}
+        if 'report_bindings' in row: evidence['report_bindings'] = row['report_bindings']
+        state['stages'][row['stage_id']] = {'kind': kind, 'candidate_id': cid,
+            'plan': plan if kind == 'timing' else {},
+            'attempts': [{'outcome': 'failed' if failed else 'success', 'evidence': evidence}]}
         return row
     monkeypatch.setattr(iteration, 'stage', run_stage)
     result = iteration.candidate(run, 'gcd', 'gcd002', boundaries=False)
@@ -368,8 +393,14 @@ def test_candidate_reclaims_outputs_only_after_completed_timing_stage(reports_fi
     save(parent/'plans/search/stage-plan.json',plan)
     def execute(run,operator,cid,kind,group,**kwargs):
         result={'kind':kind,'candidate_id':cid,'stage_id':cid+'-'+group,'status':'passed','error':None}
-        save(parent/'stages'/group/'result.json',result)
-        state['stages'][result['stage_id']]={'candidate_id':cid,'attempts':[{'outcome':'success'}]}
+        path = parent/'stages'/group/'result.json'
+        if kind == 'timing': result['report_bindings'] = load(path)['report_bindings']
+        write(path,result)
+        evidence = {'result': pointer(path)}
+        if 'report_bindings' in result: evidence['report_bindings'] = result['report_bindings']
+        state['stages'][result['stage_id']]={'kind':kind,'candidate_id':cid,
+            'plan':plan if kind == 'timing' else {},
+            'attempts':[{'outcome':'success','evidence':evidence}]}
         calls.append('closed-'+kind)
         return result
     monkeypatch.setattr(iteration,'stage',execute)

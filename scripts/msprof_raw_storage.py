@@ -11,8 +11,11 @@ import shutil
 import stat
 import tempfile
 import time
+from msprof_search_protocol import LITE_PRODUCER
 
 VERSION = 'msprof_raw_storage_transport_v1'
+# Reviewed pre-lite reader identity; accepted only for replay of v2 capture.
+LEGACY_CAPTURE_PRODUCER_SHA = 'sha256:4d4f8d3f8d39d627bf6d5ead55d0a9e8d774a28be9f976384dc25584112e3b23'
 DIRECT = {'mode': 'direct_artifact_raw_v1'}
 LOCAL = {'mode': 'local_tmp_full_copyback_v1', 'scratch_root': '/tmp',
          'inventory': 'all_regular_files_sha256_and_directories', 'local_filesystem_required': True}
@@ -68,16 +71,25 @@ def persist_tree(root,snapshot):
             'relative_directories':relative,'raw_root_and_two_parents':True}
 
 
+def producer_matches(pointer, *, historical=False):
+    allowed = {sha(__file__)}
+    if historical:
+        allowed.add(LEGACY_CAPTURE_PRODUCER_SHA)
+    return (isinstance(pointer, dict) and set(pointer) == {'path', 'sha256'}
+            and pointer['path'] == str(Path(__file__).resolve()) and pointer['sha256'] in allowed)
+
+
 def policy(request):
     value=request.get('capture_storage')
-    if request.get('version')!='msprof_kernel_time_study_v2':
-        if 'capture_storage' in request:raise ValueError('capture_storage requires producer v2')
+    if request.get('version') not in ('msprof_kernel_time_study_v2', LITE_PRODUCER):
+        if 'capture_storage' in request:raise ValueError('capture_storage requires a supported prepared producer')
         return dict(DIRECT)
     if value is None:
         if 'capture_storage_producer' in request:raise ValueError('undeclared raw transport producer')
         return dict(DIRECT)
     if value not in (DIRECT,LOCAL):raise ValueError('unreviewed capture_storage policy')
-    if value==LOCAL and request.get('capture_storage_producer')!={'path':str(Path(__file__).resolve()),'sha256':sha(__file__)}:
+    if value==LOCAL and not producer_matches(request.get('capture_storage_producer'),
+            historical=request.get('version')=='msprof_kernel_time_study_v2'):
         raise ValueError('raw transport producer must be frozen in request')
     return dict(value)
 
@@ -113,6 +125,8 @@ def inventory(root):
 def allocate(request,directory):
     """Create scratch only after the cohort host lock has been acquired."""
     chosen=policy(request);directory=Path(directory).resolve()
+    if chosen==LOCAL and not producer_matches(request.get('capture_storage_producer')):
+        raise ValueError('new capture requires the current transport producer')
     if chosen==DIRECT:return directory/'raw',None
     filesystem=local_filesystem('/tmp')
     temporary=Path(tempfile.mkdtemp(prefix='aprof-msprof-',dir='/tmp'));raw=temporary/'raw';raw.mkdir()
@@ -132,7 +146,7 @@ def checked_allocation(record,directory,execution,*,live):
         raise ValueError('raw allocation and caller identity differ')
     if record['version']!=VERSION or record['capture_storage']!=LOCAL:
         raise ValueError('unreviewed raw allocation policy')
-    if record['capture_storage_producer']!={'path':str(Path(__file__).resolve()),'sha256':sha(__file__)}:
+    if not producer_matches(record['capture_storage_producer'],historical=not live):
         raise ValueError('raw transport producer differs')
     source=Path(record['capture_root']);container=Path(record['scratch_container'])
     if source!=container/'raw' or container.parent!=Path('/tmp') or not re.fullmatch(r'aprof-msprof-[A-Za-z0-9_-]+',container.name):
@@ -210,6 +224,8 @@ def archive(record,directory):
 def verify(request,directory,execution):
     """Return the actual argv raw path, closure files and observed storage identity."""
     chosen=policy(request);directory=Path(directory).resolve()
+    if chosen==LOCAL and not producer_matches(request.get('capture_storage_producer')):
+        raise ValueError('new capture requires the current transport producer')
     if chosen==DIRECT:
         if any((directory/name).exists() for name in ('raw-storage.request.json','raw-storage.copyback.json','raw-storage.json','raw-storage.failed.json','raw-storage.cleanup.json')):
             raise ValueError('undeclared raw relocation evidence')

@@ -130,6 +130,9 @@ def original_raw_writer(monkeypatch):
         m.setitem(sys.modules,'level2_native_output_storage',old_n)
         m.setitem(sys.modules,'level2_verification_storage',old_v)
         m.setattr(old,'host_lock',lambda:contextlib.nullcontext())
+        # These synthetic captures use the current transport. Keep the exact
+        # historical authority/closure writer; only admit that fixture transport.
+        m.setattr(old,'CAPTURE_SHA',raw.CURRENT_CAPTURE_SHA)
         yield old
 
 
@@ -174,10 +177,12 @@ def test_final_catalog_retains_actual_old_raw_tar_all_members_once(tiny,tmp_path
         assert seal['archive']['path'] in entry['files']
     collector=archive.Archive.__new__(archive.Archive)
     collector.root=tmp_path/'collected';collector.artifacts={};collector.pointer_cache={};collector.safe=lambda p,owner=None:Path(p)
-    with storage.reader_session():collector.pointer(origin,expected=storage.fingerprint(origin)['sha256'])
-    refs={r['path'] for r in collector.artifacts.values()}
-    assert str(prior/'raw-archive-storage/raw.tar') in refs and priororigin in refs
-    assert len(list((collector.root/'documents').glob('*.json')))==2
+    collector.run=s.run;collector.split='train'
+    # This synthetic catalog spans two runs. The portable authenticated reader
+    # can replay it, but a split-isolated campaign collector must reject the
+    # foreign ledger instead of silently widening its task boundary.
+    with pytest.raises(ValueError,match='outside the current run/split'):
+        with storage.reader_session():collector.pointer(origin,expected=storage.fingerprint(origin)['sha256'])
     shutil.rmtree(task.parents[2]);shutil.rmtree(s.run);shutil.rmtree(ds)
     assert portable.verify(bundle)['valid']
 
@@ -285,11 +290,12 @@ def test_facade_rejects_forged_or_unknown_transient_binding_payload(tmp_path,mon
 
 
 def test_collector_failed_catalog_retention_cannot_poison_retry_cache(tiny,tmp_path,monkeypatch):
-    _,sessions,*_=tiny;session=sessions[0]
+    task,sessions,*_=tiny;session=sessions[0]
     raw.prepare(session,writers_closed=True,retire=True)
     origin=session/'raw/unused/extra.bin';binding=storage.evidence_binding(origin,storage.fingerprint(origin)['sha256'])
     collector=archive.Archive.__new__(archive.Archive)
     collector.root=tmp_path/'collected';collector.artifacts={};collector.pointer_cache={};collector.safe=lambda p,owner=None:Path(p)
+    collector.run=task.parents[2];collector.split=task.parents[1].name
     original=collector.pointer;called=[False]
     def fail_once(path,*args,**kwargs):
         if str(path)==binding['archive']['path'] and not called[0]:
@@ -334,7 +340,10 @@ def original_raw_v2_writer(monkeypatch):
             spec=importlib.util.spec_from_file_location(name,source);module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);m.setitem(sys.modules,name,module)
         source=base/'level2_raw_archive_storage.py';assert raw.fingerprint(source)['sha256']=='sha256:'+expected[source.name]
         spec=importlib.util.spec_from_file_location('original_687_writer',source);old=importlib.util.module_from_spec(spec);spec.loader.exec_module(old)
-        m.setattr(old,'host_lock',lambda:contextlib.nullcontext());yield old
+        m.setattr(old,'host_lock',lambda:contextlib.nullcontext())
+        # Current synthetic capture, exact historical authority and seal facts.
+        m.setattr(old,'CAPTURE_SHA',raw.CURRENT_CAPTURE_SHA)
+        yield old
 
 
 def test_real_687_v2_seal_replays_exactly_after_recovery_reader(tiny,tmp_path,monkeypatch):
@@ -354,7 +363,7 @@ def test_real_687_v2_seal_replays_exactly_after_recovery_reader(tiny,tmp_path,mo
 def test_final_catalog_retains_new_v3_raw_before_final_seal(tiny,tmp_path,monkeypatch):
     task,sessions,*_=tiny;prior=sessions[0];origin=prior/'raw/unused/extra.bin'
     sealed=raw.prepare(prior,writers_closed=True,retire=True)
-    assert sealed['version']==raw.VERSION=='level2_closed_raw_storage_v3'
+    assert sealed['version']==raw.VERSION=='level2_closed_raw_storage_v4'
     s,session,_=build_final(tmp_path/'v3-catalog-final',monkeypatch,origin)
     raw.prepare(session,writers_closed=True,retire=True)
     ds=dataset_for(tmp_path/'input',[session/'raw/unused/extra.bin']);bundle=tmp_path/'bundle'

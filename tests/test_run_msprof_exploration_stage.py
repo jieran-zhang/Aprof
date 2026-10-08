@@ -111,7 +111,13 @@ def test_two_comparisons_use_their_frozen_calibration_and_preflight_all(tmp_path
         def finish(self, **kwargs): pass
     monkeypatch.setattr(stage, 'Campaign', Ledger)
     captures = []
-    monkeypatch.setattr(stage, 'collect_cohort', lambda plan, out, calibration: captures.append((plan, calibration)))
+    def collect(plan, out, calibration):
+        captures.append((plan, calibration))
+        verified = {'evidence_status': 'verified_complete'}
+        save(out / 'report.json', verified)
+        save(out / 'group-completion.json', {'status': 'passed', 'error': None})
+        return verified
+    monkeypatch.setattr(stage, 'collect_cohort', collect)
     base, parent = tmp_path / 'base.json', tmp_path / 'parent.json'
     save(base, {'source': 'original'}); save(parent, {'source': 'actual-parent'})
     cohorts = []

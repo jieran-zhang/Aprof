@@ -231,7 +231,7 @@ def storage_catalog(value, evidence):
         require(set(row) == {'version', 'seal', 'archive', 'producer', 'closed_evidence_ref'}
                 and row['version'] in ('level2_closed_verification_storage_v1', 'level2_closed_verification_storage_v2',
                                        'level2_closed_verification_storage_v3', 'level2_closed_native_outputs_v1',
-                                       'level2_closed_raw_storage_v1', 'level2_closed_raw_storage_v2', 'level2_closed_raw_storage_v3')
+                                       'level2_closed_raw_storage_v1', 'level2_closed_raw_storage_v2', 'level2_closed_raw_storage_v3', 'level2_closed_raw_storage_v4')
                 and pointer(row['seal'])['sha256'] == sha and row['closed_evidence_ref'] in value['closed_evidence'], 'invalid compact archive')
         pointer(row['archive']); pointer(row['producer'])
     require(set(value['closed_evidence']) == {v['closed_evidence_ref'] for v in value['archives'].values()}, 'orphan/dropped nested proof')

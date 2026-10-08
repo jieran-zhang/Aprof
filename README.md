@@ -29,6 +29,10 @@ conditional lessons, start with the
 For the implemented shared-context msprof campaign, see the
 [execution and archive interfaces](docs/msprof_exploration_campaign.md) and
 [Level2 complete-call protocol](docs/level2_msprof_protocol_v2.md).
+New Level2 searches use the [lightweight search protocol](docs/level2_search_lite.md);
+historical replay and frozen final measurements retain the full protocol.
+Published Level1 records and paused Level2 evidence are organized outside Git
+in the [central optimization trace library](docs/optimization_trace_library.md).
 Performance qualification is recorded per workload and calibration; research
 traces do not establish formal runtime admission. CPU data tools are described
 in [trace collection v2](docs/optimization_trace_collection_v2.md).

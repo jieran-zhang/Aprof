@@ -96,6 +96,10 @@ Use these only after a mechanism and transformation are selected; load at most o
 
 - Build must pass before accuracy.
 - Accuracy must pass before profiling.
+- Research search uses the workflow's small paired measurement against the
+  selected parent; full-case correctness remains mandatory. Treat small or
+  conflicting effects as uncertain rather than repeatedly measuring until a
+  gain appears. Final full-case evaluation and formal admission remain separate.
 - Profiling evidence must include warmup/repeat statistics; single-run results are exploratory.
 - Simulator metrics are proxy evidence; do not present them as real `Memory.csv` / `PipeUtilization.csv`.
 - Production best selection requires `semantic_status=preserved`, `scope_status=production_safe`, `portability_risk != high`, and `accepted_for` containing `production`.

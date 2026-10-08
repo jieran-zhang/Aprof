@@ -6,6 +6,7 @@ native outputs, source, input, or any measurement policy. Shadow archives must b
 explicitly selected by a scoped reader context; production discovery is fixed.
 """
 from __future__ import annotations
+from msprof_storage_protocol import cohort_process_count
 import argparse
 import contextlib
 import contextvars
@@ -118,10 +119,12 @@ def closed_from_reader(session, read_bytes):
         require(ref(paths[0])==recovery['current_result'],'recovery result changed during closure')
         stage_result=load(paths[0])
     group=load(paths[4]);completion=load(paths[5]);execution=load(paths[6])
+    count=cohort_process_count(plan=load(paths[2]),report=load(paths[3]))
+    require(count!=2 or stage.name!='final','search-lite storage cannot authorize a final stage')
     require(stage_result.get('status')=='passed' and stage_result.get('error') is None
             and stage_result.get('ended_at') is not None,'stage is not terminal passed')
     require(group.get('status')=='passed' and group.get('error') is None and str(session) in group.get('completed_sessions',[])
-            and len(group['completed_sessions'])==len(set(group['completed_sessions']))==6,'cohort is not six-process closed')
+            and len(group['completed_sessions'])==len(set(group['completed_sessions']))==count,'cohort process count differs from declared protocol')
     require(completion.get('status')=='passed' and completion.get('error') is None,'session did not pass')
     require(execution.get('exit_code')==0 and execution.get('error') is None and execution.get('ended_at') is not None,'native profiler execution is not closed')
     journal=[json.loads(line) for line in read_bytes(paths[7]).splitlines()]
@@ -250,7 +253,8 @@ def facts_for_version(session,read_bytes,version):
         session=Path(session);report=json.loads(read_bytes(session.parent/'report.json'))
         group=json.loads(read_bytes(session.parent/'group-completion.json'))
         directories=[v['directory'] for v in report['sessions']]
-        require(len(directories)==len(set(directories))==6 and directories==group['completed_sessions'],
+        count=cohort_process_count(plan=json.loads(read_bytes(session.parent/'plan.json')),report=report)
+        require(len(directories)==len(set(directories))==count and directories==group['completed_sessions'],
                 'anchored report full process roster differs')
         artifacts=next(v['artifacts'] for v in report['sessions'] if v['directory']==str(session))
         for name in ('validation.json','bindings.json','completion.json','msprof.execution.json','native/journal.jsonl'):

@@ -9,6 +9,15 @@ spec=importlib.util.spec_from_file_location('level2_report',HERE/'scripts/level2
 from test_level2_report import closed_roster,save,ptr,tree,partial
 from msprof_exploration_execute import event
 
+@pytest.fixture(autouse=True)
+def bind_shared_report_fixture_to_module_under_test(monkeypatch):
+    # Full-suite collection may already have imported the shared fixture against
+    # a different module instance before this file loads its explicit source.
+    # Keep raw-evidence stubs on the same instance exercised by these HOLD tests;
+    # selection_reconsiderations and the public event validation remain real.
+    import test_level2_report as fixtures
+    monkeypatch.setattr(fixtures, 'report', report)
+
 def hold(task,selection):
     old=save(task/'finalization/selection.json',selection)
     proof=save(task/'finalization/reconsideration-01/numeric.json',{'operator':task.name,'original_selection':ptr(old),'original_source_hash':selection['source_hash'],'unopened_payloads':[{'path':'/must/not/read/output.bin','sha256':'sha256:'+'a'*64}]})

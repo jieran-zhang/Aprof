@@ -12,6 +12,7 @@ Only indexed pilot/cohort outputs are eligible; inputs, source and arbitrary .bi
 files are never discovered. This is storage maintenance, not a measurement stage.
 """
 from __future__ import annotations
+from msprof_storage_protocol import cohort_process_count, validate_prepared_request
 import argparse
 from contextlib import contextmanager
 import fcntl
@@ -281,9 +282,10 @@ class Inventory:
         completed = self.read(path/'group-completion.json')
         require(completed.get('status') == 'passed' and completed.get('error') is None and completed.get('ended_at') is not None, 'cohort is not successfully closed')
         schedule = plan['schedule']; sessions = completed['sessions']
-        require(len(schedule) == len(sessions) == 6, 'cohort must have six completed sessions')
+        count = cohort_process_count(plan=plan)
+        require(len(schedule) == len(sessions) == count, 'cohort completed process count differs from protocol')
         names = [row['name'] for row in schedule]
-        require(len(set(names)) == 6 and all(TOKEN.fullmatch(name) for name in names), 'invalid session directory')
+        require(len(set(names)) == count and all(TOKEN.fullmatch(name) for name in names), 'invalid session directory')
         paths = [path/name for name in names]
         require(completed['completed_sessions'] == [str(p) for p in paths] == [row['directory'] for row in sessions], 'cohort session coverage differs')
         for directory, item, scheduled in zip(paths,sessions,schedule):
@@ -297,7 +299,8 @@ class Inventory:
             require(digest(journal_path)[0] == journal_hash, 'journal changed while reading')
             self.evidence[str(journal_path)] = journal_hash
             request = self.read(directory/'request.json')
-            require(request == scheduled['request'] and request.get('version') == 'msprof_kernel_time_study_v2', 'session request differs')
+            require(request == scheduled['request'], 'session request differs')
+            validate_prepared_request(request, lite=count == 2)
             require(completion.get('version') == request['version'] and completion.get('status') == 'passed' and completion.get('error') is None, 'session not closed')
             require(records and records[-1].get('type') == 'session_end' and records[-1].get('exit_code') == 0 and records[-1].get('stream_destroyed') is True and records[-1].get('context_destroyed') is True, 'native session has no successful teardown')
             self.exited(directory/'msprof.execution.json')

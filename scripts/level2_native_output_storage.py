@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Strict streaming storage for closed six-process Level2 native output bundles.
+"""Strict streaming storage for closed versioned Level2 native output bundles.
 
 No profiler raw, journal, input, source, pilot or semantic guard file is retired.
 Historical logical paths remain evidence identities. Archived producer copies are
 inert provenance and are never executed. All large payload processing is streamed.
 """
 from __future__ import annotations
+from msprof_storage_protocol import cohort_process_count, validate_prepared_request
 import argparse
 import contextlib
 import contextvars
@@ -93,7 +94,8 @@ def closed_from_reader(cohort,read_bytes):
     plan=load(cohort/'plan.json');group=load(cohort/'group-completion.json');report=load(cohort/'report.json')
     require(report.get('operator')==operator and report.get('evidence_status')=='verified_complete','not a verified operator report')
     schedule=plan['schedule'];sessions=group['completed_sessions']
-    require(len(schedule)==len(sessions)==6 and len(set(sessions))==6,'exactly six unique sessions required')
+    count=cohort_process_count(plan=plan,report=report)
+    require(len(schedule)==len(sessions)==count and len(set(sessions))==count,'protocol process coverage differs')
     require(sessions==[str(cohort/row['name']) for row in schedule],'scheduled output session coverage differs')
     require([row['directory'] for row in report['sessions']]==sessions,'reported output session coverage differs')
     protected={};event_binding=None;expected={};bundles=[];case_ids=None;stage_recovery=None
@@ -106,7 +108,7 @@ def closed_from_reader(cohort,read_bytes):
         require(event_binding in (None,facts['event_binding']),'stage event identity differs');event_binding=facts['event_binding']
         request=load(session/'request.json');require(request==entry['request'],'session request differs')
         protected[str(session/'request.json')]=ref(session/'request.json')
-        require(request.get('version')=='msprof_kernel_time_study_v2','only prepared Level2 output cohorts supported')
+        validate_prepared_request(request,lite=count==2)
         ids=[str(row['case_id']) for row in request['cases']]
         require(ids and len(set(ids))==len(ids) and all(re.fullmatch(r'[1-9]|1[0-9]|20',v) for v in ids),'invalid output case roster')
         require(case_ids in (None,ids),'cohort case roster differs');case_ids=ids

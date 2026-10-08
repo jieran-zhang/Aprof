@@ -12,9 +12,9 @@ S=importlib.util.spec_from_file_location('authority_under_test',Path(__file__).p
 f=importlib.util.module_from_spec(S);S.loader.exec_module(f)
 
 def provision_storage(s):
-    base=Path(os.environ.get('APROF_REVIEWED_STORAGE_ROOT',str(Path(a.__file__).parents[1])))/'scripts'
-    live=Path(os.environ.get('APROF_TEST_REPO',Path(__file__).resolve().parents[1]))/'scripts'
-    paths=[Path(a.__file__),*[(base/name if (base/name).is_file() else live/name) for name in a.STORAGE_PRODUCERS]]
+    from reviewed_storage_fixture import materialize_reviewed_storage
+    readers=materialize_reviewed_storage(s.run/'bootstrap/reviewed-storage-test-epoch',a.STORAGE_PRODUCERS)
+    paths=[Path(a.__file__),*readers]
     eng=load(s.engineering)
     for file in paths[1:]:
         ref=pointer(file);assert ref['sha256']==a.STORAGE_PRODUCERS[file.name]

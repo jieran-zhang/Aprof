@@ -265,6 +265,6 @@ def test_ordinary_report_without_new_helpers_keeps_existing_offline_dependencies
     class Reached(Exception):pass
     def verify(*args,**kwargs):reached.append(True);raise Reached()
     monkeypatch.setattr(report,'verify_observation',verify)
-    plan={'calibration_scope':{},'schedule':[{'name':f'p{i}','request':{}} for i in range(6)]}
+    plan={'protocol':report.PROTOCOL,'calibration_scope':{},'schedule':[{'name':f'p{i}','request':{}} for i in range(6)]}
     with pytest.raises(Reached):report.analyze_task_cohort.__wrapped__([tmp_path/'ordinary'/f'p{i}' for i in range(6)],plan)
     assert reached==[True]

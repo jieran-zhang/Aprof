@@ -16,6 +16,7 @@ import sys
 sys.dont_write_bytecode = True
 import msprof_exploration_campaign as campaign
 import msprof_exploration_report as analysis
+from msprof_search_protocol import LITE_PROTOCOL, LITE_ANALYSIS
 
 VERSION = 'level2_optimization_report_v1'
 
@@ -52,8 +53,13 @@ class Evidence:
 
 
 def aggregate_effects(report, selections):
-    """Average case logs within each process; keep six replication units."""
+    """Average case logs within each process using its explicit sampling protocol."""
     require(report.get('evidence_status') == 'verified_complete', 'report is not verified complete')
+    lite = report.get('protocol') == LITE_PROTOCOL
+    if lite:
+        require(report.get('analysis_version') == LITE_ANALYSIS, 'lite analysis version differs')
+    process_count = 2 if lite else 6
+    summarize = analysis.descriptive_effect if lite else analysis.effect
     mapping = {str(row['case_id']): row for row in selections}
     require(len(mapping) == len(selections), 'duplicate dispatch case selection')
     declared = [str(case) for case in report['case_ids']]
@@ -63,26 +69,32 @@ def aggregate_effects(report, selections):
         case, config = str(row['case_id']), row['buffer_config']
         require(case in mapping and config in ('normal','swapped'), 'measured case/config lacks dispatch selection')
         require((case,config) not in cells, 'duplicate measured case/config cell')
-        effect = analysis.effect(row['log_effects'])
+        effect = summarize(row['log_effects'])
         for key in ('speedup','mean_log'):
-            if key in row: require(math.isclose(row[key], effect[key], rel_tol=1e-12, abs_tol=1e-12), 'saved effect differs from six process logs')
+            if key in row: require(math.isclose(row[key], effect[key], rel_tol=1e-12, abs_tol=1e-12), 'saved effect differs from protocol process logs')
+        if lite:
+            require(row.get('ci95') is None and row.get('log_ci95') is None,
+                    'lite report cannot claim a confidence interval')
         selected = mapping[case]
         cell = {'case_id': int(case), 'buffer_config': config,
                 **{k:selected[k] for k in ('tiling_key','kernel_entry','group_id')}, **effect}
         for key in ('cv_status','calibration_status','coarse_observed_controls','measurement_quality','limitations'):
             if key in row: cell[key] = row[key]
+        if lite: cell['qualified_performance_eligible'] = False
         cells[case,config] = cell
         groups[(selected['tiling_key'],selected['kernel_entry'],selected['group_id'],config)].append(cell)
     require(set(cells) == {(case,config) for case in declared for config in ('normal','swapped')}, 'normal/swapped case coverage is incomplete')
     grouped = []
     for (key,entry,group,config), rows in sorted(groups.items()):
-        logs = [statistics.mean(row['log_effects'][i] for row in rows) for i in range(6)]
+        logs = [statistics.mean(row['log_effects'][i] for row in rows) for i in range(process_count)]
         grouped.append({'tiling_key':key, 'kernel_entry':entry, 'group_id':group, 'buffer_config':config,
             'case_ids':sorted(row['case_id'] for row in rows), 'case_count':len(rows),
-            'aggregation':'equal_case_mean_log_within_each_of_six_processes', **analysis.effect(logs),
+            'aggregation':('equal_case_mean_log_within_each_of_two_processes' if lite else
+                           'equal_case_mean_log_within_each_of_six_processes'), **summarize(logs),
             'qualified_performance_eligible':False})
     return {'per_case': sorted(cells.values(),key=lambda r:(r['case_id'],r['buffer_config'])),
             'per_tiling_key': grouped, 'replication_unit':'native_process',
+            **({'protocol':LITE_PROTOCOL,'analysis_version':LITE_ANALYSIS} if lite else {}),
             'full_twenty_case_suite':set(declared)=={str(i) for i in range(1,21)},
             'metric':report.get('metric'), 'limitations':report.get('limitations',[])}
 
@@ -113,8 +125,6 @@ def measured_stages(task, state, item, proposal, evidence):
     evidence.add(candidate/'source.tar',expected=item['source_hash'],role='candidate_source')
     verify_source_snapshot(candidate/'source.tar',candidate/'op')
     baseline_hash = analysis.sha(task/'baseline-source.tar')
-    expected_relations = {'direct_parent':item['source_parent']['candidate_id'] or 'baseline'}
-    if item['source_parent']['source_hash'] != baseline_hash: expected_relations['original_baseline']='baseline'
     for sid, stage in state['stages'].items():
         if stage['candidate_id'] != item['candidate_id'] or stage['kind'] != 'timing': continue
         attempt = stage['attempts'][-1]
@@ -123,7 +133,12 @@ def measured_stages(task, state, item, proposal, evidence):
         require(result.get('status')=='passed' and result.get('native_started') is True, 'timing result lacks successful real native execution')
         directory = Path(result_ref['path']).parent
         plan = stage['plan']
-        require(plan['comparisons']==campaign.comparisons(item,baseline_hash),'timing lineage differs from registered parent')
+        lite = plan.get('protocol') == LITE_PROTOCOL
+        require(not lite or plan.get('purpose') == 'search', 'lite measurements cannot serve as final evaluation')
+        expected_relations = {'direct_parent':item['source_parent']['candidate_id'] or 'baseline'}
+        if not lite and item['source_parent']['source_hash'] != baseline_hash:
+            expected_relations['original_baseline']='baseline'
+        require(plan['comparisons']==campaign.comparisons(item,baseline_hash,search_lite=lite),'timing lineage differs from registered parent')
         require({row['relation']:row['control_candidate_id'] for row in plan['cohorts']}==expected_relations
                 and len(plan['cohorts'])==len(expected_relations),'timing cohort control sources differ')
         stage_plan, _ = evidence.read({'path':str(directory/'stage-plan.json'),'sha256':analysis.sha(directory/'stage-plan.json')},'timing_stage_plan')
@@ -138,6 +153,8 @@ def measured_stages(task, state, item, proposal, evidence):
             evidence.add(archive,expected=expected_control,role='measured_control_source')
             verify_source_snapshot(archive,control_source)
             frozen, plan_ref = evidence.read(cohort['plan'], 'cohort_plan')
+            require((frozen.get('protocol') == LITE_PROTOCOL) == lite,
+                    'cohort protocol differs from timing stage')
             output = directory / relation
             saved_ref = evidence.add(output/'report.json',role='measured_report')
             saved = analysis.load(saved_ref['path'])
@@ -146,14 +163,20 @@ def measured_stages(task, state, item, proposal, evidence):
             require(completion.get('status')=='passed', 'timing cohort did not complete')
             evidence.tree(completion.get('sessions',[]),'native_cohort_evidence')
             calibration_ref = cohort.get('calibration_report') or plan.get('calibration_report')
-            if calibration_ref is None:
+            if lite:
+                require(calibration_ref is None, 'lite search must not reuse an A/A qualification')
+                calibration, checked_calibration = None, None
+            elif calibration_ref is None:
                 path = task/'stages/aa-initial/cohort/report.json'
                 calibration_ref = {'path':str(path),'sha256':analysis.sha(path)}
-            calibration, checked_calibration = evidence.read(calibration_ref,'aa_calibration')
+            if not lite:
+                calibration, checked_calibration = evidence.read(calibration_ref,'aa_calibration')
             provenance = []
             actual = analysis.analyze_task_cohort(completion['completed_sessions'],frozen,
                 calibration=calibration,provenance_out=provenance)
             analysis.compare_saved_report(saved,actual,evidence_path=Path(saved_ref['path']),provenance_out=provenance)
+            require((actual.get('protocol') == LITE_PROTOCOL) == lite,
+                    'measured report protocol differs from timing stage')
             require(actual.get('operator')==proposal['operator'] and actual.get('comparison_kind')=='ab', 'measured operator/comparison differs')
             require(actual['source_hashes']=={'A':source_hash(control_source),'B':source_hash(candidate/'op')},'measured implementation/control differs from registered sources')
             require([str(c) for c in actual['case_ids']]==[str(c) for c in plan['case_ids']], 'timing case coverage differs from ledger')
@@ -492,6 +515,8 @@ def build_report(run):
         operators.append(row)
     counts={status:sum(row['status']==status for row in operators) for status in ('complete','incomplete','blocked','failed')}
     status='complete' if roster_status=='frozen' and counts['complete']==len(operators) else 'blocked' if counts['blocked'] else 'failed' if counts['failed'] else 'incomplete'
+    has_lite=any(measured.get('protocol')==LITE_PROTOCOL for operator in operators
+                 for row in operator.get('rounds',[]) for measured in row.get('measurements',[]))
     return {'version':VERSION,'run_id':run.name,'run_directory':str(run),'status':status,'roster_status':roster_status,
         'producer':producer,
         'read_only':True,'hardware_executed':False,'formal_admission':'not_evaluated','graph_policy_eligible':False,'episode_ref':None,
@@ -500,8 +525,10 @@ def build_report(run):
         'evidence_index':list(evidence.rows.values()),'issues':issues,
         'limitations':['Drafts and preflight pilots are not formal source rounds.',
             'Ratios summarize operator task sums per complete call, excluding host submission and inter-task gaps.',
-            'Normal and swapped configurations remain separate; key aggregates preserve six process units.',
-            'Independent loading and interaction controls remain outside this six-process analysis.',
+            ('Normal and swapped configurations remain separate; each key aggregate preserves its protocol: two descriptive processes for lite search, six for full evaluation.'
+             if has_lite else 'Normal and swapped configurations remain separate; key aggregates preserve six process units.'),
+            ('Lite search ranges are descriptive and have no confidence interval; loading, first-order and buffer-order effects are confounded. Full-protocol loading and interaction controls remain limited.'
+             if has_lite else 'Independent loading and interaction controls remain outside this six-process analysis.'),
             'This report never chooses a source, authors a next round, or writes a training episode.']}
 
 

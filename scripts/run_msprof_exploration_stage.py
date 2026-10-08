@@ -25,8 +25,12 @@ def measurement_options(value):
     if value is not None and not isinstance(value, dict):
         raise ValueError('timing options must be a mapping')
     result = dict(value or {})
-    if set(result) - {'epoch', 'capture_storage', 'calibration_path', 'calibration_by_relation'}:
+    if set(result) - {'epoch', 'capture_storage', 'calibration_path', 'calibration_by_relation', 'search_lite'}:
         raise ValueError('unknown timing option')
+    if 'search_lite' in result and type(result['search_lite']) is not bool:
+        raise ValueError('search_lite must be a boolean')
+    if result.get('search_lite') and (result.get('calibration_path') is not None or result.get('calibration_by_relation')):
+        raise ValueError('lite search uses uncalibrated exploratory comparisons; do not relabel a full A/A')
     epoch = result.get('epoch', 'epoch-01')
     if not isinstance(epoch, str) or re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]*', epoch) is None:
         raise ValueError('invalid measurement epoch')
@@ -50,9 +54,10 @@ def measurement_options(value):
     return result
 
 
-def validate_stage_options(kind, plan_path, *, capture_storage=None, epoch='epoch-01'):
-    measurement_options({'epoch': epoch, **({'capture_storage': capture_storage} if capture_storage is not None else {})})
-    explicit = capture_storage is not None or epoch != 'epoch-01'
+def validate_stage_options(kind, plan_path, *, capture_storage=None, epoch='epoch-01', search_lite=False):
+    measurement_options({'epoch': epoch, 'search_lite': search_lite,
+                         **({'capture_storage': capture_storage} if capture_storage is not None else {})})
+    explicit = capture_storage is not None or epoch != 'epoch-01' or search_lite
     if explicit and kind != 'control':
         raise ValueError('explicit capture settings are only valid for control; timing requires a frozen plan')
     if plan_path is not None and explicit:
@@ -67,6 +72,9 @@ def validate_calibration_storage(plan, calibration):
     Legacy direct-storage plans keep their existing admission semantics.
     """
     from msprof_raw_storage import LOCAL, policy
+    from msprof_search_protocol import LITE_PROTOCOL
+    if plan.get('protocol') == LITE_PROTOCOL and calibration is not None:
+        raise ValueError('lite search must not reuse a source-specific A/A as qualification')
     scope = plan.get('calibration_scope', {})
     requests = [row['request'] for row in plan.get('schedule', [])]
     local = scope.get('capture_storage') == LOCAL or any(request.get('capture_storage') == LOCAL for request in requests)
@@ -78,6 +86,10 @@ def validate_calibration_storage(plan, calibration):
     producer = requests[0]['capture_storage_producer']['sha256']
     if scope.get('capture_storage_producer_hash') != producer or any(request['capture_storage_producer']['sha256'] != producer for request in requests):
         raise ValueError('local cohort transport producer differs')
+    if plan.get('protocol') == LITE_PROTOCOL:
+        return
+    if not isinstance(calibration, dict):
+        raise ValueError('local measurement requires a verified fresh A/A')
     if (calibration.get('protocol') != plan.get('protocol')
             or calibration.get('analysis_version') != plan.get('analysis_version')
             or calibration.get('comparison_kind') != 'aa'
@@ -399,23 +411,36 @@ def runtime_assessment(correctness, output, standalone=None, correctness_result=
     return result
 
 
-def prepare_timing(run, operator, candidate_id, group, *, purpose='search', final_candidates=None, calibration_path=None, calibration_by_relation=None, epoch='epoch-01', capture_storage=None):
-    measurement_options({'epoch': epoch,
+def timing_runner(run, *, search_lite=False):
+    """Build the separate lite harness once; never replace a frozen full runner."""
+    path = Path(run) / 'tools' / ('timing-search-lite' if search_lite else 'timing') / 'build.json'
+    if search_lite and not path.exists():
+        from msprof_exploration_execute import build_tools
+        build_tools(run, per_case=True, search_lite=True)
+    return path
+
+
+def prepare_timing(run, operator, candidate_id, group, *, purpose='search', final_candidates=None, calibration_path=None, calibration_by_relation=None, epoch='epoch-01', capture_storage=None, search_lite=False):
+    measurement_options({'epoch': epoch, 'search_lite': search_lite,
         **({'capture_storage': capture_storage} if capture_storage is not None else {}),
         **({'calibration_path': calibration_path} if calibration_path is not None else {}),
         **({'calibration_by_relation': calibration_by_relation} if calibration_by_relation is not None else {})})
+    if search_lite and purpose != 'search':
+        raise ValueError('final evaluation must use the full protocol')
     run, split, task, parent, _ = task_paths(run, operator, candidate_id)
     ledger = Campaign(run / split / 'ledger')
     candidate = ledger.state['tasks'][operator]['candidates'][candidate_id]
     baseline = ledger.config['tasks'][operator]['baseline_source_hash']
     cases = ALL_CASES if purpose == 'final' else [1, 8, 14, 20] + [p['case_id'] for p in candidate['probes']]
     controls = [('direct_parent', candidate['source_parent']['candidate_id'] or 'baseline')]
-    if candidate['source_parent']['source_hash'] != baseline: controls.append(('original_baseline', 'baseline'))
+    if not search_lite and candidate['source_parent']['source_hash'] != baseline:
+        controls.append(('original_baseline', 'baseline'))
     if set(calibration_by_relation or {}) - {relation for relation, _ in controls}:
         raise ValueError('calibration override names an absent comparison relation')
     from msprof_raw_storage import LOCAL
-    if capture_storage == LOCAL and calibration_path is None and set(calibration_by_relation or {}) != {relation for relation, _ in controls}:
+    if not search_lite and capture_storage == LOCAL and calibration_path is None and set(calibration_by_relation or {}) != {relation for relation, _ in controls}:
         raise ValueError('local timing requires an explicit fresh calibration for every comparison')
+    runner = timing_runner(run, search_lite=search_lite)
     planning = parent / 'plans' / group
     planning.mkdir(parents=True, exist_ok=False)
     cohorts = []
@@ -424,7 +449,9 @@ def prepare_timing(run, operator, candidate_id, group, *, purpose='search', fina
         roles_path = planning / (relation + '-roles.json')
         comparison_manifest(control_dir / 'build/build_manifest.json', parent / 'build/build_manifest.json', roles_path)
         name = candidate_id + '-' + group + '-' + relation.replace('_', '-')
-        plan = cohort_plan(task, roles_path, run / 'tools/timing/build.json', cases, 'ab', name, epoch=epoch, **({'capture_storage': capture_storage} if capture_storage is not None else {}))
+        plan = cohort_plan(task, roles_path, runner, cases, 'ab', name, epoch=epoch,
+                           **({'search_lite': True} if search_lite else {}),
+                           **({'capture_storage': capture_storage} if capture_storage is not None else {}))
         save(planning / (relation + '-cohort.json'), plan)
         cohorts.append({'relation': relation, 'control_candidate_id': control,
                         'plan': pointer(planning / (relation + '-cohort.json'))})
@@ -432,7 +459,8 @@ def prepare_timing(run, operator, candidate_id, group, *, purpose='search', fina
             cohorts[-1]['calibration_report'] = pointer(calibration_by_relation[relation])
     save(planning / 'comparisons.json', {'candidate_id': candidate_id, 'cohorts': cohorts, 'case_ids': cases})
     plan = ledger.timing_plan(operator, candidate_id, purpose=purpose, manifest_ref=sha(planning / 'comparisons.json'),
-                       final_candidate_ids=final_candidates, cohorts=cohorts)
+                       final_candidate_ids=final_candidates, cohorts=cohorts,
+                       **({'search_lite': True} if search_lite else {}))
     if calibration_path is not None:
         plan['calibration_report'] = pointer(calibration_path)
     save(planning / 'stage-plan.json', plan)
@@ -440,8 +468,35 @@ def prepare_timing(run, operator, candidate_id, group, *, purpose='search', fina
     return planning / 'stage-plan.json'
 
 
-def run_stage(run, operator, candidate, kind, group, cases=None, plan_path=None, *, capture_storage=None, epoch='epoch-01'):
-    validate_stage_options(kind, plan_path, capture_storage=capture_storage, epoch=epoch)
+def timing_report_bindings(directory, cohorts, reports):
+    """Bind the collector's verified reports using only small closed JSON files.
+
+    The collector already checked every payload. This pins its exact return value
+    before ledger finish so a later invocation needs no raw re-read to use it.
+    """
+    if len(cohorts) != len(reports) or not cohorts:
+        raise ValueError('timing report binding coverage differs')
+    rows = []
+    seen = set()
+    for cohort, verified in zip(cohorts, reports):
+        relation = cohort['relation']
+        if relation not in ('direct_parent', 'original_baseline') or relation in seen:
+            raise ValueError('timing report binding relation differs')
+        seen.add(relation)
+        root = Path(directory) / relation
+        report_path, completion_path = root / 'report.json', root / 'group-completion.json'
+        if load(report_path) != verified or verified.get('evidence_status') != 'verified_complete':
+            raise ValueError('saved timing report differs from collector verification')
+        completion = load(completion_path)
+        if completion.get('status') != 'passed' or completion.get('error') is not None:
+            raise ValueError('timing report binding requires a passed cohort')
+        rows.append({'relation': relation, 'report': pointer(report_path),
+                     'completion': pointer(completion_path)})
+    return {'version': 'level2_timing_report_bindings_v1', 'cohorts': rows}
+
+
+def run_stage(run, operator, candidate, kind, group, cases=None, plan_path=None, *, capture_storage=None, epoch='epoch-01', search_lite=False):
+    validate_stage_options(kind, plan_path, capture_storage=capture_storage, epoch=epoch, search_lite=search_lite)
     run, split, task, parent, source = task_paths(run, operator, candidate)
     ledger = Campaign(run / split / 'ledger')
     cid = None if candidate == 'baseline' else candidate
@@ -459,7 +514,12 @@ def run_stage(run, operator, candidate, kind, group, cases=None, plan_path=None,
             plan['control_type'] = 'aa'
             plan['control_phase'] = group
             plan['manifest_ref'] = sha(task / 'manifest.json')
-            plan['cohort'] = cohort_plan(task, parent / 'build/build_manifest.json', run / 'tools/timing/build.json', cases, 'aa', group, epoch=epoch, **({'capture_storage': capture_storage} if capture_storage is not None else {}))
+            plan['cohort'] = cohort_plan(task, parent / 'build/build_manifest.json', timing_runner(run, search_lite=search_lite), cases, 'aa', group, epoch=epoch,
+                **({'search_lite': True} if search_lite else {}),
+                **({'capture_storage': capture_storage} if capture_storage is not None else {}))
+            if search_lite:
+                plan['protocol'] = plan['cohort']['protocol']
+                plan['control_phase'] = 'search_system_self_check'
         if kind == 'profile': plan['capture_window'] = {'warmup': 10, 'repeat': 5, 'full_operator': True}
         if kind == 'runtime':
             plan.update(successful_correctness_binding(ledger, operator, cid, parent, plan['source_hash']))
@@ -469,7 +529,7 @@ def run_stage(run, operator, candidate, kind, group, cases=None, plan_path=None,
     save(out / 'stage-plan.json', plan)
     ledger.start(event_id=operator + '-' + stage_id + '-start', workload=operator, candidate_id=cid, stage_id=stage_id, kind=kind, plan=plan)
     event(task, 'stage_started', {'candidate_id': cid, 'stage': stage_id, 'kind': kind, 'plan': pointer(out / 'stage-plan.json')})
-    started = time.time(); error = None; native_started = False; result = None
+    started = time.time(); error = None; native_started = False; result = None; report_bindings = None
     try:
         if kind == 'build':
             archive = task / 'baseline-source.tar' if cid is None else parent / 'source.tar'
@@ -498,7 +558,9 @@ def run_stage(run, operator, candidate, kind, group, cases=None, plan_path=None,
             calibration_path = calibration_ref['path'] if calibration_ref else task / 'stages/aa-initial/cohort/report.json'
             if calibration_ref and sha(calibration_path) != calibration_ref['sha256']:
                 raise ValueError('frozen calibration report changed')
-            calibration = load(calibration_path) if calibration_ref or any(not row.get('calibration_report') for row in plan['cohorts']) else None
+            from msprof_search_protocol import LITE_PROTOCOL
+            lite = plan.get('protocol') == LITE_PROTOCOL
+            calibration = (load(calibration_path) if calibration_ref or any(not row.get('calibration_report') for row in plan['cohorts']) else None) if not lite else None
             results = []
             resolved = []
             for cohort in plan['cohorts']:
@@ -509,11 +571,14 @@ def run_stage(run, operator, candidate, kind, group, cases=None, plan_path=None,
                     if sha(ref['path']) != ref['sha256']: raise ValueError('frozen cohort calibration report changed')
                     selected = load(ref['path'])
                 frozen = load(cohort['plan']['path'])
+                if (frozen.get('protocol') == LITE_PROTOCOL) != lite:
+                    raise ValueError('cohort protocol differs from frozen timing stage')
                 validate_calibration_storage(frozen, selected)
                 resolved.append((cohort, frozen, selected))
             for cohort, frozen, selected in resolved:
                 directory = out / cohort['relation']
                 results.append(collect_cohort(frozen, directory, selected))
+            report_bindings = timing_report_bindings(out, plan['cohorts'], results)
             result = {'comparisons': results}
         else: raise ValueError('unsupported explicit stage')
     except BaseException as exc:
@@ -528,8 +593,12 @@ def run_stage(run, operator, candidate, kind, group, cases=None, plan_path=None,
     result_record = {'status': 'failed' if error else 'passed', 'kind': kind, 'stage_id': stage_id, 'candidate_id': cid,
                      'started_at': started, 'ended_at': time.time(), 'error': error, 'native_started': native_started,
                      'actual_costs': costs, 'cost_scope': 'Confirmed lower bounds; incomplete native sections remain unknown. formal_target_kernel_launches excludes warmup.', 'formal_admission': 'not_evaluated', 'graph_policy_eligible': False, 'episode_ref': None}
+    if report_bindings is not None:
+        result_record['report_bindings'] = report_bindings
     save(out / 'result.json', result_record)
     evidence = {'result': pointer(out / 'result.json')}
+    if report_bindings is not None:
+        evidence['report_bindings'] = report_bindings
     if kind == 'build' and (out / 'build-target.json').exists(): evidence['build_target'] = pointer(out / 'build-target.json')
     if kind == 'build' and (parent / 'build/build_manifest.json').exists(): evidence['build'] = pointer(parent / 'build/build_manifest.json')
     if kind == 'correctness': evidence['prepared_output_checked'] = error is None

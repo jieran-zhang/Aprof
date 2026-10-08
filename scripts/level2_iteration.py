@@ -35,8 +35,10 @@ def check_control_settings(plan, settings):
             or any(row["request"].get("capture_storage") != settings.get("capture_storage")
                    for row in plan["schedule"])):
         raise ValueError("requested capture storage differs from frozen control/measurement")
-    if len(plan["schedule"]) != 6:
-        raise ValueError("frozen control schedule must have six processes")
+    from msprof_search_protocol import LITE_PROTOCOL
+    lite = settings.get("search_lite", False)
+    if (plan.get("protocol") == LITE_PROTOCOL) != lite or len(plan["schedule"]) != (2 if lite else 6):
+        raise ValueError("frozen control protocol or process count differs")
     if settings.get("capture_storage") is not None:
         from msprof_raw_storage import LOCAL, policy
         for row in plan["schedule"]:
@@ -103,10 +105,11 @@ def feedback_pointer(task, candidate_id, observation):
 
 
 def stage(run, operator, candidate, kind, group, **kwargs):
-    if set(kwargs) - {"cases", "plan_path", "capture_storage", "epoch"}:
+    if set(kwargs) - {"cases", "plan_path", "capture_storage", "epoch", "search_lite"}:
         raise ValueError("unknown stage option")
     validate_stage_options(kind, kwargs.get("plan_path"),
-        capture_storage=kwargs.get("capture_storage"), epoch=kwargs.get("epoch", "epoch-01"))
+        capture_storage=kwargs.get("capture_storage"), epoch=kwargs.get("epoch", "epoch-01"),
+        search_lite=kwargs.get("search_lite", False))
     run, split, task, parent, source = task_paths(run, operator, candidate)
     result = parent / "stages" / group / "result.json"
     if result.exists():
@@ -151,25 +154,124 @@ def stage(run, operator, candidate, kind, group, **kwargs):
         elif kind != "timing" and plan.get("case_ids") != list(ALL_CASES if kwargs.get("cases") is None else kwargs["cases"]):
             raise ValueError("requested stage cases differ from frozen plan")
         if kind == "control" and explicit_plan is None:
-            check_control_settings(plan["cohort"], {key: kwargs[key] for key in ("epoch", "capture_storage") if key in kwargs})
+            check_control_settings(plan["cohort"], {key: kwargs[key] for key in ("epoch", "capture_storage", "search_lite") if key in kwargs})
         return value
     if result.parent.exists():
         raise ValueError("incomplete stage requires explicit evidence recovery: " + str(result.parent))
     return run_stage(run, operator, candidate, kind, group, **kwargs)
 
 
+def authenticate_timing_reports(task, parent, operator, item, plan, observations, *, required):
+    """Use ledger-pinned reports, or fully replay an older unbound completion.
+
+    Only report/completion JSON is read on the normal newly collected path. An
+    older stage cannot acquire new authority merely by saving a local receipt.
+    """
+    import msprof_exploration_report as analysis
+    ledger = Campaign(Path(task).parents[1] / 'ledger')
+    state = ledger.state['tasks'][operator]
+    cid = item['candidate_id']
+    registered = state['candidates'][cid]
+    if any(registered.get(key) != item.get(key) for key in ('source_hash', 'source_parent')):
+        raise ValueError('timing feedback source differs from ledger')
+    stage_id = cid + '-search'
+    recorded = state['stages'].get(stage_id)
+    if (recorded is None or recorded.get('kind') != 'timing' or recorded.get('candidate_id') != cid
+            or recorded.get('plan') != plan or not recorded.get('attempts')):
+        raise ValueError('timing feedback stage differs from immutable ledger')
+    attempt = recorded['attempts'][-1]
+    if attempt.get('outcome') is None or (required and attempt.get('outcome') != 'success'):
+        raise ValueError('timing feedback requires a closed matching stage')
+    evidence = attempt.get('evidence', {})
+    result_ref = evidence.get('result')
+    if not isinstance(result_ref, dict) or Path(result_ref.get('path', '')).parent != Path(parent) / 'stages/search':
+        raise ValueError('timing result lies outside the recorded search stage')
+    result = checked_pointer(result_ref, 'timing result')
+    if (result.get('kind') != 'timing' or result.get('candidate_id') != cid
+            or result.get('stage_id') != stage_id
+            or result.get('status') != ('passed' if attempt['outcome'] == 'success' else 'failed')):
+        raise ValueError('timing result differs from closed ledger outcome')
+    in_result = result.get('report_bindings')
+    in_ledger = evidence.get('report_bindings')
+    if in_result is not None or in_ledger is not None:
+        if (attempt['outcome'] != 'success' or in_result != in_ledger or not isinstance(in_result, dict)
+                or set(in_result) != {'version', 'cohorts'}
+                or in_result['version'] != 'level2_timing_report_bindings_v1'):
+            raise ValueError('timing report bindings differ from ledger and result')
+        rows = in_result['cohorts']
+        if (not isinstance(rows, list) or len(rows) != len(plan['cohorts'])
+                or [row.get('relation') for row in rows] != [row['relation'] for row in plan['cohorts']]):
+            raise ValueError('timing report binding relation coverage differs')
+        by_relation = {row['relation']: row for row in rows}
+        if len(by_relation) != len(rows):
+            raise ValueError('duplicate timing report binding relation')
+        for observed in observations:
+            row = by_relation[observed['relation']]
+            if set(row) != {'relation', 'report', 'completion'}:
+                raise ValueError('timing report binding fields differ')
+            directory = observed['directory']
+            for key, filename in (('report', 'report.json'), ('completion', 'group-completion.json')):
+                if (not isinstance(row[key], dict) or row[key].get('path') != str(directory / filename)
+                        or checked_pointer(row[key], 'bound timing ' + key) != observed[key]):
+                    raise ValueError('bound timing ' + key + ' differs from feedback input')
+        return
+    # Already closed feedback is itself an immutable ledger report anchor. This
+    # keeps final audits of historical completed rounds cheap and byte-preserving.
+    if registered.get('feedback_closed'):
+        for oid in reversed(registered.get('observation_ids', [])):
+            observation = state.get('observations', {}).get(oid, {})
+            if (observation.get('close_feedback', True) is not True
+                    or stage_id not in observation.get('stage_ids', [])
+                    or observation.get('stage_attempts', {}).get(stage_id) != len(recorded['attempts'])):
+                continue
+            feedback = observation.get('feedback', {})
+            if (feedback.get('source_hash') != item['source_hash']
+                    or feedback.get('source_parent') != item['source_parent']):
+                continue
+            feedback_pointer(task, cid, observation)
+            comparisons = feedback.get('comparisons', [])
+            for observed in observations:
+                matching = [row for row in comparisons if row.get('relation') == observed['relation']]
+                if len(matching) != 1:
+                    raise ValueError('closed feedback report coverage differs')
+                ref = matching[0].get('report')
+                if (not isinstance(ref, dict) or ref.get('path') != str(observed['directory'] / 'report.json')
+                        or checked_pointer(ref, 'closed feedback report') != observed['report']):
+                    raise ValueError('closed feedback report differs from projection')
+            return
+    # Historical unclosed completions have no independent report hash. Recover
+    # by running the canonical byte-level reader, never a saved cache.
+    from msprof_search_protocol import LITE_PROTOCOL
+    for observed in observations:
+        cohort = observed['cohort']
+        ref = cohort.get('calibration_report') or plan.get('calibration_report')
+        if plan.get('protocol') == LITE_PROTOCOL:
+            if ref is not None:
+                raise ValueError('lite replay cannot reuse an A/A qualification')
+            calibration = None
+        else:
+            calibration = (checked_pointer(ref, 'legacy replay calibration') if ref is not None else
+                           load(Path(task) / 'stages/aa-initial/cohort/report.json'))
+        actual = analysis.analyze_task_cohort(observed['completion']['completed_sessions'],
+                                             observed['frozen'], calibration=calibration)
+        analysis.compare_saved_report(observed['report'], actual,
+                                      evidence_path=observed['directory'] / 'report.json')
+
+
 def comparison_reports(task, parent, operator, item, baseline_hash, *, required):
     """Replay source and public-case bindings before exposing timing feedback."""
     source_parent = item["source_parent"]
-    controls = {"direct_parent": source_parent["candidate_id"] or "baseline"}
-    if source_parent["source_hash"] != baseline_hash:
-        controls["original_baseline"] = "baseline"
     plan = load(parent / "stages/search/stage-plan.json")
+    from msprof_search_protocol import LITE_PROTOCOL
+    lite = plan.get("protocol") == LITE_PROTOCOL
+    controls = {"direct_parent": source_parent["candidate_id"] or "baseline"}
+    if not lite and source_parent["source_hash"] != baseline_hash:
+        controls["original_baseline"] = "baseline"
     expected_cases = [1, 8, 14, 20] + [row["case_id"] for row in item["probes"]]
     if plan.get("purpose") != "search" or plan.get("case_ids") != expected_cases:
         raise ValueError("search feedback cases differ from declared sentinels and probes")
     from msprof_exploration_campaign import comparisons
-    if plan.get("comparisons") != comparisons(item, baseline_hash):
+    if plan.get("comparisons") != comparisons(item, baseline_hash, search_lite=lite):
         raise ValueError("search plan source parent or candidate identity differs")
     cohorts = {row["relation"]: row for row in plan["cohorts"]}
     if len(cohorts) != len(plan["cohorts"]) or set(cohorts) != set(controls):
@@ -179,7 +281,7 @@ def comparison_reports(task, parent, operator, item, baseline_hash, *, required)
         raise ValueError("search candidate source archive differs from ledger")
     verify_source_snapshot(parent / "source.tar", parent / "op")
     implementation = source_hash(parent / "op")
-    reports = []
+    reports, observations = [], []
     for relation, control_id in controls.items():
         cohort = cohorts[relation]
         if cohort.get("control_candidate_id") != control_id:
@@ -193,7 +295,7 @@ def comparison_reports(task, parent, operator, item, baseline_hash, *, required)
         control_source = control / ("baseline" if control_id == "baseline" else "op")
         verify_source_snapshot(archive, control_source)
         source_hashes = {"A": source_hash(control_source), "B": implementation}
-        if frozen.get("case_ids") != expected_cases:
+        if frozen.get("case_ids") != expected_cases or (frozen.get("protocol") == LITE_PROTOCOL) != lite:
             raise ValueError("cohort cases differ from public search scope")
         build = checked_pointer(frozen["identity_bindings"]["role_build"], "comparison role build")
         if build.get("operator") != operator or any(build["roles"][role]["source_sha256"] != source_hashes[role] for role in "AB"):
@@ -224,12 +326,15 @@ def comparison_reports(task, parent, operator, item, baseline_hash, *, required)
                 or set(report["suite"]) != {"normal", "swapped"}
                 or any({str(c) for c in suite["case_ids"]} != {str(c) for c in expected_cases} for suite in report["suite"].values())):
             raise ValueError("timing report case coverage differs from declared public scope")
+        observations.append({'relation': relation, 'cohort': cohort, 'frozen': frozen,
+                             'directory': report_path.parent, 'report': report, 'completion': completion})
         limitations = list(report["limitations"])
         if continuation is not None:
             limitations.extend(value for value in continuation["interruption_limitations"] if value not in limitations)
         reports.append({"relation": relation, "control_candidate_id": control_id,
             "source_hashes": source_hashes, "report": pointer(report_path),
             "case_ids": report["case_ids"], "suite": report["suite"],
+            **({"protocol": LITE_PROTOCOL, "screening_decision": search_decision(report)} if lite else {}),
             "results": [{k: row[k] for k in ("case_id", "buffer_config", "speedup", "ci95", "latency_change",
                 "cv_status", "calibration_status", "coarse_observed_controls", "measurement_quality", "limitations")}
                 for row in report["results"]], "limitations": limitations,
@@ -237,7 +342,37 @@ def comparison_reports(task, parent, operator, item, baseline_hash, *, required)
         if continuation is not None:
             if resolve_continuation(report_path.parent, require_closed=True) != continuation:
                 raise ValueError("continuation authority changed before feedback projection")
+    if observations:
+        authenticate_timing_reports(task, parent, operator, item, plan, observations, required=required)
     return reports
+
+
+def search_decision(report):
+    """Conservative exploration guidance; never a production admission verdict.
+
+    Small effects do not trigger automatic repeats. Per-case regressions remain
+    visible even when an equal-case suite improves.
+    """
+    cells = report["results"]
+    gains, losses, uncertain, inconsistent = [], [], [], []
+    for case in report["case_ids"]:
+        selected = [row for row in cells if str(row["case_id"]) == str(case)]
+        values = [value for row in selected for value in row["process_ratios"]]
+        if not values or any(row.get("cv_status") != "within_limit" for row in selected):
+            inconsistent.append(str(case))
+        elif min(values) > 1.05:
+            gains.append(str(case))
+        elif max(values) < 1 / 1.05:
+            losses.append(str(case))
+        elif min(values) >= 1 / 1.03 and max(values) <= 1.03:
+            uncertain.append(str(case))
+        else:
+            inconsistent.append(str(case))
+    return {"purpose": "next_parent_guidance_only", "clear_gain_cases": gains,
+            "clear_regression_cases": losses, "near_flat_or_uncertain_cases": uncertain,
+            "review_cases": inconsistent, "automatic_remeasure": False,
+            "default_parent": "retain_direct_parent" if losses or inconsistent or not gains else "candidate_for_consideration",
+            "baseline_comparison": "deferred_to_frozen_final", "formal_admission": "not_evaluated"}
 
 
 def boundary_result(task, parent, operator, candidate_id):
@@ -287,18 +422,19 @@ def baseline(run, operator, *, correctness_group="correctness", control_group="a
     if re.fullmatch(r"aa-[A-Za-z0-9][A-Za-z0-9_-]*", control_group) is None:
         raise ValueError("control group must be a named aa-* group")
     settings = timing_options(measurement)
-    if set(settings) - {"epoch", "capture_storage"}:
+    if set(settings) - {"epoch", "capture_storage", "search_lite"}:
         raise ValueError("baseline control cannot consume another calibration")
     for kind in ("correctness", "runtime", "control"):
         group = correctness_group if kind == "correctness" else control_group if kind == "control" else kind
-        result = stage(run, operator, "baseline", kind, group, cases=ALL_CASES,
+        cases = [1, 8, 14, 20] if kind == "control" and settings.get("search_lite") else ALL_CASES
+        result = stage(run, operator, "baseline", kind, group, cases=cases,
                        **(settings if kind == "control" else {}))
         if result["status"] != "passed":
             return {"operator": operator, "status": "blocked", "stage": result}
         if kind == "control" and deduplicate_outputs:
             _, _, task, parent, _ = task_paths(run, operator, "baseline")
             reclaim_outputs(run, task, parent, group)
-    return {"operator": operator, "status": "baseline_validated_and_calibrated"}
+    return {"operator": operator, "status": "baseline_validated_and_self_checked" if settings.get("search_lite") else "baseline_validated_and_calibrated"}
 
 
 def candidate(run, operator, candidate_id, *, boundaries=True, measurement=None, deduplicate_outputs=False):
@@ -425,12 +561,14 @@ def main():
     parser.add_argument("--correctness-group", default="correctness",
                         help="Explicit baseline correctness group; a new recovery name preserves all prior attempts")
     parser.add_argument("--capture-storage", choices=("direct", "local"))
-    parser.add_argument("--epoch", default="epoch-01")
-    parser.add_argument("--calibration-group", default="aa-initial")
+    parser.add_argument("--epoch", help="Measurement epoch; omitted uses the frozen epoch or epoch-01 for a new plan")
+    parser.add_argument("--calibration-group")
+    parser.add_argument("--search-protocol", choices=("auto", "lite", "full"), default="auto",
+                        help="New searches use lite; auto preserves an existing frozen search protocol")
     parser.add_argument("--deduplicate-outputs", action="store_true",
                         help="Synchronously deduplicate exact output bytes after closed control/timing stages")
     args = parser.parse_args()
-    settings = {"epoch": args.epoch} if args.epoch != "epoch-01" else {}
+    settings = {"epoch": args.epoch} if args.epoch is not None else {}
     if args.capture_storage is not None:
         from msprof_raw_storage import DIRECT, LOCAL
         settings["capture_storage"] = LOCAL if args.capture_storage == "local" else DIRECT
@@ -438,21 +576,44 @@ def main():
         settings = timing_options(settings)
     except ValueError as exc:
         parser.error(str(exc))
-    if re.fullmatch(r"aa-[A-Za-z0-9][A-Za-z0-9_-]*", args.calibration_group) is None:
+    if args.calibration_group is not None and re.fullmatch(r"aa-[A-Za-z0-9][A-Za-z0-9_-]*", args.calibration_group) is None:
         parser.error("calibration group must be a named aa-* group")
     if args.command == "candidate" and (len(args.operator) != 1 or not args.candidate):
         parser.error("one explicitly authored candidate is required")
     if args.command == "candidate" and args.correctness_group != "correctness":
         parser.error("--correctness-group currently supports baseline recovery only")
     for operator in args.operator:
+        from msprof_search_protocol import LITE_PROTOCOL
+        task = task_path(args.run, operator)
+        frozen_path = task / 'candidates' / (args.candidate or '') / 'plans/search/stage-plan.json'
+        frozen = load(frozen_path) if args.command == 'candidate' and frozen_path.is_file() else None
+        lite = args.search_protocol == 'lite' or (args.search_protocol == 'auto'
+            and (frozen is None or frozen.get('protocol') == LITE_PROTOCOL))
+        selected = dict(settings)
+        if lite:
+            selected['search_lite'] = True
+        group = args.calibration_group or ('aa-search-lite' if lite else 'aa-initial')
+        if args.search_protocol == 'auto' and frozen is not None:
+            first = checked_pointer(frozen['cohorts'][0]['plan'], 'frozen search cohort')
+            if args.epoch is None:
+                selected['epoch'] = first['calibration_scope']['epoch']
+            if args.capture_storage is None and first['calibration_scope'].get('capture_storage') is not None:
+                selected['capture_storage'] = first['calibration_scope']['capture_storage']
+            if args.calibration_group is None and not lite:
+                if frozen.get('calibration_report'):
+                    selected['calibration_path'] = frozen['calibration_report']['path']
+                overrides = {row['relation']: row['calibration_report']['path']
+                             for row in frozen['cohorts'] if row.get('calibration_report')}
+                if overrides:
+                    selected['calibration_by_relation'] = overrides
         if args.command == "baseline":
             result = baseline(args.run, operator, correctness_group=args.correctness_group,
-                control_group=args.calibration_group, measurement=settings, deduplicate_outputs=args.deduplicate_outputs)
+                control_group=group, measurement=selected, deduplicate_outputs=args.deduplicate_outputs)
         else:
-            task = task_path(args.run, operator)
-            selected = dict(settings)
-            if settings or args.calibration_group != "aa-initial":
-                selected["calibration_path"] = task / "stages" / args.calibration_group / "cohort/report.json"
+            if (not lite and 'calibration_path' not in selected and 'calibration_by_relation' not in selected
+                    and (settings or args.calibration_group is not None)
+                    and (args.search_protocol != 'auto' or frozen is None or args.calibration_group is not None)):
+                selected["calibration_path"] = task / "stages" / group / "cohort/report.json"
             result = candidate(args.run, operator, args.candidate, measurement=selected,
                                deduplicate_outputs=args.deduplicate_outputs)
         print(json.dumps(result), flush=True)

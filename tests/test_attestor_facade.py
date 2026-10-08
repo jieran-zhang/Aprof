@@ -6,16 +6,12 @@ import pytest
 P=Path(__file__).parents[1]
 spec=importlib.util.spec_from_file_location('attestor_facade_unit',P/'scripts/level2_final_report_attestation.py')
 a=importlib.util.module_from_spec(spec);spec.loader.exec_module(a)
-SOURCE=Path(os.environ.get('APROF_REVIEWED_STORAGE_ROOT',P))/'scripts'
-LIVE=Path(os.environ.get('APROF_TEST_REPO',P))/'scripts'
+from reviewed_storage_fixture import materialize_reviewed_storage
 
 @pytest.fixture
 def epoch(tmp_path):
     repo=tmp_path/'repo';(repo/'scripts').mkdir(parents=True)
-    for name in a.STORAGE_PRODUCERS:
-        source=SOURCE/name if (SOURCE/name).is_file() else LIVE/name
-        data=source.read_bytes();assert a.digest(data)==a.STORAGE_PRODUCERS[name]
-        (repo/'scripts'/name).write_bytes(data)
+    materialize_reviewed_storage(repo/'scripts',a.STORAGE_PRODUCERS)
     return repo
 
 def test_exact_reviewed_facade_and_capture_epoch(epoch):

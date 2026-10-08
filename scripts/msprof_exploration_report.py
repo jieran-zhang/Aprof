@@ -14,12 +14,15 @@ import hashlib
 import importlib
 import json
 import math
+import os
+from copy import deepcopy
 from pathlib import Path
 import statistics as st
 import sys
 
 import msprof_exploration_provenance as engineering_provenance
 import level2_evidence_storage as verification_storage
+from msprof_search_protocol import LITE_PROTOCOL, LITE_ANALYSIS, LITE_PRODUCER, LITE_DESIGN, pairs_for_producer
 
 PROTOCOL = 'msprof_task_time_exploration_v1'
 ANALYSIS = 'msprof_exploration_analysis_v1'
@@ -110,7 +113,7 @@ def _ids(values):
 
 def _request(request):
     require(isinstance(request, dict), 'request must be an embedded object')
-    require(request.get('version') in (PRODUCER, PRODUCER_V2), 'collector protocol differs')
+    require(request.get('version') in (PRODUCER, PRODUCER_V2, LITE_PRODUCER), 'collector protocol differs')
     require(request.get('profiler_mode') == MODE, 'explicit task-only profiler_mode required')
     require(type(request.get('device')) is int and request['device'] >= 0, 'explicit physical device required')
     require(str(request.get('cpu', '')).isdigit(), 'one explicit CPU affinity required')
@@ -128,7 +131,7 @@ def _request(request):
     require(isinstance(cases, list) and cases, 'request cases missing')
     ids = _ids([row['case_id'] for row in cases])
     for row in cases:
-        if request['version']==PRODUCER_V2:
+        if request['version'] in (PRODUCER_V2, LITE_PRODUCER):
             require(type(row.get('repeat')) is int and row['repeat'] in (1,10), 'v2 cases require frozen repeat 1 or 10')
         require(all(Path(row.get(key, '')).is_absolute() for key in ('metadata', 'verifier')),
                 'absolute prepared metadata/verifier paths required')
@@ -136,29 +139,32 @@ def _request(request):
 
 
 def validate_plan(plan):
-    """Validate the frozen six-row additive design without touching the device.
+    """Validate a versioned full or search-lite design without touching the device.
 
     Required plan: protocol, analysis_version, comparison_kind (aa/ab), case_ids,
-    calibration_scope (nonempty frozen JSON object), and six schedule entries
+    calibration_scope (nonempty frozen JSON object), and protocol-sized entries
     {name, request}, where request is the complete original collector request.
     """
     canonical(plan)
-    require((plan.get('protocol'),plan.get('analysis_version')) in ((PROTOCOL,ANALYSIS),(PROTOCOL_V2,ANALYSIS_V2)),
+    require((plan.get('protocol'),plan.get('analysis_version')) in ((PROTOCOL,ANALYSIS),(PROTOCOL_V2,ANALYSIS_V2),(LITE_PROTOCOL,LITE_ANALYSIS)),
             'exploration protocol/analysis version differs')
     require(plan.get('comparison_kind') in ('aa', 'ab'), 'comparison_kind must be aa or ab')
     ids = _ids(plan.get('case_ids'))
     require(isinstance(plan.get('calibration_scope'), dict) and plan['calibration_scope'],
             'frozen calibration_scope is required')
     schedule = plan.get('schedule')
-    require(isinstance(schedule, list) and len(schedule) == 6, 'exactly six planned native processes required')
+    lite = plan['protocol'] == LITE_PROTOCOL
+    design_rows = LITE_DESIGN if lite else DESIGN
+    require(isinstance(schedule, list) and len(schedule) == len(design_rows),
+            'exactly two planned native processes required' if lite else 'exactly six planned native processes required')
     names = []
     condition = None
-    for entry, design in zip(schedule, DESIGN):
+    for entry, design in zip(schedule, design_rows):
         name = entry.get('name', '')
         require(name and all(c.isascii() and (c.isalnum() or c in '_-') for c in name), 'unsafe session name')
         names.append(name)
         request = entry['request']
-        require(request.get('version')==(PRODUCER_V2 if plan['protocol']==PROTOCOL_V2 else PRODUCER), 'plan/producer protocol mismatch')
+        require(request.get('version')==(LITE_PRODUCER if lite else PRODUCER_V2 if plan['protocol']==PROTOCOL_V2 else PRODUCER), 'plan/producer protocol mismatch')
         require(_request(request) == ids, 'request case order differs from frozen case_ids')
         from msprof_raw_storage import policy as storage_policy
         if 'capture_storage' in request or 'capture_storage' in plan['calibration_scope']:
@@ -172,7 +178,7 @@ def validate_plan(plan):
         current = {k: v for k, v in request.items() if k not in ('load_order', 'first_order', 'buffer_configs')}
         require(condition is None or current == condition, 'cohort request conditions differ')
         condition = current
-    require(len(set(names)) == 6, 'duplicate planned session name')
+    require(len(set(names)) == len(design_rows), 'duplicate planned session name')
     if 'identity_bindings' in plan:
         identities = plan['identity_bindings']
         require(isinstance(identities, dict) and set(identities) == {'role_build', 'runner_build', 'input_bindings', 'producer'},
@@ -246,17 +252,19 @@ def _build_identity(request, bindings, *, provenance_out=None):
     _verify_pointer_tree(build, evidence_path=request['role_build'], producer_bindings=provenance_out)
     _verify_pointer_tree(runner, evidence_path=request['runner_build'], producer_bindings=provenance_out)
     require(runner.get('version') == request['version'], 'runner producer differs')
-    per_case=request['version']==PRODUCER_V2
+    per_case=request['version'] in (PRODUCER_V2,LITE_PRODUCER)
+    pair_count=pairs_for_producer(request['version'])
     require(bool(runner.get('per_case_repeat'))==per_case, 'runner case-repeat capability differs')
-    require((runner.get('repeat'), runner.get('pairs'), runner.get('warmup')) == (10, 30, 10),
-            'runner requires repeat=10, pairs=30, warmup=10')
+    require((runner.get('repeat'), runner.get('pairs'), runner.get('warmup')) == (10, pair_count, 10),
+            'runner sampling parameters differ from producer protocol')
     _bound_file(bindings, runner['runner'])
     require(sha(runner['runner']) == runner['runner_hash'], 'runner binary hash differs')
     runner_root = Path(request['runner_build']).parent
     for filename, field in [('runner.cpp', 'source_hash'), ('original-runner.cpp', 'original_hash'), ('abi.h', 'abi_hash')]:
         require(sha(runner_root / filename) == runner[field], 'runner source/ABI hash differs')
     original = (runner_root / 'original-runner.cpp').read_text()
-    generated=timing.instrument(original,10,per_case=True) if per_case else timing.instrument(original,10)
+    generated=(timing.instrument(original,10,per_case=True,search_lite=True) if request['version']==LITE_PRODUCER
+               else timing.instrument(original,10,per_case=True) if per_case else timing.instrument(original,10))
     require((runner_root / 'runner.cpp').read_text() == generated, 'generated runner is not the attested variant')
     expected_patch = ''.join(difflib.unified_diff(original.splitlines(True), generated.splitlines(True),
                                                 fromfile='original-runner.cpp', tofile='runner.cpp'))
@@ -331,6 +339,7 @@ def verify_observation(directory, expected_request=None, *, provenance_out=None)
     if expected_request is not None:
         require(request == expected_request, 'request differs from frozen plan')
     case_ids = _request(request)
+    pair_count = pairs_for_producer(request['version'])
     completion = load(directory / 'completion.json')
     require(completion.get('version') == request['version'] and completion.get('status') == 'passed'
             and completion.get('error') is None and completion.get('formal_admission') == 'not_evaluated',
@@ -343,6 +352,9 @@ def verify_observation(directory, expected_request=None, *, provenance_out=None)
         _bound_file(bindings,path)
     timing, build, runner = _build_identity(request, bindings)
     require(any(Path(p).name == 'cannbench_msprof_timing.py' for p in bindings), 'collector producer hash missing')
+    if request['version'] == LITE_PRODUCER:
+        import msprof_search_protocol
+        _bound_file(bindings, Path(msprof_search_protocol.__file__).resolve())
     require(any(Path(p).suffix == '.json' and p not in (request['role_build'], request['runner_build'])
                 and load(p, opaque=True) == request for p in bindings if Path(p).suffix == '.json'),
             'original collector request binding missing')
@@ -386,7 +398,7 @@ def verify_observation(directory, expected_request=None, *, provenance_out=None)
     expected_types = ['process_start', 'session_start', 'module', 'module']
     for _ in case_ids:
         for _ in configs:
-            expected_types += ['case_start', 'resources', 'resources', 'warmup_complete'] + ['sample'] * 60 + ['output', 'output']
+            expected_types += ['case_start', 'resources', 'resources', 'warmup_complete'] + ['sample'] * (2 * pair_count) + ['output', 'output']
     expected_types += ['session_end']
     require([row.get('type') for row in records] == expected_types, 'native lifecycle sequence incomplete or reordered')
     # The existing instrumenter adds timing_protocol to emit(), but the final
@@ -420,12 +432,12 @@ def verify_observation(directory, expected_request=None, *, provenance_out=None)
             'case/config execution coverage differs')
     for row in starts:
         require((row.get('case_index'), row.get('warmup_per_role'), row.get('pairs'), row.get('repeat')) ==
-                (case_ids.index(row['case_id']), 10, 30, case_repeats[row['case_id']]), 'case measurement parameters differ')
+                (case_ids.index(row['case_id']), 10, pair_count, case_repeats[row['case_id']]), 'case measurement parameters differ')
     warmups = [row for row in records if row['type'] == 'warmup_complete']
     require([(row['case_id'], row['buffer_config'], row['calls_per_role']) for row in warmups] ==
             [(c, k, 10) for c in case_ids for k in configs], 'warmup coverage differs')
     samples = [row for row in records if row['type'] == 'sample']
-    expected_keys = [(c, k, j, role) for c in case_ids for k in configs for j in range(30)
+    expected_keys = [(c, k, j, role) for c in case_ids for k in configs for j in range(pair_count)
                      for role in (request['first_order'] if j % 2 == 0 else request['first_order'][::-1])]
     require([(row['case_id'], row['buffer_config'], row['pair_id'], row['role']) for row in samples] == expected_keys,
             'sample pairing/order/coverage differs')
@@ -471,7 +483,7 @@ def verify_observation(directory, expected_request=None, *, provenance_out=None)
     for native, checked_row in zip(outputs, checked):
         stem = f"{native['case_id']}_{native['buffer_config']}_{native['role']}"
         output = directory / 'native' / (stem + '.bin')
-        require(Path(native['path']).resolve() == output and native.get('complete_calls_since_prepare') == 10+30*case_repeats[native['case_id']]
+        require(Path(native['path']).resolve() == output and native.get('complete_calls_since_prepare') == 10+pair_count*case_repeats[native['case_id']]
                 and native.get('validation_scope') == 'final_call_of_final_formal_sample'
                 and native.get('validation_status') == 'pending_external_oracle', 'native output identity/scope differs')
         require(checked_row.get('passed') is True and checked_row.get('output_hash') == sha(output), 'prepared output hash/verdict differs')
@@ -485,7 +497,7 @@ def verify_observation(directory, expected_request=None, *, provenance_out=None)
         oracle_argv = oracle.get('argv')
         execution_metadata_path=str(vdir/'metadata.json')
         if 'oracle_relocation' in oracle:
-            require(request['version']==PRODUCER_V2 and build['operator']=='unsorted_segment_sum','unexpected oracle metadata relocation')
+            require(request['version'] in (PRODUCER_V2,LITE_PRODUCER) and build['operator']=='unsorted_segment_sum','unexpected oracle metadata relocation')
             oracle_relocation_artifacts.extend(verify_oracle_relocation(oracle['oracle_relocation'],vdir/'metadata.json',spec['verifier']))
             execution_metadata_path=oracle['oracle_relocation']['execution_metadata_path']
         require(isinstance(oracle_argv, list) and len(oracle_argv) == 4
@@ -509,11 +521,11 @@ def verify_observation(directory, expected_request=None, *, provenance_out=None)
     for case in case_ids:
         for config in ('normal', 'swapped'):
             rows = [row for row in parsed['samples'] if (row['case_id'], row['buffer_config']) == (case, config)]
-            require(len(rows) == 60, 'complete case/config sample block missing')
-            pairs = {j: {row['role']: row for row in rows if row['pair_id'] == j} for j in range(30)}
+            require(len(rows) == 2 * pair_count, 'complete case/config sample block missing')
+            pairs = {j: {row['role']: row for row in rows if row['pair_id'] == j} for j in range(pair_count)}
             require(all(set(p) == {'A', 'B'} for p in pairs.values()), 'pair role incomplete')
-            logs = [math.log(pairs[j]['A']['task_us']) - math.log(pairs[j]['B']['task_us']) for j in range(30)]
-            strata = {order: st.mean(logs[j] for j in range(30) if pairs[j]['A']['order'] == order) for order in ('AB', 'BA')}
+            logs = [math.log(pairs[j]['A']['task_us']) - math.log(pairs[j]['B']['task_us']) for j in range(pair_count)]
+            strata = {order: st.mean(logs[j] for j in range(pair_count) if pairs[j]['A']['order'] == order) for order in ('AB', 'BA')}
             roles = {role: _describe([p[role]['task_us'] for p in pairs.values()]) for role in 'AB'}
             cells.append({'case_id': case, 'buffer_config': config, 'mean_log': st.mean(logs), 'speedup': math.exp(st.mean(logs)),
                           'roles': roles, 'order_log_means': strata, 'order_log_contrast': strata['AB'] - strata['BA']})
@@ -586,6 +598,17 @@ def _describe(values):
             'minimum_us': min(values), 'maximum_us': max(values)}
 
 
+def descriptive_effect(logs):
+    require(len(logs) == 2 and all(math.isfinite(v) for v in logs), 'search-lite requires two finite process values')
+    mean = st.mean(logs)
+    return {'n_processes': 2, 'df': None, 'log_effects': list(logs),
+            'process_ratios': [math.exp(v) for v in logs], 'mean_log': mean,
+            'log_ci95': None, 'speedup': math.exp(mean), 'ci95': None,
+            'latency_change': math.expm1(-mean), 'latency_change_ci95': None,
+            'observed_process_range': [math.exp(min(logs)), math.exp(max(logs))],
+            'uncertainty': 'descriptive_two_process_range_not_confidence_interval'}
+
+
 def effect(logs):
     require(len(logs) == 6 and all(math.isfinite(v) for v in logs), 'effect requires six finite process values')
     mean = st.mean(logs)
@@ -597,6 +620,8 @@ def effect(logs):
 
 
 def equivalence(summary):
+    if summary['log_ci95'] is None:
+        return 'not_estimated'
     lo, hi = summary['log_ci95']
     if lo >= -TOL and hi <= TOL:
         return 'equivalent'
@@ -681,29 +706,79 @@ def _scope_evidence(scope, session):
             'limitation': 'Matching the declared epoch is conditional on unchanged external environment; absent versions are not inferred.'}
 
 
+class ObservationCache:
+    """One collector process's full-verification results; never a saved receipt.
+
+    The external replay API defaults to full byte/hash/oracle-evidence replay.
+    During collection only, a verified observation can be reused if every input
+    retains its inode, size, mtime and ctime. The cache cannot be reconstructed
+    from JSON and does not survive a process boundary. This is an optimization
+    within a trusted collector, not an authentication boundary against that
+    process or an adversarial filesystem.
+    """
+    def __init__(self):
+        self._pid = os.getpid()
+        self._entries = {}
+
+    @staticmethod
+    def _stamp(path):
+        value = Path(path).stat()
+        return (value.st_dev, value.st_ino, value.st_size,
+                value.st_mtime_ns, value.st_ctime_ns)
+
+    def verify(self, directory, request, *, provenance_out=None):
+        require(os.getpid() == self._pid, 'observation cache crossed a process boundary')
+        key = str(Path(directory).resolve())
+        require(key not in self._entries, 'observation already cached')
+        session = verify_observation(directory, expected_request=request,
+                                     provenance_out=provenance_out)
+        paths = set(session['artifacts']) | set(session['bound_artifacts'])
+        # Live collection has no retired evidence. Missing paths therefore fail
+        # closed rather than silently adopting an archived or saved receipt.
+        stamps = {path: self._stamp(path) for path in paths}
+        self._entries[key] = (digest(request), deepcopy(session), stamps)
+        return deepcopy(session)
+
+    def get(self, directory, request):
+        require(os.getpid() == self._pid, 'observation cache crossed a process boundary')
+        key = str(Path(directory).resolve())
+        require(key in self._entries, 'observation was not verified in this collector')
+        request_hash, session, stamps = self._entries[key]
+        require(digest(request) == request_hash, 'cached request differs from frozen plan')
+        require(all(self._stamp(path) == stamp for path, stamp in stamps.items()),
+                'evidence changed after in-process verification')
+        return deepcopy(session)
+
+
 @verification_storage.reader_session()
-def analyze_task_cohort(directories, plan, calibration=None, *, provenance_out=None):
-    """Verify six processes, then return a new report without writing artifacts."""
+def analyze_task_cohort(directories, plan, calibration=None, *, provenance_out=None, _verified_sessions=None):
+    """Verify the frozen process cohort, then return a read-only analysis."""
     plan = validate_plan(plan)
     scope_paths = _verify_pointer_tree(plan['calibration_scope'])
     if 'identity_bindings' in plan:
         scope_paths.extend(_verify_pointer_tree(plan['identity_bindings'], evidence_path=plan['schedule'][0]['request']['role_build']))
     scope_artifacts = {str(path): sha(path) for path in scope_paths}
-    require(len(directories) == 6, 'exactly six observed native processes required')
+    lite = plan['protocol'] == LITE_PROTOCOL
+    process_count = 2 if lite else 6
+    summarize_effect = descriptive_effect if lite else effect
+    require(len(directories) == process_count, 'exactly two observed native processes required' if lite else 'exactly six observed native processes required')
     paths = [Path(path).resolve() for path in directories]
-    require(len(set(paths)) == 6, 'duplicate process directory')
+    require(len(set(paths)) == process_count, 'duplicate process directory')
     resolve_continuation = engineering_provenance.resolve_continuation
     continuation = resolve_continuation(paths[0].parent, verification_storage.read_bytes)
     if continuation is not None:
         from level2_cohort_continuation import annotation as continuation_annotation
         require([str(p) for p in paths] == continuation['directories'], 'continuation session mapping differs')
         require(plan == load(paths[0].parent / 'plan.json'), 'continuation must use its exact frozen cohort plan')
+    if _verified_sessions is not None:
+        require(isinstance(_verified_sessions, ObservationCache), 'only an in-process observation cache may be reused')
     sessions = []
     identities = set()
     previous_end = None
     for path, entry in zip(paths, plan['schedule']):
         require(continuation is not None or path.name == entry['name'], 'observation order/name differs from frozen schedule')
-        session = verify_observation(path, entry['request'], **({'provenance_out': provenance_out} if provenance_out is not None else {}))
+        session = (_verified_sessions.get(path, entry['request']) if _verified_sessions is not None
+                   else verify_observation(path, entry['request'], **({'provenance_out': provenance_out} if provenance_out is not None else {})))
         identity = (session['host'], session['pid'], session['started_at'])
         require(identity not in identities, 'duplicate native process identity')
         identities.add(identity)
@@ -723,17 +798,19 @@ def analyze_task_cohort(directories, plan, calibration=None, *, provenance_out=N
         config_results = {}
         for config in ('normal', 'swapped'):
             cells = [next(c for c in s['cells'] if (c['case_id'], c['buffer_config']) == (case, config)) for s in sessions]
-            result = {'case_id': case, 'buffer_config': config, 'metric': METRIC, **effect([c['mean_log'] for c in cells]),
+            result = {'case_id': case, 'buffer_config': config, 'metric': METRIC, **summarize_effect([c['mean_log'] for c in cells]),
                       'max_within_process_cv': max(c['roles'][r]['cv'] for c in cells for r in 'AB'),
                       'sessions': [{'session_id': s['session_id'], 'started_at': s['started_at'], **c} for s, c in zip(sessions, cells)],
-                      'order_conditions': {order: effect([c['order_log_means'][order] for c in cells]) for order in ('AB', 'BA')},
-                      'order_contrast': effect([c['order_log_contrast'] for c in cells]),
-                      'additive_factors': additive_effects([c['mean_log'] for c in cells])}
+                      'order_conditions': {order: summarize_effect([c['order_log_means'][order] for c in cells]) for order in ('AB', 'BA')},
+                      'order_contrast': summarize_effect([c['order_log_contrast'] for c in cells]),
+                      'additive_factors': ({'support': 'not_estimable_two_process_design',
+                          'interaction_control': 'not_covered', 'independent_loading_control': 'not_covered'}
+                          if lite else additive_effects([c['mean_log'] for c in cells]))}
             result['cv_status'] = 'within_limit' if result['max_within_process_cv'] <= .05 else 'exceeds_limit'
             result['aa_equivalence_status'] = equivalence(result) if plan['comparison_kind'] == 'aa' else 'not_applicable'
             result['aa_within_two_percent'] = (result['aa_equivalence_status'] == 'equivalent') if plan['comparison_kind'] == 'aa' else None
             config_results[config] = result
-        buffer_effect = effect([a - b for a, b in zip(config_results['normal']['log_effects'], config_results['swapped']['log_effects'])])
+        buffer_effect = summarize_effect([a - b for a, b in zip(config_results['normal']['log_effects'], config_results['swapped']['log_effects'])])
         buffer_effect['equivalence_status'] = equivalence(buffer_effect)
         applicable, card = _calibration_match(calibration, plan, sessions[0], case) if plan['comparison_kind'] == 'ab' else ('evaluated_here', None)
         if plan['comparison_kind'] == 'aa':
@@ -765,7 +842,7 @@ def analyze_task_cohort(directories, plan, calibration=None, *, provenance_out=N
     suites = {}
     for config in ('normal', 'swapped'):
         logs = [st.mean(c['mean_log'] for c in s['cells'] if c['buffer_config'] == config) for s in sessions]
-        suites[config] = {**effect(logs), 'case_ids': ids, 'coverage': len(ids), 'expected_case_count': len(ids),
+        suites[config] = {**summarize_effect(logs), 'case_ids': ids, 'coverage': len(ids), 'expected_case_count': len(ids),
                           'description': 'equal_case_equal_process_geometric_task_time_ratio',
                           'measurement_quality': 'descriptive_complete_with_caution', 'qualified_performance_eligible': False,
                           'full_twenty_case_suite': set(ids) == {str(i) for i in range(1, 21)}}
@@ -785,6 +862,19 @@ def analyze_task_cohort(directories, plan, calibration=None, *, provenance_out=N
                              'Marginal case intervals are not simultaneous coverage guarantees.',
                              'Additive factor intervals use residual df=2; unmeasured interactions remain uncovered.',
                              'Task sums exclude host submission and inter-task gaps; they are not end-to-end latency.']}
+    if lite:
+        result['limits']['search_neutral_ratio_band'] = [1 / 1.03, 1.03]
+        result['limitations'] = [
+            'Two process effects provide a descriptive range, not a confidence interval or an A/A equivalence test.',
+            'Module loading, first order, and buffer order effects are confounded in this two-row design.',
+            'Search feedback cannot establish qualified performance or formal runtime admission.',
+            'Task sums exclude host submission and inter-task gaps; they are not end-to-end latency.']
+        for row in result['results']:
+            row['measurement_quality'] = 'descriptive_search_only'
+            row['limitations'] = list(result['limitations'])
+            row['claim_status'] = 'unresolved_near_neutral' if abs(row['mean_log']) <= math.log(1.03) else 'exploratory_observation'
+        for row in result['suite'].values():
+            row['measurement_quality'] = 'descriptive_search_only'
     if continuation is not None:
         # Full original request checks above still run for each actual directory.
         result['continuation'] = continuation_annotation(continuation)

@@ -130,7 +130,7 @@ def test_baseline_cli_passes_explicit_group_without_changing_candidate_flow(tmp_
     calls = []
     monkeypatch.setattr(iteration, 'baseline', lambda *args, **kwargs: calls.append((args, kwargs)) or {'status': 'baseline_validated_and_calibrated'})
     monkeypatch.setattr(sys, 'argv', ['level2_iteration.py', 'baseline', '--run', str(tmp_path), '--operator', 'maximum',
-                                    '--correctness-group', 'correctness-recovery-01'])
+                                    '--correctness-group', 'correctness-recovery-01', '--search-protocol', 'full'])
     assert iteration.main() == 0
     assert calls[0][1] == {'correctness_group': 'correctness-recovery-01',
                              'control_group': 'aa-initial', 'measurement': {}, 'deduplicate_outputs': False}

@@ -26,6 +26,7 @@ from cannbench_shared_context import count_launches
 from cannbench_shared_context_profile import run_logged, sha, save, read_metadata, save_metadata
 from run_level1_serial import exclusive_host, health
 from shared_context_build import source_hash
+from msprof_search_protocol import LITE_PRODUCER, LITE_PAIRS, pairs_for_producer
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = 'msprof_kernel_time_study_v1'
@@ -37,8 +38,10 @@ def load(path):
     return json.loads(Path(path).read_text())
 
 
-def instrument(source, repeat, *, per_case=False):
+def instrument(source, repeat, *, per_case=False, search_lite=False):
     """A separate, hashed measurement variant; original runner is untouched."""
+    if search_lite and (not per_case or repeat != 10):
+        raise ValueError('search-lite requires frozen per-case repeats with default repeat=10')
     if type(repeat) is not int or not 1 <= repeat <= 100:
         raise ValueError('repeat must be in [1,100]')
     replacements = [
@@ -80,16 +83,24 @@ def instrument(source, repeat, *, per_case=False):
         anchor='for(size_t case_index=0;case_index<cases.size();++case_index){auto &c=cases[case_index];'
         if source.count(anchor)!=1: raise ValueError('case loop template changed')
         source = source.replace(anchor,anchor+'aprof_case_repeat='+str(repeat)+';for(size_t j=1;j+1<c.size();j+=2)if(c[j]=="--aprof-repeat"){aprof_case_repeat=std::stoi(c[j+1]);if(aprof_case_repeat!=1&&aprof_case_repeat!=10)throw std::runtime_error("invalid frozen case repeat");}')
+    if search_lite:
+        source = source.replace(VERSION_V2, LITE_PRODUCER)
+        for before, after in [('for(int pair=0;pair<30;++pair)', 'for(int pair=0;pair<6;++pair)'),
+                              (r'\"pairs\":30', r'\"pairs\":6'),
+                              ('10+30*aprof_case_repeat', '10+6*aprof_case_repeat')]:
+            if source.count(before) != 1:
+                raise ValueError('search-lite native template changed: ' + before)
+            source = source.replace(before, after)
     return source
 
 
-def build_runner(out, repeat, *, per_case=False):
+def build_runner(out, repeat, *, per_case=False, search_lite=False):
     out = Path(out).resolve()
     out.mkdir(parents=True, exist_ok=False)
     original = ROOT/'benchmarks/cannbench/harness/shared_context/runner.cpp'
     abi = original.with_name('abi.h')
     text = original.read_text()
-    generated = instrument(text, repeat, per_case=per_case)
+    generated = instrument(text, repeat, per_case=per_case, search_lite=search_lite)
     (out/'original-runner.cpp').write_text(text)
     (out/'runner.cpp').write_text(generated)
     (out/'harness.patch').write_text(''.join(difflib.unified_diff(
@@ -100,7 +111,7 @@ def build_runner(out, repeat, *, per_case=False):
             '-L'+str(home/'lib64'), '-Wl,-rpath,'+str(home/'lib64'), '-lascendcl', '-ldl', '-o', str(out/'runner')]
     with exclusive_host():
         run_logged(argv, out/'build', dict(os.environ), 120)
-    result = dict(version=VERSION_V2 if per_case else VERSION, repeat=repeat, pairs=30, warmup=10,
+    result = dict(version=LITE_PRODUCER if search_lite else VERSION_V2 if per_case else VERSION, repeat=repeat, pairs=LITE_PAIRS if search_lite else 30, warmup=10,
                   runner=str(out/'runner'), runner_hash=sha(out/'runner'),
                   source_hash=sha(out/'runner.cpp'), original_hash=sha(original), abi_hash=sha(abi))
     if per_case: result['per_case_repeat'] = True
@@ -123,6 +134,8 @@ def parse_profile(raw, journal, build, cases, repeat):
         raise ValueError('expected exactly one op_summary CSV')
     path = files[0]
     records = [load_row for load_row in (json.loads(x) for x in Path(journal).read_text().splitlines())]
+    producer = records[0].get('timing_protocol', VERSION) if records else VERSION
+    pair_count = pairs_for_producer(producer)
     if not records or records[-1].get('type') != 'session_end' or records[-1].get('exit_code') != 0:
         raise ValueError('native session did not finish')
     modules = {r['role']:r for r in records if r['type']=='module'}
@@ -163,7 +176,7 @@ def parse_profile(raw, journal, build, cases, repeat):
                              device=row['Device_id'], stream=row['Stream ID'], task=row['Task ID']))
     auxiliary_csv=None
     compute_count=len(rows)
-    use_task_time=needs_auxiliary or records[0].get('timing_protocol')==VERSION_V2
+    use_task_time=needs_auxiliary or producer in (VERSION_V2, LITE_PRODUCER)
     if use_task_time:
         task_files=sorted(Path(raw).rglob('task_time*.csv'))
         if len(task_files)!=1:raise ValueError('complete-call reset requires exactly one task_time CSV')
@@ -233,7 +246,7 @@ def parse_profile(raw, journal, build, cases, repeat):
         if record['type'] == 'case_start':
             case = metadata[record['case_id']]
             case_repeat=case.get('repeat',repeat)
-            if (record['repeat'],record['pairs'],record['warmup_per_role']) != (case_repeat,30,10):
+            if (record['repeat'],record['pairs'],record['warmup_per_role']) != (case_repeat,pair_count,10):
                 raise ValueError('native measurement parameters differ')
             for _ in range(10):
                 for role in 'AB':
@@ -264,7 +277,7 @@ def parse_profile(raw, journal, build, cases, repeat):
     if not samples:
         raise ValueError('no measured samples')
     producer=records[0].get('timing_protocol',VERSION)
-    if producer not in (VERSION,VERSION_V2):raise ValueError('unknown native timing producer')
+    if producer not in (VERSION,VERSION_V2,LITE_PRODUCER):raise ValueError('unknown native timing producer')
     result=dict(version=producer, csv=str(path), csv_hash=sha(path), target_tasks=len(rows),
                 warmup_tasks_excluded=warmup_rows, other_tasks=skipped, samples=samples)
     if use_task_time:result.update(auxiliary_csv=str(auxiliary_csv),auxiliary_csv_hash=sha(auxiliary_csv),compute_tasks=compute_count,auxiliary_tasks=len(rows)-compute_count)
@@ -292,8 +305,10 @@ def collect(request_path, out):
     build = load(request['role_build'])
     runner = load(request['runner_build'])
     version=runner['version']
-    if version not in (VERSION,VERSION_V2) or request.get('version',VERSION)!=version or sha(runner['runner']) != runner['runner_hash']:
+    if version not in (VERSION,VERSION_V2,LITE_PRODUCER) or request.get('version',VERSION)!=version or sha(runner['runner']) != runner['runner_hash']:
         raise ValueError('runner identity differs')
+    if version == LITE_PRODUCER and (runner.get('repeat'), runner.get('pairs'), runner.get('warmup'), runner.get('per_case_repeat')) != (10, LITE_PAIRS, 10, True):
+        raise ValueError('search-lite runner parameters differ')
     for role in 'AB':
         identity=build['roles'][role]
         if sha(identity['binary']) != 'sha256:'+identity['binary_sha256'] or source_hash(Path(identity['source_dir'])) != identity['source_sha256']:
@@ -336,6 +351,8 @@ def collect(request_path, out):
                 if path.is_file() and path.suffix in ('.py','.csv','.yaml','.yml'): bindings[str(path)]=sha(path)
     for path in [request_path,request['role_build'],request['runner_build'],__file__,runner['runner']]:
         bindings[str(path)]=sha(path)
+    if version == LITE_PRODUCER:
+        path=ROOT/'scripts/msprof_search_protocol.py';bindings[str(path)]=sha(path)
     if 'capture_storage' in request:
         path=ROOT/'scripts/msprof_raw_storage.py';bindings[str(path)]=sha(path)
     save(out/'bindings.json',bindings)
@@ -425,6 +442,9 @@ def summarize(directories):
             raise ValueError('incomplete collection: '+str(directory))
         request=load(directory/'request.json')
         current={k:request.get(k) for k in ('role_build','runner_build','cases')}
+        producer=request.get('version',VERSION)
+        pair_count=pairs_for_producer(producer)
+        current['producer_protocol']=producer
         current.update(profiler_mode=request.get('profiler_mode','task_time_l1_pipe_utilization'),
                        device=request.get('device',0),cpu=request.get('cpu',8),
                        host_delay_a_us=request.get('host_delay_a_us',0),host_delay_b_us=request.get('host_delay_b_us',0))
@@ -443,7 +463,7 @@ def summarize(directories):
                 if row['role'] in slot:
                     raise ValueError('duplicate role/pair')
                 slot[row['role']]=row
-            if set(pairs)!=set(range(30)) or any(set(p)!=set('AB') for p in pairs.values()):
+            if set(pairs)!=set(range(pair_count)) or any(set(p)!=set('AB') for p in pairs.values()):
                 raise ValueError('incomplete pairing')
             for metric in METRICS:
                 if any(p[r][metric] is None for p in pairs.values() for r in 'AB'):
@@ -459,13 +479,13 @@ def summarize(directories):
         if (case,config,metric) in missing:
             continue  # Never report a subset of processes as the full cohort.
         logs=[s['log_ratio'] for s in sessions];n=len(logs);mean=st.mean(logs)
-        half=float(t.ppf(.975,n-1))*st.stdev(logs)/math.sqrt(n) if n>1 else None
+        half=float(t.ppf(.975,n-1))*st.stdev(logs)/math.sqrt(n) if n>1 and producer != LITE_PRODUCER else None
         ci=[math.exp(mean-half),math.exp(mean+half)] if half is not None else None
         result.append(dict(case_id=case,buffer_config=config,metric=metric,n_processes=n,speedup=math.exp(mean),ci95=ci,
             aa_within_half_percent=bool(ci and ci[0]>=1/1.005 and ci[1]<=1.005),
             max_within_process_cv=max(s['roles'][r]['cv'] for s in sessions for r in 'AB'),
             sessions=sessions))
-    return dict(version=VERSION,unit='us_per_complete_call',replication_unit='native_process',results=result,
+    return dict(version=LITE_PRODUCER if producer == LITE_PRODUCER else VERSION,unit='us_per_complete_call',replication_unit='native_process',results=result,
                 unavailable=[dict(case_id=k[0],buffer_config=k[1],metric=k[2],missing_in_sessions=v) for k,v in sorted(missing.items())])
 
 

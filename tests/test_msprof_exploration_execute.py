@@ -12,6 +12,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import msprof_exploration_execute as execute
 
 
+@pytest.mark.parametrize('flags,expected', [([], (False,False)), (['--per-case'], (True,False)),
+                                           (['--search-lite'], (True,True))])
+def test_build_tools_cli_dispatches_explicit_protocol_without_hardware(monkeypatch, flags, expected):
+    calls=[]
+    monkeypatch.setattr(execute, 'build_tools', lambda run, **kwargs: calls.append((run,kwargs)))
+    execute.main(['build-tools','--run','/unused-method-run',*flags])
+    assert calls == [('/unused-method-run',dict(per_case=expected[0],search_lite=expected[1]))]
+
+
 @pytest.mark.parametrize('existing', [False, True])
 def test_recorded_shared_read_rejects_wrong_task_without_writes(tmp_path, monkeypatch, existing):
     monkeypatch.setattr(execute, 'ROOT', tmp_path)
@@ -93,7 +102,7 @@ def test_cohort_never_starts_second_process_after_evidence_failure(tmp_path, mon
         calls.append(str(out))
         out.mkdir()
     def invalid(*args, **kwargs): raise ValueError('missing case/config')
-    fake = SimpleNamespace(validate_plan=lambda p: p, verify_observation=invalid,
+    fake = SimpleNamespace(validate_plan=lambda p: p, ObservationCache=lambda: SimpleNamespace(verify=invalid),
                            analyze_task_cohort=lambda *args, **kwargs: pytest.fail('invalid evidence summarized'))
     monkeypatch.setitem(sys.modules, 'msprof_exploration_report', fake)
     monkeypatch.setattr(execute, 'execution_modules', lambda: (SimpleNamespace(collect=collect), None, None))
@@ -277,7 +286,7 @@ def test_cohort_rechecks_identity_before_each_process_and_records_resolution(tmp
         execute.save(out / 'native/journal.jsonl', {})
         (task / 'baseline/op_kernel/kernel.h').write_bytes(b'changed after first native')
     monkeypatch.setattr(execute, 'execution_modules', lambda: (SimpleNamespace(collect=collect), None, None))
-    monkeypatch.setattr(report, 'verify_observation', lambda *args, **kwargs: None)
+    monkeypatch.setattr(report, 'verify_observation', lambda *args, **kwargs: {'artifacts': {}, 'bound_artifacts': {}})
     monkeypatch.setattr(report, 'analyze_task_cohort', lambda *args, **kwargs: pytest.fail('failed cohort analyzed'))
     out = task / 'cohort'
     with pytest.raises(ValueError, match='source hash differs'):

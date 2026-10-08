@@ -1,5 +1,6 @@
 """CPU-only checks for prospective capture epochs and closed-stage reclamation."""
 from copy import deepcopy
+import json
 from pathlib import Path
 import sys
 
@@ -11,6 +12,7 @@ import msprof_raw_storage as storage
 import run_msprof_exploration_stage as stage
 from msprof_exploration_execute import load, pointer, save
 from msprof_exploration_report import DESIGN
+from msprof_search_protocol import LITE_PROTOCOL
 
 
 def local_plan():
@@ -45,7 +47,7 @@ def test_default_cli_retains_legacy_search_plan_shape_and_task_path_api(tmp_path
     calls = []
     monkeypatch.setattr(iteration, 'candidate', lambda *a, **kw: calls.append((a,kw)) or {'status': 'measured'})
     monkeypatch.setattr(sys, 'argv', ['level2_iteration.py', 'candidate', '--run', str(tmp_path),
-        '--operator', 'gcd', '--candidate', 'gcd001'])
+        '--operator', 'gcd', '--candidate', 'gcd001', '--search-protocol', 'full'])
     assert iteration.main() == 0
     assert calls[0][1] == {'measurement': {}, 'deduplicate_outputs': False}
     assert 'calibration_path' not in calls[0][1]['measurement']
@@ -56,7 +58,7 @@ def test_local_cli_binds_explicit_epoch_group_and_dedup(tmp_path, monkeypatch):
     monkeypatch.setattr(iteration, 'candidate', lambda *a, **kw: calls.append((a,kw)) or {'status': 'measured'})
     monkeypatch.setattr(sys, 'argv', ['level2_iteration.py', 'candidate', '--run', str(tmp_path),
         '--operator', 'gcd', '--candidate', 'gcd001', '--capture-storage', 'local', '--epoch', 'local-02',
-        '--calibration-group', 'aa-local-02', '--deduplicate-outputs'])
+        '--calibration-group', 'aa-local-02', '--deduplicate-outputs', '--search-protocol', 'full'])
     assert iteration.main() == 0
     assert calls[0][1] == {'measurement': {'epoch': 'local-02', 'capture_storage': storage.LOCAL,
         'calibration_path': iteration.task_path(tmp_path, 'gcd')/'stages/aa-local-02/cohort/report.json'},
@@ -197,3 +199,45 @@ def test_feedback_lookup_uses_observation_hash_for_explicit_later_same_source_re
     new.unlink()
     with pytest.raises(ValueError,match='immutable observation'):
         iteration.feedback_pointer(task,cid,observation)
+
+
+@pytest.mark.parametrize('protocol', ['msprof_task_time_exploration_v2', LITE_PROTOCOL])
+@pytest.mark.parametrize('requested,expected', [(None, 'old-epoch-05'), ('epoch-01', 'epoch-01'),
+                                               ('old-epoch-05', 'old-epoch-05')])
+def test_auto_inherits_only_omitted_epoch(tmp_path, monkeypatch, protocol, requested, expected):
+    task=tmp_path/'train/tasks/gather'
+    cohort=task/'candidates/gather001/plans/search/cohort.json'
+    cohort.parent.mkdir(parents=True)
+    cohort.write_text(json.dumps({'calibration_scope': {'epoch': 'old-epoch-05'}}))
+    plan={'protocol':protocol,'cohorts':[{'relation':'direct_parent','plan':iteration.pointer(cohort)}]}
+    (cohort.parent/'stage-plan.json').write_text(json.dumps(plan))
+    argv=['level2_iteration.py','candidate','--run',str(tmp_path),'--operator','gather','--candidate','gather001']
+    if requested is not None:argv+=['--epoch',requested]
+    monkeypatch.setattr(sys,'argv',argv)
+    captured=[]
+    def candidate(*args, **kwargs):
+        captured.append(kwargs['measurement'])
+        return {'status':'measured'}
+    monkeypatch.setattr(iteration,'candidate',candidate)
+    assert iteration.main()==0
+    assert captured[0]['epoch']==expected
+    # An explicit epoch does not invent a calibration pointer absent from the
+    # frozen plan; the existing candidate settings check rejects epoch changes.
+    assert 'calibration_path' not in captured[0]
+    assert 'calibration_by_relation' not in captured[0]
+
+
+def test_explicit_epoch_change_reaches_frozen_setting_rejection(tmp_path, monkeypatch):
+    task=tmp_path/'train/tasks/gather'
+    cohort=task/'candidates/gather001/plans/search/cohort.json'
+    cohort.parent.mkdir(parents=True)
+    frozen={'protocol':LITE_PROTOCOL,'calibration_scope':{'epoch':'old-epoch-05'},
+            'schedule':[{'request':{}},{'request':{}}]}
+    cohort.write_text(json.dumps(frozen))
+    plan={'protocol':LITE_PROTOCOL,'cohorts':[{'relation':'direct_parent','plan':iteration.pointer(cohort)}]}
+    (cohort.parent/'stage-plan.json').write_text(json.dumps(plan))
+    monkeypatch.setattr(sys,'argv',['level2_iteration.py','candidate','--run',str(tmp_path),
+        '--operator','gather','--candidate','gather001','--epoch','epoch-01'])
+    monkeypatch.setattr(iteration,'candidate',lambda *a,**kw:iteration.check_timing_settings(plan,kw['measurement']))
+    with pytest.raises(ValueError,match='requested epoch differs'):
+        iteration.main()
