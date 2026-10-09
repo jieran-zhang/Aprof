@@ -1,321 +1,63 @@
 # AProf
 
-AProf is a profile-grounded, trace-producing Ascend C optimization system. It
-keeps the foundation model frozen and separates two layers:
+AProf 将稳定可用的 skill 库与研发、测量、trace 采集工程分开维护。
 
-- a small Agent-facing skill/plugin layer for interaction, evidence collection,
-  and candidate proposal;
-- a machine-authoritative runtime and immutable SkillGraph for routing,
-  validation, episode storage, and post-training.
+| 入口 | 用途 |
+| --- | --- |
+| [skill-libs](skill-libs/catalog.json) | 已冻结版本目录；每版都是完整源码及可独立使用的包 |
+| [graph-base 0.4.1](skill-libs/graph-base/0.4.1/README.md) | 当前默认版本，源于 0.4.0 / d8f6837 |
+| [采集流程](scaffolding/collection/workflows/README.md) | 显式绑定 skill 版本，组织实验、测量、归档和恢复 |
+| [精简证据](scaffolding/evidence/README.md) | lesson、trace、源码与反馈；大型证据保留外部索引 |
+| [CANNBench](scaffolding/benchmarks/cannbench) | 算子直调工程、harness 及冻结 split |
+| [迁移说明](scaffolding/docs/repository-layout.md) | 依赖边界、版本发布、历史 producer 与验证限制 |
 
-The current `v0001` graph is an expert seed compiled from the repository's
-static diagnosis and optimization knowledge. It is a starting prior, not a
-trained taxonomy.
-
-See [the training roadmap](docs/training_roadmap.md) for the current fixed-graph
-training boundary, episode eligibility rules, operator-disjoint data protocol,
-and the staged plan for evidence acquisition, graph evolution, parameter
-learning, and transfer evaluation.
-
-For a preparation-only first run, see the
-[lightweight trace pilot](docs/trace_collection_pilot.md). It freezes graph,
-split, budget, source, and store identities without executing hardware or
-modifying a candidate.
-
-For organizing new optimization experiments, recording feedback, and extracting
-conditional lessons, start with the
-[experiment playbook (中文)](docs/optimization_experiment_playbook.md) and its
-[shared-context paired measurement specification](docs/shared_context_paired_protocol.md).
-For the implemented shared-context msprof campaign, see the
-[execution and archive interfaces](docs/msprof_exploration_campaign.md) and
-[Level2 complete-call protocol](docs/level2_msprof_protocol_v2.md).
-New Level2 searches use the [lightweight search protocol](docs/level2_search_lite.md);
-historical replay and frozen final measurements retain the full protocol.
-Published Level1 records and paused Level2 evidence are organized outside Git
-in the [central optimization trace library](docs/optimization_trace_library.md).
-Performance qualification is recorded per workload and calibration; research
-traces do not establish formal runtime admission. CPU data tools are described
-in [trace collection v2](docs/optimization_trace_collection_v2.md).
-
-For the historical bounded Level1 device experiments and local structured data, see the
-[hardware trace campaign](docs/level1_trace_campaign.md),
-[JSONL contracts](docs/trace_jsonl_contract.md), and
-[isolated knowledge manifests](docs/level1_knowledge_manifest.md).
-
-## Architecture
-
-```text
-Agent-facing skills
-  -> versioned context/evidence draft
-  -> immutable SkillGraph + compatible policy
-  -> isolated candidate proposal
-  -> machine candidate gate
-  -> content-addressed artifacts + attested append-only candidate episode
-  -> fixed-graph policy update
-  -> separately validated future graph version
-```
-
-The six historical performance families are non-exclusive facets. Runtime
-mechanisms and atomic transformations use stable IDs and versions. Agents never
-assign `selected_as_best`, terminal utility, or graph updates.
-
-## Repository layout
-
-```text
-plugins/aprof-performance-workflow/  # thin Agent orchestration adapters
-skills/aprof/                        # user-facing capability skills and human references
-skillgraph/source/                   # typed expert seed sources
-skillgraph/versions/                 # immutable compiled graph snapshots
-schemas/                             # versioned runtime JSON contracts
-src/aprof_runtime/                   # validation, routing, gate, episode store, policy runtime
-scripts/                             # registry sync and deterministic graph compiler
-tests/                               # executable contract/runtime/compiler tests
-docs/                                # architecture, decision-surface, and training plans
-benchmarks/cannbench/                 # source-only operator corpus and frozen split manifests
-```
-
-Task-local runtime state belongs under `<op_dir>/.aprof/` and is not committed
-to Git.
-
-## Capability packages
-
-`skillgraph/registry.json` is the only source of truth for names, roles,
-dependencies, marketplace metadata, and host installation.
-
-- `aprof-skills`: core workflow, diagnosis, profiling, optimization, and
-  direct-invoke scaffolding.
-- `aprof-performance-workflow`: thin orchestration plugin depending on the core
-  skills.
-- `aprof-benchmark-tools`: independent benchmark/data-generation package. Its
-  injection recipes and labels are not core SkillGraph priors.
-- `ascendc-remote-kernel-deploy`: optional execution adapter.
-
-Validate generated installation metadata:
+## 使用稳定版本
 
 ```bash
-python3 scripts/sync_aprof_registry.py check
+cd skill-libs/graph-base/0.4.1
+python3 tools/install.py --runtime
+python3 tools/release.py
+./tools/aprofctl graph validate --graph skillgraph/versions/v0002
 ```
 
-Install the core Cursor capabilities:
+该目录可独立复制。宿主加载其中的 `skills/`，主入口是
+`ascendc-aprof-workflow`；完整安装及调用说明见版本 README。
+Python runtime 保持 0.2.0，skill/plugin 为 0.4.1，默认图为 v0002。
+
+仓库级插件入口在 `.agents/plugins/marketplace.json` 与
+`.claude-plugin/marketplace.json`，均指向明确的默认版本。安装后的插件
+应保留整个版本目录，并在宿主实际安装目录安装 runtime。
+
+## 使用采集脚手架
+
+从仓库根目录显式选定版本；所有子进程继承同一选择：
 
 ```bash
-bash plugins/aprof-performance-workflow/init.sh
+export APROF_SKILL_LIB="$PWD/skill-libs/graph-base/0.4.1"
+python3 scaffolding/collection/scripts/prepare_trace_pilot.py \
+  --skill-lib "$APROF_SKILL_LIB" \
+  --config scaffolding/collection/configs/trace-pilot.example.json \
+  --output-root /tmp/aprof-pilot
 ```
 
-Optional adapters are explicit:
+pilot 只准备和冻结输入，不编译、不执行硬件。新 Level2 campaign 的
+`prepare --skill-lib` 同样冻结 release 身份；后续步骤读取已绑定的版本。
+Level2 搜索仍为 2 进程 × 6 对、直接父本比较，保留全量正确性和最终完整测量。
+
+## 验证与开发
 
 ```bash
-bash plugins/aprof-performance-workflow/init.sh --with-remote
-bash plugins/aprof-performance-workflow/init.sh --with-benchmark-tools
+export APROF_SKILL_LIB="$PWD/skill-libs/graph-base/0.4.1"
+python3 scaffolding/tools/sync_aprof_registry.py check --skill-lib "$APROF_SKILL_LIB"
+python3 scaffolding/tools/compile_graph_v2.py --skill-lib "$APROF_SKILL_LIB" --check
+python3 scaffolding/tools/compact_evidence.py verify --root scaffolding/evidence
+python3 -m pytest scaffolding/tests -q
 ```
 
-### Install as a Codex plugin
+稳定版不得原地修改。下一版在开发分支复制一个版本目录，移除其旧
+`release.json`，更新版本号并修改源码，经验证后使用
+`scaffolding/tools/release_skill_lib.py seal` 封存，最后更新 catalog 和宿主入口。
+不另设 skill 作者源或生成副本目录。
 
-The Codex plugin and the Python runtime are separate installations. From this
-repository root, register the repo-local marketplace and install the workflow
-plugin:
-
-```bash
-codex plugin marketplace add "$PWD"
-codex plugin list --marketplace aprof --available --json
-codex plugin add aprof-performance-workflow@aprof
-python3 -m pip install -e .
-```
-
-`marketplace add` is only needed the first time this checkout is registered.
-The marketplace is defined by `.agents/plugins/marketplace.json`; the plugin
-manifest is `plugins/aprof-performance-workflow/.codex-plugin/plugin.json`.
-Start a new Codex thread after installation so the plugin skills are loaded.
-
-To invoke the workflow explicitly, name its skill:
-
-```text
-Use $ascendc-aprof-workflow.
-Build and validate an AProf plan, but do not modify source or run hardware.
-op_dir: <path/to/direct-invoke-op>
-budget:
-  candidate_limit: 1
-  build_limit: 0
-  timing_limit: 0
-  full_profile_limit: 0
-```
-
-During local development, refresh Codex's cached plugin after changing plugin
-skills or metadata:
-
-```bash
-python3 scripts/sync_aprof_registry.py write
-python3 - <<'PY'
-import json
-from pathlib import Path
-from uuid import uuid4
-
-registry = json.loads(Path("skillgraph/registry.json").read_text())
-path = Path("plugins/aprof-performance-workflow/.codex-plugin/plugin.json")
-manifest = json.loads(path.read_text())
-manifest["version"] = registry["workflow_plugin"]["version"] + "+codex." + uuid4().hex
-path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
-PY
-python3 scripts/sync_aprof_registry.py check
-codex plugin add aprof-performance-workflow@aprof
-```
-
-Then start a new Codex thread. This uses the repository's registry and Python's
-standard library to replace the cachebuster suffix; no external skill is needed.
-
-To remove only the plugin, and optionally the marketplace registration and
-runtime, run:
-
-```bash
-codex plugin remove aprof-performance-workflow@aprof
-codex plugin marketplace remove aprof
-python3 -m pip uninstall aprof-runtime
-```
-
-Do not remove the `aprof` marketplace if other plugins from this repository are
-still installed. Removing the plugin does not uninstall `aprofctl`, and
-uninstalling `aprof-runtime` does not remove the plugin.
-
-## Runtime
-
-Install the dependency-free Python 3.11 runtime if a command entry point is
-needed:
-
-```bash
-python3 -m pip install -e .
-```
-
-The same CLI can be invoked without installation with
-`PYTHONPATH=src python3 -m aprof_runtime`.
-
-Core commands:
-
-```text
-aprofctl contract validate
-aprofctl graph validate
-aprofctl graph route
-aprofctl candidate gate
-aprofctl episode finalize
-aprofctl episode verify
-aprofctl artifact add
-aprofctl artifact verify
-aprofctl policy train
-aprofctl policy validate
-```
-
-Profiling execution is intentionally a separate draft-producing layer. From an
-AProf checkout, use the bundled tools to enforce stage ordering, compress raw
-msprof CSV, and collect AB/BA command timings:
-
-```bash
-python3 skills/aprof/profiling/scripts/run_profile_stages.py \
-  --config <profile-stages.json> --report <stage-report.json> --dry-run
-python3 skills/aprof/profiling/scripts/compress_msprof.py \
-  --input <msprof-report-root> --op-name <exact-kernel-name> \
-  --available-cores <count> --output <symptoms.json>
-python3 skills/aprof/profiling/scripts/paired_timing.py \
-  --config <paired-timing.json> --output <paired-timing-output.json>
-```
-
-These outputs are not runtime contract kinds. Map their measured evidence into
-`context` or `gate_request`; `aprofctl candidate gate` remains authoritative
-for stability, lower confidence bounds, and the verdict.
-
-Finalize with the exact behavior graph and optional learned behavior policy.
-Every source, patch, producer, and evidence digest referenced by the complete
-gate batch must already exist in the store's CAS:
-
-```bash
-aprofctl episode finalize --context .aprof/context.json \
-  --request .aprof/gate-request.json \
-  --graph skillgraph/versions/v0001 \
-  --store .aprof/episodes.sqlite
-```
-
-Train an immutable fixed-graph checkpoint only from a verified `EpisodeStore`
-SQLite database. Policy training verifies the episode attestations, CAS bytes,
-and append-only hash chain before reading any reward:
-
-```bash
-aprofctl policy train --graph skillgraph/versions/v0001 \
-  --episodes .aprof/episodes.sqlite --policy-version p0001 \
-  --output .aprof/policies/p0001.json
-aprofctl policy validate --checkpoint .aprof/policies/p0001.json \
-  --graph skillgraph/versions/v0001
-aprofctl graph route --graph skillgraph/versions/v0001 \
-  --context .aprof/context.json --policy .aprof/policies/p0001.json
-```
-
-All Agent JSON is draft input. Unknown fields are rejected, candidate gates are
-recomputed by the runtime, routes are replayed from the exact graph/checkpoint,
-and finalized episodes are append-only. Raw JSON/JSONL episode files are not a
-production policy-training input because they cannot prove CAS existence.
-
-## Seed SkillGraph
-
-Compile or verify the expert seed deterministically:
-
-```bash
-python3 scripts/compile_seed_graph.py --check
-```
-
-The source graph contains:
-
-- six non-trainable anchor facets;
-- tri-state evidence predicates with explicit implementation status;
-- actionable mechanism nodes plus `unknown_unresolved`;
-- atomic transformation contracts plus `NOOP`;
-- fixed evidence/facet edges and trainable problem-to-transformation priors.
-
-Unimplemented predicates remain explicitly unimplemented. No threshold or
-hardware fact is fabricated to make the graph appear executable.
-
-### Decision surface
-
-Audit the graph-only branch surface with:
-
-```bash
-python3 scripts/audit_skillgraph_decisions.py \
-  --graph skillgraph/versions/v0001 \
-  --output .aprof/v0001-decision-surface.json
-```
-
-See [the decision-surface contract](docs/skillgraph_decision_surface.md). The
-current classification is
-`fixed_graph_edge_ranking_with_handler_parameter_trace_collection`: raw
-symptoms may have several candidate mechanisms, but v0001 collapses them into
-one-target formal predicates; each actionable mechanism has only one positive
-transformation plus `NOOP`; and the runtime does not learn handler parameters
-or recovery transitions. A shape-validated `handler_attempt` sidecar can be
-kept for offline exploration, but it is not EpisodeStore/CAS-attested and is
-not policy-training input.
-
-## Workflow rules
-
-- Keep the baseline project read-only and modify only isolated candidates.
-- Preserve the complete legal route candidate set, hard-mask reasons, selection
-  mode/seed, selected edge, and true behavior probability.
-- Stop a candidate after the first mandatory gate failure and retain the typed
-  negative episode.
-- Use paired hardware samples for production performance decisions; simulator
-  data is feasibility/proxy evidence.
-- Preserve build, accuracy, runtime, stable-no-gain, regression, specialized,
-  and successful outcomes.
-- Express observable session limits with `candidate_limit`, `build_limit`,
-  `timing_limit`, and `full_profile_limit`; finalization and store append enforce
-  them cumulatively per session.
-- Never use legacy flat memory or historical FastGELU demonstrations as verified
-  policy reward.
-
-## Development checks
-
-```bash
-python3 scripts/sync_aprof_registry.py check
-python3 scripts/compile_seed_graph.py --check
-PYTHONPATH=src python3 -m unittest discover -s tests
-python3 -m pytest -q
-```
-
-The minimum system milestone is one versioned route, one isolated candidate,
-one machine verdict, one immutable episode, and a reproducible change in
-fixed-graph candidate ranking after policy training.
+原暂停 Level2 实验仍为 26/48，且不是完整离线证据包。这里的重构及证据导入
+不会恢复实验、重写旧记录、制造正式准入或改变训练资格。

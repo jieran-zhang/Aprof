@@ -1,0 +1,133 @@
+{
+  "architecture_profile_ref": "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+  "groups": [
+    {
+      "algorithm": "Independent stable class reduction per position",
+      "alternatives": [
+        "Batch positions for small C",
+        "Existing per-position vector reduction"
+      ],
+      "group_id": "none_contiguous",
+      "memory_requirements": {
+        "UB": 110624
+      },
+      "ownership": "One owner per loss output, aligned store boundaries required",
+      "reduction": "Within-position max and exp sum",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:e46a185eb098102df09a66ea942a2fea47f0d014a7cef6243c5bfbae4afea532",
+        "sha256:8b0b03cbd54aebbb27facacd87bff789b1bcfdab3e9da0469e76fc2f0be4e6a2",
+        "sha256:61be487f6e8218551f2149a586f07c749e48322b971ec94b79781cc2693edcd7",
+        "sha256:1255442b261b289ec6ba09d577ffdd215d1b6870519d2115e177a3f7f9c6ee67",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:344c5eed3862a0765689e51caaaf7842d850f2593b74e2ad98550af2ab3fd3f8",
+        "sha256:395863a4c50dc6ffb160fea9636a71c12e454b99ca98c8a84472dd7e78f74814"
+      ],
+      "synchronization": "MTE2 to vector; V_S before scalar reads; output completion",
+      "task_partition": "Contiguous per-core position intervals aligned to64 output bytes; final core owns the sole short tail",
+      "workspace_bytes": 8000024,
+      "workspace_formula": "Host preserves two baseline positions*4-byte allocations, total8*positions. workspace_bytes is the maximum over the20 declared workload cases. Only key12 touches128*blockNum bytes, at most6144; positions>=768 and blockNum<=48 prove those private64-byte slots fit. None and generic entries leave both workspaces unused."
+    },
+    {
+      "algorithm": "Independent stable reduction of strided class logits",
+      "alternatives": [
+        "New plan groups adjacent inner columns to reuse loads",
+        "Existing per-position gather when inner>=32/itembytes"
+      ],
+      "group_id": "none_strided",
+      "memory_requirements": {
+        "UB": 110624
+      },
+      "ownership": "One output owner; adjacent inner columns may share read-only planes",
+      "reduction": "Within-position class max/sum",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:e46a185eb098102df09a66ea942a2fea47f0d014a7cef6243c5bfbae4afea532",
+        "sha256:8b0b03cbd54aebbb27facacd87bff789b1bcfdab3e9da0469e76fc2f0be4e6a2",
+        "sha256:61be487f6e8218551f2149a586f07c749e48322b971ec94b79781cc2693edcd7",
+        "sha256:1255442b261b289ec6ba09d577ffdd215d1b6870519d2115e177a3f7f9c6ee67",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:344c5eed3862a0765689e51caaaf7842d850f2593b74e2ad98550af2ab3fd3f8",
+        "sha256:395863a4c50dc6ffb160fea9636a71c12e454b99ca98c8a84472dd7e78f74814"
+      ],
+      "synchronization": "Gather/packing followed by vector reduction and scalar output",
+      "task_partition": "Contiguous per-core position intervals aligned to64 output bytes; final core owns the sole short tail",
+      "workspace_bytes": 8000024,
+      "workspace_formula": "Host preserves two baseline positions*4-byte allocations, total8*positions. workspace_bytes is the maximum over the20 declared workload cases. Only key12 touches128*blockNum bytes, at most6144; positions>=768 and blockNum<=48 prove those private64-byte slots fit. None and generic entries leave both workspaces unused."
+    },
+    {
+      "algorithm": "Stable class loss per position, per-AIV FP32 sum/valid count and one final merge when baseline workspace capacity permits",
+      "alternatives": [
+        "Serial reduced fallback when positions<768 or gather is unsafe",
+        "Capacity-compatible parallel partial/merge for positions>=768"
+      ],
+      "group_id": "reduced_parallel",
+      "memory_requirements": {
+        "UB": 110624
+      },
+      "ownership": "Each producer owns its positions and separate64-byte sum/count slots; only final merge writes scalar output",
+      "reduction": "Local sequential FP32 accumulation then core-order FP32 merge; all-ignored mean yields canonical NaN",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:e46a185eb098102df09a66ea942a2fea47f0d014a7cef6243c5bfbae4afea532",
+        "sha256:8b0b03cbd54aebbb27facacd87bff789b1bcfdab3e9da0469e76fc2f0be4e6a2",
+        "sha256:61be487f6e8218551f2149a586f07c749e48322b971ec94b79781cc2693edcd7",
+        "sha256:1255442b261b289ec6ba09d577ffdd215d1b6870519d2115e177a3f7f9c6ee67",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:344c5eed3862a0765689e51caaaf7842d850f2593b74e2ad98550af2ab3fd3f8",
+        "sha256:395863a4c50dc6ffb160fea9636a71c12e454b99ca98c8a84472dd7e78f74814"
+      ],
+      "synchronization": "Same stream orders partial kernel completion before merge kernel; count both launches in complete-call timing",
+      "task_partition": "Contiguous ceil(positions/activeAIV) positions per core; up to48 SDK AIV capacity, bounded by aclrtGetDeviceInfo visibility",
+      "workspace_bytes": 8000024,
+      "workspace_formula": "Host preserves two baseline positions*4-byte allocations, total8*positions. workspace_bytes is the maximum over the20 declared workload cases. Only key12 touches128*blockNum bytes, at most6144; positions>=768 and blockNum<=48 prove those private64-byte slots fit. None and generic entries leave both workspaces unused."
+    },
+    {
+      "algorithm": "Safe correctness fallback with stable losses",
+      "alternatives": [
+        "Bounds-checked scalar gather for inner smaller than32/itembytes; stable vector loss then serial reduction"
+      ],
+      "group_id": "generic",
+      "memory_requirements": {
+        "UB": 110624
+      },
+      "ownership": "No overlapping sub-cacheline writes",
+      "reduction": "Full semantic reduction including ignored labels",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:e46a185eb098102df09a66ea942a2fea47f0d014a7cef6243c5bfbae4afea532",
+        "sha256:8b0b03cbd54aebbb27facacd87bff789b1bcfdab3e9da0469e76fc2f0be4e6a2",
+        "sha256:61be487f6e8218551f2149a586f07c749e48322b971ec94b79781cc2693edcd7",
+        "sha256:1255442b261b289ec6ba09d577ffdd215d1b6870519d2115e177a3f7f9c6ee67",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:344c5eed3862a0765689e51caaaf7842d850f2593b74e2ad98550af2ab3fd3f8",
+        "sha256:395863a4c50dc6ffb160fea9636a71c12e454b99ca98c8a84472dd7e78f74814"
+      ],
+      "synchronization": "Conservative queue/events and safe element staging for inner<lanes",
+      "task_partition": "One core sequentially reduces all positions for mean/sum when positions<768 or gather is unsafe; none retains disjoint aligned position owners",
+      "workspace_bytes": 8000024,
+      "workspace_formula": "Host preserves two baseline positions*4-byte allocations, total8*positions. workspace_bytes is the maximum over the20 declared workload cases. Only key12 touches128*blockNum bytes, at most6144; positions>=768 and blockNum<=48 prove those private64-byte slots fit. None and generic entries leave both workspaces unused."
+    }
+  ],
+  "operator": "cross_entropy_loss",
+  "plan_id": "cross_entropy_loss-r1-capacity-compatible-parallel-plan",
+  "precision_invariants": [
+    "FP32 logsumexp accumulation; preserve dtype-specific output cast and baseline verifier. Parallel reduction changes accumulation order and requires all-case precision validation.",
+    "Canonical frozen golden uses torch cross_entropy: all-ignored mean producesNaN, whereas baseline serial path returns0. This static source divergence needs a hardware correctness guard; preserve NaN/Inf behavior."
+  ],
+  "schema_version": "1.0.0",
+  "semantic_invariants": [
+    "For each N/spatial position use stable logsumexp across C minus selected logit; ignore_index contributes zero and is excluded from mean denominator.",
+    "Reduction none returns position losses; sum/mean combine all valid positions. Integer targets outside valid labels or ignore_index must be rejected before device indexing.",
+    "Class axis is dimension1, so inner=product(shape[2:]); row gather and output ordering must preserve N/spatial layout."
+  ],
+  "source_hash": "sha256:6de2a9dce59dc820a86c52e9fabd2fbba6949dd6799dcdbdcd48c58b562e9515"
+}

@@ -1,0 +1,92 @@
+{
+  "architecture_profile_ref": "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+  "groups": [
+    {
+      "algorithm": "Reuse vertical coordinates and plane bases within each output row",
+      "alternatives": [
+        "Original flat fallback for unaligned rows",
+        "Spatial-coordinate table reuse only with measured benefit"
+      ],
+      "group_id": "row_float",
+      "memory_requirements": {
+        "UB": 4096
+      },
+      "ownership": "Exclusive 64-byte-aligned complete output rows",
+      "reduction": "none",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:19cf99df77bb39be99c1f7e23848c8a0e9648f80178b40dba0c8ab84daad5863",
+        "sha256:fae2d2a88ae73aecfc7a7140db95c3103777a24c8a045ed981e24cebe8e44f38",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c"
+      ],
+      "synchronization": "Same explicit runner stream; retain source producer/consumer barriers until separately justified",
+      "task_partition": "Whole aligned output rows across AIV with per-row hoisted geometry",
+      "workspace_bytes": 0,
+      "workspace_formula": "0; future geometry remains bounded in private UB; new global workspace requires a revised plan"
+    },
+    {
+      "algorithm": "Same row geometry reuse with original bounded float scratch and dtype output cast",
+      "alternatives": [
+        "Retain original cast mode separately for half and bfloat16",
+        "Tune bounded row segments after feedback"
+      ],
+      "group_id": "row_b16",
+      "memory_requirements": {
+        "UB": 6144
+      },
+      "ownership": "Exclusive aligned output rows; local scratch private to each core",
+      "reduction": "none",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:19cf99df77bb39be99c1f7e23848c8a0e9648f80178b40dba0c8ab84daad5863",
+        "sha256:fae2d2a88ae73aecfc7a7140db95c3103777a24c8a045ed981e24cebe8e44f38",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c"
+      ],
+      "synchronization": "Same explicit runner stream; retain source producer/consumer barriers until separately justified",
+      "task_partition": "Whole aligned rows across AIV, retaining partial tile handling",
+      "workspace_bytes": 0,
+      "workspace_formula": "0; future geometry remains bounded in private UB; new global workspace requires a revised plan"
+    },
+    {
+      "algorithm": "Original flat output interpolation",
+      "alternatives": [
+        "Hoist scale computation per core without changing rounding"
+      ],
+      "group_id": "generic",
+      "memory_requirements": {
+        "UB": 6144
+      },
+      "ownership": "One writer per output interval",
+      "reduction": "none",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:19cf99df77bb39be99c1f7e23848c8a0e9648f80178b40dba0c8ab84daad5863",
+        "sha256:fae2d2a88ae73aecfc7a7140db95c3103777a24c8a045ed981e24cebe8e44f38",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c"
+      ],
+      "synchronization": "Same explicit runner stream; retain source producer/consumer barriers until separately justified",
+      "task_partition": "64-byte-aligned contiguous output tiles over available AIV",
+      "workspace_bytes": 0,
+      "workspace_formula": "0; future geometry remains bounded in private UB; new global workspace requires a revised plan"
+    }
+  ],
+  "operator": "resize_bilinear",
+  "plan_id": "resize_bilinear-algorithm-initial",
+  "precision_invariants": [
+    "Keep four weighted terms in original operation order and retain dtype-specific vector cast mode.",
+    "Do not replace interpolation with approximate averaging or reassociated fused arithmetic on matching benchmark dimensions."
+  ],
+  "schema_version": "1.0.0",
+  "semantic_invariants": [
+    "Bilinear NCHW resize with original align_corners scale and edge clamp.",
+    "Retain original output size resolution from size or scale_factor and original output layout.",
+    "Output pixels are independent; reuse row-coordinate transform across columns and channel planes."
+  ],
+  "source_hash": "sha256:3b7e9b214887f2f5cafb9ace2dcb112f67069d3d1921dc8f021967654269f6ae"
+}

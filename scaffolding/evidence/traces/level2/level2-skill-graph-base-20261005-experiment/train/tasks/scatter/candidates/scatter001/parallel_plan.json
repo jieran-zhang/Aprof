@@ -1,0 +1,69 @@
+{
+  "architecture_profile_ref": "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+  "groups": [
+    {
+      "algorithm": "Independent output rows, retaining serial duplicate resolution within each row",
+      "alternatives": [
+        "Keep full serial fallback for unaligned or unmatched shape families",
+        "Do not introduce floating atomics or reorder duplicate updates"
+      ],
+      "group_id": "row_owner",
+      "memory_requirements": {
+        "UB": 24576
+      },
+      "ownership": "Each core exclusively owns 64-byte-aligned output/accumulator rows",
+      "reduction": "Original per-destination order",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:78283e2b9fb1d8bbeac13b2ca1249101382151783949854077c501dfd1d84f43",
+        "sha256:adb8c1df3bf6fe85e45099db607c4f0b7323c7f131e66c0753fdfa7acf5ee718",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:374886d6956db5bc49a899e98cd03cc077f5574c73072fd14737143968a706c5"
+      ],
+      "synchronization": "Same explicit runner stream; retain source producer/consumer barriers until separately justified",
+      "task_partition": "Whole rows of the non-scatter coordinates across at most available AIV",
+      "workspace_bytes": 268435456,
+      "workspace_formula": "data_numel * 4 only for FP16 add/multiply; maximum instantiated bytes shown"
+    },
+    {
+      "algorithm": "Original serial update algorithm",
+      "alternatives": [
+        "Rank-general owner decomposition only with proven address ownership"
+      ],
+      "group_id": "generic",
+      "memory_requirements": {
+        "UB": 24576
+      },
+      "ownership": "Single writer to arbitrary duplicate targets",
+      "reduction": "Original per-destination order",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:78283e2b9fb1d8bbeac13b2ca1249101382151783949854077c501dfd1d84f43",
+        "sha256:adb8c1df3bf6fe85e45099db607c4f0b7323c7f131e66c0753fdfa7acf5ee718",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:374886d6956db5bc49a899e98cd03cc077f5574c73072fd14737143968a706c5"
+      ],
+      "synchronization": "Same explicit runner stream; retain source producer/consumer barriers until separately justified",
+      "task_partition": "One AIV processes every linear update",
+      "workspace_bytes": 268435456,
+      "workspace_formula": "data_numel * 4 only for FP16 add/multiply; maximum instantiated bytes shown"
+    }
+  ],
+  "operator": "scatter",
+  "plan_id": "scatter-r1-row-ownership",
+  "precision_invariants": [
+    "FP16 add/multiply accumulate in FP32 and cast once at the end, preserving original update order.",
+    "Retain bfloat16 per-update rounding, integer exactness, NaN/infinity and signed-zero semantics."
+  ],
+  "schema_version": "1.0.0",
+  "semantic_invariants": [
+    "Clone original data every complete call, then apply updates in original linear index order for each destination.",
+    "Duplicate indices are allowed; no dispatch based on index contents or observed uniqueness.",
+    "Preserve original assignment, add, multiply, amin and amax semantics and unchanged oracle tolerances."
+  ],
+  "source_hash": "sha256:832fc70f7a4eed53f8e6a5346e005ce3f2e47091abf15998183b504cc3eb8d07"
+}

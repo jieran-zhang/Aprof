@@ -1,0 +1,75 @@
+{
+  "architecture_profile_ref": "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+  "dispatch_id": "dynamic_quant-r2-real-entry-dispatch",
+  "entries": [
+    {
+      "conditions": [
+        {
+          "field": "attributes.row_length",
+          "op": "ge",
+          "value": 1
+        },
+        {
+          "field": "attributes.row_length",
+          "op": "le",
+          "value": 128
+        },
+        {
+          "field": "dtype",
+          "op": "in",
+          "value": [
+            "float16",
+            "bfloat16"
+          ]
+        }
+      ],
+      "group_id": "short_rows",
+      "kernel_entry": "dynamic_quant_short_rows",
+      "required_capabilities": [
+        "vector"
+      ],
+      "tiling_key": 20
+    },
+    {
+      "conditions": [
+        {
+          "field": "attributes.row_length",
+          "op": "gt",
+          "value": 128
+        },
+        {
+          "field": "attributes.row_length",
+          "op": "le",
+          "value": 16384
+        },
+        {
+          "field": "dtype",
+          "op": "in",
+          "value": [
+            "float16",
+            "bfloat16"
+          ]
+        }
+      ],
+      "group_id": "full_rows",
+      "kernel_entry": "dynamic_quant_full_rows",
+      "required_capabilities": [
+        "vector"
+      ],
+      "tiling_key": 21
+    }
+  ],
+  "fallback": {
+    "conditions": [],
+    "group_id": "generic",
+    "kernel_entry": "dynamic_quant_generic",
+    "required_capabilities": [],
+    "tiling_key": 0
+  },
+  "implementation_source_hash": "sha256:0a0aa61c217550bfb615e0eb41cb3b7dca4447beebe8bdecbb27206e151c9311",
+  "operator": "dynamic_quant",
+  "parallel_plan_ref": "sha256:4dbc6cfabe3353b4d90db1bd9fae358dad9e188cc656ee51120ca27b5fff2ad4",
+  "plan_basis_source_hash": "sha256:a80a045dc0e5c9714441af4cf54e92a75f718035083db6055f907c6f56fdc232",
+  "schema_version": "1.0.0",
+  "source_hash": "sha256:0a0aa61c217550bfb615e0eb41cb3b7dca4447beebe8bdecbb27206e151c9311"
+}
