@@ -70,7 +70,7 @@ def project_stage(events,operator,stage_id):
     for event in events:
         args=event['arguments'];op=event['operation']
         if args.get('workload')!=operator:continue
-        if op=='register' and args.get('candidate_id')=='group_norm002':candidate=args
+        if op=='register' and (operator,args.get('candidate_id')) in {('group_norm','group_norm002'),('gather','gather003')}:candidate=args
         if args.get('stage_id')!=stage_id:continue
         if op=='qualify_prestart':
             require(stage is not None and candidate is not None and qualified is None,'qualification before original stage or repeated')

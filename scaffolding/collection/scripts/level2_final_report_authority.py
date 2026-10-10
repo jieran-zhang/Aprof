@@ -177,11 +177,14 @@ def projection(rows, operator):
             starts[sid] = a; finishes.pop(sid, None); counts[sid] = counts.get(sid, 0) + 1; open_stages.add(sid)
         elif op == 'qualify_prestart':
             sid=a['stage_id']
-            require(freeze is not None and sid in starts and sid in finishes and sid not in open_stages
+            require(sid in starts and sid in finishes and sid not in open_stages
                     and sid not in qualified_recoveries and counts[sid]==1
-                    and starts[sid]['kind']=='timing' and starts[sid]['plan'].get('purpose')=='final'
-                    and starts[sid]['candidate_id'] in freeze['candidate_ids'],
-                    'prestart qualification is outside the frozen final stage')
+                    and starts[sid]['kind']=='timing'
+                    and ((freeze is None and starts[sid]['plan'].get('purpose')=='search'
+                          and starts[sid]['candidate_id'] in registered)
+                         or (freeze is not None and starts[sid]['plan'].get('purpose')=='final'
+                             and starts[sid]['candidate_id'] in freeze['candidate_ids'])),
+                    'prestart qualification is outside an eligible search or frozen final stage')
             from level2_stage_recovery import project_stage
             projected=project_stage(rows[:position+1],operator,sid)
             require(projected.get('prestart_recovery')==a,'qualified recovery projection differs')

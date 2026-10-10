@@ -33,6 +33,31 @@ def proof(tmp_path,monkeypatch):
 
 def read(p):return Path(p).read_bytes()
 
+def test_certified_search_prestart_before_final_freeze_is_accepted(monkeypatch):
+    import level2_stage_recovery
+    monkeypatch.setattr(level2_stage_recovery, 'project_stage',
+                        lambda rows, operator, sid: {'attempts': [{}, {}],
+                                                      'prestart_recovery': next(row['arguments'] for row in rows
+                                                                               if row['operation']=='qualify_prestart')})
+    rows=[{'operation':'prepare','arguments':{}}]
+    def add(operation, **arguments):
+        rows.append({'operation':operation,'arguments':{'workload':'gather',**arguments}})
+    for n in range(1,4):
+        cid=f'gather{n:03d}';sid=f'{cid}-search';start={'stage_id':sid,'candidate_id':cid,
+            'kind':'timing','plan':{'purpose':'search'}}
+        add('register',candidate_id=cid)
+        add('start',**start)
+        add('finish',stage_id=sid,outcome='prestart_failure',native_started=False)
+        if n==3:
+            add('qualify_prestart',stage_id=sid)
+            add('start',**start)
+            add('finish',stage_id=sid,outcome='passed',native_started=True)
+        add('observe',candidate_id=cid,stage_ids=[sid],close_feedback=True)
+    add('freeze',candidate_ids=[f'gather{n:03d}' for n in range(1,4)])
+    registered,starts,finishes,observed,freeze=f.projection(rows,'gather')
+    assert len(registered)==3 and finishes['gather003-search']['outcome']=='passed'
+    assert observed['gather003']['close_feedback'] is True and len(freeze['candidate_ids'])==3
+
 def test_real_ledger_tiny_attestation_admits_canonical_final(proof):
     s,r,p=proof;before=(s.run/'train/ledger/events.jsonl').read_bytes();calls=list(s.runtime.calls)
     result=f.authority(p,read)
