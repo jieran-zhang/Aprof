@@ -1009,6 +1009,177 @@ def rms_boundary_numeric_failure(e, task, parent, guard):
     return 'original_rms_boundary_nonfinite_mismatch', 'All ten retained successful native RMS guard processes and dispatch logs agree with deterministic reviewed input/reference replay; actual output special-value masks disagree with the original functional.rms_norm oracle. Historical output/verification bytes were not individually presealed; this is retained-artifact consistency attribution, not proof of an unrecorded runtime environment or a specific instruction cause.'
 
 
+REVIEWED_CE_GUARD = 'sha256:c9789d9ca9e48cd3b680650122c3ce8169d5d9549b492615537c7f15f79fe8a3'
+REVIEWED_CE_SPEC = 'sha256:d71f53d6447c01f175e5aca1507c6a46601ecde8323201365f129c37f142b70d'
+REVIEWED_CE_VERIFIER = 'sha256:c9fb47df045980e8f7b6d54ac6da9f8ba961a2e2d9a4805a043b7e0dd59f001c'
+REVIEWED_CE_GOLDEN = 'sha256:61be487f6e8218551f2149a586f07c749e48322b971ec94b79781cc2693edcd7'
+
+
+def cross_entropy_boundary_numeric_failure(e, task, parent, guard):
+    """Replay all thirteen reviewed CE guards against the original CPU golden.
+
+    This proves retained output mismatch, not the cause inside a kernel. A changed
+    guard, source, reference, native command, or threshold loses the attribution.
+    """
+    require(task.name == 'cross_entropy_loss' and parent.name == 'cross_entropy_loss001v2',
+            'unreviewed CrossEntropyLoss candidate')
+    root = parent / 'boundary-validation'
+    require(e.read(root / 'completion.json') == guard and guard.get('status') == 'failed'
+            and not guard.get('error'), 'CE guard completion differs')
+    request = e.bound(guard.get('request'), root / 'request.json')
+    require(request.get('operator') == task.name and request.get('candidate') == parent.name
+            and request.get('dispatch_logs_required') is True, 'CE guard request differs')
+    script = task / 'agent/boundary_guard.py'
+    e.bound(request.get('script'), script, text=True)
+    require(request['script']['sha256'] == REVIEWED_CE_GUARD
+            and e.file(task / 'agent/boundary_cases.json')['sha256'] == REVIEWED_CE_SPEC
+            and e.file(task / 'baseline/scripts/verify_result.py')['sha256'] == REVIEWED_CE_VERIFIER
+            and e.file(task / 'agent/reference/golden.py')['sha256'] == REVIEWED_CE_GOLDEN,
+            'CE guard, original verifier, or golden differs from reviewed bytes')
+    plan = e.bound(request.get('dispatch_plan'), parent / 'dispatch_plan.json')
+    build = e.read(parent / 'build/build_manifest.json')
+    result = e.read(parent / 'stages/build/result.json')
+    source_ref = e.file(parent / 'source.tar')
+    require(build.get('operator') == task.name and result.get('status') == 'passed'
+            and result.get('candidate_id') == parent.name and not result.get('error')
+            and e.read(parent / 'stages/build/stage-plan.json').get('source_hash') == source_ref['sha256']
+            and plan.get('source_hash') == source_ref['sha256']
+            and request.get('binary') == build.get('standalone'), 'CE registered build differs')
+    e.bound(request['binary'], parent / 'build/build/standalone', binary=True)
+    from run_msprof_exploration_stage import verify_source_snapshot
+    from collect_level1_traces import candidate_source_files
+    verify_source_snapshot(parent / 'source.tar', parent / 'op')
+    for path in candidate_source_files(parent / 'op').values():
+        e.file(path)
+    rms_registered_build(e, task, parent, request, source_ref, result)
+    health(e, root)
+    prepare = e.read(root / 'prepare/execution.json')
+    verify = e.read(root / 'verify/execution.json')
+    process(prepare); process(verify, 1)
+    argv = verify.get('argv', [])
+    require(isinstance(argv, list) and len(argv) == 8 and Path(argv[0]).is_absolute()
+            and Path(argv[0]).name.startswith('python')
+            and argv[1:] == ['-B', str(script), '--output', str(root / 'inputs'), '--verify', '--plan', str(parent / 'dispatch_plan.json')],
+            'CE verifier argv differs')
+    error = f'process failed (1): {argv[0]}'
+    require(verify.get('error') == error and guard.get('verification_error') == {'type': 'RuntimeError', 'message': error}
+            and prepare.get('argv') == [argv[0], '-B', str(script), '--output', str(root / 'inputs'), '--plan', str(parent / 'dispatch_plan.json')],
+            'CE CPU verifier termination or preparation differs')
+    for label, record in [('prepare', prepare), ('verify', verify)]:
+        require(record.get('cwd') == str(task) and record.get('environment_overrides') == {},
+                'CE guard CPU process environment differs')
+        stderr = e.read(root / label / 'stderr.log', text=True)
+        require(stderr in ('', RMS_BENIGN_STDERR), 'CE guard CPU stderr differs')
+        boundary_execution_wrapper(e, record, '40-43')
+    cases = e.read(task / 'agent/boundary_cases.json')['cases']
+    commands = e.read(root / 'inputs/coordinator_commands.json')
+    prepared = e.read(root / 'inputs/cpu_preparation.json')
+    verified = e.read(root / 'inputs/verification.json')
+    rows, before, results = guard.get('cases', []), prepared.get('results', []), verified.get('results', [])
+    require(prepared.get('operator') == verified.get('operator') == task.name
+            and prepared.get('hardware_executed_by_this_script') is False
+            and verified.get('hardware_executed_by_this_script') is False
+            and len(cases) == len(rows) == len(commands) == len(before) == len(results) == 13,
+            'CE thirteen-case coverage differs')
+    rms_boundary_events(e, task, parent, e.file(root / 'request.json'), e.file(root / 'completion.json'))
+    require(json.loads(e.read(root / 'prepare/stdout.log', text=True)) ==
+            {'operator': task.name, 'cases': 13, 'mode': 'cpu_only', 'passed': True}
+            and json.loads(e.read(root / 'verify/stdout.log', text=True)) ==
+            {'operator': task.name, 'cases': 13, 'mode': 'verify_existing_outputs', 'passed': False},
+            'CE guard stdout contradicts completion')
+    try:
+        import numpy as np
+        import torch
+        from aprof_runtime.planning import select_dispatch
+        from level2_adapters import workload_metadata
+    except ImportError as exc:
+        raise Unproven('CE CPU replay unavailable: ' + str(exc)) from exc
+    for path in (np.__file__, torch.__file__, torch._C.__file__, torch.nn.functional.__file__):
+        e.file(path)
+    mismatch = set()
+    for case, row, command, prior, observed in zip(cases, rows, commands, before, results):
+        name = case['name']; descriptor = case['metadata']; shape = descriptor['shape']; dtype = descriptor['dtype']
+        attrs = descriptor['attributes']; dest = root / 'inputs' / name; origin = task / 'agent/boundary_inputs' / name
+        require(re.fullmatch(r'[A-Za-z0-9_-]+', name) and all(item.get('name') == name for item in (row, command, prior, observed))
+                and isinstance(shape, list) and 2 <= len(shape) <= 8 and all(type(n) is int and n > 0 for n in shape)
+                and math.prod(shape) <= 1_000_000 and dtype in ('float16', 'float32', 'bfloat16')
+                and attrs.get('reduction') in ('none', 'sum', 'mean'), 'CE case scope or order differs')
+        metadata = workload_metadata(task.name, {**attrs, 'shape': shape, 'dtype': dtype, 'attrs': attrs})
+        selected = select_dispatch(plan, metadata)
+        require(command.get('metadata') == metadata and prior.get('dispatch') == observed.get('dispatch') == selected
+                and command.get('expected_key') == case.get('expected_key') == selected['tiling_key']
+                and command.get('expected_entry') == selected['kernel_entry'], 'CE dispatch declaration differs')
+        declaration = e.read(origin / 'guard.json')
+        require(declaration.get('operator') == task.name and declaration.get('name') == name
+                and declaration.get('workload_metadata') == descriptor
+                and declaration.get('expected_key') == selected['tiling_key']
+                and declaration.get('oracle') == observed.get('oracle') == prior.get('oracle')
+                and declaration.get('reference_status') == observed.get('reference_status') == prior.get('reference_status'),
+                'CE original guard declaration differs')
+        e.bound(declaration['oracle'], task / 'agent/reference/golden.py', text=True)
+        e.bound(declaration['expected'], origin / 'expected.bin', binary=True)
+        for filename in ('input.bin', 'target.bin', 'expected.bin'):
+            require(e.file(origin / filename)['sha256'] == e.file(dest / filename)['sha256'],
+                    'CE original input or reference copy differs')
+        arguments = [value.replace(str(origin), str(dest)).replace('{device}', '0')
+                     for value in declaration['native_arguments']]
+        require(command.get('argv') == arguments and command.get('reference') == str(dest / 'expected.bin'),
+                'CE native argument declaration differs')
+        native_root = root / 'executions' / name
+        native = e.bound(row.get('execution'), native_root / 'execution.json'); process(native)
+        require(native.get('argv') == [request['binary']['path'], *arguments]
+                and native.get('cwd') == str(parent / 'op') and native.get('environment_overrides') == {}
+                and row.get('expected_process_passed') is True and not row.get('error'),
+                'CE native execution differs')
+        boundary_execution_wrapper(e, native, '8')
+        stdout = e.read(native_root / 'stdout.log', text=True)
+        require(not e.read(native_root / 'stderr.log', text=True).strip(), 'CE native stderr differs')
+        logs = [json.loads(line.split('APROF_DISPATCH_JSON:', 1)[1]) for line in stdout.splitlines()
+                if line.startswith('APROF_DISPATCH_JSON:')]
+        require(logs == row.get('dispatch_logs') == [{'tiling_key': selected['tiling_key'],
+                'kernel_entry': selected['kernel_entry']}] and row.get('dispatch_log_passed') is True,
+                'CE actual dispatch differs')
+        storage = {'float16': np.float16, 'float32': np.float32, 'bfloat16': np.uint16}[dtype]
+        size = math.prod(shape); target_size = shape[0] * math.prod(shape[2:]); output_size = target_size if attrs['reduction'] == 'none' else 1
+        require((dest / 'input.bin').stat().st_size == size * np.dtype(storage).itemsize
+                and (dest / 'target.bin').stat().st_size == target_size * 8
+                and (dest / 'expected.bin').stat().st_size == (dest / 'output.bin').stat().st_size == output_size * np.dtype(storage).itemsize,
+                'CE input or output size differs')
+        actual_ref = e.file(dest / 'output.bin')
+        raw = np.fromfile(dest / 'input.bin', storage).copy()
+        tensor = torch.from_numpy(raw).view(torch.bfloat16) if dtype == 'bfloat16' else torch.from_numpy(raw)
+        target = torch.from_numpy(np.fromfile(dest / 'target.bin', np.int64).copy()).reshape([shape[0], *shape[2:]])
+        golden = torch.nn.functional.cross_entropy(tensor.reshape(shape), target,
+                    reduction=attrs['reduction'], ignore_index=-100)
+        require(golden.contiguous().reshape(-1).view(torch.uint8).numpy().tobytes() == (dest / 'expected.bin').read_bytes(),
+                'CE original golden does not replay to reference bytes')
+        def f32(path):
+            raw = np.fromfile(path, storage)
+            return (raw.astype(np.uint32) << 16).view(np.float32) if dtype == 'bfloat16' else raw
+        actual, expected = f32(dest / 'output.bin'), f32(dest / 'expected.bin')
+        special = bool(np.array_equal(np.isnan(actual), np.isnan(expected))
+                       and np.array_equal(np.isposinf(actual), np.isposinf(expected))
+                       and np.array_equal(np.isneginf(actual), np.isneginf(expected)))
+        finite = np.isfinite(actual) & np.isfinite(expected)
+        rel = np.abs(actual[finite].astype(np.float32) - expected[finite].astype(np.float32)) / (np.abs(expected[finite].astype(np.float32)) + 1e-7)
+        threshold = {'float32': 2**-13, 'float16': 2**-10, 'bfloat16': 2**-7}[dtype]
+        mere = float(rel.mean(dtype=np.float64)) if rel.size else 0.
+        mare = float(rel.max(initial=0))
+        metrics = {'passed': bool(special and mere < threshold and mare < 10 * threshold),
+                   'special_values_match': special, 'mere': mere,
+                   'mare': mare, 'threshold': threshold}
+        require(observed.get('output') == metrics and observed.get('passed') is metrics['passed']
+                and observed.get('status') == ('coordinator_output_verified' if metrics['passed'] else 'coordinator_output_failed'),
+                'CE verifier result does not replay from native output')
+        if not metrics['passed']:
+            require(special and rel.size and float(rel.mean(dtype=np.float64)) >= threshold,
+                    'CE failure is not a finite mismatch beyond original tolerance')
+            mismatch.add(name)
+    require(mismatch == {'sum_partial_tail', 'capacity_769_sum'}, 'CE reviewed failure set differs')
+    return 'original_ce_boundary_numeric_mismatch', ('Retained native outputs, dispatch, original golden CPU replay and original '
+            'dtype tolerances agree on two reduced-loss boundary mismatches. This attributes the observed outputs, not a kernel instruction cause.')
+
+
 def classify_failure(task, parent, stage=None, guard=None):
     """Return a deterministic evidence-bound classification; never execute or write.
 
@@ -1033,7 +1204,9 @@ def classify_failure(task, parent, stage=None, guard=None):
         else:
             require(guard is not None and guard.get('status') == 'failed', 'no failed stage or guard')
             if guard.get('verification_error') is not None:
-                rule, reason = (rms_boundary_numeric_failure(e, task, parent, guard) if task.name == 'rms_norm' else boundary_numeric_failure(e, task, parent, guard))
+                rule, reason = (rms_boundary_numeric_failure(e, task, parent, guard) if task.name == 'rms_norm' else
+                                cross_entropy_boundary_numeric_failure(e, task, parent, guard) if task.name == 'cross_entropy_loss' else
+                                boundary_numeric_failure(e, task, parent, guard))
             else:
                 rule, reason = dispatch_failure(e, task, parent, guard)
         status = 'source_attempt_failed'
