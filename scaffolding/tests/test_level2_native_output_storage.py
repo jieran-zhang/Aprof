@@ -124,6 +124,16 @@ def test_report_authority_v2_retirement_replays_original_outputs(tmp_path):
             assert verification.fingerprint(path)=={'sha256':native.digest(data),'size_bytes':len(data)}
     assert (cohort/'native-output-storage/compacted.json').is_file()
 
+@pytest.mark.parametrize('operator',list(native.OUTPUT_KEYS))
+def test_report_authority_v2_preserves_named_outputs(tmp_path,operator):
+    task,cohort,_,original=fixture(tmp_path,operator)
+    events=task/'events.jsonl';events.write_bytes(b''.join(events.read_bytes().splitlines(keepends=True)[:-1]))
+    result=native.prepare(cohort,writers_closed=True,retire=True,report_authority=True)
+    assert result['version']==native.REPORT_VERSION and result['logical_files']==96
+    with verification.reader_session():
+        for path,data in original.items():
+            assert verification.fingerprint(path)=={'sha256':native.digest(data),'size_bytes':len(data)}
+
 @pytest.mark.parametrize('changed',['report','output'])
 def test_report_authority_v2_rejects_changed_original(tmp_path,changed):
     task,cohort,destination,_=fixture(tmp_path)
