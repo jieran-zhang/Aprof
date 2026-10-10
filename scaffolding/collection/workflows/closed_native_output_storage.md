@@ -45,7 +45,7 @@ Shadow CLI, after confirming all writers are closed:
 
     PYTHONDONTWRITEBYTECODE=1 taskset -c 200-207 python scaffolding/collection/scripts/level2_native_output_storage.py --cohort /ABS/CLOSED/cohort --shadow-destination /tmp/native-output-shadow --writers-closed
 
-An explicit production `--retire` uses only the canonical cohort/native-output-storage directory and requires the prior passed dedup authority. Qualify the relevant output family before retirement; preserve the separate shadow proof.
+An explicit production `--retire` uses only the canonical cohort/native-output-storage directory. For v1 it requires the prior passed dedup authority; for v2 it requires `--report-authority` and the closed report proof described above. Qualify the relevant output family before retirement; preserve the separate shadow proof.
 
 Small tests use PYTHONDONTWRITEBYTECODE=1 and `-p no:cacheprovider`. The real shadow request, replay, offline result, implementation reviews and regression log are retained under the campaign storage maintenance evidence. The shadow bundle is an evidence-transport qualification, not a full optimization-memory/lesson dataset export. No full-repository suite or real evidence replay was run concurrently with native timing.
 
