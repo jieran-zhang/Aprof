@@ -13,8 +13,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 RELEASE = Path(os.environ.get('APROF_SKILL_LIB', ROOT / 'skill-libs/graph-base/0.4.1'))
-if RELEASE.name != '0.4.2':
-    pytest.skip('0.4.2 collector tests require APROF_SKILL_LIB=.../0.4.2', allow_module_level=True)
+if not (RELEASE / 'skills/ascendc-aprof-profiling/scripts/profile_capture.py').is_file():
+    pytest.skip('selected release does not contain the versioned profiler collector', allow_module_level=True)
 SCRIPTS = RELEASE / 'skills/ascendc-aprof-profiling/scripts'
 FIXTURE = Path(__file__).parent / 'fixtures/profiler_v042/real-capture'
 

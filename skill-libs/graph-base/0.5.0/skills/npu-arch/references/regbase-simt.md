@@ -1,0 +1,13 @@
+# 3510 execution choices: RegBase and SIMT
+
+Enable these paths only for an architecture profile with supported features and a compatible installed SDK. NpuArch 3510 identifies the ISA; a marketing name or a header found in a different SDK does not prove the current binary can use an API.
+
+RegBase keeps intermediate vector values in registers inside a VF, reducing UB round trips for a multi-operation chain. Preserve explicit loads/stores, masks, dtype conversion and scalar/VF calling restrictions. Inspect generated code and resource usage: excessive live registers or oversized fusion can spill or reduce throughput. A short single-op vector chain may gain little. Exact `RegTensor`, mask and VF API spellings come from the installed headers.
+
+SIMT is a candidate for irregular indexing/control and supported scalar operations, not an automatic replacement for bulk SIMD. Group lanes to coalesce GM access and reduce divergence. Use a compile-time launch bound consistent with actual threads and inspect register/stack usage. For mixed SIMD/SIMT, explicitly synchronize and account for shared UB ownership.
+
+UB exposed to SIMD is not all usable by SIMT: reserve required DCache and compiler/system space once, and record whether the platform query already deducted reservations. The official 950 example describes 256 KiB physical UB minus 8 KiB system and at least 32 KiB DCache; treat the installed compiler/platform's reported budget as authoritative, not a constant for all future SKUs.
+
+3510 changes data paths: UB→L1, L1→UB and L0C→UB can avoid GM staging. The basic UB→L1 API hardware path can require `ENABLE_CV_COMM_VIA_SSBUF`; without it an API may use software staging. Check actual flags and trace before attributing a traffic reduction. Old GM→L0A/B and L1→GM direct paths are not portable to 3510. Use the versioned migration guide and validate precision, including subnormal behavior affected by target/API/compiler settings.
+
+Sources: [official new-feature guide](https://asc.gitcode.com/guide/cross_gen_migration_guide/instructions_for_new_features/3510_new_features.html), [migration changes](https://asc.gitcode.com/guide/cross_gen_migration_guide/3510_arch_migration/2201_to_3510_arch_changes.html), and [official SIMT performance examples](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/920beta1/programug/Ascendcopdevg/docs/zh/guide/%E7%AE%97%E5%AD%90%E5%AE%9E%E8%B7%B5%E5%8F%82%E8%80%83/%E4%BC%98%E7%A7%80%E5%AE%9E%E8%B7%B5/MC-%E7%AE%97%E5%AD%90%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98%E6%A1%88%E4%BE%8B.md). These sources are guidance, not measured evidence for an AProf candidate.
