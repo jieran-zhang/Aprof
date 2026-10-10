@@ -1014,6 +1014,108 @@ REVIEWED_CE_SPEC = 'sha256:d71f53d6447c01f175e5aca1507c6a46601ecde8323201365f129
 REVIEWED_CE_VERIFIER = 'sha256:c9fb47df045980e8f7b6d54ac6da9f8ba961a2e2d9a4805a043b7e0dd59f001c'
 REVIEWED_CE_GOLDEN = 'sha256:61be487f6e8218551f2149a586f07c749e48322b971ec94b79781cc2693edcd7'
 
+REVIEWED_GCD_GUARD = 'sha256:48f74598b1cafd207ea25148ec94bbc45625b004778dd960cc2813bd7e8cc6e7'
+REVIEWED_GCD_SPEC = 'sha256:a61cf4ac1cb5c45d5608ffb987274deb2b0f43dfdfad5b137410d036475e9b97'
+REVIEWED_GCD_GOLDEN = 'sha256:7d1417d91378cd5d7e2cb0716e56e7d11dcc131adca4d245e4c4bc5a94daf979'
+
+
+def gcd_boundary_numeric_failure(e, task, parent, guard):
+    """Prove the retained min-int/zero mismatch for the reviewed GCD guard.
+
+    The positive rule uses one finite exact-integer case. Other guard cases are
+    checked for successful native execution and dispatch, but do not need to
+    establish the failure. No task Python or NPU process is executed here.
+    """
+    require(task.name == 'gcd' and parent.name == 'gcd001', 'unreviewed GCD candidate')
+    root = parent / 'boundary-validation'
+    require(e.read(root / 'completion.json') == guard and guard.get('status') == 'failed'
+            and not guard.get('error'), 'GCD guard completion differs')
+    request = e.bound(guard.get('request'), root / 'request.json')
+    script = task / 'agent/boundary_guard.py'
+    require(request.get('operator') == 'gcd' and request.get('candidate') == parent.name
+            and request.get('script') == e.file(script)
+            and request['script']['sha256'] == REVIEWED_GCD_GUARD
+            and e.file(task / 'agent/boundary_cases.json')['sha256'] == REVIEWED_GCD_SPEC
+            and e.file(task / 'agent/oracle/golden.py')['sha256'] == REVIEWED_GCD_GOLDEN,
+            'GCD guard or original oracle differs from reviewed bytes')
+    plan = e.bound(request.get('dispatch_plan'), parent / 'dispatch_plan.json')
+    build = e.read(parent / 'build/build_manifest.json')
+    source = e.file(parent / 'source.tar')
+    require(plan.get('source_hash') == source['sha256']
+            and e.read(parent / 'stages/build/stage-plan.json').get('source_hash') == source['sha256']
+            and e.read(parent / 'stages/build/result.json').get('status') == 'passed'
+            and request.get('binary') == build.get('standalone'), 'GCD build/source binding differs')
+    e.bound(request['binary'], parent / 'build/build/standalone', binary=True)
+    health(e, root)
+    prepare = e.read(root / 'prepare/execution.json')
+    verify = e.read(root / 'verify/execution.json')
+    process(prepare); process(verify, 1)
+    argv = [verify['argv'][0], '-B', str(script), '--output', str(root / 'inputs'),
+            '--verify', '--plan', str(parent / 'dispatch_plan.json')]
+    require(verify.get('argv') == argv and prepare.get('argv') == argv[:5] + argv[6:]
+            and guard.get('verification_error') ==
+            {'type': 'RuntimeError', 'message': f'process failed (1): {argv[0]}'},
+            'GCD verifier execution differs')
+    commands = e.read(root / 'inputs/coordinator_commands.json')
+    prepared = e.read(root / 'inputs/cpu_preparation.json')
+    verified = e.read(root / 'inputs/verification.json')
+    cases = e.read(task / 'agent/boundary_cases.json')['cases']
+    rows = guard.get('cases', [])
+    require(len(cases) == len(rows) == len(commands) == len(prepared['results'])
+            == len(verified['results']) == 5, 'GCD guard coverage differs')
+    require(json.loads(e.read(root / 'verify/stdout.log', text=True)) ==
+            {'operator': 'gcd', 'cases': 5, 'mode': 'verify_existing_outputs', 'passed': False},
+            'GCD verifier stdout differs')
+    expected_dispatch = {row['tiling_key']: row['kernel_entry']
+                         for row in [*plan['entries'], plan['fallback']]}
+    for case, row, command, before, after in zip(cases, rows, commands,
+                                                   prepared['results'], verified['results']):
+        name = case['name']
+        require(name == row.get('name') == command.get('name') == before.get('name')
+                == after.get('name'), 'GCD case identity differs')
+        native = e.bound(row.get('execution'), root / 'executions' / name / 'execution.json')
+        process(native)
+        require(native.get('argv') == [request['binary']['path'], *command['argv']]
+                and row.get('expected_process_passed') is True and not row.get('error')
+                and row.get('dispatch_log_passed') is True
+                and row.get('dispatch_logs') == [{'tiling_key': command['expected_key'],
+                                                 'kernel_entry': expected_dispatch[command['expected_key']]}],
+                'GCD native process or dispatch differs')
+        stdout = e.read(root / 'executions' / name / 'stdout.log', text=True)
+        logs = [json.loads(line.split('APROF_DISPATCH_JSON:', 1)[1])
+                for line in stdout.splitlines() if line.startswith('APROF_DISPATCH_JSON:')]
+        require(logs == row['dispatch_logs'], 'GCD dispatch stdout differs')
+    first = cases[0]
+    require(first == {'name': 'int16_min_zero_max', 'dtype': 'int16',
+                      'input_shapes': [[2, 3], [2, 3]],
+                      'a': [-32768, -32768, 32767, 0, 0, -6],
+                      'b': [0, -32768, 32767, 0, 7, 15]},
+            'GCD exact-integer proof case differs')
+    folder = root / 'inputs' / first['name']
+    require(commands[0].get('argv') == ['--x1-shape', '2,3', '--x2-shape', '2,3',
+            '--dtype', 'int16', '--x1', str(folder / 'x1.bin'), '--x2',
+            str(folder / 'x2.bin'), '--output', str(folder / 'output.bin'),
+            '--device', '0'] and commands[0].get('expected_key') == 1,
+            'GCD native input/output binding differs')
+    import struct
+    values = []
+    for filename in ('x1.bin', 'x2.bin', 'expected_output.bin', 'output.bin'):
+        raw = (folder / filename).read_bytes()
+        e.file(folder / filename)
+        require(len(raw) == 12, 'GCD boundary tensor length differs')
+        values.append(struct.unpack('<6h', raw))
+    left, right, expected, actual = values
+    require(left == tuple(first['a']) and right == tuple(first['b'])
+            and expected == (-32768, -32768, 32767, 0, 7, 3),
+            'GCD original oracle replay differs')
+    # torch.gcd of int16 inputs is computed in int32 by the frozen golden;
+    # 32768 is then narrowed to -32768. This rule checks exact bytes.
+    require(actual[0] != expected[0] and verified['results'][0].get('passed') is False
+            and verified['results'][0].get('status') == 'hardware_output_failed',
+            'GCD retained output does not prove an original-oracle mismatch')
+    return 'original_gcd_boundary_integer_mismatch', ('A successful reviewed GCD native guard emitted an exact int16 '
+            'output differing from the original torch.gcd oracle at gcd(-32768, 0).')
+
 
 def cross_entropy_boundary_numeric_failure(e, task, parent, guard):
     """Replay all thirteen reviewed CE guards against the original CPU golden.
@@ -1206,6 +1308,7 @@ def classify_failure(task, parent, stage=None, guard=None):
             if guard.get('verification_error') is not None:
                 rule, reason = (rms_boundary_numeric_failure(e, task, parent, guard) if task.name == 'rms_norm' else
                                 cross_entropy_boundary_numeric_failure(e, task, parent, guard) if task.name == 'cross_entropy_loss' else
+                                gcd_boundary_numeric_failure(e, task, parent, guard) if task.name == 'gcd' else
                                 boundary_numeric_failure(e, task, parent, guard))
             else:
                 rule, reason = dispatch_failure(e, task, parent, guard)
