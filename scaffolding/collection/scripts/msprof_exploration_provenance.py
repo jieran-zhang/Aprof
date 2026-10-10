@@ -26,6 +26,7 @@ FRESH_PRODUCERS = PRODUCERS | {
     'level2_iteration.py', 'level2_boundaries.py', 'level2_finalize.py',
     'level2_guard_contract.py', 'level2_candidate_guard.py',
     'level2_final_report_authority.py', 'level2_final_report_attestation.py',
+    'level2_aa_lite_report_authority.py', 'level2_aa_lite_report_attestation.py',
     'level2_native_output_storage.py', 'level2_verification_storage.py',
     'level2_raw_archive_storage.py', 'level2_evidence_storage.py', 'msprof_storage_protocol.py',
     'level2_storage.py', 'level2_failure_classification.py', 'level2_raw_method.py', 'msprof_raw_storage.py',

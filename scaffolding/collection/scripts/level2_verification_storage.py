@@ -241,6 +241,20 @@ def report_authority(session,read_bytes,*,allow_final=False):
         if authority:
             return {**authority,'report':target,'ledger_event':{'path':str(ledger/'events.jsonl'),'sequence':number,'hash':row['hash']},
                     'protected':[ref(ledger/'config.json'),ref(ledger/'config.sha256.json')]}
+    if (stage==task/'stages/aa-search-lite-031' and own and finished
+            and own.get('kind')=='control' and own.get('candidate_id') is None
+            and own.get('plan')==stage_plan and finished.get('outcome')=='success'
+            and finished.get('native_started') is True
+            and finished.get('evidence',{}).get('result')==result):
+        # A retrospective replay is separately published and event-bound. It
+        # never upgrades the original report's capture-time authority.
+        trusted=Path(__file__).resolve().with_name('level2_aa_lite_report_authority.py')
+        require(trusted.is_file() and not trusted.is_symlink()
+                and digest(trusted.read_bytes())=='sha256:9a29902ded85d4cd0cfa6936a52efd67642ab5d3dcb995f85494b825ea86f3a4',
+                'trusted lite A/A authority reader differs')
+        spec=importlib.util.spec_from_file_location('_trusted_aa_lite_report_authority',trusted)
+        aa_authority=importlib.util.module_from_spec(spec);spec.loader.exec_module(aa_authority)
+        return aa_authority.authority(session,read_bytes)
     raise ValueError('no independent previously recorded report authority; new verification archive is blocked')
 
 
@@ -281,8 +295,8 @@ def event_bindings(facts):
         result.extend(facts['stage_recovery']['event_bindings'])
     if facts.get('report_authority'):
         authority=facts['report_authority']
-        if authority.get('kind')=='retrospective_final_report_authority_v1':
-            require(authority.get('historical_report_authority') is False,'final audit claims capture-time authority')
+        if authority.get('kind') in ('retrospective_final_report_authority_v1','retrospective_lite_aa_report_authority_v1'):
+            require(authority.get('historical_report_authority') is False,'retrospective audit claims capture-time authority')
             result.extend(authority['event_bindings'])
         else:result.append(authority['ledger_event'])
     return result

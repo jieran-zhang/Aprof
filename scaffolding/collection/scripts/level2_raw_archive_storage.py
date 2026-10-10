@@ -23,8 +23,9 @@ PRE_RECOVERY_VERSION='level2_closed_raw_storage_v2'
 PRE_LITE_VERSION='level2_closed_raw_storage_v3'
 PRE_GATHER_VERSION='level2_closed_raw_storage_v4'
 GATHER_VERSION='level2_closed_raw_storage_v5'
-VERSION='level2_closed_raw_storage_v6'
-VERSIONS=(LEGACY_VERSION,PRE_RECOVERY_VERSION,PRE_LITE_VERSION,PRE_GATHER_VERSION,GATHER_VERSION,VERSION)
+REPORT_VERSION='level2_closed_raw_storage_v6'
+VERSION='level2_closed_raw_storage_v7'
+VERSIONS=(LEGACY_VERSION,PRE_RECOVERY_VERSION,PRE_LITE_VERSION,PRE_GATHER_VERSION,GATHER_VERSION,REPORT_VERSION,VERSION)
 HASH=re.compile(r'sha256:[0-9a-f]{64}\Z')
 CHUNK=1024*1024
 TOP={'version','csv','csv_hash','target_tasks','warmup_tasks_excluded','other_tasks','samples'}
@@ -87,7 +88,7 @@ class RawArchive:
         require(self.version in VERSIONS,'unsupported raw storage version')
         group=self.session.parent.parent.name
         require(self.session.parent.name in {'cohort','direct_parent','original_baseline'}
-                and (group=='search' or re.fullmatch(r'aa-[A-Za-z0-9_-]+',group) or (self.version in (PRE_RECOVERY_VERSION,PRE_LITE_VERSION,PRE_GATHER_VERSION,GATHER_VERSION,VERSION) and group=='final'))
+                and (group=='search' or re.fullmatch(r'aa-[A-Za-z0-9_-]+',group) or (self.version in (PRE_RECOVERY_VERSION,PRE_LITE_VERSION,PRE_GATHER_VERSION,GATHER_VERSION,REPORT_VERSION,VERSION) and group=='final'))
                 and self.session.parent.parent.parent.name=='stages','unsupported/unanchored final scope')
         self.closed=cohort_facts(self.session,version=self.version)
         original=self.closed['original_report']
@@ -106,7 +107,7 @@ class RawArchive:
         require(report.get('evidence_status')=='verified_complete' and report.get('protocol') in ('msprof_task_time_exploration_v2',LITE_PROTOCOL),'unverified report')
         sessions=report.get('sessions',[])
         count=cohort_process_count(report=report)
-        require(self.version in (PRE_GATHER_VERSION,GATHER_VERSION,VERSION) or count==6,'historical raw seal cannot authorize search-lite')
+        require(self.version in (PRE_GATHER_VERSION,GATHER_VERSION,REPORT_VERSION,VERSION) or count==6,'historical raw seal cannot authorize search-lite')
         require(len(sessions)==count and len({s['directory'] for s in sessions})==count,'protocol session coverage differs')
         matches=[s for s in sessions if s['directory']==str(self.session)]
         require(len(matches)==1,'report session differs');self.report_session=matches[0]
@@ -347,6 +348,8 @@ CURRENT_AUTHORITY_SHA='sha256:77c0386b2a3a9ecd2001c1203a502c18c59e9dcec1f77cdcee
 GATHER_AUTHORITY_SHA='sha256:43be646212c903144308bfbeb1a462b655a69ba8d548db18c41364b1c92b0019'
 CURRENT_NATIVE_SHA='sha256:2bb4b5f9a47502912cdb42c695514032e8a13664c894a88e5d4c0230590a8bfa'
 REPORT_NATIVE_SHA='sha256:8988ba74ada08bd333fee1325bce58b81d4c28e09886dbd34308fd18581d7ef4'
+LITE_AUTHORITY_SHA='sha256:8492ba1c4c2a03c4b9c9bbbfb8ed13efba4b8498a2a2b88b67669028cc18f1c9'
+LITE_NATIVE_SHA='sha256:3f8bfba87f4ad3e374627a9107b2d36a08f0af5e3c8243e47727e05e46fc15a2'
 CURRENT_CAPTURE_SHA='sha256:6e71eb0460d6de76afc83b674ca437ee5abd670e539c1368aed60e53ca9185ed'
 # Full20 final seals include all six sessions and their authenticated closure.
 # A real closed GN seal is 20.7 MB; keep a finite limit above that evidence.
@@ -398,7 +401,7 @@ def small_read(path):
 
 def checked_authority(require_capture=True):
     import importlib.util,sys
-    for name,expected in [('level2_native_output_storage',REPORT_NATIVE_SHA),('level2_verification_storage',GATHER_AUTHORITY_SHA)]:
+    for name,expected in [('level2_native_output_storage',LITE_NATIVE_SHA),('level2_verification_storage',LITE_AUTHORITY_SHA)]:
         spec=importlib.util.find_spec(name)
         require(spec is not None and spec.origin,'reviewed authority dependency missing')
         require(fingerprint(Path(spec.origin))['sha256']==expected,'reviewed authority producer differs')
@@ -417,7 +420,7 @@ LOCAL={'mode':'local_tmp_full_copyback_v1','scratch_root':'/tmp',
 def cohort_facts(session, read_bytes=None, *, version=VERSION):
     """Pure original authority replay when a complete logical byte reader is given."""
     session=Path(session);cohort=session.parent;stage=cohort.parent.name
-    require(version in VERSIONS and (stage=='search' or re.fullmatch(r'aa-[A-Za-z0-9_-]+',stage) or (version in (PRE_RECOVERY_VERSION,PRE_LITE_VERSION,PRE_GATHER_VERSION,GATHER_VERSION,VERSION) and stage=='final')),'unsupported/unanchored final scope')
+    require(version in VERSIONS and (stage=='search' or re.fullmatch(r'aa-[A-Za-z0-9_-]+',stage) or (version in (PRE_RECOVERY_VERSION,PRE_LITE_VERSION,PRE_GATHER_VERSION,GATHER_VERSION,REPORT_VERSION,VERSION) and stage=='final')),'unsupported/unanchored final scope')
     offline=read_bytes is not None
     authority=checked_authority(require_capture=not offline)
     if not offline:session=authority.process_location(session)
@@ -430,7 +433,7 @@ def cohort_facts(session, read_bytes=None, *, version=VERSION):
     require(report.get('evidence_status')=='verified_complete' and report.get('protocol') in ('msprof_task_time_exploration_v2',LITE_PROTOCOL),'unverified original report')
     sessions=report.get('sessions',[]);directories=[row['directory'] for row in sessions]
     count=cohort_process_count(report=report)
-    require(version in (PRE_GATHER_VERSION,GATHER_VERSION,VERSION) or count==6,'historical raw seal cannot authorize search-lite')
+    require(version in (PRE_GATHER_VERSION,GATHER_VERSION,REPORT_VERSION,VERSION) or count==6,'historical raw seal cannot authorize search-lite')
     require(count!=2 or stage!='final','search-lite cannot authorize final raw storage')
     require(len(directories)==len(set(directories))==count and str(session) in directories,'protocol original session coverage differs')
     facts=[];transport_refs=[];oracle_refs=[]
@@ -442,8 +445,12 @@ def cohort_facts(session, read_bytes=None, *, version=VERSION):
             for logical,digest in expected.items():
                 if Path(logical).name in {'metadata.json','execution.json','stdout.log'}:
                     ref=ptr(logical);require(ref['sha256']==digest,'original oracle bytes differ');oracle_refs.append(ref)
-            require(value['report_authority']['kind']==('ledger_timing_calibration_v1' if stage.startswith('aa-') else 'retrospective_final_report_authority_v1' if stage=='final' else 'ledger_closed_feedback_report_v1'),'report authority kind/scope differs')
-            require(version in (PRE_LITE_VERSION,PRE_GATHER_VERSION,GATHER_VERSION,VERSION) or 'stage_recovery' not in value,'historical raw storage cannot authorize newly recovered stages')
+            expected_kind=('retrospective_lite_aa_report_authority_v1' if stage=='aa-search-lite-031' and version==VERSION
+                           else 'ledger_timing_calibration_v1' if stage.startswith('aa-')
+                           else 'retrospective_final_report_authority_v1' if stage=='final'
+                           else 'ledger_closed_feedback_report_v1')
+            require(value['report_authority']['kind']==expected_kind,'report authority kind/scope differs')
+            require(version in (PRE_LITE_VERSION,PRE_GATHER_VERSION,GATHER_VERSION,REPORT_VERSION,VERSION) or 'stage_recovery' not in value,'historical raw storage cannot authorize newly recovered stages')
             facts.append({'session':str(current),'facts':value});observed={}
             for name in ('request.json','raw-storage.json','raw-storage.request.json','raw-storage.copyback.json'):
                 p=current/name;ref=ptr(p)
@@ -465,7 +472,7 @@ def cohort_facts(session, read_bytes=None, *, version=VERSION):
     return {'original_report':ptr(cohort/'report.json'),'sessions':facts,'raw_transport':transport_refs,
             'protected':[protected[k] for k in sorted(protected)],'event_bindings':[events[k] for k in sorted(events)],
             'report_authority':facts[0]['facts']['report_authority'],
-            'authority_producer_hashes':{'level2_verification_storage.py':LEGACY_AUTHORITY_SHA if version==LEGACY_VERSION else PRE_RECOVERY_AUTHORITY_SHA if version==PRE_RECOVERY_VERSION else AUTHORITY_SHA if version==PRE_LITE_VERSION else CURRENT_AUTHORITY_SHA if version==PRE_GATHER_VERSION else GATHER_AUTHORITY_SHA,'level2_native_output_storage.py':REPORT_NATIVE_SHA if version==VERSION else CURRENT_NATIVE_SHA if version in (PRE_GATHER_VERSION,GATHER_VERSION) else NATIVE_SHA if version==PRE_LITE_VERSION else LEGACY_NATIVE_SHA}}
+            'authority_producer_hashes':{'level2_verification_storage.py':LEGACY_AUTHORITY_SHA if version==LEGACY_VERSION else PRE_RECOVERY_AUTHORITY_SHA if version==PRE_RECOVERY_VERSION else AUTHORITY_SHA if version==PRE_LITE_VERSION else CURRENT_AUTHORITY_SHA if version==PRE_GATHER_VERSION else LITE_AUTHORITY_SHA if version==VERSION else GATHER_AUTHORITY_SHA,'level2_native_output_storage.py':LITE_NATIVE_SHA if version==VERSION else REPORT_NATIVE_SHA if version==REPORT_VERSION else CURRENT_NATIVE_SHA if version in (PRE_GATHER_VERSION,GATHER_VERSION) else NATIVE_SHA if version==PRE_LITE_VERSION else LEGACY_NATIVE_SHA}}
 
 
 def validate_archive(session, seal, archive, read_bytes):

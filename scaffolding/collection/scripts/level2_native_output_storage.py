@@ -109,7 +109,9 @@ def closed_from_reader(cohort,read_bytes,*,version=VERSION):
             proof_version=(verification.FINAL_VERSION if cohort.parent.name=='final' else verification.ANCHORED_VERSION)
             facts,oracle_roster=verification.facts_for_version(session,read,proof_version)
             authority=facts['report_authority']
-            require(authority['kind'] in {'retrospective_final_report_authority_v1','ledger_timing_calibration_v1','ledger_closed_feedback_report_v1'},'unsupported native output report authority')
+            require(authority['kind'] in {'retrospective_final_report_authority_v1','retrospective_lite_aa_report_authority_v1',
+                                          'ledger_timing_calibration_v1','ledger_closed_feedback_report_v1'},
+                    'unsupported native output report authority')
             require(report_authority in (None,authority),'native sessions have different report authority')
             report_authority=authority
         if number==0:stage_recovery=facts.get('stage_recovery')

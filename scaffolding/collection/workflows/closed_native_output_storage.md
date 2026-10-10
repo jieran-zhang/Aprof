@@ -3,7 +3,8 @@ Closed native-output archives preserve measured logical evidence while reducing 
 New cohorts without a prior output-dedup event may use the explicit
 `--report-authority` option. This writes `level2_closed_native_outputs_v2`
 only when the existing closed feedback, A/A calibration, or retrospective final
-report attestation independently binds the complete report. The report must
+report attestation independently binds the complete report. The closed Gather
+lite A/A control may also use its separate retrospective report audit. The report must
 pin every native output hash; the session request, passed validation, native
 journal, and all named output parts still have to agree. Example:
 

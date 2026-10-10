@@ -1,6 +1,9 @@
 # Closed LOCAL raw storage and reader integration
 
-Version v6 binds the reviewed native-output reader that also supports
+Version v7 admits the separately attested Gather lite A/A control report. Its
+reader requires the retrospective task event and reviewed writer snapshot;
+the raw format and full inventory checks remain unchanged. Version v6 binds
+the reviewed native-output reader that also supports
 report-authorized v2 output seals. Previously sealed v5 raw archives retain
 their original producer snapshot and closed authority hashes. The trusted v6
 reader validates both versions; new raw seals use v6 only after a fresh
