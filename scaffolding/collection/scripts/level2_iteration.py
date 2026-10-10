@@ -562,12 +562,26 @@ def main():
                         help="Explicit baseline correctness group; a new recovery name preserves all prior attempts")
     parser.add_argument("--capture-storage", choices=("direct", "local"))
     parser.add_argument("--epoch", help="Measurement epoch; omitted uses the frozen epoch or epoch-01 for a new plan")
+    parser.add_argument("--epoch-handoff", type=Path,
+                        help="Required when a historical campaign has no skill-lib.json")
     parser.add_argument("--calibration-group")
     parser.add_argument("--search-protocol", choices=("auto", "lite", "full"), default="auto",
                         help="New searches use lite; auto preserves an existing frozen search protocol")
     parser.add_argument("--deduplicate-outputs", action="store_true",
                         help="Synchronously deduplicate exact output bytes after closed control/timing stages")
     args = parser.parse_args()
+    if (args.run / "campaign-manifest.json").is_file() and not (args.run / "skill-lib.json").is_file():
+        if args.epoch_handoff is None:
+            parser.error("historical campaign requires --epoch-handoff")
+        from level2_legacy_epoch import check
+        handoff = check(args.epoch_handoff)
+        if Path(handoff["run"]).resolve() != args.run.resolve():
+            parser.error("epoch handoff belongs to another campaign")
+        if args.epoch is not None and args.epoch != handoff["epoch"]:
+            parser.error("requested measurement epoch differs from handoff")
+        if args.capture_storage not in (None, "local"):
+            parser.error("historical continuation requires local msprof capture")
+        args.epoch = handoff["epoch"]
     settings = {"epoch": args.epoch} if args.epoch is not None else {}
     if args.capture_storage is not None:
         from msprof_raw_storage import DIRECT, LOCAL

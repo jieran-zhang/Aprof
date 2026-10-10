@@ -11,6 +11,8 @@ from msprof_search_protocol import LITE_PROTOCOL, LITE_PRODUCER
 REPOSITORY = Path(__file__).resolve().parents[3]
 ENGINEERING_SCRIPTS = REPOSITORY / 'scaffolding/collection/scripts'
 CAMPAIGN_RUNS = REPOSITORY / '.aprof/runs'
+LEGACY_RUNS = REPOSITORY.parent / 'aprof/.aprof/runs'
+LEGACY_SCRIPTS = REPOSITORY.parent / 'aprof/scripts'
 PRODUCERS = {
     'msprof_exploration_execute.py', 'run_msprof_exploration_stage.py',
     'msprof_exploration_standalone.py', 'msprof_exploration_oracle.py',
@@ -79,11 +81,22 @@ def campaign_root(evidence_path):
         return None
     try:
         parts = path.relative_to(CAMPAIGN_RUNS.resolve()).parts
+        runs = CAMPAIGN_RUNS.resolve()
     except ValueError:
-        return None
+        try:
+            parts = path.relative_to(LEGACY_RUNS.resolve()).parts
+            runs = LEGACY_RUNS.resolve()
+        except ValueError:
+            return None
     if len(parts) < 5 or parts[1] not in ('train', 'validation') or parts[2] != 'tasks':
         return None
-    root = CAMPAIGN_RUNS.resolve() / parts[0]
+    root = runs / parts[0]
+    if runs == LEGACY_RUNS.resolve():
+        from level2_legacy_epoch import check
+        requests = sorted((root / 'preflight').glob('resume-epoch-*/request.json'))
+        if not requests:
+            return None
+        check(requests[-1])
     if re.fullmatch(r'level1-msprof-feedback-\d{8}T\d{6}Z', parts[0]) or fresh_task_manifest(root, path):
         return root
     return None
@@ -170,9 +183,11 @@ def frozen_producer(origin, expected, *, evidence_path, semantic_path):
         observation=closed_observation_code(origin,expected,evidence_path)
         if observation is None:return None
     elif (run is None or semantic_path not in (('producer',), ('campaign_build', 'generator'))
-            or origin.parent != ENGINEERING_SCRIPTS.resolve() or origin.name not in producers
+            or origin.parent not in (ENGINEERING_SCRIPTS.resolve(), LEGACY_SCRIPTS.resolve()) or origin.name not in producers
             or origin.is_symlink()):
         return None
+    if origin.parent == LEGACY_SCRIPTS.resolve():
+        require(run.is_relative_to(LEGACY_RUNS.resolve()), 'legacy producer requires a bound continuation')
     for manifest in sorted((run / 'bootstrap').glob('frozen-engineering*.json')):
         require(not manifest.is_symlink() and manifest.resolve() == manifest,
                 'frozen engineering manifest location differs')
@@ -198,6 +213,18 @@ def frozen_producer(origin, expected, *, evidence_path, semantic_path):
                 'binding_mode': 'frozen_engineering_snapshot',
                 **({'closed_observation':observation} if observation is not None else {})}
     return None
+
+
+def legacy_harness_readme(expected, evidence_path):
+    """Authenticate the sole moved harness README without loading old code."""
+    run = campaign_root(evidence_path)
+    if run is None or not run.is_relative_to(LEGACY_RUNS.resolve()):
+        return False
+    origin = LEGACY_RUNS.parent.parent / 'benchmarks/cannbench/harness/shared_context/README.md'
+    old = run / 'bootstrap/frozen-engineering-026.json'
+    rows = [row for row in load(old)['files']
+            if row.get('path') == str(origin) and row.get('sha256') == expected]
+    return len(rows) == 1 and sha(origin) == expected and sha(rows[0]['snapshot']) == expected
 
 
 def verify_pointer_tree(value, *, evidence_path, producer_bindings=None):

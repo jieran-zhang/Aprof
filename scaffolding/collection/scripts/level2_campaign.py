@@ -327,13 +327,18 @@ def freeze_campaign(run):
     return pointer(manifest_path)
 
 
-def freeze_engineering(run):
+def freeze_engineering(run, *, historical_continuation=False):
     """Snapshot actual producer/knowledge bytes before use, with task root seals."""
     run = Path(run).resolve()
     root = run / "bootstrap"
     number = len(list(root.glob("frozen-engineering-*.json"))) + 1
     files = []
-    binding = verify_run(run)
+    if historical_continuation:
+        if (run / "skill-lib.json").exists():
+            raise ValueError("historical continuation requires an unbound legacy run")
+        binding = identity()
+    else:
+        binding = verify_run(run)
     collector_roots = [ROOT / "scaffolding/collection", ROOT / "scaffolding/benchmarks/cannbench/harness",
                        ROOT / "scaffolding/benchmarks/cannbench/task_specs"]
     package = skill_lib()

@@ -280,9 +280,16 @@ def _build_identity(request, bindings, *, provenance_out=None):
             require(Path(pointer['path']).is_absolute() and sha(pointer['path']) == pointer['sha256'], 'component build hash differs')
             component = load(pointer['path'])
             _verify_pointer_tree(component, evidence_path=pointer['path'], producer_bindings=provenance_out)
+            component_harness, comparison_harness = component.get('harness'), build.get('harness')
+            readme_only = (role == 'B' and isinstance(component_harness, dict) and isinstance(comparison_harness, dict)
+                and {k: v for k, v in component_harness.items() if k != 'README.md'}
+                    == {k: v for k, v in comparison_harness.items() if k != 'README.md'}
+                and component_harness.get('README.md') != comparison_harness.get('README.md')
+                and sha(build_tool.HARNESS / 'README.md') == 'sha256:' + component_harness['README.md']
+                and engineering_provenance.legacy_harness_readme('sha256:' + comparison_harness['README.md'], request['role_build']))
             require(component.get('version') == 'shared_context_build_v1' and component.get('operator') == build['operator']
                     and component.get('roles', {}).get(role) == build['roles'][role]
-                    and component.get('harness') == build.get('harness'), 'component role/harness identity differs')
+                    and (component_harness == comparison_harness or readme_only), 'component role/harness identity differs')
             component_roots[role] = Path(pointer['path']).parent
     for role, identity in build['roles'].items():
         require(identity.get('role') == role and identity.get('operator_name') == build['operator'], 'role build operator/role mismatch')
@@ -295,7 +302,9 @@ def _build_identity(request, bindings, *, provenance_out=None):
         require(sha(component_root / (role + '.harness.patch')) == 'sha256:' + identity['patch_sha256'], 'role patch hash differs')
     require(build.get('harness'), 'missing role harness identities')
     for name, value in build['harness'].items():
-        require(Path(name).name == name and sha(build_tool.HARNESS / name) == 'sha256:' + value,
+        require(Path(name).name == name and (sha(build_tool.HARNESS / name) == 'sha256:' + value
+                or (name == 'README.md' and engineering_provenance.legacy_harness_readme(
+                    'sha256:' + value, request['role_build']))),
                 'role harness dependency differs')
     return timing, build, runner
 
