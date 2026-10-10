@@ -235,8 +235,20 @@ def register_proposal(run, operator, candidate_id, proposal_path):
         if patch_path.read_text() != patch: raise ValueError('submitted patch differs from actual parent/source')
     else:
         with patch_path.open('x') as stream: stream.write(patch)
-    source_binding = create_source_snapshot(source, parent / 'source.tar', root_label=candidate_id)
-    save(parent / 'source-binding.json', {**source_binding, 'source_content_identity': content_identity})
+    archive = parent / 'source.tar'
+    binding_path = parent / 'source-binding.json'
+    if archive.exists() or binding_path.exists():
+        if not archive.is_file() or not binding_path.is_file():
+            raise ValueError('incomplete pre-registration source snapshot')
+        source_binding = load(binding_path)
+        if (source_binding.get('path') != str(archive)
+                or source_binding.get('sha256') != sha(archive)
+                or source_binding.get('source_content_identity') != content_identity):
+            raise ValueError('pre-registration source snapshot binding differs')
+        verify_source_snapshot(archive, source)
+    else:
+        source_binding = create_source_snapshot(source, archive, root_label=candidate_id)
+        save(binding_path, {**source_binding, 'source_content_identity': content_identity})
     artifacts = {'proposal': pointer(proposal_path), 'source': pointer(parent / 'source.tar'), 'patch': pointer(patch_path)}
     if ledger.config.get('schema_version') == 'msprof_exploration_campaign_v2':
         from aprof_runtime.contracts import Context
