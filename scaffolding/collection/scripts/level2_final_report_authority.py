@@ -35,6 +35,8 @@ APPROVED_PROFILE_HASHES['sha256:f6c018611301273dd2ee402c8a4d95b548a1e4c4c99b586a
 # engineering profile. Historical writer/profile rows above remain unchanged.
 APPROVED_WRITERS['sha256:83d94118c0979e70bb050a0ef25d26f24d07e6b701e23a0a3a0cfb3bd5394289'] = VERSION
 APPROVED_PROFILE_HASHES['sha256:83d94118c0979e70bb050a0ef25d26f24d07e6b701e23a0a3a0cfb3bd5394289'] = 'sha256:de6a9e2641b8ac1bc75a2f553d8733c341fedcc46132b618cdb29efda7c514e3'
+APPROVED_WRITERS['sha256:325e70a5ae03f9ac571f3f365b20c4f1b037137fd9857448c845603ac2e8c581'] = VERSION
+APPROVED_PROFILE_HASHES['sha256:325e70a5ae03f9ac571f3f365b20c4f1b037137fd9857448c845603ac2e8c581'] = 'sha256:11c864952b675435f34e14a56cc1e0993e551ac05b6ca172b48ae606ffb7cabb'
 # End layout migration
 ALL_CASES = list(range(1, 21))
 MAX_METADATA = 32 * 1024 * 1024
@@ -243,7 +245,10 @@ def storage_catalog(value, evidence):
         require(set(row) == {'version', 'seal', 'archive', 'producer', 'closed_evidence_ref'}
                 and row['version'] in ('level2_closed_verification_storage_v1', 'level2_closed_verification_storage_v2',
                                        'level2_closed_verification_storage_v3', 'level2_closed_native_outputs_v1',
-                                       'level2_closed_raw_storage_v1', 'level2_closed_raw_storage_v2', 'level2_closed_raw_storage_v3', 'level2_closed_raw_storage_v4')
+                                       'level2_closed_native_outputs_v2', 'level2_closed_raw_storage_v1',
+                                       'level2_closed_raw_storage_v2', 'level2_closed_raw_storage_v3',
+                                       'level2_closed_raw_storage_v4', 'level2_closed_raw_storage_v5',
+                                       'level2_closed_raw_storage_v6')
                 and pointer(row['seal'])['sha256'] == sha and row['closed_evidence_ref'] in value['closed_evidence'], 'invalid compact archive')
         pointer(row['archive']); pointer(row['producer'])
     require(set(value['closed_evidence']) == {v['closed_evidence_ref'] for v in value['archives'].values()}, 'orphan/dropped nested proof')

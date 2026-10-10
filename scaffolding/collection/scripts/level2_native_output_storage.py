@@ -21,6 +21,8 @@ import struct
 import tarfile
 
 VERSION='level2_closed_native_outputs_v1'
+REPORT_VERSION='level2_closed_native_outputs_v2'
+VERSIONS={VERSION,REPORT_VERSION}
 OPERATORS={'apply_adam_w','apply_rotary_pos_emb','arg_max','cross_entropy_loss','cummin','dynamic_quant','gather','gcd','grid_sampler_3d','group_norm','maximum','resize_bilinear','rms_norm','scatter','softmax','unsorted_segment_sum'}
 CHUNK=1024*1024
 MAX_METADATA=16*1024*1024
@@ -83,7 +85,7 @@ def location(path,check_files=True):
     if check_files:safe(path,exists=False)
     return cohort
 
-def closed_from_reader(cohort,read_bytes):
+def closed_from_reader(cohort,read_bytes,*,version=VERSION):
     """Pure closure reconstruction. Never opens original paths or runs code."""
     import level2_verification_storage as verification
     cohort=Path(cohort);task,operator=cohort_location(cohort,False)
@@ -98,10 +100,18 @@ def closed_from_reader(cohort,read_bytes):
     require(len(schedule)==len(sessions)==count and len(set(sessions))==count,'protocol process coverage differs')
     require(sessions==[str(cohort/row['name']) for row in schedule],'scheduled output session coverage differs')
     require([row['directory'] for row in report['sessions']]==sessions,'reported output session coverage differs')
-    protected={};event_binding=None;expected={};bundles=[];case_ids=None;stage_recovery=None
+    require(version in VERSIONS,'unsupported native output storage version')
+    protected={};event_binding=None;expected={};bundles=[];case_ids=None;stage_recovery=None;report_authority=None
     for number,(directory,entry,observed) in enumerate(zip(sessions,schedule,report['sessions'])):
         session=Path(directory)
-        facts,oracle_roster=verification.closed_from_reader(session,read)
+        if version==VERSION:facts,oracle_roster=verification.closed_from_reader(session,read)
+        else:
+            proof_version=(verification.FINAL_VERSION if cohort.parent.name=='final' else verification.ANCHORED_VERSION)
+            facts,oracle_roster=verification.facts_for_version(session,read,proof_version)
+            authority=facts['report_authority']
+            require(authority['kind'] in {'retrospective_final_report_authority_v1','ledger_timing_calibration_v1','ledger_closed_feedback_report_v1'},'unsupported native output report authority')
+            require(report_authority in (None,authority),'native sessions have different report authority')
+            report_authority=authority
         if number==0:stage_recovery=facts.get('stage_recovery')
         else:require(stage_recovery==facts.get('stage_recovery'),'recovery identity differs across native sessions')
         for p in facts['protected']:protected[p['path']]=p
@@ -141,6 +151,12 @@ def closed_from_reader(cohort,read_bytes):
                     expected[str(part)]={'sha256':h,'size_bytes':size}
                 bundles.append({'path':str(path),'rows':rows})
     require(sorted(map(int,plan['case_ids']))==sorted(map(int,case_ids)),'cohort plan case coverage differs')
+    if version==REPORT_VERSION:
+        require(report_authority is not None,'missing closed report authority')
+        facts={'protected':[protected[k] for k in sorted(protected)],'event_binding':event_binding,
+               'report_authority':report_authority,'authority':'closed_report_outputs_v2'}
+        if stage_recovery is not None:facts['stage_recovery']=stage_recovery
+        return facts,expected,bundles
     # A terminal stage says execution ended, but does not itself authenticate
     # output/report bytes. Require the earliest already event-bound successful
     # output-dedup inventory for this scope. Do not manufacture that authority.
@@ -254,7 +270,7 @@ def archive_members(archive,seal):
 
 def validate_archive(cohort,seal,archive,read_proof):
     """Shared offline validator; read_proof is a complete trusted byte mapping."""
-    require(seal.get('version')==VERSION and seal.get('cohort')==str(cohort) and seal.get('source_bytes_preserved') is True,'native output seal identity differs')
+    require(seal.get('version') in VERSIONS and seal.get('cohort')==str(cohort) and seal.get('source_bytes_preserved') is True,'native output seal identity differs')
     require(raw_fingerprint(archive)['sha256']==seal['archive']['sha256'],'native output archive hash differs')
     offsets=archive_members(archive,seal);rows=seal['members'];mapping={r['path']:r for r in rows}
     require(len(mapping)==len(rows),'duplicate native output logical path')
@@ -265,7 +281,7 @@ def validate_archive(cohort,seal,archive,read_proof):
         if str(path) not in mapping:return read_proof(path)
         with member_open(path) as stream:
             data=stream.read(MAX_METADATA+1);require(len(data)<=MAX_METADATA,'metadata too large');return data
-    facts,expected,bundles=closed_from_reader(cohort,read)
+    facts,expected,bundles=closed_from_reader(cohort,read,version=seal['version'])
     require(facts==seal['closed_evidence'],'closed native output proof changed')
     require(set(mapping)==set(expected),'native output logical roster differs')
     for path,row in mapping.items():
@@ -290,7 +306,7 @@ def verified(cohort,destination=None):
             if '.bin' in path.name:require(str(path) in mapping,'unindexed native output file')
     receipt=destination/'compacted.json'
     if receipt.exists() or receipt.is_symlink():
-        require(json.loads(small_read(receipt))=={'version':VERSION,'status':'complete','seal':raw_ref(seal_path),'source_bytes_preserved':True}
+        require(json.loads(small_read(receipt))=={'version':seal['version'],'status':'complete','seal':raw_ref(seal_path),'source_bytes_preserved':True}
                 and not any(Path(path).exists() for path in mapping),'retired output reappeared or completion differs')
     value={'seal':seal,'seal_ref':raw_ref(seal_path),'members':mapping,'offsets':offsets,'archive_path':archive,'destination':destination}
     if cache is not None:cache[key]=(signature,value)
@@ -352,7 +368,7 @@ def evidence_binding(path,expected=None):
     value=resolve(path)
     if value is None:return None
     row=value['members'][str(path)];require(expected is None or expected==row['sha256'],'native logical hash differs')
-    return {'version':VERSION,'origin':{'path':str(path),'sha256':row['sha256']},'seal':value['seal_ref'],
+    return {'version':value['seal']['version'],'origin':{'path':str(path),'sha256':row['sha256']},'seal':value['seal_ref'],
             'archive':value['seal']['archive'],'producer':value['seal']['producer'],'closed_evidence':value['seal']['closed_evidence']}
 
 def logical_files(directory):
@@ -362,7 +378,7 @@ def logical_files(directory):
         if Path(cohort).is_relative_to(directory):values.update(verified(Path(cohort),Path(destination))['members'])
     return sorted(values)
 
-def prepare(cohort,destination=None,*,writers_closed=False,retire=False):
+def prepare(cohort,destination=None,*,writers_closed=False,retire=False,report_authority=False):
     require(writers_closed is True,'closed writers attestation required')
     cohort=Path(cohort);task,operator=cohort_location(cohort)
     destination=Path(destination) if destination else cohort/'native-output-storage'
@@ -370,11 +386,17 @@ def prepare(cohort,destination=None,*,writers_closed=False,retire=False):
     from level2_storage import exclusive_host,storage_lock,write_new,sync_directory
     import level2_verification_storage as verification
     with exclusive_host(),verification.reader_session():
-        facts,expected,bundles=closed_from_reader(cohort,verification.read_bytes)
+        seal_path=destination/'seal.json'
+        selected_version=json.loads(small_read(seal_path))['version'] if seal_path.exists() else REPORT_VERSION if report_authority else VERSION
+        require(selected_version in VERSIONS,'unsupported native seal version')
+        require(not seal_path.exists() or not report_authority or selected_version==REPORT_VERSION,
+                'report authority request differs from existing native seal')
+        facts,expected,bundles=closed_from_reader(cohort,verification.read_bytes,version=selected_version)
         if not destination.exists():safe(destination.parent,directory=True);destination.mkdir()
         safe(destination,directory=True)
         with storage_lock(destination):
-            if (destination/'seal.json').exists():value=verified(cohort,destination)
+            if (destination/'seal.json').exists():
+                value=verified(cohort,destination)
             else:
                 rows=[];objects={}
                 for path,item in sorted(expected.items()):
@@ -395,7 +417,7 @@ def prepare(cohort,destination=None,*,writers_closed=False,retire=False):
                 producer=destination/'producer.py'
                 data=Path(__file__).read_bytes()
                 with producer.open('xb') as stream:stream.write(data);stream.flush();os.fsync(stream.fileno())
-                seal={'version':VERSION,'cohort':str(cohort),'source_bytes_preserved':True,'archive':raw_ref(archive),'producer':raw_ref(producer),'closed_evidence':facts,'members':rows}
+                seal={'version':selected_version,'cohort':str(cohort),'source_bytes_preserved':True,'archive':raw_ref(archive),'producer':raw_ref(producer),'closed_evidence':facts,'members':rows}
                 validate_archive(cohort,seal,archive,verification.read_bytes)
                 write_new(destination/'seal.json',seal);value=verified(cohort,destination)
             if retire:
@@ -413,13 +435,13 @@ def prepare(cohort,destination=None,*,writers_closed=False,retire=False):
                     p=Path(path)
                     if p.exists():require(raw_fingerprint(p)=={k:row[k] for k in ('sha256','size_bytes')},'output changed before retirement');p.unlink()
                 for directory in {Path(p).parent for p in value['members']}:sync_directory(directory)
-                receipt={'version':VERSION,'status':'complete','seal':raw_ref(destination/'seal.json'),'source_bytes_preserved':True}
+                receipt={'version':value['seal']['version'],'status':'complete','seal':raw_ref(destination/'seal.json'),'source_bytes_preserved':True}
                 if (destination/'compacted.json').exists():require(json.loads(small_read(destination/'compacted.json'))==receipt,'native completion receipt differs')
                 else:write_new(destination/'compacted.json',receipt)
                 verified(cohort,destination)
-            return {'version':VERSION,'status':'complete' if retire else 'sealed_shadow','cohort':str(cohort),'seal':raw_ref(destination/'seal.json'),'logical_files':len(value['members']),'original_bytes_preserved':True}
+            return {'version':value['seal']['version'],'status':'complete' if retire else 'sealed_shadow','cohort':str(cohort),'seal':raw_ref(destination/'seal.json'),'logical_files':len(value['members']),'original_bytes_preserved':True}
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--cohort',required=True);p.add_argument('--shadow-destination');p.add_argument('--writers-closed',action='store_true');p.add_argument('--retire',action='store_true');a=p.parse_args()
-    print(json.dumps(prepare(Path(a.cohort),Path(a.shadow_destination) if a.shadow_destination else None,writers_closed=a.writers_closed,retire=a.retire),indent=2))
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--cohort',required=True);p.add_argument('--shadow-destination');p.add_argument('--writers-closed',action='store_true');p.add_argument('--retire',action='store_true');p.add_argument('--report-authority',action='store_true');a=p.parse_args()
+    print(json.dumps(prepare(Path(a.cohort),Path(a.shadow_destination) if a.shadow_destination else None,writers_closed=a.writers_closed,retire=a.retire,report_authority=a.report_authority),indent=2))
 if __name__=='__main__':main()

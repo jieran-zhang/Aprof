@@ -100,6 +100,39 @@ def test_unary_shadow_exact_bounded_stream_and_no_original_mutation(tmp_path):
         assert len(native.logical_files(cohort))==24
     assert len(native.verified(cohort,destination)['offsets'])==1
 
+def test_report_authority_v2_archives_without_dedup_event(tmp_path):
+    task,cohort,destination,original=fixture(tmp_path)
+    events=task/'events.jsonl'
+    rows=events.read_bytes().splitlines(keepends=True)
+    assert json.loads(rows[-1])['kind']=='closed_outputs_deduplicated'
+    events.write_bytes(b''.join(rows[:-1]))
+    result=native.prepare(cohort,destination,writers_closed=True,report_authority=True)
+    assert result['version']==native.REPORT_VERSION and result['status']=='sealed_shadow'
+    with native.reader_session({cohort:destination}):
+        for path,data in original.items():
+            assert native.fingerprint(path)=={'sha256':native.digest(data),'size_bytes':len(data)}
+    assert {p:Path(p).read_bytes() for p in original}==original
+
+def test_report_authority_v2_retirement_replays_original_outputs(tmp_path):
+    task,cohort,_,original=fixture(tmp_path)
+    events=task/'events.jsonl';events.write_bytes(b''.join(events.read_bytes().splitlines(keepends=True)[:-1]))
+    result=native.prepare(cohort,writers_closed=True,retire=True,report_authority=True)
+    assert result['version']==native.REPORT_VERSION and result['status']=='complete'
+    assert all(not Path(path).exists() for path in original)
+    with verification.reader_session():
+        for path,data in original.items():
+            assert verification.fingerprint(path)=={'sha256':native.digest(data),'size_bytes':len(data)}
+    assert (cohort/'native-output-storage/compacted.json').is_file()
+
+@pytest.mark.parametrize('changed',['report','output'])
+def test_report_authority_v2_rejects_changed_original(tmp_path,changed):
+    task,cohort,destination,_=fixture(tmp_path)
+    events=task/'events.jsonl';events.write_bytes(b''.join(events.read_bytes().splitlines(keepends=True)[:-1]))
+    path=cohort/'report.json' if changed=='report' else cohort/'p01/native/1_normal_A.bin'
+    path.write_bytes(path.read_bytes()+b'changed')
+    with pytest.raises(ValueError):native.prepare(cohort,destination,writers_closed=True,report_authority=True)
+    assert not (destination/'seal.json').exists() and path.exists()
+
 @pytest.mark.parametrize('operator',list(native.OUTPUT_KEYS))
 def test_named_bundle_report_metadata_and_retirement(tmp_path,operator):
     task,cohort,shadow,original=fixture(tmp_path,operator)
@@ -341,6 +374,19 @@ def test_native_portable_after_all_six_verification_trees_already_retired(tmp_pa
     root=tmp_path/'dataset';dataset.publish(root,{'attempt':body},lambda _: {},evidence,{'hardware_executed':False})
     for number in range(1,7):verification.prepare(cohort/f'p{number:02d}',writers_closed=True,retire=True)
     native.prepare(cohort,writers_closed=True,retire=True)
+    bundle=tmp_path/'bundle';assert portable.export(root,bundle)['valid']
+    task.rename(task.with_name('original-unavailable'))
+    assert portable.verify(bundle)['valid']
+
+def test_report_authority_v2_portable_after_verification_retirement(tmp_path):
+    from test_trace_v2_dataset import fixture_data
+    task,cohort,_,original=fixture(tmp_path)
+    events=task/'events.jsonl';events.write_bytes(b''.join(events.read_bytes().splitlines(keepends=True)[:-1]))
+    evidence,body=fixture_data(tmp_path);origin=Path(next(iter(original)))
+    body['sources']['evidence_ids'].append(evidence.file(origin))
+    root=tmp_path/'dataset';dataset.publish(root,{'attempt':body},lambda _: {},evidence,{'hardware_executed':False})
+    for number in range(1,7):verification.prepare(cohort/f'p{number:02d}',writers_closed=True,retire=True)
+    native.prepare(cohort,writers_closed=True,retire=True,report_authority=True)
     bundle=tmp_path/'bundle';assert portable.export(root,bundle)['valid']
     task.rename(task.with_name('original-unavailable'))
     assert portable.verify(bundle)['valid']

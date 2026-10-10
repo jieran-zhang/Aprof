@@ -229,9 +229,9 @@ def verify_storage_closure(bundle, manifest, index):
             require('verifier/level2_stage_recovery.py' in manifest['files'],'portable recovered stage reader missing')
             sibling=Path(__file__).resolve().with_name('level2_stage_recovery.py')
             require(sibling.is_file() and not sibling.is_symlink(),'trusted recovered stage reader missing')
-        if seal.get('version') in ('level2_closed_raw_storage_v1','level2_closed_raw_storage_v2','level2_closed_raw_storage_v3','level2_closed_raw_storage_v4'):
+        if seal.get('version') in ('level2_closed_raw_storage_v1','level2_closed_raw_storage_v2','level2_closed_raw_storage_v3','level2_closed_raw_storage_v4','level2_closed_raw_storage_v5','level2_closed_raw_storage_v6'):
             require(closure['version'] in ('level2_storage_portable_v4','level2_storage_portable_v5'),'raw storage needs explicit closure v4+')
-            if seal['version'] in ('level2_closed_raw_storage_v2','level2_closed_raw_storage_v3','level2_closed_raw_storage_v4'):require(closure['version']=='level2_storage_portable_v5','new raw storage needs closure v5')
+            if seal['version'] in ('level2_closed_raw_storage_v2','level2_closed_raw_storage_v3','level2_closed_raw_storage_v4','level2_closed_raw_storage_v5','level2_closed_raw_storage_v6'):require(closure['version']=='level2_storage_portable_v5','new raw storage needs closure v5')
             for filename in ('level2_raw_archive_storage.py','level2_verification_storage.py','level2_native_output_storage.py'):
                 require('verifier/'+filename in manifest['files'],'portable raw reader missing')
             trusted=Path(__file__).resolve().with_name('level2_raw_archive_storage.py')
@@ -259,7 +259,7 @@ def verify_storage_closure(bundle, manifest, index):
                 virtual[origin]={'archive':key,'relative_path':row['relative_path'],
                                  'source':v2.EvidenceSlice(inside(bundle,target),row['offset'],row['size_bytes'])}
             continue
-        if seal.get('version')=='level2_closed_native_outputs_v1':
+        if seal.get('version') in ('level2_closed_native_outputs_v1','level2_closed_native_outputs_v2'):
             require(closure['version'] in ('level2_storage_portable_v2','level2_storage_portable_v3','level2_storage_portable_v4','level2_storage_portable_v5'),'native storage needs explicit closure v2')
             for filename in ('level2_native_output_storage.py','level2_verification_storage.py'):
                 require('verifier/'+filename in manifest['files'],'portable native reader missing')
@@ -439,12 +439,12 @@ def export(dataset, destination):
             existing=dependencies.setdefault(origin,value)
             require(existing['seal']==key and existing['sha256']==value['sha256'],'conflicting nested archive identity')
             if parent not in existing['parents']:existing['parents'].append(parent);existing['parents'].sort()
-        if binding.get('version')=='level2_closed_native_outputs_v1' and storage_closure['version'] not in ('level2_storage_portable_v3','level2_storage_portable_v4','level2_storage_portable_v5'):
+        if binding.get('version') in ('level2_closed_native_outputs_v1','level2_closed_native_outputs_v2') and storage_closure['version'] not in ('level2_storage_portable_v3','level2_storage_portable_v4','level2_storage_portable_v5'):
             storage_closure['version']='level2_storage_portable_v2'
-        if binding.get('version') in ('level2_closed_raw_storage_v1','level2_closed_raw_storage_v2','level2_closed_raw_storage_v3','level2_closed_raw_storage_v4'):
+        if binding.get('version') in ('level2_closed_raw_storage_v1','level2_closed_raw_storage_v2','level2_closed_raw_storage_v3','level2_closed_raw_storage_v4','level2_closed_raw_storage_v5','level2_closed_raw_storage_v6'):
             if storage_closure['version']!='level2_storage_portable_v5':storage_closure['version']='level2_storage_portable_v4'
             storage_closure.setdefault('dependencies',{})
-        if binding.get('version') in ('level2_closed_raw_storage_v2','level2_closed_raw_storage_v3','level2_closed_raw_storage_v4','level2_closed_verification_storage_v3'):
+        if binding.get('version') in ('level2_closed_raw_storage_v2','level2_closed_raw_storage_v3','level2_closed_raw_storage_v4','level2_closed_raw_storage_v5','level2_closed_raw_storage_v6','level2_closed_verification_storage_v3'):
             storage_closure['version']='level2_storage_portable_v5';storage_closure.setdefault('dependencies',{})
         if key in storage_closure['archives']:return
         locations={};storage_closure['archives'][key]={'seal':binding['seal'],'files':locations}
@@ -468,7 +468,7 @@ def export(dataset, destination):
 
     for row in index.values():
         binding=storage_binding(row['path'],row['sha256'])
-        if binding is not None and binding.get('version') in ('level2_closed_raw_storage_v1','level2_closed_raw_storage_v2','level2_closed_raw_storage_v3','level2_closed_raw_storage_v4'):
+        if binding is not None and binding.get('version') in ('level2_closed_raw_storage_v1','level2_closed_raw_storage_v2','level2_closed_raw_storage_v3','level2_closed_raw_storage_v4','level2_closed_raw_storage_v5','level2_closed_raw_storage_v6'):
             logical=Path(binding['origin']['path']);seal=v2.strict_loads(Path(binding['seal']['path']).read_bytes())
             name={'archive':binding['seal']['sha256'],'relative_path':logical.relative_to(seal['logical_root']).as_posix()}
         else:name = 'evidence/sha256/' + row['sha256'][7:]
