@@ -35,6 +35,9 @@ def zero_costs(v):return isinstance(v,dict) and bool(v) and all(type(n) is int a
 
 def validate_qualification(stage,candidate,args):
     """Pure Campaign transition gate; file/certificate proof is replayed separately."""
+    if args.get('workload')=='gather' and args.get('stage_id')=='gather003-search':
+        from level2_gather_search_recovery import validate_qualification as gather_validate
+        return gather_validate(stage,candidate,args)
     require(isinstance(args,dict) and set(args)==ARGUMENTS,'unknown prestart qualification arguments')
     require(args['workload']=='group_norm' and args['stage_id']=='group_norm002-final' and stage['stage_id']==args['stage_id'] and stage['candidate_id']=='group_norm002','only exact GN002 final recovery is reviewed')
     require(stage['kind']=='timing' and stage['plan'].get('purpose')=='final' and stage['plan'].get('case_ids')==list(range(1,21)),'recovery requires original full20 final plan')
@@ -103,6 +106,10 @@ def task_events(data):
 def resolve_result(stage_dir,stage_record,read_bytes=Path.read_bytes,*,require_success=False,qualification_only=False):
     """Return effective immutable result and every fixed recovery dependency."""
     stage_dir=path(str(stage_dir));protected={}
+    if stage_dir.name=='search' and stage_dir.parent.parent.name=='gather003':
+        from level2_gather_search_recovery import resolve_result as gather_resolve
+        return gather_resolve(stage_dir,stage_record,read_bytes,require_success=require_success,
+                              qualification_only=qualification_only)
     def read(p):return read_bytes(Path(p))
     def ref(p):return {'path':str(p),'sha256':sha(read(p))}
     def checked(p):
@@ -212,6 +219,9 @@ def resolve_result(stage_dir,stage_record,read_bytes=Path.read_bytes,*,require_s
 def resolve_from_reader(stage_dir,read_bytes=Path.read_bytes,*,require_success=False):
     stage_dir=path(str(stage_dir));original={'path':str(stage_dir/'result.json'),'sha256':sha(read_bytes(stage_dir/'result.json'))};value=load(read_bytes(stage_dir/'result.json'))
     if value.get('status')=='passed':return {'current_result':original,'original_failed_result':None,'qualification':None,'protected':[],'event_bindings':[]}
+    if stage_dir.name=='search' and stage_dir.parent.parent.name=='gather003':
+        from level2_gather_search_recovery import resolve_from_reader as gather_resolve
+        return gather_resolve(stage_dir,read_bytes,require_success=require_success)
     if stage_dir.name!='final' or stage_dir.parent.name!='stages' or stage_dir.parent.parent.name!='group_norm002':
         if require_success:require(False,'stage is not terminal passed')
         return {'current_result':original,'original_failed_result':None,'qualification':None,'protected':[],'event_bindings':[]}

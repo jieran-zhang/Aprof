@@ -31,6 +31,10 @@ APPROVED_PROFILE_HASHES = {
 # Historical writer/profile rows remain unchanged; this row binds the relocated code.
 APPROVED_WRITERS['sha256:f6c018611301273dd2ee402c8a4d95b548a1e4c4c99b586a5be12023e275e426'] = VERSION
 APPROVED_PROFILE_HASHES['sha256:f6c018611301273dd2ee402c8a4d95b548a1e4c4c99b586a5be12023e275e426'] = 'sha256:3afb503006cfa399dae8c3c2b31f4fa1e6364d94cfa00d507b4019d773300b9e'
+# Gather search recovery uses the reviewed v5 raw reader and its own frozen
+# engineering profile. Historical writer/profile rows above remain unchanged.
+APPROVED_WRITERS['sha256:83d94118c0979e70bb050a0ef25d26f24d07e6b701e23a0a3a0cfb3bd5394289'] = VERSION
+APPROVED_PROFILE_HASHES['sha256:83d94118c0979e70bb050a0ef25d26f24d07e6b701e23a0a3a0cfb3bd5394289'] = 'sha256:de6a9e2641b8ac1bc75a2f553d8733c341fedcc46132b618cdb29efda7c514e3'
 # End layout migration
 ALL_CASES = list(range(1, 21))
 MAX_METADATA = 32 * 1024 * 1024

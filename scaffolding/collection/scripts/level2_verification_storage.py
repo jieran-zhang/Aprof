@@ -109,7 +109,8 @@ def closed_from_reader(session, read_bytes):
            cohort/'group-completion.json',session/'completion.json',session/'msprof.execution.json',
            session/'native/journal.jsonl',session/'validation.json',session/'bindings.json']
     stage_result=load(paths[0]);recovery=None
-    if stage_result.get('status')!='passed' and stage.name=='final':
+    if stage_result.get('status')!='passed' and (stage.name=='final' or
+            stage==task/'candidates/gather003/stages/search'):
         # Historical ordinary seals retain their exact original facts and need
         # no new helper. A failed canonical final result can only be superseded
         # by the separately qualified, append-only recovery protocol.
@@ -155,7 +156,7 @@ def closed_from_reader(session, read_bytes):
     facts={'protected':[ref(p) for p in paths],'event_binding':binding}
     if recovery is not None:
         require(recovery['qualification'] is not None and recovery['original_failed_result'] is not None,
-                'failed final result lacks explicit recovery qualification')
+                'failed result lacks explicit recovery qualification')
         protected={p['path']:p for p in [*facts['protected'],*recovery['protected']]}
         facts['protected']=[protected[k] for k in sorted(protected)]
         facts['stage_recovery']={k:recovery[k] for k in
@@ -191,6 +192,9 @@ def report_authority(session,read_bytes,*,allow_final=False):
             and config.get('tasks',{}).get(operator,{}).get('split')==parts[i-1], 'verification authority requires same fresh ledger task')
     require(load(ledger/'config.sha256.json')=={'sha256':config_hash},'verification authority config identity differs')
     target=ref(cohort/'report.json');result=ref(stage/'result.json');stage_plan=load(stage/'stage-plan.json')
+    if stage==task/'candidates/gather003/stages/search' and load(stage/'result.json').get('status')!='passed':
+        from level2_stage_recovery import resolve_from_reader
+        result=resolve_from_reader(stage,read_bytes,require_success=True)['current_result']
     report=load(cohort/'report.json');candidate_sources={};starts={};finishes={};ids=set()
     previous='sha256:'+'0'*64;data=read(ledger/'events.jsonl')
     require(data.endswith(b'\n'),'verification authority ledger has incomplete tail')

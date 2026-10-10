@@ -325,7 +325,8 @@ def _transition(state, config, operation, arguments):
         return
     if operation == "qualify_prestart":
         require(set(a) == ARGUMENTS[operation], "prestart qualification fields differ")
-        require(config.get("schema_version") == FRESH_SCHEMA and task["frozen"]
+        gather_search = (name == "gather" and a.get("stage_id") == "gather003-search" and not task["frozen"])
+        require(config.get("schema_version") == FRESH_SCHEMA and (task["frozen"] or gather_search)
                 and state["status"] == "active" and not _active(state),
                 "prestart qualification requires a quiescent frozen fresh task")
         stage = task["stages"].get(a.get("stage_id"))

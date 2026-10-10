@@ -70,6 +70,10 @@ def recorded_stage(run, operator, cid, sid, row):
     result = iteration.stage(run, operator, cid, row["kind"], group,
                              plan_path=path.parent / "stage-plan.json")
     verify_pointer_tree(row["attempts"][-1]["evidence"], evidence_path=path)
+    if row.get("prestart_recovery") is not None:
+        from level2_stage_recovery import resolve_result
+        effective = resolve_result(path.parent, row, require_success=True)
+        return result, effective["current_result"]
     return result, pointer(path)
 
 
@@ -229,6 +233,13 @@ def validate_final_plan(path, ledger, task, operator, cid, options=None):
         if "calibration_report" in cohort:
             checked(cohort["calibration_report"], "relation calibration")
         calibration = checked(cohort.get("calibration_report", plan["calibration_report"]), "selected final calibration")
+        if options is not None and options.get("calibration_by_control"):
+            require(calibration.get("comparison_kind") == "aa"
+                    and calibration.get("evidence_status") == "verified_complete"
+                    and calibration.get("case_ids") == [str(c) for c in campaign.ALL_CASES]
+                    and calibration.get("calibration_scope") == frozen.get("calibration_scope")
+                    and calibration.get("source_hashes") == {"A": hashes["A"], "B": hashes["A"]},
+                    "selected final calibration differs from control source or capture scope")
         stage_module.validate_calibration_storage(frozen, calibration)
     return plan
 
@@ -274,7 +285,13 @@ def timing_settings(task, supplied, request_path, *, needs_calibration):
             **({'capture_storage':settings['capture_storage']} if 'capture_storage' in settings else {}),
             **({'calibration_path':settings['calibration_report']['path']} if settings['calibration_report'] else {}),
             'calibration_by_relation':{relation:ref['path'] for relation,ref in settings['calibration_by_relation'].items()}})
+        require(isinstance(settings.get('calibration_by_control', {}), dict),
+                'frozen control calibration mapping differs')
         return settings
+    supplied = dict(supplied or {})
+    by_control = supplied.pop('calibration_by_control', {})
+    require(isinstance(by_control, dict) and all(isinstance(k, str) and k for k in by_control),
+            'invalid control calibration mapping')
     supplied = iteration.timing_options(supplied)
     require(isinstance(supplied, dict) and not set(supplied) - {
         "capture_storage", "epoch", "calibration_path", "calibration_by_relation"}, "unknown final timing option")
@@ -286,7 +303,8 @@ def timing_settings(task, supplied, request_path, *, needs_calibration):
     calibration = supplied.get("calibration_path", task / "stages/aa-initial/cohort/report.json")
     settings = {"epoch": epoch,
                 "calibration_report": pointer(calibration) if needs_calibration or "calibration_path" in supplied else None,
-                "calibration_by_relation": {relation: pointer(path) for relation, path in overrides.items()}}
+                "calibration_by_relation": {relation: pointer(path) for relation, path in overrides.items()},
+                "calibration_by_control": {control: pointer(path) for control, path in by_control.items()}}
     if "capture_storage" in supplied:
         settings["capture_storage"] = supplied["capture_storage"]
     return settings
@@ -327,6 +345,11 @@ def _finalize(run, operator, *, prepare_only, timing_options):
             for relation, ref in options["calibration_by_relation"].items():
                 checked(ref, "explicit relation calibration")
                 overrides[relation] = ref["path"]
+            for cohort in search["cohorts"]:
+                control_ref = options["calibration_by_control"].get(cohort["control_candidate_id"])
+                if control_ref is not None:
+                    checked(control_ref, "explicit control calibration")
+                    overrides[cohort["relation"]] = control_ref["path"]
             path = stage_module.prepare_timing(run, operator, cid, GROUP, purpose="final",
                         calibration_path=calibration, calibration_by_relation=overrides, epoch=options["epoch"],
                         **({"capture_storage": options["capture_storage"]} if "capture_storage" in options else {}))
@@ -334,8 +357,14 @@ def _finalize(run, operator, *, prepare_only, timing_options):
         require(plans[cid].get("calibration_report") == options["calibration_report"], "final calibration differs from requested setting")
         for cohort in plans[cid]["cohorts"]:
             if cohort["relation"] in options["calibration_by_relation"]:
-                require(cohort.get("calibration_report") == options["calibration_by_relation"][cohort["relation"]],
+                expected = options["calibration_by_control"].get(cohort["control_candidate_id"],
+                    options["calibration_by_relation"][cohort["relation"]])
+                require(cohort.get("calibration_report", plans[cid]["calibration_report"]) == expected,
                         "final relation calibration differs from requested setting")
+            elif cohort["control_candidate_id"] in options["calibration_by_control"]:
+                require(cohort.get("calibration_report", plans[cid]["calibration_report"])
+                        == options["calibration_by_control"][cohort["control_candidate_id"]],
+                        "final control calibration differs from requested setting")
         refs[cid] = pointer(path)
     request = {"version": VERSION, "operator": operator, "campaign_config_hash": ledger.config_hash,
                "producers": producers(), "source_attempts": audit, "evaluation_candidate_ids": qualified,
@@ -394,6 +423,7 @@ def main(argv=None):
     parser.add_argument("--epoch")
     parser.add_argument("--calibration", type=Path)
     parser.add_argument("--calibration-by-relation", action="append", default=[], metavar="RELATION=PATH")
+    parser.add_argument("--calibration-for-control", action="append", default=[], metavar="CONTROL=PATH")
     args = parser.parse_args(argv)
     timing_options = {}
     if args.capture_storage:
@@ -414,6 +444,14 @@ def main(argv=None):
         if relation in refs:
             parser.error("duplicate calibration relation")
         refs[relation] = Path(path)
+    for entry in args.calibration_for_control:
+        control, separator, path = entry.partition("=")
+        if not separator or not control or not path:
+            parser.error("control calibration must be CONTROL=PATH")
+        refs = timing_options.setdefault("calibration_by_control", {})
+        if control in refs:
+            parser.error("duplicate control calibration")
+        refs[control] = Path(path)
     for operator in args.operator:
         result = finalize(args.run, operator, prepare_only=args.prepare_only, timing_options=timing_options or None)
         print(json.dumps(result), flush=True)

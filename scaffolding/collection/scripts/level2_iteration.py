@@ -437,7 +437,8 @@ def baseline(run, operator, *, correctness_group="correctness", control_group="a
     return {"operator": operator, "status": "baseline_validated_and_self_checked" if settings.get("search_lite") else "baseline_validated_and_calibrated"}
 
 
-def candidate(run, operator, candidate_id, *, boundaries=True, measurement=None, deduplicate_outputs=False):
+def candidate(run, operator, candidate_id, *, boundaries=True, measurement=None, deduplicate_outputs=False,
+              close_prestart_recovery=False):
     settings = timing_options(measurement)
     run, split, task, parent, _ = task_paths(run, operator, candidate_id)
     ledger = Campaign(run / split / "ledger")
@@ -449,7 +450,16 @@ def candidate(run, operator, candidate_id, *, boundaries=True, measurement=None,
     plan_path = parent / "plans/search/stage-plan.json"
     if plan_path.exists() and (not item["feedback_closed"] or measurement is not None):
         check_timing_settings(load(plan_path), settings)
-    if item["feedback_closed"] or item["observation_ids"]:
+    if close_prestart_recovery:
+        if (operator != "gather" or candidate_id != "gather003" or item["feedback_closed"]
+                or item["observation_ids"] != ["gather003-feedback-01"]):
+            raise ValueError("only the recorded Gather003 blocked feedback can be recovered")
+        from level2_stage_recovery import resolve_result
+        recovered = resolve_result(parent / "stages/search",
+            ledger.state["tasks"][operator]["stages"]["gather003-search"], require_success=True)
+        if recovered["original_failed_result"] != pointer(parent / "stages/search/result.json"):
+            raise ValueError("Gather003 original failed result differs")
+    elif item["feedback_closed"] or item["observation_ids"]:
         observation = ledger.state["tasks"][operator]["observations"][item["observation_ids"][-1]]
         feedback_path = Path(feedback_pointer(task, candidate_id, observation)["path"])
         feedback = load(feedback_path)
@@ -525,7 +535,8 @@ def candidate(run, operator, candidate_id, *, boundaries=True, measurement=None,
         "optimization_stage": load(parent / "proposal.json")["optimization_stage"],
         "status": "measured" if complete else "infrastructure_blocked" if infrastructure_block else "source_attempt_failed",
         "stages": [{"stage_id": r["stage_id"], "kind": r["kind"], "status": r["status"], "error": r["error"],
-                    "result": pointer(parent / "stages" / r["stage_id"].removeprefix(candidate_id + "-") / "result.json")}
+                    "result": pointer(parent / "stages" / r["stage_id"].removeprefix(candidate_id + "-") /
+                                      ("result.recovery-01.json" if close_prestart_recovery and r["kind"] == "timing" else "result.json"))}
                    for r in results],
         "semantic_guards": pointer(parent / "boundary-validation/completion.json") if guard is not None else None,
         "comparisons": reports, "measurement_error": measurement_error,
@@ -534,13 +545,13 @@ def candidate(run, operator, candidate_id, *, boundaries=True, measurement=None,
         "episode_ref": None, "next_source_authored": False,
         "next_action": ("Resolve the recorded infrastructure failure through explicit evidence recovery; source feedback remains open."
                         if infrastructure_block else "Analyze this closed feedback before selecting any parent and next intervention.")}
-    feedback_path = task / "feedback" / (candidate_id + ".json")
+    feedback_path = task / "feedback" / (candidate_id + ("-prestart-recovery-01" if close_prestart_recovery else "") + ".json")
     if feedback_path.exists():
         if load(feedback_path) != feedback:
             raise ValueError("existing feedback differs")
     else:
         save(feedback_path, feedback)
-    observation_id = candidate_id + "-feedback-01"
+    observation_id = candidate_id + ("-prestart-recovery-01" if close_prestart_recovery else "-feedback-01")
     ledger.observe(event_id=observation_id, workload=operator, candidate_id=candidate_id,
         observation_id=observation_id, stage_ids=stages, feedback=feedback,
         close_feedback=not infrastructure_block, report_ref=pointer(feedback_path)["sha256"],
@@ -569,6 +580,8 @@ def main():
                         help="New searches use lite; auto preserves an existing frozen search protocol")
     parser.add_argument("--deduplicate-outputs", action="store_true",
                         help="Synchronously deduplicate exact output bytes after closed control/timing stages")
+    parser.add_argument("--close-prestart-recovery", action="store_true",
+                        help="Close only the certified Gather003 same-stage search recovery")
     args = parser.parse_args()
     if (args.run / "campaign-manifest.json").is_file() and not (args.run / "skill-lib.json").is_file():
         if args.epoch_handoff is None:
@@ -628,8 +641,9 @@ def main():
                     and (settings or args.calibration_group is not None)
                     and (args.search_protocol != 'auto' or frozen is None or args.calibration_group is not None)):
                 selected["calibration_path"] = task / "stages" / group / "cohort/report.json"
+            recovery_option = {'close_prestart_recovery': True} if args.close_prestart_recovery else {}
             result = candidate(args.run, operator, args.candidate, measurement=selected,
-                               deduplicate_outputs=args.deduplicate_outputs)
+                               deduplicate_outputs=args.deduplicate_outputs, **recovery_option)
         print(json.dumps(result), flush=True)
         if result["status"] in ("blocked", "infrastructure_blocked", "source_attempt_failed"):
             return 1

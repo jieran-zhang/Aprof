@@ -21,7 +21,7 @@ PRODUCERS = {
     'msprof_exploration_provenance.py', 'msprof_search_protocol.py',
 }
 FRESH_PRODUCERS = PRODUCERS | {
-    "level2_stage_recovery.py", "level2_prestart_recovery.py", "level2_cohort_continuation.py", "level2_failed_capture_preservation.py",
+    "level2_stage_recovery.py", "level2_prestart_recovery.py", "level2_gather_search_recovery.py", "level2_cohort_continuation.py", "level2_failed_capture_preservation.py",
     'level2_adapters.py', 'level2_pilot.py', 'level2_campaign.py',
     'level2_iteration.py', 'level2_boundaries.py', 'level2_finalize.py',
     'level2_guard_contract.py', 'level2_candidate_guard.py',
@@ -144,7 +144,8 @@ def closed_observation_code(origin, expected, evidence_path):
             return {'completion': {'path': str(paths['completion']), 'sha256': sha(paths['completion'])},
                     'cohort_continuation': continuation}
         return None
-    if load(paths['stage_result']).get('status') != 'passed' and stage.name == 'final':
+    if load(paths['stage_result']).get('status') != 'passed' and (stage.name == 'final' or
+            stage == run/'train/tasks/gather/candidates/gather003/stages/search'):
         from level2_stage_recovery import resolve_from_reader
         recovery = resolve_from_reader(stage, require_success=True)
         paths['stage_result'] = Path(recovery['current_result']['path'])

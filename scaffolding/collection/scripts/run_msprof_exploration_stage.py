@@ -623,7 +623,11 @@ def run_qualified_timing_recovery(run, qualification_path, qualification_sha256)
     """
     import fcntl
     import os
-    import level2_prestart_recovery as recovery
+    recovery = (__import__('level2_gather_search_recovery')
+                if Path(qualification_path).name == 'qualification.json'
+                and Path(qualification_path).parent.parent.name == 'search'
+                and Path(qualification_path).parent.parent.parent.parent.name == 'gather003'
+                else __import__('level2_prestart_recovery'))
     facts = recovery.execution_audit(run, qualification_path, qualification_sha256)
     lock_path = recovery.safe(facts['directory'] / '.execute.lock')
     fd = os.open(lock_path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
@@ -637,15 +641,20 @@ def run_qualified_timing_recovery(run, qualification_path, qualification_sha256)
             'version':'level2_final_prestart_execution_v1', 'qualification':qualifier,
             'previous_result':previous, 'stage_id':stage_id, 'automatic_retry':False,
             'python_import_paths':facts['python_import_paths']})
-        started=time.time();error=None;committed=False
+        started=time.time();error=None;committed=False;reports=[]
         try:
             # Complete all ordinary frozen identity checks before start/native.
             from msprof_exploration_execute import preflight_cohort
             calibration_ref=plan.get('calibration_report')
-            calibration_path=calibration_ref['path'] if calibration_ref else task/'stages/aa-initial/cohort/report.json'
-            if calibration_ref and sha(calibration_path)!=calibration_ref['sha256']:
-                raise ValueError('frozen calibration report changed')
-            calibration=load(calibration_path) if calibration_ref or any(not c.get('calibration_report') for c in plan['cohorts']) else None
+            if plan.get('protocol') == 'msprof_task_time_search_lite_v1':
+                if calibration_ref or any(c.get('calibration_report') for c in plan['cohorts']):
+                    raise ValueError('lite recovery cannot use full calibration')
+                calibration=None
+            else:
+                calibration_path=calibration_ref['path'] if calibration_ref else task/'stages/aa-initial/cohort/report.json'
+                if calibration_ref and sha(calibration_path)!=calibration_ref['sha256']:
+                    raise ValueError('frozen calibration report changed')
+                calibration=load(calibration_path) if calibration_ref or any(not c.get('calibration_report') for c in plan['cohorts']) else None
             resolved=[]
             for cohort in plan['cohorts']:
                 if sha(cohort['plan']['path'])!=cohort['plan']['sha256']:raise ValueError('cohort plan changed')
@@ -664,7 +673,7 @@ def run_qualified_timing_recovery(run, qualification_path, qualification_sha256)
             event(task,'stage_started',{'candidate_id':cid,'stage':stage_id,'kind':'timing',
                   'plan':pointer(out/'stage-plan.json'),'qualification':qualifier,'attempt':2})
             for cohort,frozen,selected in resolved:
-                collect_cohort(frozen,out/cohort['relation'],selected)
+                reports.append(collect_cohort(frozen,out/cohort['relation'],selected))
         except BaseException as exc:
             error={'type':type(exc).__name__,'message':str(exc)}
         if not committed:
@@ -680,12 +689,16 @@ def run_qualified_timing_recovery(run, qualification_path, qualification_sha256)
                 'actual_costs':costs,'cost_scope':'Confirmed lower bounds; incomplete native sections remain unknown. formal_target_kernel_launches excludes warmup.',
                 'formal_admission':'not_evaluated','graph_policy_eligible':False,'episode_ref':None,
                 'prestart_recovery':{'qualification':qualifier,'previous_result':previous,'attempt':2}}
+        if error is None and recovery.OPERATOR == 'gather':
+            result['report_bindings']=timing_report_bindings(out,plan['cohorts'],reports)
         if pointer(out/'result.json')!=previous or load(out/'stage-plan.json')!=plan:
             raise ValueError('original failed stage changed during recovery; preserve incomplete execution')
         result_path=out/'result.recovery-01.json';recovery.save(result_path,result)
+        evidence={'result':pointer(result_path),'qualification':qualifier}
+        if 'report_bindings' in result:evidence['report_bindings']=result['report_bindings']
         ledger.finish(event_id=recovery.OPERATOR+'-'+stage_id+'-recovery-01-finish',workload=recovery.OPERATOR,
                       stage_id=stage_id,outcome='failed' if error else 'success',
-                      evidence={'result':pointer(result_path),'qualification':qualifier},native_started=native_started,
+                      evidence=evidence,native_started=native_started,
                       formal_samples=costs['role_samples'],actual_costs=costs,reason=json.dumps(error) if error else None)
         event(task,'stage_completed',{'candidate_id':cid,'stage':stage_id,'result':pointer(result_path),
               'qualification':qualifier,'attempt':2})
