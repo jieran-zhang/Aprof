@@ -1,0 +1,50 @@
+--- parent/op_host/gcd.asc
++++ candidate/op_host/gcd.asc
+@@ -78,8 +78,8 @@
+         Check(aclrtMemcpy(devTiling, sizeof(tiling), &tiling, sizeof(tiling), ACL_MEMCPY_HOST_TO_DEVICE), "H2D tiling");
+         const uint64_t tilingKey = SelectGcdTilingKey(s1, s2);
+         if (tilingKey == 1) {
+-            std::cout << "APROF_DISPATCH_JSON:{\"tiling_key\":1,\"kernel_entry\":\"gcd_kernel\"}" << std::endl;
+-            gcd_kernel<<<tiling.blockNum, nullptr, stream>>>(static_cast<uint8_t *>(devX1),
++            std::cout << "APROF_DISPATCH_JSON:{\"tiling_key\":1,\"kernel_entry\":\"gcd_linear_kernel\"}" << std::endl;
++            gcd_linear_kernel<<<tiling.blockNum, nullptr, stream>>>(static_cast<uint8_t *>(devX1),
+                 static_cast<uint8_t *>(devX2), static_cast<uint8_t *>(devOut), static_cast<uint8_t *>(devTiling));
+         } else {
+             std::cout << "APROF_DISPATCH_JSON:{\"tiling_key\":0,\"kernel_entry\":\"gcd_kernel\"}" << std::endl;
+--- parent/op_kernel/gcd_kernel.asc
++++ candidate/op_kernel/gcd_kernel.asc
+@@ -46,3 +46,34 @@
+     else if (t->dtype == GCD_INT32) GcdScalar<int32_t, uint32_t>(x1, x2, y, t);
+     else GcdScalar<int64_t, uint64_t>(x1, x2, y, t);
+ }
++
++// Same output partition and exact unsigned Euclidean arithmetic as GcdScalar.
++// Host selects this entry only when both public shapes are identical.
++template <typename T, typename U>
++__aicore__ inline void GcdLinear(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
++                                 const __gm__ GcdTilingData *t) {
++    __gm__ T *a = reinterpret_cast<__gm__ T *>(x1);
++    __gm__ T *b = reinterpret_cast<__gm__ T *>(x2);
++    __gm__ T *out = reinterpret_cast<__gm__ T *>(y);
++    const uint64_t begin = static_cast<uint64_t>(AscendC::GetBlockIdx()) * t->blockLength;
++    uint64_t end = begin + t->blockLength;
++    if (end > t->totalLength) end = t->totalLength;
++    for (uint64_t linear = begin; linear < end; ++linear) {
++        U av = UnsignedMagnitude<T, U>(a[linear]);
++        U bv = UnsignedMagnitude<T, U>(b[linear]);
++        while (bv != 0) {
++            const U next = av % bv;
++            av = bv;
++            bv = next;
++        }
++        out[linear] = static_cast<T>(av);
++    }
++}
++
++extern "C" __global__ __aicore__ __attribute__((aiv)) void gcd_linear_kernel(
++    GM_ADDR x1, GM_ADDR x2, GM_ADDR y, GM_ADDR tilingAddr) {
++    const __gm__ GcdTilingData *t = reinterpret_cast<const __gm__ GcdTilingData *>(tilingAddr);
++    if (t->dtype == GCD_INT16) GcdLinear<int16_t, uint16_t>(x1, x2, y, t);
++    else if (t->dtype == GCD_INT32) GcdLinear<int32_t, uint32_t>(x1, x2, y, t);
++    else GcdLinear<int64_t, uint64_t>(x1, x2, y, t);
++}
