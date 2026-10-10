@@ -1,6 +1,24 @@
 Closed native-output archives preserve measured logical evidence while reducing directory entries. Apply producer changes and perform maintenance only between closed stages.
 
-Scope is only fixed native output bundles of a terminal-passed six-process Level2 cohort. The new helper reads real original hashes from an already event-bound, passed `level2_output_dedup_v1` manifest; it does not create maintenance authority, rerun native code, broaden case coverage, or infer that current self-consistent output/report hashes are original. The earliest scoped authority pins every binary/part hash and byte count, each named bundle index and the original requested/validated roster. A scope without that prior event-bound inventory is blocked. Profiler raw trees, journals, pilot outputs, standalone/runtime/boundary outputs, inputs and source are out of scope.
+New cohorts without a prior output-dedup event may use the explicit
+`--report-authority` option. This writes `level2_closed_native_outputs_v2`
+only when the existing closed feedback, A/A calibration, or retrospective final
+report attestation independently binds the complete report. The report must
+pin every native output hash; the session request, passed validation, native
+journal, and all named output parts still have to agree. Example:
+
+```sh
+python scaffolding/collection/scripts/level2_native_output_storage.py \
+  --cohort /absolute/run/train/tasks/gather/candidates/gather003/stages/final/direct_parent \
+  --writers-closed --report-authority --retire
+```
+
+Use a `/tmp` shadow destination without `--retire` to qualify a new cohort
+first. The reader replays the archive and the original report authority before
+retiring any output. An existing v1 seal remains v1; the flag cannot relabel it.
+Historical v1 receipts and their dedup requirement remain unchanged.
+
+Historical v1 scope is fixed native output bundles of a terminal-passed six-process Level2 cohort. Its helper reads real original hashes from an already event-bound, passed `level2_output_dedup_v1` manifest; it does not create maintenance authority, rerun native code, broaden case coverage, or infer that current self-consistent output/report hashes are original. The earliest scoped authority pins every binary/part hash and byte count, each named bundle index and the original requested/validated roster. A v1 scope without that prior event-bound inventory is blocked. Profiler raw trees, journals, pilot outputs, standalone/runtime/boundary outputs, inputs and source are out of scope.
 
 The canonical implementation passed 674 regression tests (one skipped), plus focused and independent admission checks. Engineering snapshot019 qualified the real ArgMax aa-local-01 cohort in a /tmp shadow: all six processes, twenty cases, 480 output paths and 183,987,840 logical output bytes. The full report, original logical references and A/A calibration cards matched; the only permitted difference was the independently attested analysis-producer hash. An evidence-only bundle containing the native archive and six nested historical verification archives passed offline validation with original-run reads denied. No native call, source round, live output retirement, learned memory or graph episode was created by this qualification. This does not qualify every historical output or the named-output path.
 

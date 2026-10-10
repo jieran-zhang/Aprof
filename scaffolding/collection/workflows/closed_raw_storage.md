@@ -1,5 +1,11 @@
 # Closed LOCAL raw storage and reader integration
 
+Version v6 binds the reviewed native-output reader that also supports
+report-authorized v2 output seals. Previously sealed v5 raw archives retain
+their original producer snapshot and closed authority hashes. The trusted v6
+reader validates both versions; new raw seals use v6 only after a fresh
+engineering freeze. No historical seal or logical raw path is rewritten.
+
 This new helper is a separate post-capture storage layer. It does not change
 `msprof_raw_storage.py`, `cannbench_msprof_timing.py`, capture argv, profiler flags,
 capture filesystem identity, calibration epoch, samples or native execution cost.
