@@ -32,7 +32,7 @@ def fixture(tmp_path):
         verified.append({'case_id': str(cid), 'passed': True})
     write(stage / 'result.json', {'kind': 'correctness', 'status': 'passed', 'ended_at': 1})
     write(stage / 'standalone/completion.json', {'status': 'passed', 'planned_cases': list(range(1, 21)), 'completed': cases})
-    write(stage / 'evidence/completion.json', {'status': 'passed', 'planned_cases': list(range(1, 21)), 'completed': verified})
+    write(stage / 'evidence/completion.json', {'status': 'passed', 'planned_cases': [str(i) for i in range(1, 21)], 'completed': verified})
     return stage
 
 

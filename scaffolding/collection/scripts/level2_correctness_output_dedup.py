@@ -65,7 +65,8 @@ def inventory(stage):
     evidence = read(stage / 'evidence/completion.json')
     require(result.get('status') == standalone.get('status') == evidence.get('status') == 'passed'
             and result.get('kind') == 'correctness' and result.get('ended_at') is not None
-            and standalone.get('planned_cases') == evidence.get('planned_cases')
+            and standalone.get('planned_cases') == list(range(1, 21))
+            and evidence.get('planned_cases') == [str(i) for i in range(1, 21)]
             and len(standalone.get('completed', [])) == len(evidence.get('completed', [])) == 20,
             'correctness stage is not a complete passed 20-case result')
     pairs = []
