@@ -17,7 +17,7 @@ numeric guard evidence, the output bytes were not independently presealed at
 execution time.
 
 After freezing the updated engineering, use `level2_feedback_recovery.py`
-with `--operator gcd --candidate gcd001 --blocked-observation-id
+with `--operator gcd --candidate gcd001 --blocked-observation
 gcd001-feedback-01 --recovery-id reclassification-01`. Inspect first, then
 apply. This appends a new closed observation while keeping the old blocked
 feedback and all measured costs. It neither reruns GCD001 nor adds an attempt.
