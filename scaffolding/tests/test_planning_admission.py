@@ -8,6 +8,7 @@ import pytest
 
 from aprof_runtime.contracts import Context, GateRequest, CandidateEpisode
 from aprof_runtime.episodes import finalize_episodes
+from profile_evidence_fixture import finalize_with_profile_fixture
 from aprof_runtime.errors import ContractError, StoreError
 from aprof_runtime.gates import CandidateGate
 from aprof_runtime.graph import load_snapshot, route_graph
@@ -82,7 +83,7 @@ def test_explicit_dispatch_implementation_must_be_actual_candidate(stage):
 @pytest.mark.parametrize('stage', ['algorithm_parallel', 'execution'])
 def test_complete_matching_bundle_finalizes_and_replays(stage):
     context, request = request_for(complete_context(stage))
-    episode = finalize_episodes(context, request, graph=GRAPH)[0]
+    episode = finalize_with_profile_fixture(context, request, graph=GRAPH)[0]
     assert episode.outcome.eligible and episode.outcome.policy_update_eligible
     assert CandidateEpisode.from_dict(to_primitive(episode)) == episode
 
@@ -130,7 +131,7 @@ def test_legacy_v1_finalization_and_episode_replay_are_unchanged():
     value=context_example();value['evidence']={'predicate_states':{'predicate.profile.vector_granularity_low':True},'optimization_stage':'invalid'}
     value['workload']['tiling_key']=True
     context,request=request_for(value,OTHER,graph)
-    episode=finalize_episodes(context,request,graph=graph)[0]
+    episode=finalize_with_profile_fixture(context,request,graph=graph)[0]
     assert episode.outcome.eligible
     assert CandidateEpisode.from_dict(to_primitive(episode))==episode
 
@@ -215,7 +216,7 @@ def test_every_transformation_in_the_other_phase_is_hard_masked(stage):
 def test_reviewed_families_admit_vector_plan_only_with_bound_identity(family,soc,arch):
     value=complete_context();p=value['evidence']['architecture_profile']
     p.update(architecture_id=family,soc_name=soc,npu_arch=arch);rebind(value)
-    context,request=request_for(value);episode=finalize_episodes(context,request,graph=GRAPH)[0]
+    context,request=request_for(value);episode=finalize_with_profile_fixture(context,request,graph=GRAPH)[0]
     assert episode.outcome.eligible
     assert CandidateEpisode.from_dict(to_primitive(episode))==episode
 

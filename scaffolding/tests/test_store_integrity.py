@@ -91,7 +91,6 @@ def _episode(
     return finalize_episodes(
         context, request, graph=graph,
         finalized_at="2026-08-11T01:00:00Z",
-        runtime_build="aprof-runtime/test",
     )[0]
 
 
@@ -138,7 +137,6 @@ def _noop_episode(source_digest: str, candidate_id: str = "noop"):
     return finalize_episodes(
         context, request, graph=graph,
         finalized_at="2026-08-11T01:00:00Z",
-        runtime_build="aprof-runtime/test",
     )[0]
 
 

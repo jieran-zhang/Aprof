@@ -193,16 +193,21 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(outcome.pair_count, 0)
 
 
+def arithmetic_gate(request):
+    gate = CandidateGate()
+    return gate._evaluate_prepared(request) if hasattr(gate, "_evaluate_prepared") else gate.evaluate(request)
+
+
 class GateTests(unittest.TestCase):
     def test_direct_dataclass_construction_cannot_bypass_gate_profile(self) -> None:
         request = GateRequest.from_dict(request_dict("c1"))
         unsafe = replace(request, config=replace(request.config, min_pairs=1))
         with self.assertRaisesRegex(ContractError, "requires value >= 30"):
-            CandidateGate().evaluate(unsafe)
+            arithmetic_gate(unsafe)
 
     def test_verified_noop_is_audited_but_never_selected_or_trained_as_gain(self) -> None:
         request = GateRequest.from_dict(noop_request_dict())
-        outcome = CandidateGate().evaluate(request)[0]
+        outcome = arithmetic_gate(request)[0]
         self.assertEqual(outcome.verdict, GateVerdict.VERIFIED_NOOP)
         self.assertEqual(outcome.utility, 0.0)
         self.assertFalse(outcome.eligible)
@@ -217,7 +222,7 @@ class GateTests(unittest.TestCase):
         value = noop_request_dict()
         value["candidates"][0]["source_hashes"]["candidate"] = "sha256:" + "b" * 64
         value["candidates"][0]["patch_artifact_hash"] = HASH
-        outcome = CandidateGate().evaluate(GateRequest.from_dict(value))[0]
+        outcome = arithmetic_gate(GateRequest.from_dict(value))[0]
         self.assertEqual(outcome.verdict, GateVerdict.STATIC_REJECTED)
         self.assertFalse(outcome.eligible)
         self.assertTrue(any("source hashes differ" in reason for reason in outcome.reasons))
@@ -226,21 +231,21 @@ class GateTests(unittest.TestCase):
     def test_noop_requires_static_review_to_pass(self) -> None:
         value = noop_request_dict()
         value["evidence"][0]["static_review"] = "not_run"
-        outcome = CandidateGate().evaluate(GateRequest.from_dict(value))[0]
+        outcome = arithmetic_gate(GateRequest.from_dict(value))[0]
         self.assertEqual(outcome.verdict, GateVerdict.STATIC_REJECTED)
         self.assertTrue(any("requires passed" in reason for reason in outcome.reasons))
 
     def test_semantic_not_run_cannot_reach_production_safe_gain(self) -> None:
         value = request_dict("c1")
         value["evidence"][0]["semantic"] = "not_run"
-        outcome = CandidateGate().evaluate(GateRequest.from_dict(value))[0]
+        outcome = arithmetic_gate(GateRequest.from_dict(value))[0]
         self.assertEqual(outcome.verdict, GateVerdict.ACCURACY_FAILED)
         self.assertFalse(outcome.eligible)
 
     def test_paired_lcb_and_batch_selection_are_authoritative(self) -> None:
         request = request_dict("fast", "faster")
         request["evidence"][1] = evidence_dict("faster", [70.0, 71.0, 69.0, 70.0, 72.0])
-        outcomes = CandidateGate().evaluate(GateRequest.from_dict(request))
+        outcomes = arithmetic_gate(GateRequest.from_dict(request))
         self.assertEqual([item.verdict for item in outcomes], [GateVerdict.PRODUCTION_SAFE_GAIN] * 2)
         self.assertEqual([item.selected_as_best for item in outcomes], [False, True])
         self.assertGreater(outcomes[1].speedup_lcb, outcomes[0].speedup_lcb)
@@ -249,7 +254,7 @@ class GateTests(unittest.TestCase):
     def test_benchmark_specialized_gain_is_preserved_but_not_selected(self) -> None:
         request = request_dict("c1")
         request["evidence"][0]["portability"] = "not_run"
-        outcome = CandidateGate().evaluate(GateRequest.from_dict(request))[0]
+        outcome = arithmetic_gate(GateRequest.from_dict(request))[0]
         self.assertEqual(outcome.verdict, GateVerdict.BENCHMARK_SPECIALIZED_GAIN)
         self.assertFalse(outcome.eligible)
         self.assertFalse(outcome.selected_as_best)
@@ -257,7 +262,7 @@ class GateTests(unittest.TestCase):
     def test_unpaired_measurements_are_rejected(self) -> None:
         request = request_dict("c1")
         request["evidence"][0]["candidate_samples_ns"].pop()
-        outcome = CandidateGate().evaluate(GateRequest.from_dict(request))[0]
+        outcome = arithmetic_gate(GateRequest.from_dict(request))[0]
         self.assertEqual(outcome.verdict, GateVerdict.MEASUREMENT_UNSTABLE)
 
 

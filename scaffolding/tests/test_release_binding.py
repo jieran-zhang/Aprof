@@ -20,7 +20,8 @@ def test_no_implicit_latest(monkeypatch):
 def test_new_run_binds_release_and_rejects_changes(tmp_path, monkeypatch):
     run = tmp_path / 'run'
     binding = layout.bind_run(run)
-    assert binding['release_id'] == 'graph-base/0.4.1'
+    expected = json.loads((skill_lib() / 'release.json').read_text())['release_id']
+    assert binding['release_id'] == expected
     assert layout.verify_run(run) == binding
     monkeypatch.setattr(sys, 'argv', ['collector', '--run', str(run)])
     monkeypatch.setenv('APROF_SKILL_LIB', str(tmp_path / 'different'))

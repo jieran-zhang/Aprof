@@ -9,7 +9,7 @@ import pytest
 
 from aprof_runtime.errors import StoreError
 from aprof_runtime.jsonio import file_hash
-from test_finalize_level1_campaign import dump, finalize, fixture_run
+from test_finalize_level1_campaign import LEGACY_PROFILE_ADMISSION, dump, finalize, fixture_run
 
 ROOT = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location('finalize_level1_serial', ROOT / 'scaffolding/collection/scripts/finalize_level1_serial.py')
@@ -110,9 +110,13 @@ def test_machine_gate_qualified_selection_retry_and_cas_tampering(tmp_path):
     run, parent = continuation(tmp_path)
     finalizer = serial.SerialFinalizer(run)
     result = finalizer.run_export()
-    assert result['operators'][0]['best_source']['candidate_id'] == 'exp-001'
+    assert result['operators'][0]['best_source']['candidate_id'] == ('exp-001' if LEGACY_PROFILE_ADMISSION else None)
+    if not LEGACY_PROFILE_ADMISSION:
+        assert result['operators'][0]['measured_best_source']['candidate_id'] == 'exp-001'
+        assert result['operators'][0]['measured_best_source']['production_safe'] is False
+        assert (run / 'tasks/exp/best_source/op_kernel/kernel.asc').read_text() == 'baseline'
     record = finalize.rows(run / 'optimization_traces.jsonl')[0]
-    assert record['result']['verdict'] == 'production_safe_gain'
+    assert record['result']['verdict'] == ('production_safe_gain' if LEGACY_PROFILE_ADMISSION else 'attribution_uncertain')
     assert record['result']['speedup'] == pytest.approx(1.25)
     assert record['result']['graph_policy_eligible'] is False
     assert record['result']['episode_ref'] is None

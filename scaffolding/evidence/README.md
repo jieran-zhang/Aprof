@@ -7,6 +7,7 @@ SHA-256 和大小；原始记录中的绝对路径只作 provenance，不用作�
 - Level2：26/48 次已闭合尝试，保持暂停；收录事件、反馈、报告、checkpoint、
   baseline/candidate 源码包及计划。尚无正式发布的 Level2 memory/lesson/episode。
 - `deliveries/`：已经测量过的算子实现和旁证，不是 skill 发布版本。
+- [0.4.2 工具验收](deliveries/graph-base-0.4.2-validation/index.json)：910C 上 exp 的正确性和 profiling 记录；无优化收益或训练资格。
 
 约 18 MB 精简材料进入 Git。完整 evidence closure、snapshot、payload、完整文件
 索引及约 435 GiB 原外置 raw 保持外部。部分历史 loose raw 已归档清理；查看

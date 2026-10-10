@@ -10,10 +10,16 @@ import tarfile
 
 import pytest
 
+from aprof_runtime import __version__
 from aprof_runtime.errors import StoreError
 from aprof_runtime.jsonio import file_hash
 from aprof_runtime.store import EpisodeStore
 from aprof_runtime.traces import TraceWriter, register_json_artifact, verify_optimization_traces, verify_trace
+
+# These frozen research-producer fixtures intentionally retain normalized 1.0.
+# Only their original runtime can admit that profile format; 0.2.1 must preserve
+# readable evidence while refusing to promote it without capture provenance.
+LEGACY_PROFILE_ADMISSION = __version__ == '0.2.0'
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scaffolding/collection/scripts'))
@@ -109,11 +115,11 @@ def test_all_attempts_failures_raw_evidence_gate_replay_and_idempotence(tmp_path
     run = fixture_run(tmp_path)
     finalizer = finalize.Finalizer(run)
     result = finalizer.finalize_operator('exp')
-    assert [item['verdict'] for item in result['attempts']] == ['build_failed', 'accuracy_failed', 'measurement_unstable', 'attribution_uncertain', 'production_safe_gain']
+    assert [item['verdict'] for item in result['attempts']] == ['build_failed', 'accuracy_failed', 'measurement_unstable', 'attribution_uncertain', 'production_safe_gain' if LEGACY_PROFILE_ADMISSION else 'attribution_uncertain']
     assert [item['first_failed_stage'] for item in result['attempts'][:4]] == ['build', 'correctness', 'timing', 'mechanism_alignment']
-    assert result['best_source']['candidate_id'] == 'exp-005'
+    assert result['best_source']['candidate_id'] == ('exp-005' if LEGACY_PROFILE_ADMISSION else None)
     task = run / 'tasks/exp'
-    assert (task / 'best_source/op_kernel/kernel.asc').read_text() == 'exp-005'
+    assert (task / 'best_source/op_kernel/kernel.asc').read_text() == ('exp-005' if LEGACY_PROFILE_ADMISSION else 'baseline')
     before = (task / 'trace_events.jsonl').read_bytes()
     assert finalizer.finalize_operator('exp') == result
     assert (task / 'trace_events.jsonl').read_bytes() == before
@@ -121,7 +127,7 @@ def test_all_attempts_failures_raw_evidence_gate_replay_and_idempotence(tmp_path
     assert records[2]['result']['speedup'] is None
     assert records[3]['result']['speedup'] == pytest.approx(1.25)
     assert records[3]['lesson']['status'] == 'inconclusive'
-    assert records[4]['lesson']['status'] == 'supported'
+    assert records[4]['lesson']['status'] == ('supported' if LEGACY_PROFILE_ADMISSION else 'inconclusive')
     with EpisodeStore(run / 'train/episodes.sqlite') as store:
         assert store.connection.execute('SELECT count(*) FROM episodes').fetchone()[0] == 0
         for record in records:
@@ -185,11 +191,12 @@ def test_benchmark_gain_can_be_delivered_with_explicit_scope_limit(tmp_path):
     run = fixture_run(tmp_path, ('gain',))
     (run / 'tasks/exp/candidates/001/gate_review.json').unlink()
     result = finalize.Finalizer(run).finalize_operator('exp')
-    assert result['attempts'][0]['verdict'] == 'benchmark_specialized_gain'
-    assert result['best_source']['candidate_id'] == 'exp-001'
+    assert result['attempts'][0]['verdict'] == ('benchmark_specialized_gain' if LEGACY_PROFILE_ADMISSION else 'attribution_uncertain')
+    assert result['best_source']['candidate_id'] == ('exp-001' if LEGACY_PROFILE_ADMISSION else None)
     summary = finalize.rows(run / 'tasks/exp/optimization_traces.jsonl')[0]
-    assert summary['lesson']['status'] == 'supported'
-    assert any('qualified only for this benchmark' in reason for reason in summary['lesson']['limitations'])
+    assert summary['lesson']['status'] == ('supported' if LEGACY_PROFILE_ADMISSION else 'inconclusive')
+    assert any('qualified only for this benchmark' in reason for reason in summary['lesson']['limitations']) is LEGACY_PROFILE_ADMISSION
+    assert (run / 'tasks/exp/best_source/op_kernel/kernel.asc').read_text() == ('exp-001' if LEGACY_PROFILE_ADMISSION else 'baseline')
     assert not summary['result']['graph_policy_eligible']
 
 
@@ -265,9 +272,10 @@ def test_finalizer_preserves_unadmitted_mechanism_bindings(tmp_path, candidate_v
     binding = binder.bind('exp', '001')
     assert binding['status'] == expected_status
     result = finalize.Finalizer(run).finalize_operator('exp')
-    assert result['attempts'][0]['verdict'] == ('benchmark_specialized_gain' if expected_status == 'supported' else 'attribution_uncertain')
+    admitted = expected_status == 'supported' and LEGACY_PROFILE_ADMISSION
+    assert result['attempts'][0]['verdict'] == ('benchmark_specialized_gain' if admitted else 'attribution_uncertain')
     summary = finalize.rows(task / 'optimization_traces.jsonl')[0]
-    assert summary['lesson']['status'] == expected_status
+    assert summary['lesson']['status'] == ('inconclusive' if expected_status == 'supported' and not admitted else expected_status)
     assert any('Predeclared mechanism set is ' + expected_status in reason for reason in summary['lesson']['limitations'])
     assert any('No causal mechanism success' in reason for reason in summary['lesson']['limitations']) == (expected_status != 'supported')
     evidence = finalize.read(task / 'exploration_request.json')['evidence'][0]['artifacts']
@@ -276,7 +284,15 @@ def test_finalizer_preserves_unadmitted_mechanism_bindings(tmp_path, candidate_v
             assert evidence[key] in summary['lesson']['evidence_refs']
             assert store.verify_artifact(evidence[key]).read_bytes() == (task / 'candidates/001' / (key + '.json')).read_bytes()
     assert ('mechanism_report' in evidence) == (expected_status == 'supported')
-    assert result['best_source']['candidate_id'] == ('exp-001' if expected_status == 'supported' else None)
+    assert result['best_source']['candidate_id'] == ('exp-001' if admitted else None)
+    if expected_status == 'supported' and not LEGACY_PROFILE_ADMISSION:
+        # Research counter support remains inspectable; it does not acquire the
+        # independent-capture provenance required by the current formal gate.
+        with EpisodeStore(run / 'train/episodes.sqlite') as store:
+            report = json.loads(store.verify_artifact(evidence['mechanism_report']).read_text())
+            profile = json.loads(store.verify_artifact(report['metrics'][0]['candidate_profile_hash']).read_text())
+            assert profile['schema_version'] == '1.0.0'
+        assert not summary['result']['graph_policy_eligible']
 
 
 def test_search_execution_failure_is_not_hidden_by_missing_final_timing(tmp_path):

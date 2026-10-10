@@ -24,7 +24,10 @@ def test_registry_and_host_metadata_agree():
     market = json.loads((repo / '.agents/plugins/marketplace.json').read_text())
     assert len(market['plugins']) == 1
     entry = market['plugins'][0]
-    assert (repo / entry['source']['path']).resolve() == root
+    catalog = json.loads((repo / 'skill-libs/catalog.json').read_text())
+    assert (repo / entry['source']['path']).resolve() == (
+        repo / 'skill-libs' / catalog['default_release']).resolve()
+    assert root.name in {Path(row['path']).name for row in catalog['releases']}
     assert entry['policy'] == {'installation': 'AVAILABLE', 'authentication': 'ON_INSTALL'}
 
 

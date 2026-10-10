@@ -11,6 +11,7 @@ from pathlib import Path
 from aprof_runtime.cli import _parser, run
 from aprof_runtime.contracts import Context, EMPTY_ARTIFACT_SHA256, GateRequest, GateVerdict
 from aprof_runtime.episodes import finalize_episodes
+from profile_evidence_fixture import finalize_with_profile_fixture
 from aprof_runtime.errors import ContractError
 from aprof_runtime.graph import route_graph
 from aprof_runtime.jsonio import content_hash, to_primitive
@@ -127,12 +128,11 @@ def episode(
         "evidence": [evidence],
         "config": config,
     })
-    return finalize_episodes(
+    return finalize_with_profile_fixture(
         context,
         request,
         graph=graph_value,
         finalized_at="2026-08-11T01:00:00Z",
-        runtime_build="aprof-runtime/test",
     )[0]
 
 
@@ -209,8 +209,7 @@ class FixedGraphPolicyTests(unittest.TestCase):
         })
         noop = finalize_episodes(
             context, request, graph=noop_graph, finalized_at="2026-08-11T01:00:00Z",
-            runtime_build="aprof-runtime/test",
-        )[0]
+            )[0]
         self.assertEqual(noop.outcome.verdict, GateVerdict.VERIFIED_NOOP)
         self.assertFalse(noop.outcome.policy_update_eligible)
         checkpoint = train_fixed_graph_policy(

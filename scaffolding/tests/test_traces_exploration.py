@@ -247,6 +247,11 @@ def request_fixture(tmp_path, store, *, failed=False):
         evidence["artifacts"]["mechanism_report"] = register_json_artifact(store, {"schema_version": "1.0.0", "candidate_id": "c1",
             "hypothesis_basis": "heuristic", "metrics": [{"name": "duration", "baseline": 20.0, "candidate": 10.0,
                 "expected_direction": "decrease", "unit": "us", "baseline_profile_hash": profiles[0], "candidate_profile_hash": profiles[1]}]})
+    from aprof_runtime import __version__
+    if not failed and __version__ != "0.2.0":
+        from profile_evidence_fixture import bind_profiles
+        proof, _ = bind_profiles({"candidates": [candidate], "evidence": [evidence]}, store, preserve_sources=True)
+        evidence = proof["evidence"][0]
     return {"schema_version": "1.0.0", "frozen_manifest_hash": manifest, "candidates": [candidate], "evidence": [evidence], "config": {"bootstrap_resamples": 100}}
 
 
@@ -344,5 +349,5 @@ def test_profile_claims_must_reproduce_bound_raw_csv(tmp_path, store):
     report["metrics"][0]["candidate_profile_hash"] = register_json_artifact(store, profile)
     report["metrics"][0]["candidate"] = 1.0
     evidence["artifacts"]["mechanism_report"] = register_json_artifact(store, report)
-    with pytest.raises(ContractError, match="samples differ from bound raw"):
+    with pytest.raises(ContractError, match="samples.*(bound raw|raw source)"):
         mechanism_alignment_from_artifacts(evidence, store)

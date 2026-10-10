@@ -89,7 +89,7 @@ def _runtime_values() -> dict[str, dict]:
     })
     episode = finalize_episodes(
         context, request, graph=graph,
-        finalized_at="2026-08-11T01:00:00Z", runtime_build="aprof-runtime/test",
+        finalized_at="2026-08-11T01:00:00Z",
     )[0]
     checkpoint = train_fixed_graph_policy(graph, [], policy_version="schema-test")
     handler_attempt = HandlerAttempt.from_dict({
