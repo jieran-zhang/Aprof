@@ -12,7 +12,7 @@ from msprof_exploration_campaign import Campaign, _active
 from msprof_exploration_execute import load, pointer, save, sha
 
 VERSION = "level2_legacy_epoch_handoff_v1"
-EPOCH = "graph-base-050-search-lite-02"
+EPOCH = "graph-base-050-search-lite-03"
 
 
 def prefix(run):
