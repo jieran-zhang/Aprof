@@ -1155,7 +1155,13 @@ def cross_entropy_boundary_numeric_failure(e, task, parent, guard):
     This proves retained output mismatch, not the cause inside a kernel. A changed
     guard, source, reference, native command, or threshold loses the attribution.
     """
-    require(task.name == 'cross_entropy_loss' and parent.name == 'cross_entropy_loss001v2',
+    reviewed = {
+        'cross_entropy_loss001v2': ('sha256:32704fc26353fbe696e1cf80a6c48732b38d56c48abd1cd0fdef6810bea52c6d',
+                                  {'sum_partial_tail', 'capacity_769_sum'}),
+        'cross_entropy_loss003': ('sha256:188cbb7a79cf9a7210d082350c19b25b3e9e1bb6b75481eb96ba3c5cde19072b',
+                                  {'capacity_769_sum'}),
+    }
+    require(task.name == 'cross_entropy_loss' and parent.name in reviewed,
             'unreviewed CrossEntropyLoss candidate')
     root = parent / 'boundary-validation'
     require(e.read(root / 'completion.json') == guard and guard.get('status') == 'failed'
@@ -1174,6 +1180,7 @@ def cross_entropy_boundary_numeric_failure(e, task, parent, guard):
     build = e.read(parent / 'build/build_manifest.json')
     result = e.read(parent / 'stages/build/result.json')
     source_ref = e.file(parent / 'source.tar')
+    require(source_ref['sha256'] == reviewed[parent.name][0], 'CE reviewed source differs')
     require(build.get('operator') == task.name and result.get('status') == 'passed'
             and result.get('candidate_id') == parent.name and not result.get('error')
             and e.read(parent / 'stages/build/stage-plan.json').get('source_hash') == source_ref['sha256']
@@ -1309,9 +1316,10 @@ def cross_entropy_boundary_numeric_failure(e, task, parent, guard):
             require(special and rel.size and float(rel.mean(dtype=np.float64)) >= threshold,
                     'CE failure is not a finite mismatch beyond original tolerance')
             mismatch.add(name)
-    require(mismatch == {'sum_partial_tail', 'capacity_769_sum'}, 'CE reviewed failure set differs')
+    require(mismatch == reviewed[parent.name][1], 'CE reviewed failure set differs')
+    count = 'two reduced-loss boundary mismatches' if parent.name == 'cross_entropy_loss001v2' else 'one reduced-loss boundary mismatch'
     return 'original_ce_boundary_numeric_mismatch', ('Retained native outputs, dispatch, original golden CPU replay and original '
-            'dtype tolerances agree on two reduced-loss boundary mismatches. This attributes the observed outputs, not a kernel instruction cause.')
+            f'dtype tolerances agree on {count}. This attributes the observed outputs, not a kernel instruction cause.')
 
 
 def classify_failure(task, parent, stage=None, guard=None):
