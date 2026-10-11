@@ -191,7 +191,7 @@ def stage_location(e, parent, stage):
     return directory
 
 
-def reviewed_original_role_build(e, parent, stage, configure, execution):
+def reviewed_original_role_build(e, parent, stage, configure, execution, *, allow_repository_cwd=False):
     """Replay frozen original source, both exact adapters and retained ASC recipes."""
     build = parent / 'build'
     config_out = e.read(build / 'configure-execution/stdout.log', text=True)
@@ -260,7 +260,8 @@ def reviewed_original_role_build(e, parent, stage, configure, execution):
     e.file(Path(shared_context_build.__file__).resolve())
     e.file(Path(level2_adapters.__file__).resolve())
     harness = Path(shared_context_build.HARNESS)
-    require(configure.get('cwd') == execution.get('cwd') == str(harness.parents[3]),
+    expected_cwd = harness.parents[4] if allow_repository_cwd else harness.parents[3]
+    require(configure.get('cwd') == execution.get('cwd') == str(expected_cwd),
             'compiler working directory differs from reviewed harness repository')
     require(manifest.get('harness') == {p.name: e.file(p)['sha256'][7:] for p in harness.iterdir() if p.is_file()},
             'build harness differs from recorded implementation')
@@ -378,6 +379,35 @@ def kernel_type_failure(e, parent, stage, configure, execution, stdout, stderr):
 RMS_ADDS_NATIVE_SHA256 = 'bb2469fd7529049a87a534210a0f0e79547f8ac4e5a9297a2eaff980b067e9b7'
 RMS_ADDS_STDERR_SHA256 = 'b944ce7a28e9b1cef90393ee8320611ab289cf0c8a5287a840f2a9406a15e9b4'
 
+# Finite CE002 witness: both ASC roles reject the newly authored scalar
+# bfloat16_t cast before any native execution. Unrelated backend errors stay blocked.
+CE_BF16_CAST_NATIVE_SHA256 = '568fb01191fd725af6fb5e5cda12fdbfe5fcefff304edf149d61895c8c04c439'
+CE_BF16_CAST_STDERR_SHA256 = 'a59e17324708c163c69a7f2ee3b63daf48e62d7197f114746b24cbaee6692c2e'
+
+
+def ce_bf16_cast_failure(e, parent, stage, configure, execution, stdout, stderr):
+    require(parent.name == 'cross_entropy_loss002' and parent.parent.parent.name == 'cross_entropy_loss'
+            and stage.get('native_started') is False and execution.get('exit_status') == 2,
+            'CE BF16 cast proof requires the reviewed zero-native build')
+    proof = reviewed_original_role_build(e, parent, stage, configure, execution, allow_repository_cwd=True)
+    require(proof['source_hash'] == CE_BF16_CAST_NATIVE_SHA256,
+            'CE BF16 cast source differs from the reviewed witness')
+    require(e.file(parent / 'build/build-execution/stderr.log')['sha256']
+            == 'sha256:' + CE_BF16_CAST_STDERR_SHA256,
+            'CE BF16 cast diagnostic differs from the reviewed witness')
+    source = proof['native']['op_kernel/cross_entropy_loss_kernel.asc'].decode()
+    require(source.count('static_cast<T>(One(p,label))') == 2
+            and source.count('static_cast<T>(total+loss)') == 1
+            and source.count('static_cast<T>(lane[j]+loss)') == 1
+            and 'fatal error: error in backend: not support bf16 type cast' in stderr,
+            'reviewed original BF16 cast expressions or diagnostic differ')
+    require(sorted(stdout.splitlines()) == sorted(
+        f'[ 25%] Building ASC object CMakeFiles/role_{role}.dir/{role}/op_host/cross_entropy_loss.asc.o'
+        for role in ('A', 'B')), 'CE compiler stdout differs from the reviewed two-role build')
+    return 'original_source_ce_bf16_scalar_cast_unsupported', (
+        'Both frozen ASC roles rejected the original candidate scalar BF16 casts before native execution; '
+        'the source, generated role build and exact retained compiler diagnostic were replayed.')
+
 
 def rms_adds_scalar_failure(e, parent, stage, configure, execution, stdout, stderr):
     require(parent.parent.parent.name == 'rms_norm' and execution.get('exit_status') == 2,
@@ -429,6 +459,8 @@ def compiler_failure(e, parent, stage):
     require(not INFRA_LOG.search(logs), 'build logs contain an infrastructure/tool failure')
     if parent.parent.parent.name == 'rms_norm' and "no matching function for call to 'Adds'" in stderr:
         return rms_adds_scalar_failure(e, parent, stage, configure, execution, stdout, stderr)
+    if parent.parent.parent.name == 'cross_entropy_loss' and 'not support bf16 type cast' in stderr:
+        return ce_bf16_cast_failure(e, parent, stage, configure, execution, stdout, stderr)
     if any(KERNEL_TYPE_DIAGNOSTIC.fullmatch(line) for line in stderr.splitlines()):
         return kernel_type_failure(e, parent, stage, configure, execution, stdout, stderr)
     for line in logs.splitlines():
