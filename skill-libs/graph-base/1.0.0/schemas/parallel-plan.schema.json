@@ -1,0 +1,170 @@
+{
+  "$id": "https://aprof.local/schemas/parallel-plan.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "architecture_profile_ref": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "groups": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "algorithm": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "alternatives": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "group_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "memory_requirements": {
+            "additionalProperties": false,
+            "properties": {
+              "BT": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "L0_A": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "L0_B": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "L0_C": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "L1": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "L2": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "UB": {
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [],
+            "type": "object"
+          },
+          "ownership": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "reduction": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "required_capabilities": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "selection_evidence": {
+            "items": {
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "synchronization": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "task_partition": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "workspace_bytes": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "workspace_formula": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "group_id",
+          "algorithm",
+          "task_partition",
+          "ownership",
+          "reduction",
+          "synchronization",
+          "workspace_bytes",
+          "workspace_formula",
+          "required_capabilities",
+          "memory_requirements",
+          "alternatives",
+          "selection_evidence"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "operator": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "plan_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "precision_invariants": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "semantic_invariants": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "source_hash": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "plan_id",
+    "operator",
+    "source_hash",
+    "architecture_profile_ref",
+    "semantic_invariants",
+    "precision_invariants",
+    "groups"
+  ],
+  "type": "object"
+}

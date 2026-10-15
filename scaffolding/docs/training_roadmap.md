@@ -2,6 +2,60 @@
 
 本文给出 AProf 从当前 expert-seeded SkillGraph 走向可验证后训练系统的实施路线。它描述工程训练协议，不替代论文 proposal；“已实现”和“后续能力”在文中明确分开。
 
+## graph-base/1.0.0：技能文件演化与固定图训练分轨
+
+已封存的测量基线与当前默认版本为 0.5.1（runtime 0.2.2）。1.0.0 候选
+已同步该版本，并绑定其稳定 manifest；v0002、机器阈值和原 0.5.0 比较组不变。
+
+1.0.0 的第一条 technique 是架构感知、分阶段执行：**架构与语义约束 →
+诊断与 profiling → 并行设计 → 执行优化 → 验证反馈**。并行设计决定算法、任务
+划分、归约、ownership、同步和 workspace；执行优化在冻结的设计内决定 tile、
+buffer、搬运、API 和流水。每轮保留真实源码父本、原始 baseline、最新反馈、
+完整正确性、设备计时及实际时间/token 成本。当前任务证据先进入上下文；
+按阶段选一个 skill，再在条件不明或出现反例时按 Wiki 索引点读一页。
+这些路由和上下文策略参考 [KOPE](https://arxiv.org/html/2608.25570)，但
+经验尝试的父子关系只代表谱系，不代表干预的因果效果。
+
+第二条 technique 是 **Raw Trace → Persistent Wiki → Published Skills**，
+参考 [WikiSkill](https://arxiv.org/html/2608.27454)。Teacher 离线审查成功、
+失败和不确定案例，按问题与干预整理条件、反例、来源哈希和拒绝历史；
+每次只提出一个 skill 的局部修订。运行 Agent 可以按需读 Wiki；训练和
+等预算评测另设 skill-only 与 skill+Wiki 两组，以量化这项 AProf 扩展。
+基础模型、机器 gate 和已封存 skill 版本都不随 Teacher 文本修订而变化。
+
+当前候选的来源审计在 `scaffolding/curation/graph-base-1.0.0.json`，安装包
+自带 `wiki/index.json`、条件性条目与 `wiki/evolution.jsonl`。使用
+`python3 scaffolding/tools/verify_teacher_wiki.py` 核对冻结索引、当前算子
+split、原始记录哈希、Wiki 引用及晋升状态。按当前冻结 split 判断归属，
+不能采信旧轨迹里的 `original_split`；validation/test 记录不参与提炼。
+Wiki 条目目前都是 draft，包括有正式 `benchmark_specialized_gain`、但缺少
+独立生产安全验收的 `foreach_norm` 案例。Level2 的反馈也未通过正式准入。
+
+从 Wiki 向 skill 晋升的步骤是：冻结一个条件性命题及目标 skill → 在独立
+910C/A3 workload 上复核完整正确性、边界和正式计时 → 用兼容 runtime gate
+取得 `production_safe_gain`，核查来源与回放 → 审阅单 skill diff 和反例 →
+封存新版本。测量方法命题使用独立 A/A/范围控制实验，不把它伪装为加速规则。
+失败提案保留在 Wiki，旧 skill 不改。原始 JSONL 不进入下文的 policy train；
+该命令仍只接受经验证的 SQLite EpisodeStore。
+
+对 1.0.0 的端到端比较固定单候选、单构建、一次探索筛选与一次正式 profile，
+每任务共享 60 分钟硬上限（生成、独立审查、构建、正确性、计时、profiling
+及在线验收全部计入）；模型 token 只记录成本，不按生成、审查或合计设置
+拒绝阈值。此为 2026-10-15 用户明确调整的 `time_only_v1`，统一用于新冻结的
+各实验组，旧 token 超限失败回执不改。五个 validation 算子、三个预定 seed，
+比较 0.5.0、1.0.0 skill-only、1.0.0 按需 Wiki。报告正确加速、回退、
+达到目标的时间/token 和 Wiki 阅读成本。只有独立规则验收且等预算收益有
+支持、正确性不下降时，才 seal 1.0.0 并切换默认入口；否则保留候选，继续
+使用 0.5.1。优化预算包含完整正确性、全部 Task CSV 解析、A/A 控制与在线准入；
+优化 Agent 仅使用任务本地文件并交付代码、小报告和本地索引。任务结束后由
+trace/training collector 按需执行永久复制、CAS 登记、归档与独立审计，其成本
+单列，不占优化预算，也不能追认原超时或失败。0.5.1 已封存并为默认；
+未发布的 1.0.0 经用户授权升级 runtime 0.2.3 / Task v5，继续使用
+`local_profile_only`，升级链路仍需硬件复验。
+
+当前 test 的部分算子已有历史轨迹，即使本轮隔离，也要披露
+先前暴露，不能宣称严格从未见过。
+
 ## 1. 当前基线与边界
 
 当前 `skillgraph/versions/v0001` 是由静态知识确定性编译得到的专家种子，不是从数据中归纳出的完整 taxonomy。runtime 已实现：
@@ -35,7 +89,9 @@
 - 缺失 counter 保持 `unknown`，不填成零或负证据；
 - 以信息增益、novelty、edge coverage 和硬件预算决定 full profile 候选。
 
-生产收益仍由至少 30 个交错 AB/BA timing pairs 和 runtime gate 裁决。完整 msprof 用于机制指标，不替代配对 timing。
+生产收益仍由至少 30 个交错 AB/BA 配对样本和 runtime gate 裁决。
+已验证的 910C/A3 Task v4 协议从完整设备任务序列提取配对 Task Duration；
+独立 PMU profiling 用于机制指标，Event/Host 区间保留为辅助量。
 
 ### 2.3 P2：mechanism graph 归纳与版本演化
 
@@ -95,7 +151,9 @@ Injection recipe、隐藏 label 和 variant 名只允许离线 dataset adapter �
 
 ### 3.4 Episode 准入条件
 
-正式训练只读取完整校验的 SQLite EpisodeStore。每条记录必须满足：
+正式训练只读取完整校验的 SQLite EpisodeStore。下列归档/入库工作由任务结束后
+的 trace/training collector 完成；优化 Agent 的本地小报告本身不是训练 episode。
+每条记录必须满足：
 
 - graph version 与 canonical graph hash 精确匹配；
 - behavior checkpoint（如使用）可验证，候选集与 propensity 可 replay；

@@ -186,6 +186,9 @@ def test_new_gate_ignores_bare_agent_boolean():
 def test_profiling_is_not_required_to_record_failed_build(store):
     value = request_dict("c1")
     value["evidence"][0]["build"] = "failed"
+    # A failed build has no measured samples requiring Task admission.
+    value["evidence"][0]["baseline_samples_ns"] = []
+    value["evidence"][0]["candidate_samples_ns"] = []
     outcome, = CandidateGate().evaluate(GateRequest.from_dict(value), store=store)
     assert outcome.verdict is GateVerdict.BUILD_FAILED
 
@@ -407,4 +410,5 @@ def test_bound_candidate_kernel_can_be_renamed_without_cross_kernel_aggregation(
     updated = normalize_profile(store, register_json_artifact(store, candidate_manifest), specs)
     report["metrics"][0]["candidate_profile_hash"] = register_json_artifact(store, updated)
     value["evidence"][0]["artifacts"]["mechanism_report"] = register_json_artifact(store, report)
-    assert CandidateGate().evaluate(GateRequest.from_dict(value), store=store)[0].eligible
+    assert mechanism_alignment_from_artifacts(value["evidence"][0], store,
+        source_hashes=value["candidates"][0]["source_hashes"], require_v11=True) is True

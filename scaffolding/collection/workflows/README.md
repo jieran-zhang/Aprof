@@ -5,8 +5,18 @@
 1. 显式选择已冻结的 skill release，声明算子、split、预算与测量策略。
 2. 冻结 baseline、workload、skill/runtime/graph 身份及独立的 collector producer。
 3. 使用选定 skill 的诊断、规划和候选能力；由采集执行器运行协议规定的验证和测量。
-4. 保存每次尝试、失败、父本、反馈和原始证据；没有兼容 gate 时保持未正式准入。
-5. 完成测量后生成研究 memory/lesson、归档和索引；经验证的知识进入下一版 skill。
+4. 优化阶段使用任务本地临时文件，完成完整正确性、Task CSV 解析、A/A 控制和在线准入；
+   这些工作仍计入优化预算。返回代码、小报告与本地证据索引，保留失败和 partial。
+5. 任务结束后由 trace/training collector 按需复制、CAS 登记、归档、独立审计并生成
+   memory/lesson；归档成本单独报告。没有兼容 gate 时保持未准入，后采集不能改写
+   原失败、超时或原预算结果。
+
+1.0.0 的离线 Teacher→Wiki→skill 筛选与硬件发布门禁见
+[训练路线](../../docs/training_roadmap.md)和[审计清单](../../curation/README.md)。
+`shared_buffer_msprof_task_window_v4` / `local_profile_only` 已完成 exp、sigmoid
+全量资格确认与独立安装回放，0.5.1 已封存并成为默认版本。
+优化 skill 不承担完整 profile 永久复制或 CAS 归档；
+`policy train` 的 EpisodeStore 准入规则不变，未归档的小报告不能直接成为训练数据。
 
 当前流程入口：
 

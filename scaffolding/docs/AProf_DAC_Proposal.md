@@ -866,6 +866,8 @@ candidate 仍复制到隔离目录修改。最终 harness 按单 operator 编译
 
 ## 11.1 Baselines
 
+graph-base/1.0.0 当前发布比较采用 2026-10-15 明确修订的 `time_only_v1`：每任务共享 60 分钟硬上限，覆盖生成、独立审查、构建、正确性、计时、profiling 和在线验收；token 仅记录实际成本，不设生成、审查或总量拒绝阈值。单候选、一次候选构建及其余验收门禁不变，归档在任务结束后单独计费。下列长期研究设计中的 token 预算表述不覆盖该发布协议。
+
 主表至少包含以下方法，并保持相同模型、prompt 骨架、token、候选、编译和 profiling 预算。
 
 1. Base LLM，无 skill library。

@@ -4,8 +4,12 @@
 
 The Agent-facing plugin gathers context, proposes evidence, and edits isolated
 candidates. `aprofctl` owns validation, routing trace integrity, paired
-statistics, candidate verdicts, CAS verification, episode hashes, cumulative
-session budgets, and append-only storage.
+statistics, candidate verdicts and cumulative optimization budgets. In the
+proposed v4 local workflow, full correctness, Task CSV parsing, controls and
+online admission remain budgeted; optimization returns code plus a small report
+and local evidence index. Post-task trace/training owns optional CAS verification,
+archiving, episode hashes and append-only storage, with separately reported cost.
+V4 is not yet qualified or released; this does not move the default from 0.5.0.
 
 ```text
 op_dir + budget
@@ -15,8 +19,9 @@ op_dir + budget
   -> immutable graph + compatible policy
   -> isolated transformation candidate
   -> build/correctness/runtime/profile artifacts
-  -> machine gate
-  -> CAS objects + candidate episode in <op_dir>/.aprof/
+  -> online machine gate against complete local evidence (within task budget)
+  -> code + small report + local evidence index (task ends)
+  -> optional post-task trace/training archive + verified candidate episode
 ```
 
 ## Graph state
@@ -65,7 +70,7 @@ candidate set, true behavior propensity, transformation contract/version,
 patch/source/producer identities, raw gate evidence, and machine outcome. On
 read and append, the runtime replays the gate and route from these inputs.
 
-The store copies every referenced object into a content-addressed directory,
+The post-task collector uses the store to copy every referenced object into a content-addressed directory,
 rehashes it, appends episodes transactionally, and maintains an append-only hash
 chain. Its threat model excludes an administrator able to replace both the
 database and the CAS; export the verified chain head to an external log when
@@ -74,4 +79,6 @@ that threat matters.
 Only version- and hash-compatible eligible episodes from a verified SQLite
 EpisodeStore may update a fixed-graph policy. Legacy flat memory, injection
 labels, raw JSON/JSONL traces, and historical FastGELU demonstrations do not
-enter production policy reward.
+enter production policy reward. The archival audit preserves the online result;
+it cannot convert a timeout, missing online admission or a failed control into a
+success. Existing failed reports and their frozen producer bytes remain intact.

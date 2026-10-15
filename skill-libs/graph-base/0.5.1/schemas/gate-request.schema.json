@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aprof.local/schemas/gate-request.schema.json",
+  "title": "AProf GateRequest 1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "candidates", "evidence"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "candidates": {"type": "array", "minItems": 1, "items": {"$ref": "candidate-draft.schema.json"}},
+    "evidence": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/evidence"}},
+    "config": {"$ref": "#/$defs/config"}
+  },
+  "$defs": {
+    "status": {"enum": ["passed", "failed", "not_run"]},
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["candidate_id", "static_review", "build", "accuracy", "runtime", "semantic", "scope", "portability", "artifacts"],
+      "properties": {
+        "candidate_id": {"type": "string"},
+        "static_review": {"$ref": "#/$defs/status"}, "build": {"$ref": "#/$defs/status"},
+        "accuracy": {"$ref": "#/$defs/status"}, "runtime": {"$ref": "#/$defs/status"},
+        "semantic": {"$ref": "#/$defs/status"}, "scope": {"$ref": "#/$defs/status"},
+        "portability": {"$ref": "#/$defs/status"},
+        "baseline_samples_ns": {"type": "array", "items": {"type": "number", "exclusiveMinimum": 0}},
+        "candidate_samples_ns": {"type": "array", "items": {"type": "number", "exclusiveMinimum": 0}},
+        "mechanism_alignment": {"type": ["boolean", "null"]},
+        "heldout_regressions": {"type": "array", "items": {"type": "number"}},
+        "artifacts": {"type": "object", "additionalProperties": {"$ref": "#/$defs/sha256"}}
+      }
+    },
+    "config": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "max_cv": {"type": "number", "minimum": 0, "maximum": 0.05},
+        "max_heldout_regression": {"type": "number", "minimum": 0, "maximum": 0.03},
+        "require_mechanism_alignment": {"const": true},
+        "required_artifacts": {
+          "type": "array", "uniqueItems": true, "items": {"type": "string"},
+          "allOf": [
+            {"contains": {"const": "build_log"}},
+            {"contains": {"const": "accuracy_report"}},
+            {"contains": {"const": "measurement_report"}}
+          ]
+        },
+        "min_pairs": {"type": "integer", "minimum": 30},
+        "lcb_confidence": {"type": "number", "exclusiveMinimum": 0.5, "exclusiveMaximum": 1},
+        "min_speedup_lcb": {"type": "number", "minimum": 1.03},
+        "bootstrap_resamples": {"type": "integer", "minimum": 100}
+      }
+    }
+  }
+}

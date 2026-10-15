@@ -1,0 +1,29 @@
+--- a/skills/ascendc-aprof-profiling/scripts/profile_capture.py
++++ b/skills/ascendc-aprof-profiling/scripts/profile_capture.py
+@@ -27,6 +27,7 @@
+ RELEASE = Path(__file__).resolve().parents[3]
+ sys.path.insert(0, str(RELEASE / "runtime" / "src"))
+ from aprof_runtime.local_evidence import LocalEvidence
++from aprof_runtime.jsonio import canonical_json
+ from aprof_runtime.task_measurement_admission import LOCAL_PROFILE_FILESYSTEMS, select_mount
+ 
+ BASIC = ["Pipeline", "PipeUtilization", "Memory", "MemoryL0", "MemoryUB", "L2Cache", "ArithmeticUtilization"]
+@@ -90,7 +91,7 @@
+ 
+ def identity_state(binding):
+     source = {"schema_version": "1.0.0", "files": source_inventory(binding["source_dir"])}
+-    source_bytes = (json.dumps(source, ensure_ascii=False, sort_keys=True, indent=2, allow_nan=False) + "\n").encode()
++    source_bytes = canonical_json(source).encode("utf-8")
+     return {"binary_hash": file_hash(binding["binary"]), "tool_hash": file_hash(binding["tool"]),
+             "source_hash": "sha256:" + hashlib.sha256(source_bytes).hexdigest()}
+ 
+@@ -261,7 +262,8 @@
+ def source_bundle(source_dir, output, store):
+     files = source_inventory(source_dir, store)
+     path = output / "source-bundle.json"
+-    save(path, {"schema_version": "1.0.0", "files": files})
++    with path.open("x", encoding="utf-8") as stream:
++        stream.write(canonical_json({"schema_version": "1.0.0", "files": files}))
+     return store.register_artifact(path)
+ 
+ 

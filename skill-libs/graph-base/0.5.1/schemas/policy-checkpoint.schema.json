@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aprof.local/schemas/policy-checkpoint.schema.json",
+  "title": "AProf fixed-graph policy checkpoint",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "policy_version",
+    "graph_version",
+    "base_graph_hash",
+    "algorithm",
+    "objective_semantics",
+    "config",
+    "config_hash",
+    "input_episode_hashes",
+    "training_data_hashes",
+    "edge_updates",
+    "training_summary",
+    "checkpoint_hash"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "policy_version": {"type": "string", "minLength": 1},
+    "graph_version": {"type": "string", "minLength": 1},
+    "base_graph_hash": {"$ref": "#/$defs/hash"},
+    "algorithm": {"const": "fixed_graph_shrunk_edge_bias_v1"},
+    "objective_semantics": {
+      "const": "observational_machine_gate_outcome_update_not_causal_attribution"
+    },
+    "config": {"$ref": "#/$defs/config"},
+    "config_hash": {"$ref": "#/$defs/hash"},
+    "input_episode_hashes": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/hash"},
+      "uniqueItems": true
+    },
+    "training_data_hashes": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/hash"},
+      "uniqueItems": true
+    },
+    "edge_updates": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/edgeUpdate"}
+    },
+    "training_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_record_count",
+        "unique_valid_episode_count",
+        "training_episode_count",
+        "updated_edge_count",
+        "skip_reasons"
+      ],
+      "properties": {
+        "input_record_count": {"type": "integer", "minimum": 0},
+        "unique_valid_episode_count": {"type": "integer", "minimum": 0},
+        "training_episode_count": {"type": "integer", "minimum": 0},
+        "updated_edge_count": {"type": "integer", "minimum": 0},
+        "skip_reasons": {
+          "type": "object",
+          "additionalProperties": {"type": "integer", "minimum": 1}
+        }
+      }
+    },
+    "checkpoint_hash": {"$ref": "#/$defs/hash"}
+  },
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "learning_rate",
+        "shrinkage",
+        "min_support",
+        "max_abs_signal",
+        "max_abs_bias",
+        "max_importance_weight",
+        "use_recorded_propensity",
+        "min_measurement_pairs",
+        "max_measurement_cv",
+        "allowed_runtime_prefixes",
+        "require_known_producer_hashes",
+        "negative_verdict_utilities"
+      ],
+      "properties": {
+        "learning_rate": {"type": "number", "exclusiveMinimum": 0},
+        "shrinkage": {"type": "number", "exclusiveMinimum": 0},
+        "min_support": {"type": "integer", "minimum": 1},
+        "max_abs_signal": {"type": "number", "exclusiveMinimum": 0},
+        "max_abs_bias": {"type": "number", "exclusiveMinimum": 0},
+        "max_importance_weight": {"type": "number", "exclusiveMinimum": 0},
+        "use_recorded_propensity": {"type": "boolean"},
+        "min_measurement_pairs": {"type": "integer", "minimum": 1},
+        "max_measurement_cv": {"type": "number", "minimum": 0},
+        "allowed_runtime_prefixes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "require_known_producer_hashes": {"type": "boolean"},
+        "negative_verdict_utilities": {
+          "type": "object",
+          "propertyNames": {
+            "enum": [
+              "static_rejected",
+              "build_failed",
+              "accuracy_failed",
+              "runtime_failed",
+              "stable_no_gain",
+              "heldout_regression"
+            ]
+          },
+          "additionalProperties": {"type": "number", "maximum": 0}
+        }
+      }
+    },
+    "edgeUpdate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "edge_id",
+        "source_id",
+        "target_id",
+        "prior_logit",
+        "bias",
+        "effective_logit",
+        "reliability",
+        "support_count",
+        "weighted_support",
+        "positive_count",
+        "negative_count"
+      ],
+      "properties": {
+        "edge_id": {"type": "string", "minLength": 1},
+        "source_id": {"type": "string", "minLength": 1},
+        "target_id": {"type": "string", "minLength": 1},
+        "prior_logit": {"type": "number"},
+        "bias": {"type": "number"},
+        "effective_logit": {"type": "number"},
+        "reliability": {"type": "number", "minimum": 0, "maximum": 1},
+        "support_count": {"type": "integer", "minimum": 0},
+        "weighted_support": {"type": "number", "minimum": 0},
+        "positive_count": {"type": "integer", "minimum": 0},
+        "negative_count": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

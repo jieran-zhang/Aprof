@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aprof.local/schemas/exploration-outcome.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "candidate_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "frozen_manifest_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "request_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "verdict": {
+      "type": "string",
+      "minLength": 1
+    },
+    "state_path": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "baseline_median_ns": {
+      "type": "number"
+    },
+    "candidate_median_ns": {
+      "type": "number"
+    },
+    "speedup": {
+      "type": "number"
+    },
+    "speedup_lcb": {
+      "type": "number"
+    },
+    "measurement_cv": {
+      "type": "number"
+    },
+    "utility": {
+      "type": "number"
+    },
+    "pair_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "measurement_protocol": {
+      "type": "string",
+      "minLength": 1
+    },
+    "eligible": {
+      "type": "boolean"
+    },
+    "graph_policy_eligible": {
+      "const": false
+    },
+    "episode_ref": {
+      "type": "null"
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "outcome_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  },
+  "required": [
+    "schema_version",
+    "candidate_id",
+    "frozen_manifest_hash",
+    "request_hash",
+    "verdict",
+    "state_path",
+    "baseline_median_ns",
+    "candidate_median_ns",
+    "speedup",
+    "speedup_lcb",
+    "measurement_cv",
+    "utility",
+    "pair_count",
+    "measurement_protocol",
+    "eligible",
+    "graph_policy_eligible",
+    "episode_ref",
+    "reasons",
+    "outcome_hash"
+  ]
+}

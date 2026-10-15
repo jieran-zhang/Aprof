@@ -123,18 +123,27 @@ def main() -> int:
 
     catalog: dict[str, str] = {}
     catalog_root = REPO_ROOT / "third_party/cann-bench/tasks"
-    for path in catalog_root.glob("level*/*"):
-        if path.is_dir():
-            catalog[path.name] = path.parent.name
     pending_union = set().union(*pending.values())
-    catalog_missing = set(catalog) - ready_dirs
+    if catalog_root.is_dir():
+        for path in catalog_root.glob("level*/*"):
+            if path.is_dir():
+                catalog[path.name] = path.parent.name
+        catalog_missing = set(catalog) - ready_dirs
+    else:
+        # The reorganized checkout keeps frozen split metadata but not the
+        # upstream 53-task catalog; preserve the sealed pending membership.
+        catalog_missing = set(index["inventory"]["not_materialized"])
+        for split_name, manifest in manifests.items():
+            for item in manifest.get("pending_operators", []):
+                if not isinstance(item, dict) or item.get("level") != "level4" or item.get("status") != "not_materialized":
+                    errors.append(f"{split_name}: pending task lacks frozen Level 4 status")
     if pending_union != catalog_missing:
         errors.append(
             "pending coverage differs from unmaterialized catalog tasks: "
             f"missing={sorted(catalog_missing - pending_union)}, "
             f"unexpected={sorted(pending_union - catalog_missing)}"
         )
-    non_level4 = {name for name in pending_union if catalog.get(name) != "level4"}
+    non_level4 = {name for name in pending_union if catalog_root.is_dir() and catalog.get(name) != "level4"}
     if non_level4:
         errors.append(f"pending tasks are not all Level 4: {sorted(non_level4)}")
 

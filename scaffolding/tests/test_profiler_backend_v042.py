@@ -1,12 +1,14 @@
 """Collector contracts tested with fake processes; real fixture is offline only."""
 from __future__ import annotations
 import copy
+import contextlib
 import hashlib
 import importlib.util
 import json
 import os
 from pathlib import Path
 import shlex
+import subprocess
 import sys
 
 import pytest
@@ -30,6 +32,21 @@ collector = module('profile_capture')
 normalizer = module('normalize_profile')
 from aprof_runtime.store import EpisodeStore
 from aprof_runtime.profile_evidence import load_capture_manifest, normalize_profile, compare_profiles
+
+
+def capture(config, output, db):
+    return collector.capture(config, output) if hasattr(collector, 'LocalEvidence') else collector.capture(config, output, db)
+
+
+def evidence(db, result, previous=None):
+    if not hasattr(collector, 'LocalEvidence'):
+        return EpisodeStore(db)
+    store = collector.LocalEvidence.from_index(result['local_index'])
+    if previous:
+        for ref, path in json.loads(Path(previous['local_index']).read_text())['artifacts'].items():
+            assert store.register_artifact(path) == ref
+    assert not Path(db).exists()
+    return contextlib.nullcontext(store)
 
 
 def executable(path, code):
@@ -81,9 +98,9 @@ def test_no_unsupported_or_mismatched_fallback(backend,architecture,soc):
 
 def test_msprof_receipts_independent_samples_and_comparable_identity(project,tmp_path):
     db=tmp_path/'episodes.sqlite'
-    result=collector.capture(project,tmp_path/'baseline',db)
+    result=capture(project,tmp_path/'baseline',db)
     assert (Path(project['cwd'])/'calls.txt').read_text().splitlines()==['launch']*15
-    with EpisodeStore(db) as store:
+    with evidence(db, result) as store:
         manifest=load_capture_manifest(store,result['manifest_hash'])
         assert len(set(c['collection'] for c in manifest['captures']))==5
         assert all('--warm-up=0' in c['argv'] and '--launch-count=1' in c['argv'] for c in manifest['captures'])
@@ -96,17 +113,28 @@ def test_msprof_receipts_independent_samples_and_comparable_identity(project,tmp
         core_profile=normalize_profile(store,result['manifest_hash'],normalizer.expand_specs(manifest,cores))
         assert len(core_profile['metrics']['vector']['samples'])==5  # ten core rows != ten process samples
         changed=dict(project,role='candidate')
-    candidate=collector.capture(changed,tmp_path/'candidate',db)
-    with EpisodeStore(db) as store:
+    candidate=capture(changed,tmp_path/'candidate',db)
+    with evidence(db, candidate, result) as store:
         cm=load_capture_manifest(store,candidate['manifest_hash'])
         cp=normalize_profile(store,candidate['manifest_hash'],normalizer.expand_specs(cm,specs))
         assert compare_profiles(store,profile,cp,'duration')
+    if hasattr(collector, 'LocalEvidence'):
+        metrics = tmp_path / 'metrics.json'; metrics.write_text(json.dumps(specs))
+        destination = tmp_path / 'normalized.json'
+        completed = subprocess.run([sys.executable, str(SCRIPTS / 'normalize_profile.py'),
+            '--manifest', result['manifest'], '--local-index', result['local_index'],
+            '--metrics', str(metrics), '--output', str(destination)],
+            capture_output=True, text=True, check=True)
+        normalized = json.loads(completed.stdout)
+        local = collector.LocalEvidence.from_index(normalized['local_index'])
+        assert local.verify_artifact(normalized['profile_hash']) == destination
+        assert not db.exists()
 
 
 def test_capture_failure_retains_logs_and_never_publishes_success(project,tmp_path):
     executable(Path(project['binary']),"raise SystemExit(9)\n")
     with pytest.raises(RuntimeError):
-        collector.capture(project,tmp_path/'failed',tmp_path/'db')
+        capture(project,tmp_path/'failed',tmp_path/'db')
     assert (tmp_path/'failed/failure.json').exists()
     assert (tmp_path/'failed/warmup-000.execution.json').exists()
     assert not (tmp_path/'failed/capture-manifest.json').exists()
@@ -115,20 +143,30 @@ def test_capture_failure_retains_logs_and_never_publishes_success(project,tmp_pa
 def test_declared_a3_must_match_actual_board(project,tmp_path):
     executable(Path(project['npu_smi_path']),"print('Ascend950 dav-3510')\n")
     with pytest.raises(ValueError,match='actual npu-smi'):
-        collector.capture(project,tmp_path/'wrong-board',tmp_path/'db')
+        capture(project,tmp_path/'wrong-board',tmp_path/'db')
     assert not (Path(project['cwd'])/'calls.txt').exists()
 
 
 def test_nonzero_device_requires_physical_mapping(project,tmp_path):
     project['device']=3
     with pytest.raises(ValueError,match='physical_device'):
-        collector.capture(project,tmp_path/'wrong-device',tmp_path/'db')
+        capture(project,tmp_path/'wrong-device',tmp_path/'db')
 
 
 def test_output_collision_does_not_overwrite(project,tmp_path):
     (tmp_path/'existing').mkdir()
     with pytest.raises(FileExistsError):
-        collector.capture(project,tmp_path/'existing',tmp_path/'db')
+        capture(project,tmp_path/'existing',tmp_path/'db')
+
+
+def test_local_capture_rejects_remote_profile_directory_before_launch(project, tmp_path, monkeypatch):
+    if not hasattr(collector, 'LocalEvidence'):
+        pytest.skip('local capture is available in 0.5.1')
+    monkeypatch.setattr(collector, 'select_mount', lambda *args: {'filesystem_type': 'fuse.juicefs'})
+    with pytest.raises(ValueError, match='local filesystem'):
+        capture(project, tmp_path/'remote-profile', tmp_path/'db')
+    assert not (tmp_path/'remote-profile').exists()
+    assert not (Path(project['cwd'])/'calls.txt').exists()
 
 
 def test_terminal_receipts_and_symlinks(tmp_path):
@@ -179,8 +217,8 @@ else:
  print('npu-compute: report= '+str(export))
 ''')
     project.update(architecture='Ascend950',soc='9599',tool_path=str(tool),warmups=0,repeats=1,sections=['PipeUtilization'],kernel='add_custom(unsigned char*, unsigned char*, unsigned char*, AddCustomTilingData)')
-    result=collector.capture(project,tmp_path/'npu-offline',tmp_path/'db')
-    with EpisodeStore(tmp_path/'db') as store:
+    result=capture(project,tmp_path/'npu-offline',tmp_path/'db')
+    with evidence(tmp_path/'db', result) as store:
         manifest=load_capture_manifest(store,result['manifest_hash'])
         assert '--warm-up=0' not in manifest['captures'][0]['argv']
         specs={'aiv_time':{'unit':'us','file':'summary.jsonl','format':'jsonl','field':'aiv_time(us)','where':{'category':'PipeUtilization'}}}
@@ -201,7 +239,7 @@ def test_identity_mutation_rejected_and_failure_receipt_retained(project, tmp_pa
     executable(Path(project['binary']), "from pathlib import Path\np=Path(" + repr(str(target)) + ")\np.write_text(p.read_text()+'# changed during execution\\n')\n")
     out = tmp_path / 'mutating'
     with pytest.raises(RuntimeError, match='retained receipt'):
-        collector.capture(project, out, tmp_path / 'db')
+        capture(project, out, tmp_path / 'db')
     receipt = json.loads((out / 'warmup-000.execution.json').read_text())
     assert receipt['exit_code'] == 0
     assert 'identity changed during launch' in receipt['error']['message']
