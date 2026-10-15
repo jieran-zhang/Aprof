@@ -1,0 +1,49 @@
+{
+  "accepted": false,
+  "blocking_reasons": [
+    "Independent production confirmation failed exp case 6 cycle 4 and sigmoid case 7 cycle 4 timing controls.",
+    "Unprofiled long events were reproduced without corresponding main-thread enqueue/record delays; cause remains unresolved.",
+    "Independent profiling materially perturbs submission and event durations; its task gaps cannot establish the cause of the unprofiled failures."
+  ],
+  "decision": "hold_unsealed_candidate",
+  "default_release": "graph-base/0.5.0",
+  "evidence": {
+    "formal_confirmation": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/production-confirmation-json-fix/campaign/campaign.json",
+      "sha256": "sha256:522c9f1c8b072f044538c14950711a025b801adb069838f7fdb47d0bf2467bc5"
+    },
+    "long_timeline_analysis": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/submission-long-timeline-diagnostics-20261014/mechanism-analysis.json",
+      "sha256": "sha256:3100e01da55e6ce814a93469a6d57ce11fd4810e7cd92cd2510506566129679a"
+    },
+    "long_timeline_replay": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/submission-long-timeline-diagnostics-20261014/diagnostic-replay.json",
+      "sha256": "sha256:0b4c6fd524d3dab2772e7c3cd5dfc0b5f612007319894bc835f01fcae3354565"
+    },
+    "preservation_audit": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/release-preflight/post-diagnostic-hold.json",
+      "sha256": "sha256:9f40f9957e29f1f1b102d0d4568a5309fb240ef23ca9c60fa7a3c0891400db47"
+    },
+    "submission_diagnostic_replay": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/submission-timing-diagnostics-20261014/diagnostic-replay.json",
+      "sha256": "sha256:96815471249acc42f27c53a88e4d93d990f800c0600bf55af3fa5cb27b88aa79"
+    },
+    "submission_mechanism_analysis": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/submission-timing-diagnostics-20261014/mechanism-analysis.json",
+      "sha256": "sha256:d6e66beb478de086e529f63ed9aff0761f6ba4d37c5a5dc40cdd995c3ffd3566"
+    }
+  },
+  "implemented_repairs": [
+    "same process/context/stream/shared buffers for fixed source roles",
+    "buffer stdout and defer raw JSON writes until native cycle exit",
+    "six fresh resource lifetimes with raw before/after A/A control replay",
+    "bind source, executable, input, original oracle and protocol evidence"
+  ],
+  "next_required_evidence": "Same-execution correlation of the unprofiled long-event interval with runtime background dispatch and device task scheduling, sufficient to support a specific repair; then a new preregistered independent qualification.",
+  "published": false,
+  "purpose": "measurement_repair_publication_decision",
+  "recorded_at": 1791973131.6213388,
+  "sampling_policy": "All fixed campaigns and failed attempts preserved; no sample deletion, replacement, threshold change, or repeated formal confirmation until passing.",
+  "schema_version": 1,
+  "target_release": "graph-base/0.5.1"
+}

@@ -1,0 +1,1790 @@
+{
+  "accepted": false,
+  "audit_source_ref": {
+    "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-restructured/scaffolding/curation/graph-base-0.5.1-statistical-gate-audit.json",
+    "sha256": "sha256:9ca8b9765d4270623653a136ce021959057ab25b6d8ca6cc064c4888ff596f45"
+  },
+  "budget_estimates_not_acceptance": {
+    "cycles_per_case": 6,
+    "fifty_ms_event_seconds_nominal": 180.0,
+    "if_warm_request_cost_4_seconds_saved_minutes": 18.35676944883246,
+    "limitations": [
+      "Only early exp and sigmoid cases, stopped at their first measurement-control failure; not a random sample of all 40 cases or five validation operators.",
+      "The 50 ms event total is a nominal interval calculation, not measured collector overhead or a guaranteed upper bound. Candidate events may be shorter or slower than the baseline pilot target.",
+      "Excludes model proposer/review, pilot, compilation, separate upfront full correctness, profiling, hardware queries and evidence replay.",
+      "Persistent verifier warm request cost, import share and actual five-operator completion time are unmeasured.",
+      "No thresholds, correctness checks or historical verdicts are changed."
+    ],
+    "minutes_saved_per_one_second_lower_request_cost": 4.0,
+    "nonoracle_session_lower_bound_minutes": 15.22750473022461,
+    "observed_mean_extrapolation_session_minutes": 49.58427417905707,
+    "oracle_requests_per_task": 240,
+    "task_cases": 20
+  },
+  "calculation": {
+    "clock": "stage started_at/finished_at are recorded wall time; outer duration_seconds is the execution wrapper duration",
+    "component_seconds": "adjacent differences of ordered_boundaries, without dropping failed-control cycles",
+    "native_envelope_limit": "Includes process startup and receipt close/log finalization. No separate old native-process-exit timestamp exists.",
+    "oracle_envelope_limit": "Whole Python CLI invocation including imports, math, input/output and process exit. Import cost is not measured separately.",
+    "ordered_boundaries": [
+      "session.started_at",
+      "execution.started_at",
+      "execution.finished_at",
+      "verifications.baseline.started_at",
+      "verifications.baseline.finished_at",
+      "verifications.candidate.started_at",
+      "verifications.candidate.finished_at",
+      "session.finished_at"
+    ],
+    "other_limit": "Residual categories are not a CPU attribution; CAS/output registration and identity work cannot be individually timed retrospectively."
+  },
+  "combined": {
+    "between_sessions_seconds": 12.375346422195435,
+    "component_seconds": {
+      "after_candidate_oracle": 72.78890013694763,
+      "baseline_oracle_cli": 658.0813701152802,
+      "before_native": 25.565239429473877,
+      "between_oracles": 28.325246810913086,
+      "candidate_oracle_cli": 647.4758689403534,
+      "native_receipt_envelope": 248.94713521003723,
+      "native_to_baseline_oracle": 203.01865816116333
+    },
+    "cycles": 76,
+    "oracle_fraction_of_outer": 0.6493869626438775,
+    "oracle_launches": 152,
+    "oracle_mean_seconds": 8.589192362208115,
+    "oracle_seconds": 1305.5572390556335,
+    "outer_duration_seconds": 2010.4457190521061,
+    "outside_raw_seconds": 113.867953825742,
+    "raw_envelope_seconds": 1896.5777652263641,
+    "session_max_seconds": 35.936644077301025,
+    "session_mean_seconds": 24.792137089528534,
+    "session_median_seconds": 23.12288761138916,
+    "session_min_seconds": 19.21281886100769,
+    "session_seconds": 1884.2024188041687
+  },
+  "operators": {
+    "exp": {
+      "component_seconds": {
+        "after_candidate_oracle": 34.3828067779541,
+        "baseline_oracle_cli": 301.42219376564026,
+        "before_native": 12.317324161529541,
+        "between_oracles": 13.051136255264282,
+        "candidate_oracle_cli": 300.67636609077454,
+        "native_receipt_envelope": 114.62063312530518,
+        "native_to_baseline_oracle": 101.84479546546936
+      },
+      "cycles": 35,
+      "raw_envelope_seconds": 884.0794296264648,
+      "session_seconds": 878.3152556419373
+    },
+    "sigmoid": {
+      "component_seconds": {
+        "after_candidate_oracle": 38.40609335899353,
+        "baseline_oracle_cli": 356.6591763496399,
+        "before_native": 13.247915267944336,
+        "between_oracles": 15.274110555648804,
+        "candidate_oracle_cli": 346.79950284957886,
+        "native_receipt_envelope": 134.32650208473206,
+        "native_to_baseline_oracle": 101.17386269569397
+      },
+      "cycles": 41,
+      "raw_envelope_seconds": 1012.4983355998993,
+      "session_seconds": 1005.8871631622314
+    }
+  },
+  "production_admission": false,
+  "purpose": "posthoc_cost_audit_and_future_verifier_design",
+  "schema_version": 1,
+  "sessions": [
+    {
+      "case_id": 1,
+      "cycle": 0,
+      "finished_at": 1791968425.3204498,
+      "native_pid": 835361,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.9696254730224609,
+        "baseline_oracle_cli": 11.792800426483154,
+        "before_native": 0.36316585540771484,
+        "between_oracles": 0.3263425827026367,
+        "candidate_oracle_cli": 7.600482940673828,
+        "native_receipt_envelope": 2.720048666000366,
+        "native_to_baseline_oracle": 1.0912871360778809
+      },
+      "session_seconds": 24.863753080368042,
+      "started_at": 1791968400.4566967
+    },
+    {
+      "case_id": 1,
+      "cycle": 1,
+      "finished_at": 1791968448.0917876,
+      "native_pid": 835522,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.8318607807159424,
+        "baseline_oracle_cli": 9.276890516281128,
+        "before_native": 0.3171672821044922,
+        "between_oracles": 0.34888768196105957,
+        "candidate_oracle_cli": 8.221477270126343,
+        "native_receipt_envelope": 2.7373046875,
+        "native_to_baseline_oracle": 0.9921219348907471
+      },
+      "session_seconds": 22.725710153579712,
+      "started_at": 1791968425.3660774
+    },
+    {
+      "case_id": 1,
+      "cycle": 2,
+      "finished_at": 1791968469.2755814,
+      "native_pid": 835683,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.8379249572753906,
+        "baseline_oracle_cli": 8.974835872650146,
+        "before_native": 0.3012399673461914,
+        "between_oracles": 0.3357357978820801,
+        "candidate_oracle_cli": 7.905312776565552,
+        "native_receipt_envelope": 1.7035002708435059,
+        "native_to_baseline_oracle": 1.0769147872924805
+      },
+      "session_seconds": 21.135464429855347,
+      "started_at": 1791968448.140117
+    },
+    {
+      "case_id": 1,
+      "cycle": 3,
+      "finished_at": 1791968489.9572742,
+      "native_pid": 835849,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7084622383117676,
+        "baseline_oracle_cli": 7.665729284286499,
+        "before_native": 0.2812495231628418,
+        "between_oracles": 0.40601634979248047,
+        "candidate_oracle_cli": 8.8973388671875,
+        "native_receipt_envelope": 1.7243754863739014,
+        "native_to_baseline_oracle": 0.9438488483428955
+      },
+      "session_seconds": 20.627020597457886,
+      "started_at": 1791968469.3302536
+    },
+    {
+      "case_id": 1,
+      "cycle": 4,
+      "finished_at": 1791968509.225608,
+      "native_pid": 836016,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.9396095275878906,
+        "baseline_oracle_cli": 7.465414047241211,
+        "before_native": 0.27491331100463867,
+        "between_oracles": 0.3338661193847656,
+        "candidate_oracle_cli": 7.560247898101807,
+        "native_receipt_envelope": 1.7058677673339844,
+        "native_to_baseline_oracle": 0.9329001903533936
+      },
+      "session_seconds": 19.21281886100769,
+      "started_at": 1791968490.0127892
+    },
+    {
+      "case_id": 1,
+      "cycle": 5,
+      "finished_at": 1791968529.1150687,
+      "native_pid": 836159,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7474660873413086,
+        "baseline_oracle_cli": 8.001805305480957,
+        "before_native": 0.27608513832092285,
+        "between_oracles": 0.3180122375488281,
+        "candidate_oracle_cli": 7.604047775268555,
+        "native_receipt_envelope": 1.7955043315887451,
+        "native_to_baseline_oracle": 1.07704758644104
+      },
+      "session_seconds": 19.819968461990356,
+      "started_at": 1791968509.2951002
+    },
+    {
+      "case_id": 2,
+      "cycle": 0,
+      "finished_at": 1791968551.0698228,
+      "native_pid": 836311,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.8276767730712891,
+        "baseline_oracle_cli": 7.609058856964111,
+        "before_native": 0.47420358657836914,
+        "between_oracles": 0.3258500099182129,
+        "candidate_oracle_cli": 8.297295331954956,
+        "native_receipt_envelope": 2.6883938312530518,
+        "native_to_baseline_oracle": 1.6282374858856201
+      },
+      "session_seconds": 21.85071587562561,
+      "started_at": 1791968529.219107
+    },
+    {
+      "case_id": 2,
+      "cycle": 1,
+      "finished_at": 1791968571.7410047,
+      "native_pid": 836456,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.8116791248321533,
+        "baseline_oracle_cli": 8.44347095489502,
+        "before_native": 0.3774709701538086,
+        "between_oracles": 0.4123706817626953,
+        "candidate_oracle_cli": 7.39089822769165,
+        "native_receipt_envelope": 1.6825358867645264,
+        "native_to_baseline_oracle": 1.4943270683288574
+      },
+      "session_seconds": 20.61275291442871,
+      "started_at": 1791968551.1282518
+    },
+    {
+      "case_id": 2,
+      "cycle": 2,
+      "finished_at": 1791968594.188778,
+      "native_pid": 836606,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.8976848125457764,
+        "baseline_oracle_cli": 8.001977682113647,
+        "before_native": 0.2929563522338867,
+        "between_oracles": 0.4902822971343994,
+        "candidate_oracle_cli": 8.304652452468872,
+        "native_receipt_envelope": 2.6960811614990234,
+        "native_to_baseline_oracle": 1.6961088180541992
+      },
+      "session_seconds": 22.379743576049805,
+      "started_at": 1791968571.8090343
+    },
+    {
+      "case_id": 2,
+      "cycle": 3,
+      "finished_at": 1791968616.39706,
+      "native_pid": 836773,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7725131511688232,
+        "baseline_oracle_cli": 8.75369143486023,
+        "before_native": 0.29189467430114746,
+        "between_oracles": 0.3498377799987793,
+        "candidate_oracle_cli": 7.398705244064331,
+        "native_receipt_envelope": 2.695483446121216,
+        "native_to_baseline_oracle": 1.8659536838531494
+      },
+      "session_seconds": 22.128079414367676,
+      "started_at": 1791968594.2689805
+    },
+    {
+      "case_id": 2,
+      "cycle": 4,
+      "finished_at": 1791968641.005725,
+      "native_pid": 836938,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.8976969718933105,
+        "baseline_oracle_cli": 7.661441087722778,
+        "before_native": 0.315748929977417,
+        "between_oracles": 0.37026548385620117,
+        "candidate_oracle_cli": 10.311268091201782,
+        "native_receipt_envelope": 2.7228610515594482,
+        "native_to_baseline_oracle": 2.2500851154327393
+      },
+      "session_seconds": 24.529366731643677,
+      "started_at": 1791968616.4763582
+    },
+    {
+      "case_id": 2,
+      "cycle": 5,
+      "finished_at": 1791968661.2772982,
+      "native_pid": 837098,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7457096576690674,
+        "baseline_oracle_cli": 7.850942850112915,
+        "before_native": 0.27817821502685547,
+        "between_oracles": 0.47683000564575195,
+        "candidate_oracle_cli": 7.4597532749176025,
+        "native_receipt_envelope": 1.6765689849853516,
+        "native_to_baseline_oracle": 1.6764812469482422
+      },
+      "session_seconds": 20.164464235305786,
+      "started_at": 1791968641.112834
+    },
+    {
+      "case_id": 3,
+      "cycle": 0,
+      "finished_at": 1791968686.2338698,
+      "native_pid": 837243,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.8554084300994873,
+        "baseline_oracle_cli": 8.008055210113525,
+        "before_native": 0.3065938949584961,
+        "between_oracles": 0.3249192237854004,
+        "candidate_oracle_cli": 10.429512977600098,
+        "native_receipt_envelope": 2.67631196975708,
+        "native_to_baseline_oracle": 2.0026493072509766
+      },
+      "session_seconds": 24.603451013565063,
+      "started_at": 1791968661.6304188
+    },
+    {
+      "case_id": 3,
+      "cycle": 1,
+      "finished_at": 1791968711.780735,
+      "native_pid": 837462,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.9720458984375,
+        "baseline_oracle_cli": 8.22632908821106,
+        "before_native": 0.29962706565856934,
+        "between_oracles": 0.32958316802978516,
+        "candidate_oracle_cli": 10.752440214157104,
+        "native_receipt_envelope": 2.6975419521331787,
+        "native_to_baseline_oracle": 2.156489849090576
+      },
+      "session_seconds": 25.434057235717773,
+      "started_at": 1791968686.3466778
+    },
+    {
+      "case_id": 3,
+      "cycle": 2,
+      "finished_at": 1791968740.0391111,
+      "native_pid": 837692,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.956928014755249,
+        "baseline_oracle_cli": 11.66526460647583,
+        "before_native": 0.2851097583770752,
+        "between_oracles": 0.3484470844268799,
+        "candidate_oracle_cli": 9.947734832763672,
+        "native_receipt_envelope": 2.6851649284362793,
+        "native_to_baseline_oracle": 2.064207077026367
+      },
+      "session_seconds": 27.952856302261353,
+      "started_at": 1791968712.0862548
+    },
+    {
+      "case_id": 3,
+      "cycle": 3,
+      "finished_at": 1791968763.515884,
+      "native_pid": 837914,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.8437662124633789,
+        "baseline_oracle_cli": 8.164095163345337,
+        "before_native": 0.30652570724487305,
+        "between_oracles": 0.3190891742706299,
+        "candidate_oracle_cli": 7.598188638687134,
+        "native_receipt_envelope": 2.6715304851531982,
+        "native_to_baseline_oracle": 3.371422052383423
+      },
+      "session_seconds": 23.274617433547974,
+      "started_at": 1791968740.2412665
+    },
+    {
+      "case_id": 3,
+      "cycle": 4,
+      "finished_at": 1791968785.8182766,
+      "native_pid": 838146,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.84334397315979,
+        "baseline_oracle_cli": 7.897243499755859,
+        "before_native": 0.3157498836517334,
+        "between_oracles": 0.2941460609436035,
+        "candidate_oracle_cli": 7.861143112182617,
+        "native_receipt_envelope": 2.7156448364257812,
+        "native_to_baseline_oracle": 2.272199869155884
+      },
+      "session_seconds": 22.19947123527527,
+      "started_at": 1791968763.6188054
+    },
+    {
+      "case_id": 3,
+      "cycle": 5,
+      "finished_at": 1791968808.0817106,
+      "native_pid": 838359,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7983465194702148,
+        "baseline_oracle_cli": 7.8248021602630615,
+        "before_native": 0.3084754943847656,
+        "between_oracles": 0.5258662700653076,
+        "candidate_oracle_cli": 7.655513048171997,
+        "native_receipt_envelope": 3.0940239429473877,
+        "native_to_baseline_oracle": 1.940889596939087
+      },
+      "session_seconds": 22.14791703224182,
+      "started_at": 1791968785.9337935
+    },
+    {
+      "case_id": 4,
+      "cycle": 0,
+      "finished_at": 1791968838.6377463,
+      "native_pid": 838581,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.010923147201538,
+        "baseline_oracle_cli": 9.203355550765991,
+        "before_native": 0.44925522804260254,
+        "between_oracles": 0.3109002113342285,
+        "candidate_oracle_cli": 9.64643669128418,
+        "native_receipt_envelope": 3.759847640991211,
+        "native_to_baseline_oracle": 5.9831507205963135
+      },
+      "session_seconds": 30.363869190216064,
+      "started_at": 1791968808.2738771
+    },
+    {
+      "case_id": 4,
+      "cycle": 1,
+      "finished_at": 1791968866.8025877,
+      "native_pid": 838753,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.0187513828277588,
+        "baseline_oracle_cli": 8.783904552459717,
+        "before_native": 0.3484313488006592,
+        "between_oracles": 0.3047051429748535,
+        "candidate_oracle_cli": 9.013923645019531,
+        "native_receipt_envelope": 4.667945861816406,
+        "native_to_baseline_oracle": 3.90016508102417
+      },
+      "session_seconds": 28.037827014923096,
+      "started_at": 1791968838.7647607
+    },
+    {
+      "case_id": 4,
+      "cycle": 2,
+      "finished_at": 1791968896.7552714,
+      "native_pid": 838925,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.0787036418914795,
+        "baseline_oracle_cli": 8.608503341674805,
+        "before_native": 0.4814438819885254,
+        "between_oracles": 0.5705301761627197,
+        "candidate_oracle_cli": 9.22838807106018,
+        "native_receipt_envelope": 4.6970274448394775,
+        "native_to_baseline_oracle": 4.618971586227417
+      },
+      "session_seconds": 29.283568143844604,
+      "started_at": 1791968867.4717033
+    },
+    {
+      "case_id": 4,
+      "cycle": 3,
+      "finished_at": 1791968925.6400604,
+      "native_pid": 839109,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.1132261753082275,
+        "baseline_oracle_cli": 8.912968635559082,
+        "before_native": 0.34752392768859863,
+        "between_oracles": 0.3561677932739258,
+        "candidate_oracle_cli": 9.074439287185669,
+        "native_receipt_envelope": 3.7170488834381104,
+        "native_to_baseline_oracle": 5.214050769805908
+      },
+      "session_seconds": 28.73542547225952,
+      "started_at": 1791968896.904635
+    },
+    {
+      "case_id": 4,
+      "cycle": 4,
+      "finished_at": 1791968953.2225962,
+      "native_pid": 839274,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.0573112964630127,
+        "baseline_oracle_cli": 8.955642700195312,
+        "before_native": 0.36371660232543945,
+        "between_oracles": 0.3600935935974121,
+        "candidate_oracle_cli": 8.60236382484436,
+        "native_receipt_envelope": 4.670933246612549,
+        "native_to_baseline_oracle": 3.4028279781341553
+      },
+      "session_seconds": 27.41288924217224,
+      "started_at": 1791968925.809707
+    },
+    {
+      "case_id": 4,
+      "cycle": 5,
+      "finished_at": 1791968980.9098117,
+      "native_pid": 839445,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.1984496116638184,
+        "baseline_oracle_cli": 9.25616979598999,
+        "before_native": 0.368333101272583,
+        "between_oracles": 0.3669407367706299,
+        "candidate_oracle_cli": 8.940414905548096,
+        "native_receipt_envelope": 3.67252254486084,
+        "native_to_baseline_oracle": 3.6864173412323
+      },
+      "session_seconds": 27.489248037338257,
+      "started_at": 1791968953.4205637
+    },
+    {
+      "case_id": 5,
+      "cycle": 0,
+      "finished_at": 1791969015.6338432,
+      "native_pid": 839619,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.3703174591064453,
+        "baseline_oracle_cli": 8.923245906829834,
+        "before_native": 0.5383508205413818,
+        "between_oracles": 0.3161766529083252,
+        "candidate_oracle_cli": 12.259301900863647,
+        "native_receipt_envelope": 5.666446208953857,
+        "native_to_baseline_oracle": 5.446087598800659
+      },
+      "session_seconds": 34.51992654800415,
+      "started_at": 1791968981.1139166
+    },
+    {
+      "case_id": 5,
+      "cycle": 1,
+      "finished_at": 1791969050.855965,
+      "native_pid": 839797,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.578620433807373,
+        "baseline_oracle_cli": 10.826707601547241,
+        "before_native": 0.44677233695983887,
+        "between_oracles": 0.33820533752441406,
+        "candidate_oracle_cli": 8.414832592010498,
+        "native_receipt_envelope": 6.877257585525513,
+        "native_to_baseline_oracle": 6.566694974899292
+      },
+      "session_seconds": 35.04909086227417,
+      "started_at": 1791969015.806874
+    },
+    {
+      "case_id": 5,
+      "cycle": 2,
+      "finished_at": 1791969081.7115407,
+      "native_pid": 839984,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.452807903289795,
+        "baseline_oracle_cli": 8.689560651779175,
+        "before_native": 0.5465924739837646,
+        "between_oracles": 0.5190539360046387,
+        "candidate_oracle_cli": 8.60054636001587,
+        "native_receipt_envelope": 4.679609775543213,
+        "native_to_baseline_oracle": 6.205265998840332
+      },
+      "session_seconds": 30.693437099456787,
+      "started_at": 1791969051.0181036
+    },
+    {
+      "case_id": 5,
+      "cycle": 3,
+      "finished_at": 1791969112.4163263,
+      "native_pid": 840191,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.4109828472137451,
+        "baseline_oracle_cli": 8.78577208518982,
+        "before_native": 0.4913017749786377,
+        "between_oracles": 0.38936805725097656,
+        "candidate_oracle_cli": 8.757215976715088,
+        "native_receipt_envelope": 4.678160905838013,
+        "native_to_baseline_oracle": 6.0213541984558105
+      },
+      "session_seconds": 30.53415584564209,
+      "started_at": 1791969081.8821704
+    },
+    {
+      "case_id": 5,
+      "cycle": 4,
+      "finished_at": 1791969147.22005,
+      "native_pid": 840387,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.3473031520843506,
+        "baseline_oracle_cli": 9.399374961853027,
+        "before_native": 0.4514138698577881,
+        "between_oracles": 0.5504748821258545,
+        "candidate_oracle_cli": 8.758264064788818,
+        "native_receipt_envelope": 5.673886299133301,
+        "native_to_baseline_oracle": 8.449090957641602
+      },
+      "session_seconds": 34.62980818748474,
+      "started_at": 1791969112.590242
+    },
+    {
+      "case_id": 5,
+      "cycle": 5,
+      "finished_at": 1791969180.2786272,
+      "native_pid": 840596,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.4643330574035645,
+        "baseline_oracle_cli": 8.415566682815552,
+        "before_native": 0.46933960914611816,
+        "between_oracles": 0.344942569732666,
+        "candidate_oracle_cli": 9.006998300552368,
+        "native_receipt_envelope": 6.668973684310913,
+        "native_to_baseline_oracle": 6.512074708938599
+      },
+      "session_seconds": 32.88222861289978,
+      "started_at": 1791969147.3963985
+    },
+    {
+      "case_id": 6,
+      "cycle": 0,
+      "finished_at": 1791969201.655182,
+      "native_pid": 840781,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7367355823516846,
+        "baseline_oracle_cli": 8.448347568511963,
+        "before_native": 0.2628142833709717,
+        "between_oracles": 0.3191962242126465,
+        "candidate_oracle_cli": 7.555647373199463,
+        "native_receipt_envelope": 2.723238229751587,
+        "native_to_baseline_oracle": 1.1010053157806396
+      },
+      "session_seconds": 21.146984577178955,
+      "started_at": 1791969180.5081973
+    },
+    {
+      "case_id": 6,
+      "cycle": 1,
+      "finished_at": 1791969222.548231,
+      "native_pid": 840991,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.8146603107452393,
+        "baseline_oracle_cli": 7.457460641860962,
+        "before_native": 0.27590513229370117,
+        "between_oracles": 0.34896278381347656,
+        "candidate_oracle_cli": 8.12364387512207,
+        "native_receipt_envelope": 2.6910109519958496,
+        "native_to_baseline_oracle": 0.9931454658508301
+      },
+      "session_seconds": 20.70478916168213,
+      "started_at": 1791969201.8434417
+    },
+    {
+      "case_id": 6,
+      "cycle": 2,
+      "finished_at": 1791969243.3307552,
+      "native_pid": 841201,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7514848709106445,
+        "baseline_oracle_cli": 7.836133003234863,
+        "before_native": 0.287398099899292,
+        "between_oracles": 0.3310580253601074,
+        "candidate_oracle_cli": 7.822652339935303,
+        "native_receipt_envelope": 2.726344585418701,
+        "native_to_baseline_oracle": 0.848684549331665
+      },
+      "session_seconds": 20.603755474090576,
+      "started_at": 1791969222.7269998
+    },
+    {
+      "case_id": 6,
+      "cycle": 3,
+      "finished_at": 1791969263.4912255,
+      "native_pid": 841434,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.9531214237213135,
+        "baseline_oracle_cli": 8.011598110198975,
+        "before_native": 0.2735762596130371,
+        "between_oracles": 0.3469583988189697,
+        "candidate_oracle_cli": 7.739712238311768,
+        "native_receipt_envelope": 1.6910464763641357,
+        "native_to_baseline_oracle": 0.9456536769866943
+      },
+      "session_seconds": 19.961666584014893,
+      "started_at": 1791969243.529559
+    },
+    {
+      "case_id": 6,
+      "cycle": 4,
+      "finished_at": 1791969284.3366606,
+      "native_pid": 841640,
+      "operator": "exp",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7673258781433105,
+        "baseline_oracle_cli": 7.6240339279174805,
+        "before_native": 0.24879980087280273,
+        "between_oracles": 0.34105372428894043,
+        "candidate_oracle_cli": 7.935571670532227,
+        "native_receipt_envelope": 2.2705891132354736,
+        "native_to_baseline_oracle": 1.416982889175415
+      },
+      "session_seconds": 20.60435700416565,
+      "started_at": 1791969263.7323036
+    },
+    {
+      "case_id": 1,
+      "cycle": 0,
+      "finished_at": 1791969365.900578,
+      "native_pid": 842100,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7247488498687744,
+        "baseline_oracle_cli": 12.341286182403564,
+        "before_native": 0.3618757724761963,
+        "between_oracles": 0.34151268005371094,
+        "candidate_oracle_cli": 7.650303840637207,
+        "native_receipt_envelope": 2.7839791774749756,
+        "native_to_baseline_oracle": 1.0030736923217773
+      },
+      "session_seconds": 25.206780195236206,
+      "started_at": 1791969340.6937978
+    },
+    {
+      "case_id": 1,
+      "cycle": 1,
+      "finished_at": 1791969385.9023862,
+      "native_pid": 842337,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.9710628986358643,
+        "baseline_oracle_cli": 7.647783279418945,
+        "before_native": 0.2488880157470703,
+        "between_oracles": 0.358806848526001,
+        "candidate_oracle_cli": 7.800696134567261,
+        "native_receipt_envelope": 1.7292757034301758,
+        "native_to_baseline_oracle": 0.9013824462890625
+      },
+      "session_seconds": 19.65789532661438,
+      "started_at": 1791969366.2444909
+    },
+    {
+      "case_id": 1,
+      "cycle": 2,
+      "finished_at": 1791969407.8030834,
+      "native_pid": 842551,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.9396307468414307,
+        "baseline_oracle_cli": 8.537911653518677,
+        "before_native": 0.23852300643920898,
+        "between_oracles": 0.5405869483947754,
+        "candidate_oracle_cli": 7.814288139343262,
+        "native_receipt_envelope": 2.6950526237487793,
+        "native_to_baseline_oracle": 1.0619268417358398
+      },
+      "session_seconds": 21.827919960021973,
+      "started_at": 1791969385.9751635
+    },
+    {
+      "case_id": 1,
+      "cycle": 3,
+      "finished_at": 1791969429.7966194,
+      "native_pid": 842778,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.755347490310669,
+        "baseline_oracle_cli": 8.663675308227539,
+        "before_native": 0.2835268974304199,
+        "between_oracles": 0.3705637454986572,
+        "candidate_oracle_cli": 8.01855182647705,
+        "native_receipt_envelope": 2.7144808769226074,
+        "native_to_baseline_oracle": 1.1367311477661133
+      },
+      "session_seconds": 21.942877292633057,
+      "started_at": 1791969407.8537421
+    },
+    {
+      "case_id": 1,
+      "cycle": 4,
+      "finished_at": 1791969452.3567736,
+      "native_pid": 843014,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.8705885410308838,
+        "baseline_oracle_cli": 9.009289026260376,
+        "before_native": 0.26675891876220703,
+        "between_oracles": 0.33942246437072754,
+        "candidate_oracle_cli": 8.066351652145386,
+        "native_receipt_envelope": 2.6915934085845947,
+        "native_to_baseline_oracle": 1.262274980545044
+      },
+      "session_seconds": 22.50627899169922,
+      "started_at": 1791969429.8504946
+    },
+    {
+      "case_id": 1,
+      "cycle": 5,
+      "finished_at": 1791969473.2917132,
+      "native_pid": 843241,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7618691921234131,
+        "baseline_oracle_cli": 7.9793007373809814,
+        "before_native": 0.2649977207183838,
+        "between_oracles": 0.3606753349304199,
+        "candidate_oracle_cli": 8.681254148483276,
+        "native_receipt_envelope": 1.7001147270202637,
+        "native_to_baseline_oracle": 1.1134300231933594
+      },
+      "session_seconds": 20.861641883850098,
+      "started_at": 1791969452.4300714
+    },
+    {
+      "case_id": 2,
+      "cycle": 0,
+      "finished_at": 1791969495.6476958,
+      "native_pid": 843466,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.767512321472168,
+        "baseline_oracle_cli": 7.760401487350464,
+        "before_native": 0.33585572242736816,
+        "between_oracles": 0.40239405632019043,
+        "candidate_oracle_cli": 8.25216007232666,
+        "native_receipt_envelope": 2.981900453567505,
+        "native_to_baseline_oracle": 1.7459454536437988
+      },
+      "session_seconds": 22.246169567108154,
+      "started_at": 1791969473.4015262
+    },
+    {
+      "case_id": 2,
+      "cycle": 1,
+      "finished_at": 1791969518.9286964,
+      "native_pid": 843682,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.8851385116577148,
+        "baseline_oracle_cli": 9.060238599777222,
+        "before_native": 0.2882711887359619,
+        "between_oracles": 0.5814640522003174,
+        "candidate_oracle_cli": 7.825001955032349,
+        "native_receipt_envelope": 2.7243359088897705,
+        "native_to_baseline_oracle": 1.8451919555664062
+      },
+      "session_seconds": 23.20964217185974,
+      "started_at": 1791969495.7190542
+    },
+    {
+      "case_id": 2,
+      "cycle": 2,
+      "finished_at": 1791969540.6463737,
+      "native_pid": 843904,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7527472972869873,
+        "baseline_oracle_cli": 8.149316310882568,
+        "before_native": 0.2723355293273926,
+        "between_oracles": 0.36062121391296387,
+        "candidate_oracle_cli": 7.741419076919556,
+        "native_receipt_envelope": 2.677717685699463,
+        "native_to_baseline_oracle": 1.6992554664611816
+      },
+      "session_seconds": 21.653412580490112,
+      "started_at": 1791969518.9929612
+    },
+    {
+      "case_id": 2,
+      "cycle": 3,
+      "finished_at": 1791969563.7543766,
+      "native_pid": 844134,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.765880823135376,
+        "baseline_oracle_cli": 9.02946424484253,
+        "before_native": 0.2665064334869385,
+        "between_oracles": 0.3643491268157959,
+        "candidate_oracle_cli": 7.843521595001221,
+        "native_receipt_envelope": 2.696868419647217,
+        "native_to_baseline_oracle": 2.069542407989502
+      },
+      "session_seconds": 23.03613305091858,
+      "started_at": 1791969540.7182436
+    },
+    {
+      "case_id": 2,
+      "cycle": 4,
+      "finished_at": 1791969585.8510513,
+      "native_pid": 844362,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7930476665496826,
+        "baseline_oracle_cli": 8.572155237197876,
+        "before_native": 0.2816030979156494,
+        "between_oracles": 0.35300707817077637,
+        "candidate_oracle_cli": 7.480620861053467,
+        "native_receipt_envelope": 2.6877126693725586,
+        "native_to_baseline_oracle": 1.857370138168335
+      },
+      "session_seconds": 22.025516748428345,
+      "started_at": 1791969563.8255346
+    },
+    {
+      "case_id": 2,
+      "cycle": 5,
+      "finished_at": 1791969610.3660192,
+      "native_pid": 844585,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7714791297912598,
+        "baseline_oracle_cli": 8.397655725479126,
+        "before_native": 0.2739830017089844,
+        "between_oracles": 0.32996296882629395,
+        "candidate_oracle_cli": 10.155844449996948,
+        "native_receipt_envelope": 2.687716245651245,
+        "native_to_baseline_oracle": 1.8211519718170166
+      },
+      "session_seconds": 24.437793493270874,
+      "started_at": 1791969585.9282258
+    },
+    {
+      "case_id": 3,
+      "cycle": 0,
+      "finished_at": 1791969636.0062163,
+      "native_pid": 844813,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.845128059387207,
+        "baseline_oracle_cli": 9.84706735610962,
+        "before_native": 0.33733153343200684,
+        "between_oracles": 0.2799668312072754,
+        "candidate_oracle_cli": 9.40893006324768,
+        "native_receipt_envelope": 2.682500123977661,
+        "native_to_baseline_oracle": 2.115575075149536
+      },
+      "session_seconds": 25.516499042510986,
+      "started_at": 1791969610.4897172
+    },
+    {
+      "case_id": 3,
+      "cycle": 1,
+      "finished_at": 1791969660.3026764,
+      "native_pid": 845055,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.8074359893798828,
+        "baseline_oracle_cli": 7.849920272827148,
+        "before_native": 0.3311765193939209,
+        "between_oracles": 0.3450939655303955,
+        "candidate_oracle_cli": 10.100399017333984,
+        "native_receipt_envelope": 2.8086295127868652,
+        "native_to_baseline_oracle": 1.9570019245147705
+      },
+      "session_seconds": 24.199657201766968,
+      "started_at": 1791969636.1030192
+    },
+    {
+      "case_id": 3,
+      "cycle": 2,
+      "finished_at": 1791969683.629566,
+      "native_pid": 845285,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.813894510269165,
+        "baseline_oracle_cli": 8.248972177505493,
+        "before_native": 0.29042720794677734,
+        "between_oracles": 0.45268750190734863,
+        "candidate_oracle_cli": 8.809054136276245,
+        "native_receipt_envelope": 2.6976418495178223,
+        "native_to_baseline_oracle": 1.9141652584075928
+      },
+      "session_seconds": 23.226842641830444,
+      "started_at": 1791969660.4027233
+    },
+    {
+      "case_id": 3,
+      "cycle": 3,
+      "finished_at": 1791969706.5348783,
+      "native_pid": 845505,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7845747470855713,
+        "baseline_oracle_cli": 7.97622275352478,
+        "before_native": 0.28683018684387207,
+        "between_oracles": 0.36659717559814453,
+        "candidate_oracle_cli": 8.021217584609985,
+        "native_receipt_envelope": 3.4137027263641357,
+        "native_to_baseline_oracle": 1.9606647491455078
+      },
+      "session_seconds": 22.809809923171997,
+      "started_at": 1791969683.7250683
+    },
+    {
+      "case_id": 3,
+      "cycle": 4,
+      "finished_at": 1791969729.6066532,
+      "native_pid": 845745,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7943987846374512,
+        "baseline_oracle_cli": 8.84591794013977,
+        "before_native": 0.2844710350036621,
+        "between_oracles": 0.4056437015533447,
+        "candidate_oracle_cli": 8.051809787750244,
+        "native_receipt_envelope": 2.6965365409851074,
+        "native_to_baseline_oracle": 1.8727898597717285
+      },
+      "session_seconds": 22.95156764984131,
+      "started_at": 1791969706.6550856
+    },
+    {
+      "case_id": 3,
+      "cycle": 5,
+      "finished_at": 1791969752.3425846,
+      "native_pid": 845972,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7882616519927979,
+        "baseline_oracle_cli": 8.040364980697632,
+        "before_native": 0.29029393196105957,
+        "between_oracles": 0.5426452159881592,
+        "candidate_oracle_cli": 8.217443227767944,
+        "native_receipt_envelope": 2.6909170150756836,
+        "native_to_baseline_oracle": 2.0658042430877686
+      },
+      "session_seconds": 22.635730266571045,
+      "started_at": 1791969729.7068543
+    },
+    {
+      "case_id": 4,
+      "cycle": 0,
+      "finished_at": 1791969779.9603345,
+      "native_pid": 846196,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.1203882694244385,
+        "baseline_oracle_cli": 8.214736938476562,
+        "before_native": 0.45647263526916504,
+        "between_oracles": 0.5073111057281494,
+        "candidate_oracle_cli": 8.971449375152588,
+        "native_receipt_envelope": 4.705255746841431,
+        "native_to_baseline_oracle": 3.4490323066711426
+      },
+      "session_seconds": 27.424646377563477,
+      "started_at": 1791969752.5356882
+    },
+    {
+      "case_id": 4,
+      "cycle": 1,
+      "finished_at": 1791969805.7129333,
+      "native_pid": 846421,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.0517239570617676,
+        "baseline_oracle_cli": 8.405465126037598,
+        "before_native": 0.34612369537353516,
+        "between_oracles": 0.32452392578125,
+        "candidate_oracle_cli": 8.242152214050293,
+        "native_receipt_envelope": 3.672084331512451,
+        "native_to_baseline_oracle": 3.556689500808716
+      },
+      "session_seconds": 25.59876275062561,
+      "started_at": 1791969780.1141706
+    },
+    {
+      "case_id": 4,
+      "cycle": 2,
+      "finished_at": 1791969832.648764,
+      "native_pid": 846634,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.1059293746948242,
+        "baseline_oracle_cli": 9.02158784866333,
+        "before_native": 0.3650331497192383,
+        "between_oracles": 0.4034285545349121,
+        "candidate_oracle_cli": 8.438977003097534,
+        "native_receipt_envelope": 3.9087135791778564,
+        "native_to_baseline_oracle": 3.543975591659546
+      },
+      "session_seconds": 26.78764510154724,
+      "started_at": 1791969805.8611188
+    },
+    {
+      "case_id": 4,
+      "cycle": 3,
+      "finished_at": 1791969860.3251052,
+      "native_pid": 846872,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.0479989051818848,
+        "baseline_oracle_cli": 8.503453969955444,
+        "before_native": 0.38187360763549805,
+        "between_oracles": 0.3102529048919678,
+        "candidate_oracle_cli": 8.663557052612305,
+        "native_receipt_envelope": 4.9184277057647705,
+        "native_to_baseline_oracle": 3.6723949909210205
+      },
+      "session_seconds": 27.49795913696289,
+      "started_at": 1791969832.827146
+    },
+    {
+      "case_id": 4,
+      "cycle": 4,
+      "finished_at": 1791969887.5483403,
+      "native_pid": 847108,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.0535717010498047,
+        "baseline_oracle_cli": 8.498777627944946,
+        "before_native": 0.3402526378631592,
+        "between_oracles": 0.49440956115722656,
+        "candidate_oracle_cli": 8.357432126998901,
+        "native_receipt_envelope": 4.716646194458008,
+        "native_to_baseline_oracle": 3.605083703994751
+      },
+      "session_seconds": 27.066173553466797,
+      "started_at": 1791969860.4821668
+    },
+    {
+      "case_id": 4,
+      "cycle": 5,
+      "finished_at": 1791969918.67697,
+      "native_pid": 847344,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.1338846683502197,
+        "baseline_oracle_cli": 10.427382707595825,
+        "before_native": 0.34537672996520996,
+        "between_oracles": 0.3523728847503662,
+        "candidate_oracle_cli": 10.462225198745728,
+        "native_receipt_envelope": 4.690117835998535,
+        "native_to_baseline_oracle": 3.5261402130126953
+      },
+      "session_seconds": 30.93750023841858,
+      "started_at": 1791969887.7394698
+    },
+    {
+      "case_id": 5,
+      "cycle": 0,
+      "finished_at": 1791969950.7758708,
+      "native_pid": 847572,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.4273872375488281,
+        "baseline_oracle_cli": 10.077445030212402,
+        "before_native": 0.6148040294647217,
+        "between_oracles": 0.2781860828399658,
+        "candidate_oracle_cli": 8.112513065338135,
+        "native_receipt_envelope": 5.865641117095947,
+        "native_to_baseline_oracle": 5.520552158355713
+      },
+      "session_seconds": 31.896528720855713,
+      "started_at": 1791969918.879342
+    },
+    {
+      "case_id": 5,
+      "cycle": 1,
+      "finished_at": 1791969979.8926566,
+      "native_pid": 847840,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.437230110168457,
+        "baseline_oracle_cli": 7.989210605621338,
+        "before_native": 0.5266513824462891,
+        "between_oracles": 0.34909868240356445,
+        "candidate_oracle_cli": 8.197047710418701,
+        "native_receipt_envelope": 4.670151710510254,
+        "native_to_baseline_oracle": 5.756937265396118
+      },
+      "session_seconds": 28.92632746696472,
+      "started_at": 1791969950.966329
+    },
+    {
+      "case_id": 5,
+      "cycle": 2,
+      "finished_at": 1791970016.027586,
+      "native_pid": 848071,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.3726255893707275,
+        "baseline_oracle_cli": 8.0257089138031,
+        "before_native": 0.4502267837524414,
+        "between_oracles": 0.3321409225463867,
+        "candidate_oracle_cli": 7.971699953079224,
+        "native_receipt_envelope": 8.848994731903076,
+        "native_to_baseline_oracle": 8.93524718284607
+      },
+      "session_seconds": 35.936644077301025,
+      "started_at": 1791969980.090942
+    },
+    {
+      "case_id": 5,
+      "cycle": 3,
+      "finished_at": 1791970046.2166183,
+      "native_pid": 848325,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.4060401916503906,
+        "baseline_oracle_cli": 8.212443828582764,
+        "before_native": 0.4555838108062744,
+        "between_oracles": 0.40569400787353516,
+        "candidate_oracle_cli": 8.003242015838623,
+        "native_receipt_envelope": 5.8792641162872314,
+        "native_to_baseline_oracle": 5.64713716506958
+      },
+      "session_seconds": 30.0094051361084,
+      "started_at": 1791970016.2072132
+    },
+    {
+      "case_id": 5,
+      "cycle": 4,
+      "finished_at": 1791970077.615643,
+      "native_pid": 848568,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.4727869033813477,
+        "baseline_oracle_cli": 8.042505264282227,
+        "before_native": 0.4576258659362793,
+        "between_oracles": 0.35553789138793945,
+        "candidate_oracle_cli": 8.611642599105835,
+        "native_receipt_envelope": 6.075850248336792,
+        "native_to_baseline_oracle": 6.205660820007324
+      },
+      "session_seconds": 31.221609592437744,
+      "started_at": 1791970046.3940334
+    },
+    {
+      "case_id": 5,
+      "cycle": 5,
+      "finished_at": 1791970109.3357008,
+      "native_pid": 848817,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.35526442527771,
+        "baseline_oracle_cli": 8.307593584060669,
+        "before_native": 0.46969151496887207,
+        "between_oracles": 0.3444697856903076,
+        "candidate_oracle_cli": 9.15303349494934,
+        "native_receipt_envelope": 4.887814283370972,
+        "native_to_baseline_oracle": 7.032161474227905
+      },
+      "session_seconds": 31.550028562545776,
+      "started_at": 1791970077.7856722
+    },
+    {
+      "case_id": 6,
+      "cycle": 0,
+      "finished_at": 1791970129.124786,
+      "native_pid": 849064,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7673325538635254,
+        "baseline_oracle_cli": 8.050952911376953,
+        "before_native": 0.254253625869751,
+        "between_oracles": 0.3063178062438965,
+        "candidate_oracle_cli": 7.455972194671631,
+        "native_receipt_envelope": 1.7258992195129395,
+        "native_to_baseline_oracle": 1.0103487968444824
+      },
+      "session_seconds": 19.57107710838318,
+      "started_at": 1791970109.5537088
+    },
+    {
+      "case_id": 6,
+      "cycle": 1,
+      "finished_at": 1791970149.278459,
+      "native_pid": 849283,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.78444504737854,
+        "baseline_oracle_cli": 7.750528573989868,
+        "before_native": 0.2554903030395508,
+        "between_oracles": 0.3177933692932129,
+        "candidate_oracle_cli": 8.190371990203857,
+        "native_receipt_envelope": 1.6950066089630127,
+        "native_to_baseline_oracle": 0.9634952545166016
+      },
+      "session_seconds": 19.957131147384644,
+      "started_at": 1791970129.321328
+    },
+    {
+      "case_id": 6,
+      "cycle": 2,
+      "finished_at": 1791970169.9211035,
+      "native_pid": 849502,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.8599724769592285,
+        "baseline_oracle_cli": 7.397248983383179,
+        "before_native": 0.26966261863708496,
+        "between_oracles": 0.3717973232269287,
+        "candidate_oracle_cli": 8.808174848556519,
+        "native_receipt_envelope": 1.7180910110473633,
+        "native_to_baseline_oracle": 1.0372605323791504
+      },
+      "session_seconds": 20.462207794189453,
+      "started_at": 1791970149.4588957
+    },
+    {
+      "case_id": 6,
+      "cycle": 3,
+      "finished_at": 1791970192.5194583,
+      "native_pid": 849717,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7376437187194824,
+        "baseline_oracle_cli": 8.93327260017395,
+        "before_native": 0.24085688591003418,
+        "between_oracles": 0.34596920013427734,
+        "candidate_oracle_cli": 8.311307668685913,
+        "native_receipt_envelope": 2.7163569927215576,
+        "native_to_baseline_oracle": 1.0980453491210938
+      },
+      "session_seconds": 22.38345241546631,
+      "started_at": 1791970170.1360059
+    },
+    {
+      "case_id": 6,
+      "cycle": 4,
+      "finished_at": 1791970218.801478,
+      "native_pid": 849933,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.79250168800354,
+        "baseline_oracle_cli": 11.978224754333496,
+        "before_native": 0.27346277236938477,
+        "between_oracles": 0.3398702144622803,
+        "candidate_oracle_cli": 9.854582071304321,
+        "native_receipt_envelope": 1.6977856159210205,
+        "native_to_baseline_oracle": 1.155165433883667
+      },
+      "session_seconds": 26.09159255027771,
+      "started_at": 1791970192.7098854
+    },
+    {
+      "case_id": 6,
+      "cycle": 5,
+      "finished_at": 1791970242.2610583,
+      "native_pid": 850157,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7940633296966553,
+        "baseline_oracle_cli": 9.073714256286621,
+        "before_native": 0.2671024799346924,
+        "between_oracles": 0.3306565284729004,
+        "candidate_oracle_cli": 9.035091161727905,
+        "native_receipt_envelope": 2.717536449432373,
+        "native_to_baseline_oracle": 1.0376770496368408
+      },
+      "session_seconds": 23.25584125518799,
+      "started_at": 1791970219.005217
+    },
+    {
+      "case_id": 7,
+      "cycle": 0,
+      "finished_at": 1791970263.6962855,
+      "native_pid": 850375,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 1.0432121753692627,
+        "baseline_oracle_cli": 7.602993726730347,
+        "before_native": 0.2774045467376709,
+        "between_oracles": 0.332791805267334,
+        "candidate_oracle_cli": 9.208046197891235,
+        "native_receipt_envelope": 1.716719627380371,
+        "native_to_baseline_oracle": 0.9863228797912598
+      },
+      "session_seconds": 21.16749095916748,
+      "started_at": 1791970242.5287945
+    },
+    {
+      "case_id": 7,
+      "cycle": 1,
+      "finished_at": 1791970286.5657623,
+      "native_pid": 850587,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7403583526611328,
+        "baseline_oracle_cli": 9.281778335571289,
+        "before_native": 0.24494385719299316,
+        "between_oracles": 0.35155320167541504,
+        "candidate_oracle_cli": 8.249122858047485,
+        "native_receipt_envelope": 2.677372694015503,
+        "native_to_baseline_oracle": 1.111771583557129
+      },
+      "session_seconds": 22.656900882720947,
+      "started_at": 1791970263.9088614
+    },
+    {
+      "case_id": 7,
+      "cycle": 2,
+      "finished_at": 1791970307.6426892,
+      "native_pid": 850817,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7650322914123535,
+        "baseline_oracle_cli": 8.175307989120483,
+        "before_native": 0.2644155025482178,
+        "between_oracles": 0.32503461837768555,
+        "candidate_oracle_cli": 8.593510150909424,
+        "native_receipt_envelope": 1.7231664657592773,
+        "native_to_baseline_oracle": 0.9836251735687256
+      },
+      "session_seconds": 20.830092191696167,
+      "started_at": 1791970286.812597
+    },
+    {
+      "case_id": 7,
+      "cycle": 3,
+      "finished_at": 1791970329.6810708,
+      "native_pid": 851026,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7451081275939941,
+        "baseline_oracle_cli": 8.916554927825928,
+        "before_native": 0.24383020401000977,
+        "between_oracles": 0.35300183296203613,
+        "candidate_oracle_cli": 7.845251560211182,
+        "native_receipt_envelope": 2.669663429260254,
+        "native_to_baseline_oracle": 0.9811699390411377
+      },
+      "session_seconds": 21.75458002090454,
+      "started_at": 1791970307.9264908
+    },
+    {
+      "case_id": 7,
+      "cycle": 4,
+      "finished_at": 1791970352.9197931,
+      "native_pid": 851255,
+      "operator": "sigmoid",
+      "oracle_exit_status": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "seconds": {
+        "after_candidate_oracle": 0.7988450527191162,
+        "baseline_oracle_cli": 9.81534457206726,
+        "before_native": 0.24312090873718262,
+        "between_oracles": 0.3458974361419678,
+        "candidate_oracle_cli": 8.124232769012451,
+        "native_receipt_envelope": 2.669266700744629,
+        "native_to_baseline_oracle": 0.95469069480896
+      },
+      "session_seconds": 22.951398134231567,
+      "started_at": 1791970329.968395
+    }
+  ],
+  "source_binding_method": "Reuse hashes already verified by the statistical audit and the campaign negative summary; no large-file hashing during the quiet window. Timestamp calculations freshly replayed from both complete raw files.",
+  "source_refs": {
+    "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-restructured/skill-libs/graph-base/0.5.1/runtime/src/aprof_runtime/contracts.py": "sha256:7847cccc261810e73367083eb12cc71f4d1ecb209c3f754b7a9d40661d685454",
+    "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-restructured/skill-libs/graph-base/0.5.1/runtime/src/aprof_runtime/gates.py": "sha256:00d4b3f9205cff60b8ae47d382a1913c4792a3e6e78714bf9ca53dd7beb43a4c",
+    "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-restructured/skill-libs/graph-base/0.5.1/runtime/src/aprof_runtime/jsonio.py": "sha256:56562271feaa21afd66f6f133213529eacaa9abbeea62c204296ab57a0b01f3c",
+    "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-restructured/skill-libs/graph-base/0.5.1/runtime/src/aprof_runtime/measurement_admission.py": "sha256:6cfdaa1639e3ac6e3afff1b24f6a6a0d1d57ff9c4a43773c4407ff48365e79ce",
+    "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-restructured/skill-libs/graph-base/0.5.1/runtime/src/aprof_runtime/profile_evidence.py": "sha256:e2297b31fc59c813d51d9d0bd6ed6ebd7635ee687f4fb8f1e22020ac91cc051b",
+    "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-restructured/skill-libs/graph-base/0.5.1/skills/ascendc-aprof-profiling/assets/device_shared_timing.h": "sha256:4debf4f557d3e984e2a56bbf760f11f435c8716d4431125d7f4f54c7c7096079",
+    "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-restructured/skill-libs/graph-base/0.5.1/skills/ascendc-aprof-profiling/scripts/device_paired_timing.py": "sha256:5a07c126902807dfc25772031dc1fb857d7fb83bc0e39b5ca0cf48da5f0eb0f9",
+    "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-restructured/skill-libs/graph-base/0.5.1/skills/ascendc-aprof-profiling/scripts/device_shared_timing.py": "sha256:7e3679f3457da9c29ac445773c474255f41ca7d51fc6a704362659f563362aeb",
+    "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-restructured/skill-libs/graph-base/0.5.1/skills/ascendc-aprof-profiling/scripts/profile_capture.py": "sha256:036ffb3b03ba9d07aa159f212ba0df7d0bc7bb996170b3d36b1f3af8645df49c",
+    "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/production-confirmation-json-fix/campaign-job/execution.json": "sha256:9155996e1a5bdecc3ae7b2b4414d6285cbce0c42d5cbe0097d244237689a22a7",
+    "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/production-confirmation-json-fix/exp/confirmation/raw_measurements.json": "sha256:fccaabca587b92d171650acd8d3eeb1255242a18d6aa29959ec077e1228631f2",
+    "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/production-confirmation-json-fix/exp/source/scripts/verify_result.py": "sha256:4720677d23f2430c8ede521a1e84cff687a39cad6a7b353fec41608b827c3f50",
+    "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/production-confirmation-json-fix/sigmoid/confirmation/raw_measurements.json": "sha256:5e40e5d4da7036e9569e624f469e0e299171adf81ef4b42dfde7fdc6a123b2d6",
+    "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/production-confirmation-json-fix/sigmoid/source/scripts/verify_result.py": "sha256:e40bdef1c04495d5fd401f9de3b359ccb6d7c6c6865b3bda11bde7914daffb96"
+  }
+}

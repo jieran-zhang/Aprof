@@ -1,0 +1,198 @@
+--- parent/op_host/scatter.asc
++++ candidate/op_host/scatter.asc
+@@ -1,3 +1,4 @@
++#include "scatter_dispatch.h"
+ #include <cstdint>
+ #include <cstdlib>
+ #include <iostream>
+@@ -71,7 +72,7 @@
+         const uint32_t indexType = IndexType(Arg(argc, argv, "--index-dtype"));
+         const uint32_t reduce = Reduce(Arg(argc, argv, "--reduce", "none"));
+         const int64_t dim = std::stoll(Arg(argc, argv, "--dim"));
+-        const auto tiling = ComputeScatterTiling(dataShape, indexShape, dim, dataType, indexType, reduce);
++        auto tiling = ComputeScatterTiling(dataShape, indexShape, dim, dataType, indexType, reduce);
+         const size_t dataBytes = tiling.dataLength * ItemSize(dataType);
+         const size_t updateBytes = tiling.updateLength * ItemSize(dataType);
+         const size_t indexBytes = tiling.updateLength * (indexType == SCATTER_INDEX_INT64 ? 8 : 4);
+@@ -81,6 +82,10 @@
+ 
+         Check(aclInit(nullptr), "aclInit"); aclInitialized = true;
+         Check(aclrtSetDevice(device), "aclrtSetDevice"); deviceSet = true;
++        int64_t availableCores=1;
++        Check(aclrtGetDeviceInfo(device, ACL_DEV_ATTR_VECTOR_CORE_NUM, &availableCores), "query vector cores");
++        const uint64_t rows=tiling.updateLength/tiling.updateShape[tiling.rank-1];
++        tiling.rowBlockNum=static_cast<uint32_t>(std::min<uint64_t>(std::max<int64_t>(1,availableCores),std::max<uint64_t>(1,rows)));
+         Check(aclrtCreateStream(&stream), "aclrtCreateStream");
+         Check(aclrtMallocHost(&hostData, dataBytes), "aclrtMallocHost data");
+         Check(aclrtMallocHost(&hostIndices, indexBytes), "aclrtMallocHost indices");
+@@ -107,9 +112,25 @@
+                 static_cast<uint8_t *>(devOut), static_cast<uint8_t *>(devAccum), static_cast<uint8_t *>(devTiling));
+             Check(aclrtSynchronizeStream(stream), "half accumulator initialization synchronize");
+         }
+-        scatter_kernel<<<1, nullptr, stream>>>(
++        const uint64_t tilingKey=SelectTilingKey(tiling);
++std::cout << "APROF_DISPATCH_JSON:{\"tiling_key\":" << tilingKey << ",\"kernel_entry\":\"" << (tilingKey==1?"scatter_row_owner":(tilingKey==11?"scatter_row_owner_half":(tilingKey==12?"scatter_row_owner_half_update":(tilingKey==10?"scatter_generic_half":("scatter_generic"))))) << "\"}\n";
++
++if(tilingKey==1) { scatter_row_owner<<<tiling.rowBlockNum, nullptr, stream>>>(
+             static_cast<uint8_t *>(devIndices), static_cast<uint8_t *>(devUpdates), static_cast<uint8_t *>(devOut),
+-            static_cast<uint8_t *>(devAccum), static_cast<uint8_t *>(devTiling));
++            static_cast<uint8_t *>(devAccum), static_cast<uint8_t *>(devTiling)); }
++else if(tilingKey==11) { scatter_row_owner_half<<<tiling.rowBlockNum, nullptr, stream>>>(
++            static_cast<uint8_t *>(devIndices), static_cast<uint8_t *>(devUpdates), static_cast<uint8_t *>(devOut),
++            static_cast<uint8_t *>(devAccum), static_cast<uint8_t *>(devTiling)); }
++else if(tilingKey==12) { scatter_row_owner_half_update<<<tiling.rowBlockNum, nullptr, stream>>>(
++            static_cast<uint8_t *>(devIndices), static_cast<uint8_t *>(devUpdates), static_cast<uint8_t *>(devOut),
++            static_cast<uint8_t *>(devAccum), static_cast<uint8_t *>(devTiling)); }
++else if(tilingKey==10) { scatter_generic_half<<<1, nullptr, stream>>>(
++            static_cast<uint8_t *>(devIndices), static_cast<uint8_t *>(devUpdates), static_cast<uint8_t *>(devOut),
++            static_cast<uint8_t *>(devAccum), static_cast<uint8_t *>(devTiling)); }
++else { scatter_generic<<<1, nullptr, stream>>>(
++            static_cast<uint8_t *>(devIndices), static_cast<uint8_t *>(devUpdates), static_cast<uint8_t *>(devOut),
++            static_cast<uint8_t *>(devAccum), static_cast<uint8_t *>(devTiling)); }
++
+         if (useHalfAccumulator) {
+             Check(aclrtSynchronizeStream(stream), "scatter accumulation synchronize");
+             scatter_float_to_half_kernel<<<tiling.convertBlockNum, nullptr, stream>>>(
+--- parent/op_kernel/scatter_dispatch.h
++++ candidate/op_kernel/scatter_dispatch.h
+@@ -0,0 +1,12 @@
++#pragma once
++#include "scatter_tiling.h"
++inline uint64_t SelectTilingKey(const ScatterTilingData &t) {
++ const uint64_t item=(t.dataType==SCATTER_FLOAT16||t.dataType==SCATTER_BFLOAT16)?2:(t.dataType==SCATTER_INT64?8:4);
++ bool same=true;
++ for(uint32_t axis=0;axis<t.rank;++axis){const uint64_t d=axis==0?t.dataLength/t.dataStride[0]:t.dataStride[axis-1]/t.dataStride[axis];if(axis!=t.dim&&d!=t.updateShape[axis])same=false;}
++ const uint64_t last=t.rank==1?t.dataLength:t.dataStride[t.rank-2];
++ const bool row=t.rank>1&&t.dim+1==t.rank&&same&&(last*item)%64==0;
++ const bool half=t.dataType==SCATTER_FLOAT16&&(t.reduce==SCATTER_ADD||t.reduce==SCATTER_MULTIPLY);
++ if(row)return half?11:(t.dataType==SCATTER_FLOAT16?12:1);
++ return half?10:0;
++}
+--- parent/op_kernel/scatter_kernel.asc
++++ candidate/op_kernel/scatter_kernel.asc
+@@ -164,14 +164,25 @@
+     return bf > af ? b : a;
+ }
+ 
+-template <typename T, typename IndexT>
++template <typename T, typename IndexT, bool RowOwner = false>
+ __aicore__ inline void ScatterProcess(GM_ADDR indices, GM_ADDR updates, GM_ADDR output, GM_ADDR accumulator,
+                                       const __gm__ ScatterTilingData *t) {
+     __gm__ const IndexT *indexGm = reinterpret_cast<__gm__ const IndexT *>(indices);
+     __gm__ const T *updateGm = reinterpret_cast<__gm__ const T *>(updates);
+     __gm__ T *outGm = reinterpret_cast<__gm__ T *>(output);
+     __gm__ float *accumulatorGm = reinterpret_cast<__gm__ float *>(accumulator);
+-    for (uint64_t linear = 0; linear < t->updateLength; ++linear) {
++    // Whole rows preserve the original duplicate-index order and exclusive cache-line ownership.
++    uint64_t begin=0,end=t->updateLength;
++    if constexpr (RowOwner) {
++        const uint64_t rowWidth=t->updateShape[t->rank-1];
++        const uint64_t rows=t->updateLength/rowWidth;
++        const uint64_t perCore=(rows+t->rowBlockNum-1)/t->rowBlockNum;
++        const uint64_t rowBegin=static_cast<uint64_t>(AscendC::GetBlockIdx())*perCore;
++        const uint64_t rowEnd=rowBegin+perCore<rows?rowBegin+perCore:rows;
++        if(rowBegin>=rows)return;
++        begin=rowBegin*rowWidth;end=rowEnd*rowWidth;
++    }
++    for (uint64_t linear = begin; linear < end; ++linear) {
+         uint64_t rem = linear;
+         uint64_t target = 0;
+         for (int32_t axis = static_cast<int32_t>(t->rank) - 1; axis >= 0; --axis) {
+@@ -222,13 +233,13 @@
+     }
+ }
+ 
+-template <typename T>
++template <typename T, bool RowOwner = false>
+ __aicore__ inline void ScatterDispatchIndex(GM_ADDR indices, GM_ADDR updates, GM_ADDR output, GM_ADDR accumulator,
+                                              const __gm__ ScatterTilingData *t) {
+     if (t->indexType == SCATTER_INDEX_INT32)
+-        ScatterProcess<T, int32_t>(indices, updates, output, accumulator, t);
++        ScatterProcess<T, int32_t, RowOwner>(indices, updates, output, accumulator, t);
+     else
+-        ScatterProcess<T, int64_t>(indices, updates, output, accumulator, t);
++        ScatterProcess<T, int64_t, RowOwner>(indices, updates, output, accumulator, t);
+ }
+ 
+ extern "C" __global__ __aicore__ __attribute__((aiv)) void scatter_kernel(
+@@ -307,3 +318,70 @@
+     op.Init(accumulator, output, t);
+     op.Process();
+ }
++
++
++// Named entry selected by public workload metadata; generic paths retain the reviewed algorithm.
++extern "C" __global__ __aicore__ __attribute__((aiv)) void scatter_row_owner(
++    GM_ADDR indices, GM_ADDR updates, GM_ADDR output, GM_ADDR accumulator, GM_ADDR tilingAddr) {
++    const __gm__ ScatterTilingData *t =
++        reinterpret_cast<const __gm__ ScatterTilingData *>(tilingAddr);
++    if (t->dataType == SCATTER_FLOAT16) ScatterDispatchIndex<half, true>(indices, updates, output, accumulator, t);
++    else if (t->dataType == SCATTER_FLOAT32) ScatterDispatchIndex<float, true>(indices, updates, output, accumulator, t);
++    else if (t->dataType == SCATTER_BFLOAT16) ScatterDispatchIndex<bfloat16_t, true>(indices, updates, output, accumulator, t);
++    else if (t->dataType == SCATTER_INT32) ScatterDispatchIndex<int32_t, true>(indices, updates, output, accumulator, t);
++    else ScatterDispatchIndex<int64_t, true>(indices, updates, output, accumulator, t);
++}
++
++
++// Named entry selected by public workload metadata; generic paths retain the reviewed algorithm.
++extern "C" __global__ __aicore__ __attribute__((aiv)) void scatter_row_owner_half(
++    GM_ADDR indices, GM_ADDR updates, GM_ADDR output, GM_ADDR accumulator, GM_ADDR tilingAddr) {
++    const __gm__ ScatterTilingData *t =
++        reinterpret_cast<const __gm__ ScatterTilingData *>(tilingAddr);
++    if (t->dataType == SCATTER_FLOAT16) ScatterDispatchIndex<half, true>(indices, updates, output, accumulator, t);
++    else if (t->dataType == SCATTER_FLOAT32) ScatterDispatchIndex<float, true>(indices, updates, output, accumulator, t);
++    else if (t->dataType == SCATTER_BFLOAT16) ScatterDispatchIndex<bfloat16_t, true>(indices, updates, output, accumulator, t);
++    else if (t->dataType == SCATTER_INT32) ScatterDispatchIndex<int32_t, true>(indices, updates, output, accumulator, t);
++    else ScatterDispatchIndex<int64_t, true>(indices, updates, output, accumulator, t);
++}
++
++
++// Named entry selected by public workload metadata; generic paths retain the reviewed algorithm.
++extern "C" __global__ __aicore__ __attribute__((aiv)) void scatter_row_owner_half_update(
++    GM_ADDR indices, GM_ADDR updates, GM_ADDR output, GM_ADDR accumulator, GM_ADDR tilingAddr) {
++    const __gm__ ScatterTilingData *t =
++        reinterpret_cast<const __gm__ ScatterTilingData *>(tilingAddr);
++    if (t->dataType == SCATTER_FLOAT16) ScatterDispatchIndex<half, true>(indices, updates, output, accumulator, t);
++    else if (t->dataType == SCATTER_FLOAT32) ScatterDispatchIndex<float, true>(indices, updates, output, accumulator, t);
++    else if (t->dataType == SCATTER_BFLOAT16) ScatterDispatchIndex<bfloat16_t, true>(indices, updates, output, accumulator, t);
++    else if (t->dataType == SCATTER_INT32) ScatterDispatchIndex<int32_t, true>(indices, updates, output, accumulator, t);
++    else ScatterDispatchIndex<int64_t, true>(indices, updates, output, accumulator, t);
++}
++
++
++// Named entry selected by public workload metadata; generic paths retain the reviewed algorithm.
++extern "C" __global__ __aicore__ __attribute__((aiv)) void scatter_generic_half(
++    GM_ADDR indices, GM_ADDR updates, GM_ADDR output, GM_ADDR accumulator, GM_ADDR tilingAddr) {
++    if (AscendC::GetBlockIdx() != 0) return;
++    const __gm__ ScatterTilingData *t =
++        reinterpret_cast<const __gm__ ScatterTilingData *>(tilingAddr);
++    if (t->dataType == SCATTER_FLOAT16) ScatterDispatchIndex<half>(indices, updates, output, accumulator, t);
++    else if (t->dataType == SCATTER_FLOAT32) ScatterDispatchIndex<float>(indices, updates, output, accumulator, t);
++    else if (t->dataType == SCATTER_BFLOAT16) ScatterDispatchIndex<bfloat16_t>(indices, updates, output, accumulator, t);
++    else if (t->dataType == SCATTER_INT32) ScatterDispatchIndex<int32_t>(indices, updates, output, accumulator, t);
++    else ScatterDispatchIndex<int64_t>(indices, updates, output, accumulator, t);
++}
++
++
++// Named entry selected by public workload metadata; generic paths retain the reviewed algorithm.
++extern "C" __global__ __aicore__ __attribute__((aiv)) void scatter_generic(
++    GM_ADDR indices, GM_ADDR updates, GM_ADDR output, GM_ADDR accumulator, GM_ADDR tilingAddr) {
++    if (AscendC::GetBlockIdx() != 0) return;
++    const __gm__ ScatterTilingData *t =
++        reinterpret_cast<const __gm__ ScatterTilingData *>(tilingAddr);
++    if (t->dataType == SCATTER_FLOAT16) ScatterDispatchIndex<half>(indices, updates, output, accumulator, t);
++    else if (t->dataType == SCATTER_FLOAT32) ScatterDispatchIndex<float>(indices, updates, output, accumulator, t);
++    else if (t->dataType == SCATTER_BFLOAT16) ScatterDispatchIndex<bfloat16_t>(indices, updates, output, accumulator, t);
++    else if (t->dataType == SCATTER_INT32) ScatterDispatchIndex<int32_t>(indices, updates, output, accumulator, t);
++    else ScatterDispatchIndex<int64_t>(indices, updates, output, accumulator, t);
++}
+--- parent/op_kernel/scatter_tiling.h
++++ candidate/op_kernel/scatter_tiling.h
+@@ -31,6 +31,7 @@
+     uint32_t indexType;
+     uint32_t reduce;
+     uint32_t convertBlockNum;
++    uint32_t rowBlockNum;
+     uint64_t convertBlockLength;
+ };
+ 

@@ -1,0 +1,1019 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aprof.local/schemas/shared-context-report.schema.json",
+  "type": "object",
+  "properties": {
+    "protocol_version": {
+      "const": "shared_context_paired_v1"
+    },
+    "analysis_version": {
+      "const": "shared_context_analysis_v1"
+    },
+    "manifest_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "sessions_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "case_attributes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "measurement_quality": {
+      "type": "object",
+      "properties": {
+        "structurally_complete": {
+          "const": true
+        },
+        "observed_checks_pass": {
+          "type": "boolean"
+        },
+        "failures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "check": {
+                "enum": [
+                  "within_process_cv",
+                  "aa_equivalence"
+                ]
+              },
+              "location": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "enum": [
+                  "exceeds_0.05",
+                  "observed_bias",
+                  "precision_insufficient"
+                ]
+              }
+            },
+            "required": [
+              "check",
+              "location",
+              "status"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "method_qualification": {
+          "enum": [
+            "evaluated_here",
+            "external_scope_required"
+          ]
+        },
+        "routine_controls_complete": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "structurally_complete",
+        "observed_checks_pass",
+        "failures",
+        "method_qualification",
+        "routine_controls_complete"
+      ],
+      "additionalProperties": false
+    },
+    "cells": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "phase": {
+            "enum": [
+              "qualification",
+              "before",
+              "reverse",
+              "ab",
+              "after"
+            ]
+          },
+          "replicate_id": {
+            "type": "integer"
+          },
+          "block_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "case_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "buffer_config": {
+            "enum": [
+              "normal",
+              "swapped"
+            ]
+          },
+          "load_order": {
+            "enum": [
+              "AB",
+              "BA"
+            ]
+          },
+          "first_order": {
+            "enum": [
+              "AB",
+              "BA"
+            ]
+          },
+          "started_at": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "A": {
+            "$ref": "#/$defs/series"
+          },
+          "B": {
+            "$ref": "#/$defs/series"
+          },
+          "pair_logs": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "mean_log": {
+            "type": "number"
+          },
+          "speedup": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "pair_log_sd": {
+            "type": "number"
+          },
+          "pair_log_slope": {
+            "type": "number"
+          },
+          "order_log_means": {
+            "type": "object",
+            "properties": {
+              "AB": {
+                "type": "number"
+              },
+              "BA": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "AB",
+              "BA"
+            ],
+            "additionalProperties": false
+          },
+          "order_log_contrast": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "session_id",
+          "phase",
+          "replicate_id",
+          "block_id",
+          "case_id",
+          "buffer_config",
+          "load_order",
+          "first_order",
+          "started_at",
+          "A",
+          "B",
+          "pair_logs",
+          "mean_log",
+          "speedup",
+          "pair_log_sd",
+          "pair_log_slope",
+          "order_log_means",
+          "order_log_contrast"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "phases": {
+      "type": "object",
+      "properties": {
+        "before": {
+          "type": "object",
+          "properties": {
+            "suite": {
+              "$ref": "#/$defs/effect"
+            },
+            "cases": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/effect"
+              }
+            },
+            "order_contrasts": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/effect"
+              }
+            },
+            "order_conditions": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "AB": {
+                    "$ref": "#/$defs/effect"
+                  },
+                  "BA": {
+                    "$ref": "#/$defs/effect"
+                  }
+                },
+                "required": [
+                  "AB",
+                  "BA"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "suite",
+            "cases",
+            "order_contrasts",
+            "order_conditions"
+          ],
+          "additionalProperties": false
+        },
+        "reverse": {
+          "type": "object",
+          "properties": {
+            "suite": {
+              "$ref": "#/$defs/effect"
+            },
+            "cases": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/effect"
+              }
+            },
+            "order_contrasts": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/effect"
+              }
+            },
+            "order_conditions": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "AB": {
+                    "$ref": "#/$defs/effect"
+                  },
+                  "BA": {
+                    "$ref": "#/$defs/effect"
+                  }
+                },
+                "required": [
+                  "AB",
+                  "BA"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "suite",
+            "cases",
+            "order_contrasts",
+            "order_conditions"
+          ],
+          "additionalProperties": false
+        },
+        "ab": {
+          "type": "object",
+          "properties": {
+            "suite": {
+              "$ref": "#/$defs/effect"
+            },
+            "cases": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/effect"
+              }
+            },
+            "order_contrasts": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/effect"
+              }
+            },
+            "order_conditions": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "AB": {
+                    "$ref": "#/$defs/effect"
+                  },
+                  "BA": {
+                    "$ref": "#/$defs/effect"
+                  }
+                },
+                "required": [
+                  "AB",
+                  "BA"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "suite",
+            "cases",
+            "order_contrasts",
+            "order_conditions"
+          ],
+          "additionalProperties": false
+        },
+        "after": {
+          "type": "object",
+          "properties": {
+            "suite": {
+              "$ref": "#/$defs/effect"
+            },
+            "cases": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/effect"
+              }
+            },
+            "order_contrasts": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/effect"
+              }
+            },
+            "order_conditions": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "AB": {
+                    "$ref": "#/$defs/effect"
+                  },
+                  "BA": {
+                    "$ref": "#/$defs/effect"
+                  }
+                },
+                "required": [
+                  "AB",
+                  "BA"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "suite",
+            "cases",
+            "order_contrasts",
+            "order_conditions"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "qualification": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "conditions": {
+            "type": "object",
+            "properties": {
+              "AB/normal/AB": {
+                "$ref": "#/$defs/effect"
+              },
+              "AB/normal/BA": {
+                "$ref": "#/$defs/effect"
+              },
+              "AB/swapped/AB": {
+                "$ref": "#/$defs/effect"
+              },
+              "AB/swapped/BA": {
+                "$ref": "#/$defs/effect"
+              },
+              "BA/normal/AB": {
+                "$ref": "#/$defs/effect"
+              },
+              "BA/normal/BA": {
+                "$ref": "#/$defs/effect"
+              },
+              "BA/swapped/AB": {
+                "$ref": "#/$defs/effect"
+              },
+              "BA/swapped/BA": {
+                "$ref": "#/$defs/effect"
+              }
+            },
+            "required": [
+              "AB/normal/AB",
+              "AB/normal/BA",
+              "AB/swapped/AB",
+              "AB/swapped/BA",
+              "BA/normal/AB",
+              "BA/normal/BA",
+              "BA/swapped/AB",
+              "BA/swapped/BA"
+            ],
+            "additionalProperties": false
+          },
+          "contrasts": {
+            "type": "object",
+            "properties": {
+              "load": {
+                "$ref": "#/$defs/effect"
+              },
+              "buffer": {
+                "$ref": "#/$defs/effect"
+              },
+              "order": {
+                "$ref": "#/$defs/effect"
+              }
+            },
+            "required": [
+              "load",
+              "buffer",
+              "order"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "conditions",
+          "contrasts"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "absolute_drift": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "qualification": {
+            "type": "object",
+            "properties": {
+              "session_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "buffer_configs": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "normal",
+                    "swapped"
+                  ]
+                }
+              },
+              "started_at": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "A_medians": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "B_medians": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "A_relative_range": {
+                "type": "number"
+              },
+              "B_relative_range": {
+                "type": "number"
+              },
+              "covariance": {
+                "type": "number"
+              },
+              "diagnostic_only": {
+                "const": true
+              }
+            },
+            "required": [
+              "session_ids",
+              "buffer_configs",
+              "started_at",
+              "A_medians",
+              "B_medians",
+              "A_relative_range",
+              "B_relative_range",
+              "covariance",
+              "diagnostic_only"
+            ],
+            "additionalProperties": false
+          },
+          "before": {
+            "type": "object",
+            "properties": {
+              "session_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "buffer_configs": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "normal",
+                    "swapped"
+                  ]
+                }
+              },
+              "started_at": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "A_medians": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "B_medians": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "A_relative_range": {
+                "type": "number"
+              },
+              "B_relative_range": {
+                "type": "number"
+              },
+              "covariance": {
+                "type": "number"
+              },
+              "diagnostic_only": {
+                "const": true
+              }
+            },
+            "required": [
+              "session_ids",
+              "buffer_configs",
+              "started_at",
+              "A_medians",
+              "B_medians",
+              "A_relative_range",
+              "B_relative_range",
+              "covariance",
+              "diagnostic_only"
+            ],
+            "additionalProperties": false
+          },
+          "reverse": {
+            "type": "object",
+            "properties": {
+              "session_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "buffer_configs": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "normal",
+                    "swapped"
+                  ]
+                }
+              },
+              "started_at": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "A_medians": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "B_medians": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "A_relative_range": {
+                "type": "number"
+              },
+              "B_relative_range": {
+                "type": "number"
+              },
+              "covariance": {
+                "type": "number"
+              },
+              "diagnostic_only": {
+                "const": true
+              }
+            },
+            "required": [
+              "session_ids",
+              "buffer_configs",
+              "started_at",
+              "A_medians",
+              "B_medians",
+              "A_relative_range",
+              "B_relative_range",
+              "covariance",
+              "diagnostic_only"
+            ],
+            "additionalProperties": false
+          },
+          "ab": {
+            "type": "object",
+            "properties": {
+              "session_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "buffer_configs": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "normal",
+                    "swapped"
+                  ]
+                }
+              },
+              "started_at": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "A_medians": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "B_medians": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "A_relative_range": {
+                "type": "number"
+              },
+              "B_relative_range": {
+                "type": "number"
+              },
+              "covariance": {
+                "type": "number"
+              },
+              "diagnostic_only": {
+                "const": true
+              }
+            },
+            "required": [
+              "session_ids",
+              "buffer_configs",
+              "started_at",
+              "A_medians",
+              "B_medians",
+              "A_relative_range",
+              "B_relative_range",
+              "covariance",
+              "diagnostic_only"
+            ],
+            "additionalProperties": false
+          },
+          "after": {
+            "type": "object",
+            "properties": {
+              "session_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "buffer_configs": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "normal",
+                    "swapped"
+                  ]
+                }
+              },
+              "started_at": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "A_medians": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "B_medians": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "A_relative_range": {
+                "type": "number"
+              },
+              "B_relative_range": {
+                "type": "number"
+              },
+              "covariance": {
+                "type": "number"
+              },
+              "diagnostic_only": {
+                "const": true
+              }
+            },
+            "required": [
+              "session_ids",
+              "buffer_configs",
+              "started_at",
+              "A_medians",
+              "B_medians",
+              "A_relative_range",
+              "B_relative_range",
+              "covariance",
+              "diagnostic_only"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    "research_screen": {
+      "type": "object",
+      "properties": {
+        "evaluated": {
+          "type": "boolean"
+        },
+        "suite_lcb_at_least_1_03": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "max_case_point_regression": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "max_case_point_regression_at_most_0_03": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "quality_checks_pass": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "evaluated",
+        "suite_lcb_at_least_1_03",
+        "max_case_point_regression",
+        "max_case_point_regression_at_most_0_03",
+        "quality_checks_pass"
+      ],
+      "additionalProperties": false
+    },
+    "formal_admission": {
+      "const": "not_evaluated"
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "required": [
+    "protocol_version",
+    "analysis_version",
+    "manifest_hash",
+    "sessions_hash",
+    "case_attributes",
+    "measurement_quality",
+    "cells",
+    "phases",
+    "qualification",
+    "absolute_drift",
+    "research_screen",
+    "formal_admission",
+    "limitations"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "effect": {
+      "type": "object",
+      "properties": {
+        "n": {
+          "const": 6
+        },
+        "df": {
+          "const": 5
+        },
+        "log_effects": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "process_speedups": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "mean_log": {
+          "type": "number"
+        },
+        "log_sd": {
+          "type": "number"
+        },
+        "log_ci95": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "speedup": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "ci95": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "lcb95": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "latency_change": {
+          "type": "number"
+        },
+        "latency_change_ci95": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "direction_counts": {
+          "type": "object",
+          "properties": {
+            "faster": {
+              "type": "integer"
+            },
+            "equal": {
+              "type": "integer"
+            },
+            "slower": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "faster",
+            "equal",
+            "slower"
+          ],
+          "additionalProperties": false
+        },
+        "speedup_range": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "reproducibility_status": {
+          "enum": [
+            "mixed_process_directions",
+            "requires_independence_and_condition_review"
+          ]
+        }
+      },
+      "required": [
+        "n",
+        "df",
+        "log_effects",
+        "process_speedups",
+        "mean_log",
+        "log_sd",
+        "log_ci95",
+        "speedup",
+        "ci95",
+        "lcb95",
+        "latency_change",
+        "latency_change_ci95",
+        "direction_counts",
+        "speedup_range",
+        "reproducibility_status"
+      ],
+      "additionalProperties": false
+    },
+    "series": {
+      "type": "object",
+      "properties": {
+        "mean": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "median": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "cv": {
+          "type": "number"
+        },
+        "minimum": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "maximum": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "required": [
+        "mean",
+        "median",
+        "cv",
+        "minimum",
+        "maximum"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

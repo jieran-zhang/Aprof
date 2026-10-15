@@ -1,0 +1,131 @@
+--- parent/op_host/cross_entropy_loss.asc
++++ candidate/op_host/cross_entropy_loss.asc
+@@ -9,4 +9,26 @@
+ #include "cross_entropy_loss_tiling.h"
+ #include "../op_kernel/cross_entropy_loss_kernel.asc"
+ namespace{void C(aclError r,const char*w){if(r!=ACL_SUCCESS)throw std::runtime_error(std::string(w)+": "+std::to_string(r));}std::string A(int n,char**v,const std::string&k,const std::string&d=""){for(int i=1;i+1<n;++i)if(v[i]==k)return v[i+1];return d;}std::vector<uint64_t>S(const std::string&s){std::vector<uint64_t>o;std::stringstream q(s);std::string x;while(std::getline(q,x,','))o.push_back(std::stoull(x));return o;}uint32_t DT(const std::string&s){if(s=="float16")return CE_F16;if(s=="float32")return CE_F32;if(s=="bfloat16")return CE_BF16;throw std::invalid_argument("dtype");}size_t I(uint32_t d){return d==CE_F32?4:2;}}
+-int main(int argc,char**argv){if(argc<2)return 2;int dev=2;bool init=false,set=false;aclrtStream st=nullptr;void*hx=nullptr,*ht=nullptr,*hy=nullptr,*dx=nullptr,*dt=nullptr,*dy=nullptr,*ds=nullptr,*dc=nullptr,*dtil=nullptr;try{auto sh=S(A(argc,argv,"--shape"));if(sh.size()<2||sh.size()>8)throw std::invalid_argument("rank");uint64_t N=sh[0],Cdim=sh[1],inner=1;for(size_t i=2;i<sh.size();++i)inner*=sh[i];uint32_t dtype=DT(A(argc,argv,"--dtype"));std::string red=A(argc,argv,"--reduction","mean");uint32_t reduction=red=="none"?0:(red=="mean"?1:2);int64_t ignore=std::stoll(A(argc,argv,"--ignore","-100"));size_t item=I(dtype),xb=N*Cdim*inner*item,tb=N*inner*8,yb=(reduction==0?N*inner:1)*item;dev=std::stoi(A(argc,argv,"--device","2"));C(aclInit(nullptr),"init");init=true;C(aclrtSetDevice(dev),"set");set=true;int64_t cores=1;C(aclrtGetDeviceInfo(dev,ACL_DEV_ATTR_VECTOR_CORE_NUM,&cores),"cores");auto til=ComputeCe(N,Cdim,inner,dtype,reduction,ignore,cores);C(aclrtCreateStream(&st),"stream");auto mh=[&](void**p,size_t n){C(aclrtMallocHost(p,n),"mh");};auto md=[&](void**p,size_t n){C(aclrtMalloc(p,n,ACL_MEM_MALLOC_HUGE_FIRST),"md");};mh(&hx,xb);mh(&ht,tb);mh(&hy,yb);md(&dx,xb);md(&dt,tb);md(&dy,yb);md(&ds,til.positions*4);md(&dc,til.positions*4);md(&dtil,sizeof(til));if(!ReadFile(A(argc,argv,"--input"),hx,xb)||!ReadFile(A(argc,argv,"--target"),ht,tb))throw std::runtime_error("read");C(aclrtMemcpy(dx,xb,hx,xb,ACL_MEMCPY_HOST_TO_DEVICE),"x");C(aclrtMemcpy(dt,tb,ht,tb,ACL_MEMCPY_HOST_TO_DEVICE),"t");C(aclrtMemcpy(dtil,sizeof(til),&til,sizeof(til),ACL_MEMCPY_HOST_TO_DEVICE),"til");if(reduction==0)cross_entropy_kernel<<<til.blockNum,nullptr,st>>>(static_cast<uint8_t*>(dx),static_cast<uint8_t*>(dt),static_cast<uint8_t*>(dy),static_cast<uint8_t*>(ds),static_cast<uint8_t*>(dc),static_cast<uint8_t*>(dtil));else cross_entropy_reduce<<<1,nullptr,st>>>(static_cast<uint8_t*>(dx),static_cast<uint8_t*>(dt),static_cast<uint8_t*>(dy),static_cast<uint8_t*>(ds),static_cast<uint8_t*>(dc),static_cast<uint8_t*>(dtil));C(aclrtSynchronizeStream(st),"kernel");C(aclrtMemcpy(hy,yb,dy,yb,ACL_MEMCPY_DEVICE_TO_HOST),"out");if(!WriteFile(A(argc,argv,"--output"),hy,yb))throw std::runtime_error("write");std::cout<<"cross_entropy_loss completed positions="<<til.positions<<" C="<<til.C<<"\n";for(void*p:{dtil,dc,ds,dy,dt,dx})aclrtFree(p);for(void*p:{hy,ht,hx})aclrtFreeHost(p);aclrtDestroyStream(st);aclrtResetDevice(dev);aclFinalize();return 0;}catch(const std::exception&e){std::cerr<<e.what()<<"\n";return 1;}}
++int main(int argc,char**argv){if(argc<2)return 2;int dev=2;bool init=false,set=false;aclrtStream st=nullptr;void*hx=nullptr,*ht=nullptr,*hy=nullptr,*dx=nullptr,*dt=nullptr,*dy=nullptr,*ds=nullptr,*dc=nullptr,*dtil=nullptr;try{auto sh=S(A(argc,argv,"--shape"));if(sh.size()<2||sh.size()>8)throw std::invalid_argument("rank");uint64_t N=sh[0],Cdim=sh[1],inner=1;for(size_t i=2;i<sh.size();++i)inner*=sh[i];uint32_t dtype=DT(A(argc,argv,"--dtype"));std::string red=A(argc,argv,"--reduction","mean");uint32_t reduction=red=="none"?0:(red=="mean"?1:2);int64_t ignore=std::stoll(A(argc,argv,"--ignore","-100"));size_t item=I(dtype),xb=N*Cdim*inner*item,tb=N*inner*8,yb=(reduction==0?N*inner:1)*item;dev=std::stoi(A(argc,argv,"--device","2"));C(aclInit(nullptr),"init");init=true;C(aclrtSetDevice(dev),"set");set=true;int64_t cores=1;C(aclrtGetDeviceInfo(dev,ACL_DEV_ATTR_VECTOR_CORE_NUM,&cores),"cores");auto til=ComputeCe(N,Cdim,inner,dtype,reduction,ignore,cores);C(aclrtCreateStream(&st),"stream");auto mh=[&](void**p,size_t n){C(aclrtMallocHost(p,n),"mh");};auto md=[&](void**p,size_t n){C(aclrtMalloc(p,n,ACL_MEM_MALLOC_HUGE_FIRST),"md");};mh(&hx,xb);mh(&ht,tb);mh(&hy,yb);md(&dx,xb);md(&dt,tb);md(&dy,yb);md(&ds,til.positions*4);md(&dc,til.positions*4);md(&dtil,sizeof(til));if(!ReadFile(A(argc,argv,"--input"),hx,xb)||!ReadFile(A(argc,argv,"--target"),ht,tb))throw std::runtime_error("read");C(aclrtMemcpy(dx,xb,hx,xb,ACL_MEMCPY_HOST_TO_DEVICE),"x");C(aclrtMemcpy(dt,tb,ht,tb,ACL_MEMCPY_HOST_TO_DEVICE),"t");C(aclrtMemcpy(dtil,sizeof(til),&til,sizeof(til),ACL_MEMCPY_HOST_TO_DEVICE),"til");const uint64_t lanes=32/item;
++const bool gatherSafe=inner==1 || inner>=lanes;
++// Two baseline-sized arrays reserve positions floats each. Each producer needs16 floats.
++const bool workspaceSafe=til.positions>=768; //16*48, independent of runtime core visibility.
++const uint64_t tilingKey=reduction==0 && inner==1?10:(reduction==0 && gatherSafe?11:(reduction!=0 && gatherSafe && workspaceSafe?12:0));
++if(tilingKey==10){
++std::cout<<"APROF_DISPATCH_JSON:{\"tiling_key\":10,\"kernel_entry\":\"cross_entropy_loss_none_contiguous\"}\n";
++cross_entropy_loss_none_contiguous<<<til.blockNum,nullptr,st>>>(static_cast<uint8_t*>(dx),static_cast<uint8_t*>(dt),static_cast<uint8_t*>(dy),static_cast<uint8_t*>(ds),static_cast<uint8_t*>(dc),static_cast<uint8_t*>(dtil));
++}
++else if(tilingKey==11){
++std::cout<<"APROF_DISPATCH_JSON:{\"tiling_key\":11,\"kernel_entry\":\"cross_entropy_loss_none_strided\"}\n";
++cross_entropy_loss_none_strided<<<til.blockNum,nullptr,st>>>(static_cast<uint8_t*>(dx),static_cast<uint8_t*>(dt),static_cast<uint8_t*>(dy),static_cast<uint8_t*>(ds),static_cast<uint8_t*>(dc),static_cast<uint8_t*>(dtil));
++}
++else if(tilingKey==12){
++std::cout<<"APROF_DISPATCH_JSON:{\"tiling_key\":12,\"kernel_entry\":\"cross_entropy_loss_reduced_parallel\"}\n";
++cross_entropy_loss_reduced_parallel<<<til.blockNum,nullptr,st>>>(static_cast<uint8_t*>(dx),static_cast<uint8_t*>(dt),static_cast<uint8_t*>(dy),static_cast<uint8_t*>(ds),static_cast<uint8_t*>(dc),static_cast<uint8_t*>(dtil));
++cross_entropy_finish<<<1,nullptr,st>>>(static_cast<uint8_t*>(dy),static_cast<uint8_t*>(ds),static_cast<uint8_t*>(dc),static_cast<uint8_t*>(dtil));
++}
++else{
++std::cout<<"APROF_DISPATCH_JSON:{\"tiling_key\":0,\"kernel_entry\":\"cross_entropy_loss_generic\"}\n";
++cross_entropy_loss_generic<<<(reduction==0?til.blockNum:1),nullptr,st>>>(static_cast<uint8_t*>(dx),static_cast<uint8_t*>(dt),static_cast<uint8_t*>(dy),static_cast<uint8_t*>(ds),static_cast<uint8_t*>(dc),static_cast<uint8_t*>(dtil));
++}
++C(aclrtSynchronizeStream(st),"kernel");C(aclrtMemcpy(hy,yb,dy,yb,ACL_MEMCPY_DEVICE_TO_HOST),"out");if(!WriteFile(A(argc,argv,"--output"),hy,yb))throw std::runtime_error("write");std::cout<<"cross_entropy_loss completed positions="<<til.positions<<" C="<<til.C<<"\n";for(void*p:{dtil,dc,ds,dy,dt,dx})aclrtFree(p);for(void*p:{hy,ht,hx})aclrtFreeHost(p);aclrtDestroyStream(st);aclrtResetDevice(dev);aclFinalize();return 0;}catch(const std::exception&e){std::cerr<<e.what()<<"\n";return 1;}}
+--- parent/op_kernel/cross_entropy_loss_kernel.asc
++++ candidate/op_kernel/cross_entropy_loss_kernel.asc
+@@ -5,13 +5,83 @@
+ template<typename T>class KernelCE{public:
+  __aicore__ inline void Init(GM_ADDR x,GM_ADDR target,GM_ADDR y,GM_ADDR sums,GM_ADDR counts,const __gm__ CeTiling*t){t_=t;x_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(x));target_.SetGlobalBuffer(reinterpret_cast<__gm__ int64_t*>(target),t_->positions);y_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(y));sums_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sums),t_->positions);counts_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(counts),t_->positions);uint32_t raw=(t_->alignedC+4096)*sizeof(T),fp=t_->alignedC*sizeof(float);pipe_.InitBuffer(rawBuf_,raw);if constexpr(!std::is_same<T,float>::value)pipe_.InitBuffer(fpBuf_,fp);pipe_.InitBuffer(workBuf_,4096);pipe_.InitBuffer(scalarBuf_,32);begin_=static_cast<uint64_t>(AscendC::GetBlockIdx())*t_->posPerBlock;uint64_t r=t_->positions>begin_?t_->positions-begin_:0;num_=r<t_->posPerBlock?r:t_->posPerBlock;}
+  __aicore__ inline void Process(){for(uint64_t i=0;i<num_;++i){uint64_t p=begin_+i;int64_t label=target_.GetValue(p);if(label==t_->ignoreIndex){Store(p,0);continue;}Store(p,One(p,label));}}
+- __aicore__ inline void ProcessReduce(){if(AscendC::GetBlockIdx()!=0)return;float total=0.0f,valid=0.0f;for(uint64_t p=0;p<t_->positions;++p){int64_t label=target_.GetValue(p);if(label==t_->ignoreIndex)continue;total+=One(p,label);valid+=1.0f;}if(t_->reduction==1)total=valid>0.0f?total/valid:0.0f;Store(0,total);}
++ __aicore__ inline void ProcessReduce(){
++  if(AscendC::GetBlockIdx()!=0)return;
++  // Short low-precision sums retain a 32-lane reduction with a cast at each accumulation.
++  if constexpr(!std::is_same<T,float>::value){
++   if(t_->reduction==2 && t_->positions<=64){
++    float lane[32]={};uint32_t n=0;
++    for(uint64_t p=0;p<t_->positions;++p){int64_t label=target_.GetValue(p);if(label==t_->ignoreIndex)continue;
++     float loss=RoundLow(One(p,label));
++     uint32_t j=n++%32;lane[j]=RoundLow(lane[j]+loss);}
++    float total=0.0f;for(uint32_t j=0;j<32;++j)total=RoundLow(total+lane[j]);
++    Store(0,total);return;
++   }
++  }
++  float total=0.0f,valid=0.0f;
++  for(uint64_t p=0;p<t_->positions;++p){int64_t label=target_.GetValue(p);if(label==t_->ignoreIndex)continue;total+=One(p,label);valid+=1.0f;}
++  if(t_->reduction==1)total=valid>0.0f?total/valid:__builtin_nanf("");Store(0,total);
++ }
++ __aicore__ inline void ProcessPartial(){
++  float total=0.0f,valid=0.0f;
++  if constexpr(!std::is_same<T,float>::value){
++   if(t_->reduction==2 && num_<=32){
++    for(uint64_t i=0;i<num_;++i){const uint64_t p=begin_+i;const int64_t label=target_.GetValue(p);if(label==t_->ignoreIndex)continue;
++     float loss=RoundLow(One(p,label));
++     total=RoundLow(total+loss);valid+=1.0f;}
++   }else{
++    for(uint64_t i=0;i<num_;++i){const uint64_t p=begin_+i;const int64_t label=target_.GetValue(p);if(label==t_->ignoreIndex)continue;total+=One(p,label);valid+=1.0f;}
++   }
++  }else{
++   for(uint64_t i=0;i<num_;++i){const uint64_t p=begin_+i;const int64_t label=target_.GetValue(p);if(label==t_->ignoreIndex)continue;total+=One(p,label);valid+=1.0f;}
++  }
++  auto scalar=scalarBuf_.Get<float>();
++  // Each AIV owns a separate 64-byte workspace slot. Short MTE stores
++  // cannot share another core's cache line, including tiny-position tails.
++  const uint64_t slot=static_cast<uint64_t>(AscendC::GetBlockIdx())*16;
++  AscendC::DataCopyExtParams cp{1,4,0,0,0};
++  scalar.SetValue(0,total);AscendC::PipeBarrier<PIPE_ALL>();AscendC::DataCopyPad(sums_[slot],scalar,cp);AscendC::PipeBarrier<PIPE_ALL>();
++  scalar.SetValue(0,valid);AscendC::PipeBarrier<PIPE_ALL>();AscendC::DataCopyPad(counts_[slot],scalar,cp);AscendC::PipeBarrier<PIPE_ALL>();
++ }
++ __aicore__ inline float RoundLow(float value){
++  auto scalar=scalarBuf_.Get<float>();auto low=rawBuf_.Get<T>();
++  scalar.SetValue(0,value);AscendC::PipeBarrier<PIPE_ALL>();
++  constexpr auto mode=std::is_same<T,bfloat16_t>::value?AscendC::RoundMode::CAST_ROUND:AscendC::RoundMode::CAST_NONE;
++  AscendC::Cast(low,scalar,mode,1);AscendC::PipeBarrier<PIPE_ALL>();
++  AscendC::Cast(scalar,low,AscendC::RoundMode::CAST_NONE,1);AscendC::PipeBarrier<PIPE_ALL>();
++  return scalar.GetValue(0);
++ }
+ private:
+- __aicore__ inline void Gather(const AscendC::LocalTensor<T>&dst,uint64_t p){uint64_t innerIdx=p%t_->inner,outer=p/t_->inner;if(t_->inner==1){AscendC::DataCopyExtParams cp{1,static_cast<uint32_t>(t_->C*sizeof(T)),0,0,0};AscendC::DataCopyPad(dst,x_[outer*t_->C],cp,AscendC::DataCopyPadExtParams<T>{true,0,0,static_cast<T>(0)});AscendC::PipeBarrier<PIPE_ALL>();return;}constexpr uint32_t lanes=32/sizeof(T),maxBlocks=256;uint64_t group;if(t_->inner>=lanes){group=(innerIdx/lanes)*lanes;if(group+lanes>t_->inner)group=t_->inner-lanes;}else group=0;uint32_t lane=static_cast<uint32_t>(innerIdx-group);auto gathered=dst[t_->alignedC];uint64_t done=0;while(done<t_->C){uint32_t blocks=static_cast<uint32_t>((t_->C-done)<maxBlocks?(t_->C-done):maxBlocks);AscendC::DataCopyExtParams cp{static_cast<uint16_t>(blocks),32,static_cast<uint32_t>((t_->inner-lanes)*sizeof(T)),0,0};AscendC::DataCopyPad(gathered,x_[outer*t_->C*t_->inner+group+done*t_->inner],cp,AscendC::DataCopyPadExtParams<T>{true,0,0,static_cast<T>(0)});AscendC::PipeBarrier<PIPE_ALL>();for(uint32_t b=0;b<blocks;++b)dst.SetValue(done+b,gathered.GetValue(b*lanes+lane));AscendC::PipeBarrier<PIPE_ALL>();done+=blocks;}}
++ __aicore__ inline void Gather(const AscendC::LocalTensor<T>&dst,uint64_t p){uint64_t innerIdx=p%t_->inner,outer=p/t_->inner;if(t_->inner==1){AscendC::DataCopyExtParams cp{1,static_cast<uint32_t>(t_->C*sizeof(T)),0,0,0};AscendC::DataCopyPad(dst,x_[outer*t_->C],cp,AscendC::DataCopyPadExtParams<T>{true,0,0,static_cast<T>(0)});AscendC::PipeBarrier<PIPE_ALL>();return;}constexpr uint32_t lanes=32/sizeof(T),maxBlocks=256;
++ // Generic correctness path for inner strides that cannot form a legal
++ // 32-byte class-plane burst. Every scalar address remains within the row.
++ if(t_->inner<lanes || t_->inner-lanes>0xffffffffULL/sizeof(T)){for(uint64_t c=0;c<t_->C;++c)dst.SetValue(c,x_.GetValue(outer*t_->C*t_->inner+c*t_->inner+innerIdx));AscendC::PipeBarrier<PIPE_ALL>();return;}
++ uint64_t group;if(t_->inner>=lanes){group=(innerIdx/lanes)*lanes;if(group+lanes>t_->inner)group=t_->inner-lanes;}else group=0;uint32_t lane=static_cast<uint32_t>(innerIdx-group);auto gathered=dst[t_->alignedC];uint64_t done=0;while(done<t_->C){uint32_t blocks=static_cast<uint32_t>((t_->C-done)<maxBlocks?(t_->C-done):maxBlocks);AscendC::DataCopyExtParams cp{static_cast<uint16_t>(blocks),32,static_cast<uint32_t>((t_->inner-lanes)*sizeof(T)),0,0};AscendC::DataCopyPad(gathered,x_[outer*t_->C*t_->inner+group+done*t_->inner],cp,AscendC::DataCopyPadExtParams<T>{true,0,0,static_cast<T>(0)});AscendC::PipeBarrier<PIPE_ALL>();for(uint32_t b=0;b<blocks;++b)dst.SetValue(done+b,gathered.GetValue(b*lanes+lane));AscendC::PipeBarrier<PIPE_ALL>();done+=blocks;}}
+  __aicore__ inline float One(uint64_t p,int64_t label){auto raw=rawBuf_.Get<T>();Gather(raw,p);AscendC::LocalTensor<float>v;if constexpr(std::is_same<T,float>::value)v=raw;else{v=fpBuf_.Get<float>();AscendC::Cast(v,raw,AscendC::RoundMode::CAST_NONE,static_cast<uint32_t>(t_->C));AscendC::PipeBarrier<PIPE_ALL>();}float chosen=v.GetValue(label);auto work=workBuf_.Get<float>();auto scalar=scalarBuf_.Get<float>();const uint32_t n=static_cast<uint32_t>(t_->C);AscendC::ReduceMax(scalar,v,work,n,false);AscendC::PipeBarrier<PIPE_ALL>();float mx=scalar.GetValue(0);AscendC::Adds(v,v,-mx,n);AscendC::PipeBarrier<PIPE_V>();AscendC::Exp(v,v,n);AscendC::PipeBarrier<PIPE_V>();AscendC::ReduceSum(scalar,v,work,n);AscendC::PipeBarrier<PIPE_ALL>();float total=scalar.GetValue(0);AscendC::Duplicate(scalar,total,1);AscendC::PipeBarrier<PIPE_V>();AscendC::Ln(scalar,scalar,1);AscendC::PipeBarrier<PIPE_ALL>();return scalar.GetValue(0)+mx-chosen;}
+  __aicore__ inline void Store(uint64_t p,float value){auto scalar=scalarBuf_.Get<float>();scalar.SetValue(0,value);AscendC::PipeBarrier<PIPE_ALL>();AscendC::DataCopyExtParams cp{1,static_cast<uint32_t>(sizeof(T)),0,0,0};if constexpr(std::is_same<T,float>::value)AscendC::DataCopyPad(y_[p],scalar,cp);else{auto raw=rawBuf_.Get<T>();constexpr auto mode=std::is_same<T,bfloat16_t>::value?AscendC::RoundMode::CAST_ROUND:AscendC::RoundMode::CAST_NONE;AscendC::Cast(raw,scalar,mode,1);AscendC::PipeBarrier<PIPE_ALL>();AscendC::DataCopyPad(y_[p],raw,cp);}}
+  AscendC::TPipe pipe_;const __gm__ CeTiling*t_;AscendC::GlobalTensor<T>x_,y_;AscendC::GlobalTensor<int64_t>target_;AscendC::GlobalTensor<float>sums_,counts_;uint64_t begin_,num_;AscendC::TBuf<AscendC::TPosition::VECCALC>rawBuf_,fpBuf_,workBuf_,scalarBuf_;};
+-template<typename T>__aicore__ inline void Finish(GM_ADDR y,GM_ADDR sums,GM_ADDR counts,const __gm__ CeTiling*t){if(AscendC::GetBlockIdx()!=0)return;AscendC::GlobalTensor<float>s,c;s.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sums),t->positions);c.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(counts),t->positions);AscendC::TPipe pipe;AscendC::TBuf<AscendC::TPosition::VECCALC>copyBuf,fpBuf,rawBuf;constexpr uint32_t tile=1024;pipe.InitBuffer(copyBuf,tile*sizeof(float));pipe.InitBuffer(fpBuf,32);if constexpr(!std::is_same<T,float>::value)pipe.InitBuffer(rawBuf,32);auto local=copyBuf.Get<float>();float total=0,n=0;for(uint64_t off=0;off<t->positions;off+=tile){uint32_t len=static_cast<uint32_t>((t->positions-off)<tile?(t->positions-off):tile);AscendC::DataCopyExtParams in{1,static_cast<uint32_t>(len*sizeof(float)),0,0,0};AscendC::DataCopyPad(local,s[off],in,AscendC::DataCopyPadExtParams<float>{true,0,0,0.0f});AscendC::PipeBarrier<PIPE_ALL>();for(uint32_t j=0;j<len;++j)total+=local.GetValue(j);AscendC::DataCopyPad(local,c[off],in,AscendC::DataCopyPadExtParams<float>{true,0,0,0.0f});AscendC::PipeBarrier<PIPE_ALL>();for(uint32_t j=0;j<len;++j)n+=local.GetValue(j);}if(t->reduction==1)total=n>0?total/n:0;auto fp=fpBuf.Get<float>();fp.SetValue(0,total);AscendC::PipeBarrier<PIPE_ALL>();AscendC::GlobalTensor<T>out;out.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(y),1);AscendC::DataCopyExtParams cp{1,static_cast<uint32_t>(sizeof(T)),0,0,0};if constexpr(std::is_same<T,float>::value)AscendC::DataCopyPad(out[0],fp,cp);else{auto raw=rawBuf.Get<T>();constexpr auto mode=std::is_same<T,bfloat16_t>::value?AscendC::RoundMode::CAST_ROUND:AscendC::RoundMode::CAST_NONE;AscendC::Cast(raw,fp,mode,1);AscendC::PipeBarrier<PIPE_ALL>();AscendC::DataCopyPad(out[0],raw,cp);}}
++template<typename T>__aicore__ inline void Finish(GM_ADDR y,GM_ADDR sums,GM_ADDR counts,const __gm__ CeTiling*t){
++ if(AscendC::GetBlockIdx()!=0)return;
++ AscendC::GlobalTensor<float>s,c;s.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sums),t->positions);c.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(counts),t->positions);
++ AscendC::TPipe pipe;AscendC::TBuf<AscendC::TPosition::VECCALC>copyBuf,fpBuf,rawBuf;pipe.InitBuffer(copyBuf,32);pipe.InitBuffer(fpBuf,32);if constexpr(!std::is_same<T,float>::value)pipe.InitBuffer(rawBuf,32);
++ auto local=copyBuf.Get<float>();float total=0.0f,n=0.0f;
++ for(uint32_t block=0;block<t->blockNum;++block){
++  AscendC::DataCopyExtParams in{1,4,0,0,0};
++  AscendC::DataCopyPad(local,s[block*16],in,AscendC::DataCopyPadExtParams<float>{true,0,0,0.0f});AscendC::PipeBarrier<PIPE_ALL>();total+=local.GetValue(0);
++  AscendC::DataCopyPad(local,c[block*16],in,AscendC::DataCopyPadExtParams<float>{true,0,0,0.0f});AscendC::PipeBarrier<PIPE_ALL>();n+=local.GetValue(0);
++ }
++ if(t->reduction==1)total=n>0?total/n:__builtin_nanf("");
++ auto fp=fpBuf.Get<float>();fp.SetValue(0,total);AscendC::PipeBarrier<PIPE_ALL>();AscendC::GlobalTensor<T>out;out.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(y),1);AscendC::DataCopyExtParams cp{1,static_cast<uint32_t>(sizeof(T)),0,0,0};
++ if constexpr(std::is_same<T,float>::value)AscendC::DataCopyPad(out[0],fp,cp);else{auto raw=rawBuf.Get<T>();constexpr auto mode=std::is_same<T,bfloat16_t>::value?AscendC::RoundMode::CAST_ROUND:AscendC::RoundMode::CAST_NONE;AscendC::Cast(raw,fp,mode,1);AscendC::PipeBarrier<PIPE_ALL>();AscendC::DataCopyPad(out[0],raw,cp);}
++}
+ extern "C" __global__ __aicore__ __attribute__((aiv)) void cross_entropy_kernel(GM_ADDR x,GM_ADDR target,GM_ADDR y,GM_ADDR sums,GM_ADDR counts,GM_ADDR ta){const __gm__ CeTiling*t=reinterpret_cast<const __gm__ CeTiling*>(ta);if(t->dtype==CE_F16){KernelCE<half>o;o.Init(x,target,y,sums,counts,t);o.Process();}else if(t->dtype==CE_F32){KernelCE<float>o;o.Init(x,target,y,sums,counts,t);o.Process();}else{KernelCE<bfloat16_t>o;o.Init(x,target,y,sums,counts,t);o.Process();}}
+ extern "C" __global__ __aicore__ __attribute__((aiv)) void cross_entropy_reduce(GM_ADDR x,GM_ADDR target,GM_ADDR y,GM_ADDR sums,GM_ADDR counts,GM_ADDR ta){const __gm__ CeTiling*t=reinterpret_cast<const __gm__ CeTiling*>(ta);if(t->dtype==CE_F16){KernelCE<half>o;o.Init(x,target,y,sums,counts,t);o.ProcessReduce();}else if(t->dtype==CE_F32){KernelCE<float>o;o.Init(x,target,y,sums,counts,t);o.ProcessReduce();}else{KernelCE<bfloat16_t>o;o.Init(x,target,y,sums,counts,t);o.ProcessReduce();}}
+ extern "C" __global__ __aicore__ __attribute__((aiv)) void cross_entropy_finish(GM_ADDR y,GM_ADDR sums,GM_ADDR counts,GM_ADDR ta){const __gm__ CeTiling*t=reinterpret_cast<const __gm__ CeTiling*>(ta);if(t->dtype==CE_F16)Finish<half>(y,sums,counts,t);else if(t->dtype==CE_F32)Finish<float>(y,sums,counts,t);else Finish<bfloat16_t>(y,sums,counts,t);}
++
++extern "C" __global__ __aicore__ __attribute__((aiv)) void cross_entropy_loss_none_contiguous(GM_ADDR x,GM_ADDR target,GM_ADDR y,GM_ADDR sums,GM_ADDR counts,GM_ADDR ta){const __gm__ CeTiling*t=reinterpret_cast<const __gm__ CeTiling*>(ta);if(t->dtype==CE_F16){KernelCE<half>o;o.Init(x,target,y,sums,counts,t);o.Process();}else if(t->dtype==CE_F32){KernelCE<float>o;o.Init(x,target,y,sums,counts,t);o.Process();}else{KernelCE<bfloat16_t>o;o.Init(x,target,y,sums,counts,t);o.Process();}}
++
++extern "C" __global__ __aicore__ __attribute__((aiv)) void cross_entropy_loss_none_strided(GM_ADDR x,GM_ADDR target,GM_ADDR y,GM_ADDR sums,GM_ADDR counts,GM_ADDR ta){const __gm__ CeTiling*t=reinterpret_cast<const __gm__ CeTiling*>(ta);if(t->dtype==CE_F16){KernelCE<half>o;o.Init(x,target,y,sums,counts,t);o.Process();}else if(t->dtype==CE_F32){KernelCE<float>o;o.Init(x,target,y,sums,counts,t);o.Process();}else{KernelCE<bfloat16_t>o;o.Init(x,target,y,sums,counts,t);o.Process();}}
++
++extern "C" __global__ __aicore__ __attribute__((aiv)) void cross_entropy_loss_reduced_parallel(GM_ADDR x,GM_ADDR target,GM_ADDR y,GM_ADDR sums,GM_ADDR counts,GM_ADDR ta){const __gm__ CeTiling*t=reinterpret_cast<const __gm__ CeTiling*>(ta);if(t->dtype==CE_F16){KernelCE<half>o;o.Init(x,target,y,sums,counts,t);o.ProcessPartial();}else if(t->dtype==CE_F32){KernelCE<float>o;o.Init(x,target,y,sums,counts,t);o.ProcessPartial();}else{KernelCE<bfloat16_t>o;o.Init(x,target,y,sums,counts,t);o.ProcessPartial();}}
++
++extern "C" __global__ __aicore__ __attribute__((aiv)) void cross_entropy_loss_generic(GM_ADDR x,GM_ADDR target,GM_ADDR y,GM_ADDR sums,GM_ADDR counts,GM_ADDR ta){const __gm__ CeTiling*t=reinterpret_cast<const __gm__ CeTiling*>(ta);if(t->dtype==CE_F16){KernelCE<half>o;o.Init(x,target,y,sums,counts,t);if(t->reduction==0)o.Process();else o.ProcessReduce();}else if(t->dtype==CE_F32){KernelCE<float>o;o.Init(x,target,y,sums,counts,t);if(t->reduction==0)o.Process();else o.ProcessReduce();}else{KernelCE<bfloat16_t>o;o.Init(x,target,y,sums,counts,t);if(t->reduction==0)o.Process();else o.ProcessReduce();}}
+--- parent/op_kernel/cross_entropy_loss_tiling.h
++++ candidate/op_kernel/cross_entropy_loss_tiling.h
+@@ -4,4 +4,8 @@
+ #include <stdexcept>
+ enum CeDType:uint32_t{CE_F16=0,CE_F32=1,CE_BF16=2};
+ struct CeTiling{uint64_t N,C,inner,positions,posPerBlock;uint32_t blockNum,dtype,reduction,alignedC;int64_t ignoreIndex;};
+-inline CeTiling ComputeCe(uint64_t N,uint64_t C,uint64_t inner,uint32_t dtype,uint32_t reduction,int64_t ignore,int64_t cores){if(!N||!C||C>16384||!inner)throw std::invalid_argument("invalid shape");CeTiling t{};t.N=N;t.C=C;t.inner=inner;t.positions=N*inner;t.dtype=dtype;t.reduction=reduction;t.ignoreIndex=ignore;t.alignedC=((C+63)/64)*64;t.blockNum=static_cast<uint32_t>(std::min<uint64_t>(t.positions,std::max<int64_t>(1,cores)));t.posPerBlock=(t.positions+t.blockNum-1)/t.blockNum;return t;}
++inline CeTiling ComputeCe(uint64_t N,uint64_t C,uint64_t inner,uint32_t dtype,uint32_t reduction,int64_t ignore,int64_t cores){if(!N||!C||C>16384||!inner)throw std::invalid_argument("invalid shape");CeTiling t{};t.N=N;t.C=C;t.inner=inner;t.positions=N*inner;t.dtype=dtype;t.reduction=reduction;t.ignoreIndex=ignore;t.alignedC=((C+63)/64)*64;t.blockNum=static_cast<uint32_t>(std::min<uint64_t>(t.positions,std::max<int64_t>(1,std::min<int64_t>(cores,48))));t.posPerBlock=(t.positions+t.blockNum-1)/t.blockNum;
++// For unreduced outputs each block owns full 64-byte lines, except the sole
++// final tail. Reduced outputs use private 64-byte workspace records instead.
++if(reduction==0){const uint64_t align=64/(dtype==CE_F32?4:2);t.posPerBlock=((t.posPerBlock+align-1)/align)*align;t.blockNum=(t.positions+t.posPerBlock-1)/t.posPerBlock;}
++return t;}

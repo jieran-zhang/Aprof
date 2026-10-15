@@ -1,0 +1,44 @@
+--- parent/op_kernel/resize_bilinear_kernel.asc
++++ candidate/op_kernel/resize_bilinear_kernel.asc
+@@ -27,9 +27,17 @@
+   t_=t;x_=reinterpret_cast<const __gm__ T*>(xa);y_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(ya),t->outputNumel);
+   pipe_.InitBuffer(fp_,K*sizeof(float));
+   if constexpr(!std::is_same<T,float>::value)pipe_.InitBuffer(raw_,K*sizeof(T));
++  pipe_.InitBuffer(columns_,K*sizeof(int32_t));pipe_.InitBuffer(fractions_,K*sizeof(float));
+  }
+  __aicore__ inline void Process(){
+   const uint64_t rows=t_->n*t_->c*t_->outH;auto fp=fp_.Get<float>();
++  auto columns=columns_.Get<int32_t>();auto fractions=fractions_.Get<float>();
++  // Horizontal geometry depends only on output column and is reused across rows.
++  if(t_->outW<=K){for(uint32_t w=0;w<t_->outW;++w){
++   const float coord=ResizeCoord(w,t_->inWf,t_->outWf,t_->alignCorners);
++   const int32_t col=static_cast<int32_t>(ResizeFloor(coord));
++   columns.SetValue(w,col);fractions.SetValue(w,coord-float(col));
++  }AscendC::PipeBarrier<PIPE_ALL>();}
+   for(uint64_t row=AscendC::GetBlockIdx();row<rows;row+=t_->blockNum){
+    const uint64_t nc=row/t_->outH,oh=row%t_->outH;
+    const float ih=ResizeCoord(oh,t_->inHf,t_->outHf,t_->alignCorners);
+@@ -39,9 +47,11 @@
+    for(uint64_t off=0;off<t_->outW;off+=K){
+     const uint32_t count=uint32_t(t_->outW-off<K?t_->outW-off:K);
+     for(uint32_t k=0;k<count;++k){
+-     const float iw=ResizeCoord(off+k,t_->inWf,t_->outWf,t_->alignCorners);
+-     const int64_t w0=ResizeFloor(iw);int64_t w1=w0+1;if(uint64_t(w1)>=t_->inW)w1=w0;
+-     const float dw=iw-float(w0),aw=1.0f-dw;
++     int64_t w0;float dw;
++     if(t_->outW<=K){w0=columns.GetValue(off+k);dw=fractions.GetValue(off+k);}
++     else{const float iw=ResizeCoord(off+k,t_->inWf,t_->outWf,t_->alignCorners);w0=ResizeFloor(iw);dw=iw-float(w0);}
++     int64_t w1=w0+1;if(uint64_t(w1)>=t_->inW)w1=w0;
++     const float aw=1.0f-dw;
+      const float a=ResizeToFloat<T>(x_[base+uint64_t(h0)*t_->inW+uint64_t(w0)]);
+      const float b=ResizeToFloat<T>(x_[base+uint64_t(h0)*t_->inW+uint64_t(w1)]);
+      const float c=ResizeToFloat<T>(x_[base+uint64_t(h1)*t_->inW+uint64_t(w0)]);
+@@ -66,7 +76,7 @@
+  static constexpr uint32_t K=1024;
+  const __gm__ ResizeBilinearTilingData*t_;const __gm__ T*x_;
+  AscendC::GlobalTensor<T>y_;AscendC::TPipe pipe_;
+- AscendC::TBuf<AscendC::TPosition::VECCALC>fp_,raw_;
++ AscendC::TBuf<AscendC::TPosition::VECCALC>fp_,raw_,columns_,fractions_;
+ };
+ 
+ extern "C" __global__ __aicore__ __attribute__((aiv)) void resize_bilinear_row_float(GM_ADDR x,GM_ADDR y,GM_ADDR til){const __gm__ ResizeBilinearTilingData*t=reinterpret_cast<const __gm__ ResizeBilinearTilingData*>(til);ResizeRowOwner<float>op;op.Init(x,y,t);op.Process();}

@@ -1,0 +1,11 @@
+# Explicit final selection reconsideration
+
+A frozen final comparison can be complete while its chosen source is not ready for acceptance. A `final_selection_reconsideration_required` task event now blocks acceptance in the read-only Level2 report. This changes neither the chosen source nor any source attempt, measured result or final comparison roster.
+
+The gate verifies the public task journal hash chain and binds three small JSON documents: the original selection, the reconsideration notice and the numeric proof metadata. Their operator/source/selection pointers must agree. It does not read proof payloads or classify numerical failures; the recorded explicit hold is sufficient to withhold acceptance. The report exposes stable event-prefix identities plus its current journal snapshot. A malformed journal, changed pointer or noncanonical/symlink metadata path fails closed.
+
+While a hold is unresolved, `final_selection.status` is `reconsideration_required`, `declared_selection_status` preserves the prior selected status, the existing candidate/source/reason remain, `current_safe=false` and `acceptance_ready=false`. Task and overall report are blocked. The count of completed source rounds and the final evaluation state are calculated as before; they do not themselves authorize acceptance.
+
+No automatic resolution is supported. A later unrelated event, an unreviewed event named `final_selection_reconsideration_resolved`, or editing the declared winner cannot clear the hold. A future owner-approved resolution needs a separate reviewed append-only contract and selection revision. This patch defines no resolution or winner choice. Valid legacy tasks with no reconsideration event retain their previous report output; existing immutable-journal retention assumptions still apply.
+
+CPU tests cover an otherwise complete three-round/final20 fixture, partial tasks without a ledger, metadata and event-chain tampering, unknown apparent resolution, winner changes, payload-read exclusion and unchanged legacy output. An actual Maximum metadata-only check identifies event130 without opening raw/tensor/source-archive bytes. Full native, numerical or performance replay was not run for this change.

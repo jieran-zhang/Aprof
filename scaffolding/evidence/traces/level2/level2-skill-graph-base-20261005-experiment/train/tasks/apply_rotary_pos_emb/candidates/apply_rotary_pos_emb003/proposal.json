@@ -1,0 +1,716 @@
+{
+  "candidate_id": "apply_rotary_pos_emb003",
+  "operator": "apply_rotary_pos_emb",
+  "optimization_stage": "execution",
+  "source_parent": "apply_rotary_pos_emb002",
+  "registered_parent_source_archive_hash": "sha256:2aed8e481f88f7ed0ba5e241370bcc6e27aaddf18f42cd899d2d6dfca1942a16",
+  "decision_basis": [
+    "apply_rotary_pos_emb002-feedback-01"
+  ],
+  "statement": "Reuse resident trig inputs across consecutive whole rows with identical trigBase in key0 interleaved only; all original ownership, barriers, exact arithmetic, casts, half path, fallback, host/dispatch and paired outputs remain.",
+  "rationale": "Whole R2 improves interleaved search cases6/10/20 about1.38-1.42x against R1. This source-only next hypothesis removes redundant cos/sin copies/casts across same-core repeated trigBase, without claiming DMA/Cast bottleneck. Layout0 cases20 and10 repeat trig across heads; layout1 case6 is a no-hit counterexample/control.",
+  "diagnostic_cases": [
+    {
+      "case_id": 6,
+      "reason": "BF16 layout1 S1021: consecutive rows change trigBase, testing no-hit branch overhead; previously search-revealed."
+    },
+    {
+      "case_id": 10,
+      "reason": "FP16 layout0 N11: same-core neighboring heads share trig and can avoid its copies/casts; previously search-revealed."
+    }
+  ],
+  "predictions": [
+    {
+      "metric": "operator_task_sum_us",
+      "cases": [
+        10,
+        20
+      ],
+      "direction": "lower_or_indistinguishable",
+      "basis": "Potential same-core trig reuse; scalar arithmetic and barriers remain, so benefit is uncertain."
+    },
+    {
+      "metric": "operator_task_sum_us",
+      "cases": [
+        6,
+        1,
+        8,
+        14
+      ],
+      "direction": "control_no_predetermined_gain",
+      "basis": "Case6 has no adjacent trig reuse; key1 skips cache mechanism. Compiler/layout and branch costs remain unisolated."
+    }
+  ],
+  "constraints": [
+    "One execution data-reuse intervention; exact inherited plan7fac, no new algorithm decomposition",
+    "Current registered parent=R2 2aed; plan basis=originalbaseline d1d; implementation=R3",
+    "Original27 fresh guards plus3 R3-specific cache-hit/miss supplemental guards must pass before search",
+    "All20 standalone+prepared correctness, then runtime evidence check, precede search",
+    "One original kernel per complete call; both query_out/key_out, zero new global workspace",
+    "Search sentinels1/8/14/20 plus declared probes6/10 only; no final20 candidate timing read",
+    "Cache key is address-derived metadata only, never tensor values or case IDs",
+    "Use actual wholeR2 parent AA per direct-parent and originalbaseline AA per baseline relation",
+    "No formal gain, production acceptance, memory ID, episode or fourth source round authored"
+  ],
+  "feedback_refs": [
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/r2-evidence/closed-feedback.json",
+      "sha256": "sha256:8c562c0f298136c22d9939ef64cb9f1c1a8445512c7d6ccb460de960555d45f7"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/r2-evidence/root-parent-decision.json",
+      "sha256": "sha256:664fea2bac7ff333588e9b1da07de2b5ac03a1d6e3312144b5a0a0cc2a34364d"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/r2-evidence/recovery-completion.json",
+      "sha256": "sha256:ea885ed0c624d4ee581b7fd03babf81812227fe67e072e31b47e707e3f1a538b"
+    }
+  ],
+  "formal_admission": "not_evaluated",
+  "graph_policy_eligible": false,
+  "episode_ref": null,
+  "next_source_authored": false,
+  "parent_AA_binding": "pending actual wholeR2 AA completion; no predicted hash",
+  "inherited_parallel_plan": {
+    "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/parallel_plan.json",
+    "sha256": "sha256:7fac7d6265de2fdb599b335efbc3da7526920e0a33dbd57c474bd329edadb037"
+  },
+  "execution_note": {
+    "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/execution-note.json",
+    "sha256": "sha256:bfa4c85eb3fbbac32db8e1d210e428d2e9c2452f3f7c9c1610325ebd0eebb5e3"
+  },
+  "supplemental_status": "pending final R3 three-spec generator/declaration/qualifier pins and real native checks",
+  "source_dir": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/op",
+  "plan_basis_source_hash": "sha256:d1d487bb65002ad24012997d4139d534a6b5fb40286414ee925a4e9e1704bd44",
+  "implementation_source_hash": "sha256:1415a9363545cad1039ed6382d57a07c91f3931003510a10d2eaef09b685e55c",
+  "architecture_profile_ref": "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+  "parallel_plan_ref": "sha256:e8b0ea63e65675683e9c7ae24d2a5c650038e11d3a98333a23b5af2c2f4d9fa0",
+  "dispatch_plan_ref": "sha256:f779eb962aa7ba7ca2448c8805dc3f2787df741833ab12c5a4f6ce01fcbe4a33",
+  "graph_hash": "sha256:4d18205d52b089bce811dedfa3508ad0605d19d33fdcdb7f59109a043b7261aa",
+  "dispatch_selections": [
+    {
+      "case_id": 1,
+      "metadata": {
+        "shape": [
+          16,
+          512,
+          16,
+          128
+        ],
+        "dtype": "float16",
+        "layout": "0",
+        "attributes": {
+          "rotary_mode": "half",
+          "ndim": 4,
+          "last_axis_aligned64": true,
+          "layout": 0,
+          "mode": "half",
+          "cos_batched": false,
+          "head_dim": 128
+        }
+      },
+      "tiling_key": 1,
+      "kernel_entry": "rope_half_kernel",
+      "group_id": "half_rotation",
+      "fallback": false
+    },
+    {
+      "case_id": 2,
+      "metadata": {
+        "shape": [
+          7,
+          1021,
+          31,
+          64
+        ],
+        "dtype": "float32",
+        "layout": "0",
+        "attributes": {
+          "rotary_mode": "half",
+          "ndim": 4,
+          "last_axis_aligned64": true,
+          "layout": 0,
+          "mode": "half",
+          "cos_batched": false,
+          "head_dim": 64
+        }
+      },
+      "tiling_key": 1,
+      "kernel_entry": "rope_half_kernel",
+      "group_id": "half_rotation",
+      "fallback": false
+    },
+    {
+      "case_id": 3,
+      "metadata": {
+        "shape": [
+          31,
+          251,
+          7,
+          128
+        ],
+        "dtype": "bfloat16",
+        "layout": "0",
+        "attributes": {
+          "rotary_mode": "half",
+          "ndim": 4,
+          "last_axis_aligned64": true,
+          "layout": 0,
+          "mode": "half",
+          "cos_batched": false,
+          "head_dim": 128
+        }
+      },
+      "tiling_key": 1,
+      "kernel_entry": "rope_half_kernel",
+      "group_id": "half_rotation",
+      "fallback": false
+    },
+    {
+      "case_id": 4,
+      "metadata": {
+        "shape": [
+          15,
+          16,
+          511,
+          128
+        ],
+        "dtype": "float16",
+        "layout": "1",
+        "attributes": {
+          "rotary_mode": "half",
+          "ndim": 4,
+          "last_axis_aligned64": true,
+          "layout": 1,
+          "mode": "half",
+          "cos_batched": false,
+          "head_dim": 128
+        }
+      },
+      "tiling_key": 1,
+      "kernel_entry": "rope_half_kernel",
+      "group_id": "half_rotation",
+      "fallback": false
+    },
+    {
+      "case_id": 5,
+      "metadata": {
+        "shape": [
+          8,
+          2048,
+          16,
+          128
+        ],
+        "dtype": "float32",
+        "layout": "0",
+        "attributes": {
+          "rotary_mode": "interleaved",
+          "ndim": 4,
+          "last_axis_aligned64": true,
+          "layout": 0,
+          "mode": "interleaved",
+          "cos_batched": false,
+          "head_dim": 128
+        }
+      },
+      "tiling_key": 0,
+      "kernel_entry": "apply_rotary_pos_emb_kernel",
+      "group_id": "generic",
+      "fallback": true
+    },
+    {
+      "case_id": 6,
+      "metadata": {
+        "shape": [
+          17,
+          15,
+          1021,
+          64
+        ],
+        "dtype": "bfloat16",
+        "layout": "1",
+        "attributes": {
+          "rotary_mode": "interleaved",
+          "ndim": 4,
+          "last_axis_aligned64": true,
+          "layout": 1,
+          "mode": "interleaved",
+          "cos_batched": false,
+          "head_dim": 64
+        }
+      },
+      "tiling_key": 0,
+      "kernel_entry": "apply_rotary_pos_emb_kernel",
+      "group_id": "generic",
+      "fallback": true
+    },
+    {
+      "case_id": 7,
+      "metadata": {
+        "shape": [
+          13,
+          511,
+          13,
+          128
+        ],
+        "dtype": "float16",
+        "layout": "0",
+        "attributes": {
+          "rotary_mode": "half",
+          "ndim": 4,
+          "last_axis_aligned64": true,
+          "layout": 0,
+          "mode": "half",
+          "cos_batched": false,
+          "head_dim": 128
+        }
+      },
+      "tiling_key": 1,
+      "kernel_entry": "rope_half_kernel",
+      "group_id": "half_rotation",
+      "fallback": false
+    },
+    {
+      "case_id": 8,
+      "metadata": {
+        "shape": [
+          7,
+          1009,
+          7,
+          128
+        ],
+        "dtype": "float32",
+        "layout": "0",
+        "attributes": {
+          "rotary_mode": "half",
+          "ndim": 4,
+          "last_axis_aligned64": true,
+          "layout": 0,
+          "mode": "half",
+          "cos_batched": false,
+          "head_dim": 128
+        }
+      },
+      "tiling_key": 1,
+      "kernel_entry": "rope_half_kernel",
+      "group_id": "half_rotation",
+      "fallback": false
+    },
+    {
+      "case_id": 9,
+      "metadata": {
+        "shape": [
+          257,
+          17,
+          17,
+          128
+        ],
+        "dtype": "bfloat16",
+        "layout": "1",
+        "attributes": {
+          "rotary_mode": "half",
+          "ndim": 4,
+          "last_axis_aligned64": true,
+          "layout": 1,
+          "mode": "half",
+          "cos_batched": false,
+          "head_dim": 128
+        }
+      },
+      "tiling_key": 1,
+      "kernel_entry": "rope_half_kernel",
+      "group_id": "half_rotation",
+      "fallback": false
+    },
+    {
+      "case_id": 10,
+      "metadata": {
+        "shape": [
+          11,
+          503,
+          11,
+          128
+        ],
+        "dtype": "float16",
+        "layout": "0",
+        "attributes": {
+          "rotary_mode": "interleaved",
+          "ndim": 4,
+          "last_axis_aligned64": true,
+          "layout": 0,
+          "mode": "interleaved",
+          "cos_batched": false,
+          "head_dim": 128
+        }
+      },
+      "tiling_key": 0,
+      "kernel_entry": "apply_rotary_pos_emb_kernel",
+      "group_id": "generic",
+      "fallback": true
+    },
+    {
+      "case_id": 11,
+      "metadata": {
+        "shape": [
+          19,
+          1023,
+          19,
+          64
+        ],
+        "dtype": "float32",
+        "layout": "0",
+        "attributes": {
+          "rotary_mode": "half",
+          "ndim": 4,
+          "last_axis_aligned64": true,
+          "layout": 0,
+          "mode": "half",
+          "cos_batched": false,
+          "head_dim": 64
+        }
+      },
+      "tiling_key": 1,
+      "kernel_entry": "rope_half_kernel",
+      "group_id": "half_rotation",
+      "fallback": false
+    },
+    {
+      "case_id": 12,
+      "metadata": {
+        "shape": [
+          4001,
+          3,
+          3,
+          64
+        ],
+        "dtype": "bfloat16",
+        "layout": "1",
+        "attributes": {
+          "rotary_mode": "interleaved",
+          "ndim": 4,
+          "last_axis_aligned64": true,
+          "layout": 1,
+          "mode": "interleaved",
+          "cos_batched": false,
+          "head_dim": 64
+        }
+      },
+      "tiling_key": 0,
+      "kernel_entry": "apply_rotary_pos_emb_kernel",
+      "group_id": "generic",
+      "fallback": true
+    },
+    {
+      "case_id": 13,
+      "metadata": {
+        "shape": [
+          1,
+          500001,
+          1,
+          64
+        ],
+        "dtype": "float16",
+        "layout": "0",
+        "attributes": {
+          "rotary_mode": "half",
+          "ndim": 4,
+          "last_axis_aligned64": true,
+          "layout": 0,
+          "mode": "half",
+          "cos_batched": false,
+          "head_dim": 64
+        }
+      },
+      "tiling_key": 1,
+      "kernel_entry": "rope_half_kernel",
+      "group_id": "half_rotation",
+      "fallback": false
+    },
+    {
+      "case_id": 14,
+      "metadata": {
+        "shape": [
+          3,
+          13,
+          17,
+          128
+        ],
+        "dtype": "float32",
+        "layout": "0",
+        "attributes": {
+          "rotary_mode": "half",
+          "ndim": 4,
+          "last_axis_aligned64": true,
+          "layout": 0,
+          "mode": "half",
+          "cos_batched": false,
+          "head_dim": 128
+        }
+      },
+      "tiling_key": 1,
+      "kernel_entry": "rope_half_kernel",
+      "group_id": "half_rotation",
+      "fallback": false
+    },
+    {
+      "case_id": 15,
+      "metadata": {
+        "shape": [
+          509,
+          4,
+          4,
+          128
+        ],
+        "dtype": "bfloat16",
+        "layout": "1",
+        "attributes": {
+          "rotary_mode": "half",
+          "ndim": 4,
+          "last_axis_aligned64": true,
+          "layout": 1,
+          "mode": "half",
+          "cos_batched": false,
+          "head_dim": 128
+        }
+      },
+      "tiling_key": 1,
+      "kernel_entry": "rope_half_kernel",
+      "group_id": "half_rotation",
+      "fallback": false
+    },
+    {
+      "case_id": 16,
+      "metadata": {
+        "shape": [
+          16,
+          61,
+          16,
+          128
+        ],
+        "dtype": "float16",
+        "layout": "0",
+        "attributes": {
+          "rotary_mode": "half",
+          "ndim": 4,
+          "last_axis_aligned64": true,
+          "layout": 0,
+          "mode": "half",
+          "cos_batched": false,
+          "head_dim": 128
+        }
+      },
+      "tiling_key": 1,
+      "kernel_entry": "rope_half_kernel",
+      "group_id": "half_rotation",
+      "fallback": false
+    },
+    {
+      "case_id": 17,
+      "metadata": {
+        "shape": [
+          1023,
+          31,
+          31,
+          64
+        ],
+        "dtype": "float32",
+        "layout": "1",
+        "attributes": {
+          "rotary_mode": "interleaved",
+          "ndim": 4,
+          "last_axis_aligned64": true,
+          "layout": 1,
+          "mode": "interleaved",
+          "cos_batched": false,
+          "head_dim": 64
+        }
+      },
+      "tiling_key": 0,
+      "kernel_entry": "apply_rotary_pos_emb_kernel",
+      "group_id": "generic",
+      "fallback": true
+    },
+    {
+      "case_id": 18,
+      "metadata": {
+        "shape": [
+          8,
+          255,
+          8,
+          128
+        ],
+        "dtype": "bfloat16",
+        "layout": "0",
+        "attributes": {
+          "rotary_mode": "half",
+          "ndim": 4,
+          "last_axis_aligned64": true,
+          "layout": 0,
+          "mode": "half",
+          "cos_batched": false,
+          "head_dim": 128
+        }
+      },
+      "tiling_key": 1,
+      "kernel_entry": "rope_half_kernel",
+      "group_id": "half_rotation",
+      "fallback": false
+    },
+    {
+      "case_id": 19,
+      "metadata": {
+        "shape": [
+          127,
+          4,
+          4,
+          128
+        ],
+        "dtype": "float16",
+        "layout": "1",
+        "attributes": {
+          "rotary_mode": "half",
+          "ndim": 4,
+          "last_axis_aligned64": true,
+          "layout": 1,
+          "mode": "half",
+          "cos_batched": false,
+          "head_dim": 128
+        }
+      },
+      "tiling_key": 1,
+      "kernel_entry": "rope_half_kernel",
+      "group_id": "half_rotation",
+      "fallback": false
+    },
+    {
+      "case_id": 20,
+      "metadata": {
+        "shape": [
+          7,
+          2047,
+          7,
+          128
+        ],
+        "dtype": "float32",
+        "layout": "0",
+        "attributes": {
+          "rotary_mode": "interleaved",
+          "ndim": 4,
+          "last_axis_aligned64": true,
+          "layout": 0,
+          "mode": "interleaved",
+          "cos_batched": false,
+          "head_dim": 128
+        }
+      },
+      "tiling_key": 0,
+      "kernel_entry": "apply_rotary_pos_emb_kernel",
+      "group_id": "generic",
+      "fallback": true
+    }
+  ],
+  "artifacts": {
+    "author_draft": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/proposal.draft.json",
+      "sha256": "sha256:849b89076e09492a762dc706f1107984959d8d65e68ac61b40c76695063dbde9"
+    },
+    "architecture_profile": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/agent/architecture_profile.json",
+      "sha256": "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c"
+    },
+    "parallel_plan": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/parallel_plan.json",
+      "sha256": "sha256:7fac7d6265de2fdb599b335efbc3da7526920e0a33dbd57c474bd329edadb037"
+    },
+    "dispatch_plan": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/dispatch_plan.json",
+      "sha256": "sha256:0998c84add182b242e00b0e81495ad1aa962a72e00d3369926b5044c9a7863e0"
+    },
+    "dispatch_launch": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/dispatch-launch.json",
+      "sha256": "sha256:8582812e888e9aa0ef948860d052d0551d642784b90719fdc5c6138fa6c27e8b"
+    },
+    "graph_snapshot": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/graph/v0002/graph.json",
+      "sha256": "sha256:f98b9fed0ddb9db0f254e9687346cb3cc3826c4be9374eeb3cd86aa28d177a46"
+    },
+    "planning_evidence": [
+      {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/read-evidence/1b705c2c7df937c7d1aa6805d4323e9250f8ee200b428c42be0bee3674fecd44",
+        "sha256": "sha256:1b705c2c7df937c7d1aa6805d4323e9250f8ee200b428c42be0bee3674fecd44"
+      },
+      {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/read-evidence/e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256": "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c"
+      },
+      {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/read-evidence/f6f595a710eb365ec0e75b5aaf88c49e1ab34676882d911c50b1279b8fa9e9dc",
+        "sha256": "sha256:f6f595a710eb365ec0e75b5aaf88c49e1ab34676882d911c50b1279b8fa9e9dc"
+      },
+      {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/r2-evidence/closed-feedback.json",
+        "sha256": "sha256:8c562c0f298136c22d9939ef64cb9f1c1a8445512c7d6ccb460de960555d45f7"
+      },
+      {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/r2-evidence/root-parent-decision.json",
+        "sha256": "sha256:664fea2bac7ff333588e9b1da07de2b5ac03a1d6e3312144b5a0a0cc2a34364d"
+      },
+      {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/r2-evidence/search-only-ratios.json",
+        "sha256": "sha256:8140b45b02469931ca61515ff41bed3a5a11817a529e5e6b8dcaa45e3d2e8ede"
+      },
+      {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/resource-proof.json",
+        "sha256": "sha256:b3718e045d0d5d26a5c7bcd926bbe93e6d7b4ec254a9dd7eceb2f283c7cc0c2e"
+      },
+      {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/execution-note.json",
+        "sha256": "sha256:bfa4c85eb3fbbac32db8e1d210e428d2e9c2452f3f7c9c1610325ebd0eebb5e3"
+      },
+      {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/guard-declaration.json",
+        "sha256": "sha256:c57bb61370a17c91a27088399f0410432909b58be844c9b21fadde8197b469cb"
+      },
+      {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/qualify_rope003.py",
+        "sha256": "sha256:edf47533040c54e860ff90b6688623175f9b5e59ddaf5e638ccb6df413833aa6"
+      },
+      {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/supplemental_guards.py",
+        "sha256": "sha256:689cd82c4c0c6debfec3cd47f4ca94d0a95021c5a32f48f8beb9365e18f4a0a9"
+      },
+      {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/supplemental-guard-plan.json",
+        "sha256": "sha256:992697e51783ff18053846f1afe5ba8a8020f41340b68ec3b9fc50d2c5e00360"
+      },
+      {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/sdk-source-note.json",
+        "sha256": "sha256:7696a494e309316243923edd9a8d9eb28970bf852a87ea2946ebe1a7fcd9828f"
+      },
+      {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/r2-evidence/recovery-completion.json",
+        "sha256": "sha256:ea885ed0c624d4ee581b7fd03babf81812227fe67e072e31b47e707e3f1a538b"
+      },
+      {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/guard-evidence/cache-schedule-proof.json",
+        "sha256": "sha256:a2db11906cf3cf790c8740266b6c91fcc1c463c4a5bec76eaf66ea1a3f63f7ae"
+      },
+      {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/guard-evidence/host-observation/stdout.log",
+        "sha256": "sha256:4898cc20f3db35d5edfd6d16980c609cb720e1e8f02ea1ff48c61c0dd5b1af0a"
+      },
+      {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/guard-evidence/host-observation/execution.json",
+        "sha256": "sha256:2db40919dae5b765b5e2f7c69a0835023dad7e60b39c12be7e0b65b7d1327200"
+      }
+    ]
+  },
+  "supplemental_guards": {
+    "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/supplemental-guard-plan.json",
+    "sha256": "sha256:992697e51783ff18053846f1afe5ba8a8020f41340b68ec3b9fc50d2c5e00360"
+  },
+  "supplemental_qualifier": {
+    "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/train/tasks/apply_rotary_pos_emb/candidates/apply_rotary_pos_emb003/qualify_rope003.py",
+    "sha256": "sha256:edf47533040c54e860ff90b6688623175f9b5e59ddaf5e638ccb6df413833aa6"
+  }
+}

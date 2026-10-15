@@ -1,0 +1,53 @@
+--- parent/op_host/gcd.asc
++++ candidate/op_host/gcd.asc
+@@ -6,6 +6,7 @@
+ #include <vector>
+ #include "acl/acl.h"
+ #include "gcd_tiling.h"
++#include "gcd_dispatch.h"
+ #include "data_utils.h"
+ #include "../op_kernel/gcd_kernel.asc"
+ 
+@@ -75,8 +76,16 @@
+         Check(aclrtMemcpy(devX1, x1Bytes, hostX1, x1Bytes, ACL_MEMCPY_HOST_TO_DEVICE), "H2D x1");
+         Check(aclrtMemcpy(devX2, x2Bytes, hostX2, x2Bytes, ACL_MEMCPY_HOST_TO_DEVICE), "H2D x2");
+         Check(aclrtMemcpy(devTiling, sizeof(tiling), &tiling, sizeof(tiling), ACL_MEMCPY_HOST_TO_DEVICE), "H2D tiling");
+-        gcd_kernel<<<tiling.blockNum, nullptr, stream>>>(static_cast<uint8_t *>(devX1),
+-            static_cast<uint8_t *>(devX2), static_cast<uint8_t *>(devOut), static_cast<uint8_t *>(devTiling));
++        const uint64_t tilingKey = SelectGcdTilingKey(s1, s2);
++        if (tilingKey == 1) {
++            std::cout << "APROF_DISPATCH_JSON:{\"tiling_key\":1,\"kernel_entry\":\"gcd_kernel\"}" << std::endl;
++            gcd_kernel<<<tiling.blockNum, nullptr, stream>>>(static_cast<uint8_t *>(devX1),
++                static_cast<uint8_t *>(devX2), static_cast<uint8_t *>(devOut), static_cast<uint8_t *>(devTiling));
++        } else {
++            std::cout << "APROF_DISPATCH_JSON:{\"tiling_key\":0,\"kernel_entry\":\"gcd_kernel\"}" << std::endl;
++            gcd_kernel<<<tiling.blockNum, nullptr, stream>>>(static_cast<uint8_t *>(devX1),
++                static_cast<uint8_t *>(devX2), static_cast<uint8_t *>(devOut), static_cast<uint8_t *>(devTiling));
++        }
+         Check(aclrtSynchronizeStream(stream), "kernel synchronize");
+         Check(aclrtMemcpy(hostOut, outBytes, devOut, outBytes, ACL_MEMCPY_DEVICE_TO_HOST), "D2H output");
+         if (!WriteFile(Arg(argc, argv, "--output"), hostOut, outBytes)) throw std::runtime_error("write output failed");
+--- parent/op_kernel/gcd_dispatch.h
++++ candidate/op_kernel/gcd_dispatch.h
+@@ -0,0 +1,9 @@
++#pragma once
++#include <cstdint>
++#include <vector>
++
++// Stable public metadata key: no values, case IDs, or benchmark thresholds.
++inline uint64_t SelectGcdTilingKey(const std::vector<uint64_t> &x1Shape,
++                                  const std::vector<uint64_t> &x2Shape) {
++    return x1Shape == x2Shape ? 1ULL : 0ULL;
++}
+--- parent/op_kernel/gcd_tiling.h
++++ candidate/op_kernel/gcd_tiling.h
+@@ -41,7 +41,8 @@
+     }
+     t.totalLength = total;
+     const int64_t available = std::max<int64_t>(1, cores);
+-    t.blockNum = static_cast<uint32_t>(std::min<uint64_t>(total, static_cast<uint64_t>(available)));
++    // Tiny outputs share GM store granules across blocks. Keep one owner.
++    t.blockNum = total <= 256 ? 1 : static_cast<uint32_t>(std::min<uint64_t>(total, static_cast<uint64_t>(available)));
+     t.blockLength = (total + t.blockNum - 1) / t.blockNum;
+     return t;
+ }

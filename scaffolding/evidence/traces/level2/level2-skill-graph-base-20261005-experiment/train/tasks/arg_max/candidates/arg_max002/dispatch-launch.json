@@ -1,0 +1,131 @@
+{
+  "dispatch_plan": {
+    "architecture_profile_ref": "sha256:a74404f51c8b785164fc6bc0cb8c51510e3f4258ebe01d13d7c99a1178037cb6",
+    "dispatch_id": "arg-max-semantic-map-r2",
+    "entries": [
+      {
+        "conditions": [
+          {
+            "field": "dtype",
+            "op": "in",
+            "value": [
+              "float16",
+              "float32",
+              "bfloat16"
+            ]
+          },
+          {
+            "field": "attributes.inner",
+            "op": "eq",
+            "value": 1
+          },
+          {
+            "field": "attributes.output_length",
+            "op": "ge",
+            "value": 48
+          }
+        ],
+        "group_id": "contiguous",
+        "kernel_entry": "arg_max_contiguous",
+        "required_capabilities": [
+          "vector"
+        ],
+        "tiling_key": 30
+      },
+      {
+        "conditions": [
+          {
+            "field": "dtype",
+            "op": "in",
+            "value": [
+              "float16",
+              "float32",
+              "bfloat16"
+            ]
+          },
+          {
+            "field": "attributes.inner",
+            "op": "eq",
+            "value": 1
+          },
+          {
+            "field": "attributes.output_length",
+            "op": "lt",
+            "value": 48
+          }
+        ],
+        "group_id": "long_contiguous",
+        "kernel_entry": "arg_max_long_contiguous",
+        "required_capabilities": [
+          "vector"
+        ],
+        "tiling_key": 31
+      },
+      {
+        "conditions": [
+          {
+            "field": "dtype",
+            "op": "in",
+            "value": [
+              "float16",
+              "float32",
+              "bfloat16"
+            ]
+          },
+          {
+            "field": "attributes.inner",
+            "op": "gt",
+            "value": 1
+          }
+        ],
+        "group_id": "strided",
+        "kernel_entry": "arg_max_strided",
+        "required_capabilities": [
+          "vector"
+        ],
+        "tiling_key": 32
+      }
+    ],
+    "fallback": {
+      "conditions": [],
+      "group_id": "generic",
+      "kernel_entry": "arg_max_generic",
+      "required_capabilities": [],
+      "tiling_key": 0
+    },
+    "implementation_source_hash": "sha256:6eca24c98641a4f7dd1981def778c10f5ddfc926ca2493af39c013a3cf2bcee2",
+    "operator": "arg_max",
+    "parallel_plan_ref": "sha256:fe996177f98188e9a2d5226a39169d0289d5fc4a1de17d899b57a612586db2b3",
+    "plan_basis_source_hash": "sha256:941e110f40999118a288d45c07034e82e2c44a7b181e6293d88a0018aecff2a1",
+    "schema_version": "1.0.0",
+    "source_hash": "sha256:6eca24c98641a4f7dd1981def778c10f5ddfc926ca2493af39c013a3cf2bcee2"
+  },
+  "sequences": {
+    "0": {
+      "auxiliary_tasks": [],
+      "kernels": [
+        "arg_max_generic"
+      ]
+    },
+    "30": {
+      "auxiliary_tasks": [],
+      "kernels": [
+        "arg_max_contiguous"
+      ]
+    },
+    "31": {
+      "auxiliary_tasks": [],
+      "kernels": [
+        "arg_max_long_contiguous"
+      ]
+    },
+    "32": {
+      "auxiliary_tasks": [],
+      "kernels": [
+        "arg_max_strided"
+      ]
+    }
+  },
+  "source_sha256": "0ab995e6c44f1d81b94848af3544dd80ac060752ea7dbf97c18ad8d4033ea1ba",
+  "version": "level2_dispatch_launch_v1"
+}

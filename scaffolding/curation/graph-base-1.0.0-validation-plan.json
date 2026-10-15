@@ -1,0 +1,1279 @@
+{
+  "schema_version": 1,
+  "release_candidate": "graph-base/1.0.0",
+  "state": "exp_only_machine_accepted_teacher_edit_applied_seal_pending",
+  "promotion_proposals": [
+    {
+      "wiki_id": "norm-partials",
+      "state": "independent_boundary_failed_no_promotion",
+      "required_verdict": "production_safe_gain",
+      "latest_evidence": {
+        "path": "validation-graph-base-1.0.0-20261014/norm-partials/closure.json",
+        "sha256": "sha256:898973d282e02b4127daefa35f0d1b4bc0aa8b5f3ed3cad0ab0a7e1b0fc2cefe"
+      }
+    },
+    {
+      "wiki_id": "norm-p-specialization",
+      "state": "deferred_no_independent_qualification",
+      "required_verdict": "production_safe_gain",
+      "reason": "Historical benchmark-specialized gain cannot promote; no independent receipt and no inherited qualification from the failed partials scope."
+    },
+    {
+      "wiki_id": "tile-amortization",
+      "state": "independent_control_failed_no_promotion",
+      "required_verdict": "production_safe_gain",
+      "latest_evidence": {
+        "path": "validation-graph-base-1.0.0-20261014/exp-tile/closure.json",
+        "sha256": "sha256:b6d8e4dc6396d69770d7888cc61fbec9809a2806857d1ef63d8c02915f72a70c"
+      }
+    },
+    {
+      "wiki_id": "sigmoid-pipeline",
+      "state": "round2_protocol_control_failed_no_candidate_admission",
+      "required_verdict": "production_safe_gain",
+      "latest_evidence": {
+        "path": "validation-graph-base-1.0.0-round2-20261014/sigmoid/v2-diagnostic/closure.json",
+        "sha256": "sha256:aa1185658f110fae3346057e4f903acbab8ca03f928a8e30a15ed269a5087351"
+      },
+      "prior_evidence": [
+        {
+          "path": "validation-graph-base-1.0.0-20261014/sigmoid-pipeline/closure.json",
+          "sha256": "sha256:87cca4e3db1848e2455e43db21a39cc6fc509b93e541e9437a352d33920826f0"
+        }
+      ],
+      "reason": "Baseline-only full20x30 v2 role controls failed; confirmation and candidate qualification not run under preregistered stop rule.",
+      "current_round": "not_run_by_explicit_user_instruction",
+      "rule_status": "draft"
+    },
+    {
+      "wiki_id": "prefetch-boundaries",
+      "state": "independent_boundary_failed_no_promotion",
+      "required_verdict": "production_safe_gain",
+      "latest_evidence": {
+        "path": "validation-graph-base-1.0.0-20261014/masked-scale-prefetch/closure.json",
+        "sha256": "sha256:59082aec8346b1d2090b106481c74e4e84218de7ac7901b5e8dfad6a3b3f3e4a"
+      }
+    },
+    {
+      "wiki_id": "exp-tile8192",
+      "state": "limited_exp_production_safe_gain_teacher_edit_applied_seal_pending",
+      "required_verdict": "production_safe_gain",
+      "reason": "Independent retained review, one build, both-role full20 correctness and42 boundaries, screen and20x30 formal Task/AAs replay; only missing candidate PMU was captured. A later CPU-only gate completed with actual exit0 and production_safe_gain. Both earlier failed tasks remain failed; no new build or timing pairs.",
+      "latest_evidence": {
+        "path": "validation-graph-base-1.0.0/exp-teacher-promotion-20261015/promotion.json",
+        "sha256": "sha256:33be3448ee471db6899fa9278dc1524fdf7b073ee6ee44425f93c5752c95095c"
+      },
+      "previous_state": "round2_protocol_control_failed_no_candidate_admission",
+      "previous_reason": "Baseline-only v2 AA-before failed; all later phases not run under the preregistered stop rule.",
+      "continuation_parent_result": {
+        "path": "/tmp/aprof-teacher-boundary-fixed-20261015-ust71pmc/exp/dispatcher-result.json",
+        "sha256": "sha256:21dca4e79a9a8dd1d9075a6aebb43ef2853d0577c37864a210eb60cebdbd5c44"
+      },
+      "prior_evidence": [
+        {
+          "path": "validation-graph-base-1.0.0-round2-20261014/exp/v2-diagnostic/closure.json",
+          "sha256": "sha256:525ead39993b463df6b7351ee5bf375c33d5f3740f3964b62f4303250f111e2f"
+        }
+      ]
+    }
+  ],
+  "hardware_scope": "910C/A3",
+  "candidate_gate": {
+    "full_declared_correctness": true,
+    "extra_boundary_checks": true,
+    "independent_formal_pairs_min": 30,
+    "separate_exploratory_pairs": 6,
+    "mechanism_captures_min": 5,
+    "required_verdict": "production_safe_gain",
+    "compare_direct_parent_and_original_baseline": true
+  },
+  "equal_budget_evaluation": {
+    "state": "not_run_by_explicit_user_instruction",
+    "operators": [
+      "dynamic_quant",
+      "gelu",
+      "gqa",
+      "group_norm",
+      "weight_quant_batch_matmul"
+    ],
+    "arms": [
+      "graph-base/0.5.0",
+      "graph-base/1.0.0-skill-only",
+      "graph-base/1.0.0-skill-plus-ondemand-wiki"
+    ],
+    "seeds": [
+      4101,
+      4102,
+      4103
+    ],
+    "candidate_limit": 1,
+    "build_limit": 1,
+    "timing_limit": 1,
+    "full_profile_limit": 1,
+    "wall_time_limit_seconds": null,
+    "model_token_limit": null,
+    "model_identity": "freeze_and_record_before_run",
+    "toolchain_identity": "freeze_and_record_before_run",
+    "primary_metric": "correct_speedup_at_fixed_budget",
+    "secondary_metrics": [
+      "correctness",
+      "regression",
+      "time_to_target",
+      "tokens_to_target",
+      "wiki_read_tokens"
+    ],
+    "test_policy": "Postseal full tests are not_run by explicit user instruction; disclose this in the release evidence and preserve historical test exposure.",
+    "model_budgets": {
+      "proposer": null,
+      "reviewer": null
+    },
+    "budget_policy": "time_only_v1",
+    "wall_time_scope": [
+      "generation",
+      "independent_review",
+      "build",
+      "correctness",
+      "timing",
+      "profiling",
+      "online_admission"
+    ],
+    "token_accounting": "actual cumulative input plus output including cached input; cost only, no rejection threshold",
+    "archive_cost_scope": "post_task_separate",
+    "previous_wall_time_limit_seconds": 3600,
+    "wall_time_limit_state": "not_scheduled_45_run_comparison_not_authorized_in_current_scope",
+    "previous_state": "not_run_no_qualified_candidate",
+    "scope_role": "historical_45_run_design_not_scheduled_for_current_exp_only_release",
+    "previous_test_policy": "one evaluation only after stable sealing; disclose historical archive exposure; no test-driven tuning",
+    "previous_wall_time_limit_state": "pending_calibration_before_45_run_freeze"
+  },
+  "publication_state": "not_published_exp_only_acceptance_complete_seal_pending",
+  "active_hardware_run": "none",
+  "prior_hardware_runs": [
+    "validation-graph-base-1.0.0-20261014"
+  ],
+  "round2_preregistration": "scaffolding/curation/graph-base-1.0.0-round2-plan.json",
+  "tool_qualification": {
+    "state": "passed_adjustable_time_only_final_json_tool_capture",
+    "budget_policy": "time_only_v1",
+    "submission_protocol": "final_json_review_v1",
+    "model": "gpt-6-sol",
+    "reasoning_effort": "max",
+    "qualification": {
+      "path": "/tmp/aprof-final-json-adjustable-budget-tools-v2-20261015/qualification.json",
+      "sha256": "sha256:0cad95cf47389fbef0455ce23fdeaf7a3b663d9673edda951e9722e6ca3fcd19"
+    },
+    "scope": "Actual local mock requests, exact finite toolsets and structured final review; no optimization gain or hardware qualification."
+  },
+  "round2_results": "scaffolding/curation/graph-base-1.0.0-round2-results.json",
+  "budget_amendment": {
+    "date": "2026-10-15",
+    "authorization": "Explicit user instruction: one shared hard 60-minute task deadline; tokens are cost only; single candidate/build, independent review and all correctness/performance gates retained.",
+    "policy": "time_only_v1",
+    "prior_failures": "Historical 56k/8k/64k failures remain unchanged; new trials require a fresh freeze."
+  },
+  "prior_tool_qualifications": [
+    {
+      "state": "historical_receipt_only_fresh_time_only_qualification_required",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "max",
+      "qualification": {
+        "path": "validation-graph-base-1.0.0-round2-20261014/worker-tool-qualification-v7/qualification.json",
+        "sha256": "sha256:a31b34d911aad3baf89ba63dbc92f502f6ae617db46f52754e79ab3cf27d65b7"
+      },
+      "namespace_probe": {
+        "path": "validation-graph-base-1.0.0-round2-20261014/worker-namespace-qualification-v2/probe.json",
+        "sha256": "sha256:3c88e126b3ede46599370c4ff72d6cf32de2813a186aac75a07d72680d0f15cb"
+      },
+      "scope": "Actual local mock requests and isolation; no model optimization or baseline hardware qualification."
+    },
+    {
+      "state": "historical_time_only_receipt_fresh_prompt_qualification_required",
+      "budget_policy": "time_only_v1",
+      "submission_protocol": "final_json_review_v1",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "max",
+      "qualification": {
+        "path": "/tmp/aprof-final-json-time-only-tools-v1-20261015/qualification.json",
+        "sha256": "sha256:5f5eebcc3f4e8097245de322a362ced3da3f4cc786259ed858f2713c6643fb11"
+      },
+      "scope": "Actual local mock requests, exact finite toolsets and structured final review; no optimization gain or hardware qualification."
+    },
+    {
+      "state": "historical_time_only_receipt_before_retained_review_compatibility",
+      "budget_policy": "time_only_v1",
+      "submission_protocol": "final_json_review_v1",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "max",
+      "qualification": {
+        "path": "/tmp/aprof-final-json-time-only-tools-v2-20261015/qualification.json",
+        "sha256": "sha256:7ab8165bca7476202f17a692e406059424f5f61163b7343613d7172a297c340b"
+      },
+      "scope": "Actual local mock requests, exact finite toolsets and structured final review; no optimization gain or hardware qualification."
+    },
+    {
+      "state": "historical_qualification_preserved_new_frozen_parent_budget_producers",
+      "budget_policy": "time_only_v1",
+      "submission_protocol": "final_json_review_v1",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "max",
+      "qualification": {
+        "path": "/tmp/aprof-final-json-time-only-tools-v3-20261015/qualification.json",
+        "sha256": "sha256:341593ebe4df12eac2ce4b6b25587e907cad1a60a5cb87a89ff84bd541e764f1"
+      },
+      "scope": "Actual local mock requests, exact finite toolsets and structured final review; no optimization gain or hardware qualification."
+    }
+  ],
+  "latest_partial_trial_archive": {
+    "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-1.0.0/task-v5-sdk-evidence-review-rejections-20261015/collection-result.json",
+    "sha256": "sha256:31aa9ce89dcd7c908b738f8e5f18fd5069ad54287ee6b1bb503010cf18d108b8"
+  },
+  "active_task_campaign": {
+    "state": "completed_exp_only_machine_accepted",
+    "operators": [
+      "exp"
+    ],
+    "parent_task_directory": "/tmp/aprof-teacher-boundary-fixed-20261015-ust71pmc/exp",
+    "parent_execution": {
+      "path": "/tmp/aprof-teacher-boundary-fixed-20261015-ust71pmc/exp/job/execution.json",
+      "sha256": "sha256:65621870a31dadfdd494003cea2ef19cf6d7675e7fd428d79b62e43f035fe030"
+    },
+    "parent_dispatcher_result": {
+      "path": "/tmp/aprof-teacher-boundary-fixed-20261015-ust71pmc/exp/dispatcher-result.json",
+      "sha256": "sha256:21dca4e79a9a8dd1d9075a6aebb43ef2853d0577c37864a210eb60cebdbd5c44"
+    },
+    "parent_original_status": "failed",
+    "parent_original_exit_code": 2,
+    "parent_duration_seconds": 2821.4238690808415,
+    "completed_prefix_stages": [
+      "correctness",
+      "boundary",
+      "screen",
+      "task_measurement"
+    ],
+    "prefix_reuse_requires_independent_binding_replay": true,
+    "remaining_work": [
+      "independent_exp_scoped_publication_audit",
+      "stable_seal_and_default_update"
+    ],
+    "new_attempt_started": true,
+    "overall_admission_granted": true,
+    "historical_failure_upgraded": false,
+    "actual_new_builds": 0,
+    "new_formal_timing_pairs": 0,
+    "actual_new_pmu_captures": 5,
+    "executions": [
+      {
+        "stage": "original_trial",
+        "status": "failed",
+        "exit_code": 2,
+        "duration_seconds": 2821.4238690808415,
+        "execution": {
+          "path": "/tmp/aprof-teacher-boundary-fixed-20261015-ust71pmc/exp/job/execution.json",
+          "sha256": "sha256:65621870a31dadfdd494003cea2ef19cf6d7675e7fd428d79b62e43f035fe030"
+        },
+        "dispatcher_result": {
+          "path": "/tmp/aprof-teacher-boundary-fixed-20261015-ust71pmc/exp/dispatcher-result.json",
+          "sha256": "sha256:21dca4e79a9a8dd1d9075a6aebb43ef2853d0577c37864a210eb60cebdbd5c44"
+        }
+      },
+      {
+        "stage": "candidate_pmu_continuation",
+        "status": "failed",
+        "exit_code": 2,
+        "duration_seconds": 337.8998682834208,
+        "execution": {
+          "path": "/dev/shm/aprof-exp-pmu-continuation-20261015-y9sfeq4x/job/execution.json",
+          "sha256": "sha256:49782f1738737758105f468c1ef691edfbf418f8111ebebfd6d462b20932b824"
+        },
+        "dispatcher_result": {
+          "path": "/dev/shm/aprof-exp-pmu-continuation-20261015-y9sfeq4x/dispatcher-result.json",
+          "sha256": "sha256:988b88ca11bc8f12d1fcccef7769c6c847e894c28031d5eae76bbd4c8a25e211"
+        }
+      },
+      {
+        "stage": "gate_only_completion",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_seconds": 286.8037262894213,
+        "execution": {
+          "path": "/dev/shm/aprof-exp-gate-completion-20261015-rys12h6p/job/execution.json",
+          "sha256": "sha256:273260327feb660baeb34c8056c86733efdabc7ebcad3b57b479ce7bb1145bab"
+        },
+        "dispatcher_result": {
+          "path": "/dev/shm/aprof-exp-gate-completion-20261015-rys12h6p/dispatcher-result.json",
+          "sha256": "sha256:bafe7eca85b05b66b2315638557c229f65041767224babc9c3ed4a2be2f30fea"
+        }
+      }
+    ],
+    "final_gate_result": {
+      "path": "/dev/shm/aprof-exp-gate-completion-20261015-rys12h6p/result.json",
+      "sha256": "sha256:9b65687fd06f0af6dbe28b81e57b07f799fe4ad4e74f2d479509d4a891153118"
+    },
+    "promotion": {
+      "path": "validation-graph-base-1.0.0/exp-teacher-promotion-20261015/promotion.json",
+      "sha256": "sha256:33be3448ee471db6899fa9278dc1524fdf7b073ee6ee44425f93c5752c95095c"
+    }
+  },
+  "boundary_binding_repair": {
+    "state": "actual_exp_all42_boundary_replay_passed_no_overall_promotion",
+    "scope": "Preserve frozen generator and verifier in protocol oracle_files; check complete boundary plan before review/build/device. Original 42/57 cases and thresholds unchanged.",
+    "prior_trial_observation": "exp all20 original cases and all42 boundary native results passed for both roles; overall boundary replay failed on missing frozen generator binding; no performance conclusion",
+    "diagnostic": {
+      "path": "validation-graph-base-1.0.0/task-v5-boundary-binding-rejection-20261015/boundary-contract-diagnostic-v1/result.json",
+      "sha256": "sha256:2e12962b2af1e236b68af9b7ee3e59873e6aaec0278bf67d76a95ec41648d04b"
+    },
+    "diagnostic_authority": "diagnostic_only_prior_failure_unchanged"
+  },
+  "prepared_original_validation_inputs": {
+    "scope": "shared original deterministic input preparation before comparison; no model, build, hardware, or optimization",
+    "receipt": {
+      "path": "/tmp/aprof-validation-inputs-20261015-sg3t5qlh/summary.json",
+      "sha256": "sha256:f760f46186e355c1c98ef78a686aeeccdff49c1f871ac81b6c41a129c38a543a"
+    },
+    "operators": {
+      "group_norm": {
+        "cases": 20,
+        "seconds": 168.47429068759084,
+        "inputs": "/tmp/aprof-validation-inputs-20261015-sg3t5qlh/group_norm/inputs"
+      },
+      "weight_quant_batch_matmul": {
+        "cases": 20,
+        "seconds": 174.43087401613593,
+        "inputs": "/tmp/aprof-validation-inputs-20261015-sg3t5qlh/weight_quant_batch_matmul/inputs"
+      }
+    }
+  },
+  "prior_task_campaigns": [
+    {
+      "campaign": {
+        "path": "/tmp/aprof-teacher-native-json-fixed-20261015-9r1smydf/campaign.json",
+        "sha256": "sha256:61fbdba6d66aefae27300bd87250e3e2d4688827577391bda313614d6bb4072a"
+      },
+      "exp_anchor": {
+        "path": "/tmp/aprof-teacher-native-json-fixed-20261015-9r1smydf/exp/anchor.json",
+        "sha256": "sha256:a38c5dd6b0e5cf8a15ed368ad31206bf51818b7b05d9e141b918f8528076d35f"
+      },
+      "sigmoid_anchor": {
+        "path": "/tmp/aprof-teacher-native-json-fixed-20261015-9r1smydf/sigmoid/anchor.json",
+        "sha256": "sha256:d2539b946d0205bb1ee292e77736c855e8b144b425115adf5652626890cb1fce"
+      },
+      "budget_policy": "time_only_v1",
+      "scope": "closed finite one-attempt-per-operator campaign; no timing or promotion; original receipts preserved",
+      "state": "closed_failed_exp_boundary_report_sigmoid_not_run"
+    }
+  ],
+  "prepared_task_v5_baseline_assemblies": {
+    "path": "/tmp/aprof-task-v5-baseline-assemblies-20261015-iv6jq1h4/summary.json",
+    "sha256": "sha256:8311cea5251db1873b023d5c967a05cb325efed583b4bd0f54c2e8253afcfb6d",
+    "state": "cpu_only_no_build_no_hardware_qualification",
+    "archive_performed": false
+  },
+  "baseline_cpu_reference_environment": {
+    "policy": {
+      "OMP_NUM_THREADS": "32",
+      "MKL_NUM_THREADS": "32",
+      "OPENBLAS_NUM_THREADS": "32"
+    },
+    "reason": "Preserve the existing validation oracle environment in the new Task-v5 controller; inherited thread counts are not accepted.",
+    "cpu_check": {
+      "path": "/tmp/aprof-baseline-cpu-reference-environment-20261015-v2.log",
+      "sha256": "sha256:18d167c73b0095e2acdd60cd0e0bb44243aa0e43b68d251865d9fc54fa3c1b3a"
+    },
+    "tests_passed": 86,
+    "hardware_qualification": false
+  },
+  "original_baseline_planning_draft": {
+    "path": "/tmp/aprof-original-baseline-planning-draft-20261015-jov9aj4c/index.json",
+    "sha256": "sha256:c9e959c01cdfe060326b11fd3e7ea668053a92cbed668fbc1cb171d9eb6795d4",
+    "status": "unkeyed_dispatch_support_applied_cpu_verified_actual_baseline_qualification_pending",
+    "limitation": "Original sources have no tiling key; complete multi-kernel calls require explicit unkeyed scope without invented keys or omitted tasks.",
+    "gqa_wq_independent_read_only_review": "40/40 original case sequences, tensor workspace and source references agree; unknown SDK allocations remain unknown.",
+    "canonical_checks": {
+      "path": "/tmp/aprof-unkeyed-stream-canonical-20261015.log",
+      "sha256": "sha256:5df2b505d163189437202ceef81db9a01ead9d994aea75c12eb60802a4e169c2"
+    }
+  },
+  "next_infrastructure_checks": {
+    "path": "/tmp/aprof-task-v5-infrastructure-checks-20261015-9djlpiz2/index.json",
+    "sha256": "sha256:a587f4a069536fdf1da6bfcf2ece6d841b82738efd5d435d293be65039d0bb6d",
+    "state": "actual_architecture_and_one_whole_app_pmu_capture_and_original_oracle_exit_zero",
+    "not_rule_or_performance_admission": true,
+    "architecture_execution": {
+      "path": "/tmp/aprof-task-v5-infrastructure-checks-20261015-9djlpiz2/architecture/job/execution.json",
+      "sha256": "sha256:ec1741d9b043629eaabdc217dbdc0f622f96304a9afad2b76d75480ab62edae5"
+    },
+    "pmu_execution": {
+      "path": "/tmp/aprof-task-v5-infrastructure-checks-20261015-9djlpiz2/whole-app-pmu/job/execution.json",
+      "sha256": "sha256:519ebe1dea44cdad3f8df5e1c4895a1fca18c9bc55f1f3b65d7efd5d5c409e92"
+    },
+    "oracle_execution": {
+      "path": "/tmp/aprof-task-v5-infrastructure-checks-20261015-9djlpiz2/whole-app-pmu/oracle-job/execution.json",
+      "sha256": "sha256:ca75bc57e7413ed8646e917b92dc0a38e056e1a598e238c9b2644791e3dceea3"
+    }
+  },
+  "wall_budget_amendment": {
+    "authorized_at_recorded": 1792052583.5678844,
+    "user_instruction": "如果采集超过60分钟了不要粗暴地停止；可将硬约束调整到合理阈值，60分钟属于可调整参数。",
+    "implementation_state": "applied_cpu_verified_actual_two_reviews_completed_no_budget_rejection",
+    "selection_basis": "complete baseline/controller costs plus explicit model and review headroom; freeze one shared finite value before any of the 45 comparisons",
+    "same_budget_for_all_arms_and_seeds": true,
+    "preserve_original_executed_deadlines": true,
+    "token_caps": null,
+    "non_budget_gates_unchanged": true,
+    "archive_cost_scope": "post_task",
+    "collection_stop_policy": "finish_started_unit_v1; stop starting units at D-R, finish already-started complete units within original finite D; real hang watchdog remains",
+    "cpu_checks": [
+      {
+        "scope": "runtime parent budget, collection drain and PMU",
+        "passed": 111,
+        "log": {
+          "path": "/tmp/aprof-budget-runtime-merged-20261015.log",
+          "sha256": "sha256:a4d113d4608afd5172e93567d6f4a87274ef4d2a37dfc888f28600d1c35cc909"
+        }
+      },
+      {
+        "scope": "Teacher parent budget and negative admission fixtures",
+        "passed": 70,
+        "log": {
+          "path": "/tmp/aprof-budget-root-fixtures-20261015.log",
+          "sha256": "sha256:a6d157a20929dd1f952a8f2d92dc9f9251c54a5a26147154074802dd89eeb3c7"
+        }
+      },
+      {
+        "scope": "real CPU campaign children and parent launch preservation",
+        "passed": 21,
+        "log": {
+          "path": "/tmp/aprof-budget-campaign-join-20261015.log",
+          "sha256": "sha256:1bc0dec9fda6d1b50cccab0aa87d5a662cccc1a80f4cf5dff2b51f2a21d6b706"
+        }
+      },
+      {
+        "scope": "baseline and validation controller joins",
+        "passed": 45,
+        "log": {
+          "path": "/tmp/aprof-budget-controller-fixtures-v1-20261015.log",
+          "sha256": "sha256:8e31a7fa2603ee4aba4fc2a6d10af591ec62935a2625435108ba06b4f669b172"
+        }
+      },
+      {
+        "scope": "baseline Context and validation trial joins",
+        "passed": 48,
+        "log": {
+          "path": "/tmp/aprof-budget-context-trial-20261015.log",
+          "sha256": "sha256:2c9cea23a78fc1e03c813ae5140d2471855a6446a5273e5dbd30016bf84c07cf"
+        }
+      },
+      {
+        "scope": "protected machine-rule negative checks",
+        "passed": 3,
+        "log": {
+          "path": "/tmp/aprof-budget-protected-negative-20261015.log",
+          "sha256": "sha256:49275e407982616388c21c2d0ca2bc1b3f429532f94465a51f1478894e24b25b"
+        }
+      }
+    ],
+    "historical_campaign_replay": {
+      "path": "/tmp/aprof-stream-rejection-replay-20261015-0joeka39/summary.json",
+      "sha256": "sha256:eff8712639608249861659ee8775c8f7cbaeb9bb6a03a92385b8b5840650f42b"
+    },
+    "retained_review_replay": {
+      "path": "/tmp/aprof-retained-packet-real-replay-20261015.json",
+      "sha256": "sha256:46d9c25c7b7ab16703905711a2aad0eca307c59588fd96661e3864f0d22d4411"
+    },
+    "teacher_budget_proposal": {
+      "seconds": 5400,
+      "reserve_seconds": 600,
+      "scope": [
+        "exp",
+        "sigmoid"
+      ],
+      "state": "both_attempts_closed_at_source_review_no_budget_failure",
+      "calibration": {
+        "path": "/dev/shm/aprof-teacher-adjustable-budget-20261015-mye7mbxn/budget-calibration.json",
+        "sha256": "sha256:caebb5bf11c5596794858cce1d15df30668a034a4e0703a5ecc779d8c286f27d"
+      }
+    }
+  },
+  "stream_parser_repair": {
+    "state": "applied_verified_on_saved_actual_stdout_and_8_cpu_regressions",
+    "scope": "Only parse verified stdout JSON; retain stderr and original failed task",
+    "replay": {
+      "path": "/tmp/aprof-stream-rejection-replay-20261015-47plqa1g/summary.json",
+      "sha256": "sha256:cc642e9f655fcfacf7172749dd7c64d24120783c3a53ead5c0c521e3bc61cbcd"
+    },
+    "test_file": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-restructured/scaffolding/tests/test_mechanism_oracle_streams.py",
+      "sha256": "sha256:147c36eb0ccb64668e8e6d406b090e246c22d684c3d131a791985bad0884646b"
+    }
+  },
+  "whole_app_pmu_reader": {
+    "state": "actual_core_specific_fields_and_raw_LPM_decoder_applied_cpu_verified",
+    "checks": {
+      "path": "/tmp/aprof-lpm-pmu-canonical-20261015.log",
+      "sha256": "sha256:6a8dc8aa75040f488ad5a362c871e954aec70d59be4774db5b765b20534dcf53"
+    },
+    "passed": 92,
+    "actual_complete_positive_chain_qualification": false
+  },
+  "historical_task_campaigns": [
+    {
+      "campaign": {
+        "path": "/tmp/aprof-teacher-boundary-fixed-20261015-ust71pmc/campaign.json",
+        "sha256": "sha256:509bc26e76df167bad8f31c2199098bb78abfc2f6d62107f1cd0f88ab15f9795"
+      },
+      "exp_anchor": {
+        "path": "/tmp/aprof-teacher-boundary-fixed-20261015-ust71pmc/exp/anchor.json",
+        "sha256": "sha256:ab530bf46aaa8b0cbcf166d8c4ae324e60202ffddecd5b61a81e12a3278b7860"
+      },
+      "sigmoid_anchor": {
+        "path": "/tmp/aprof-teacher-boundary-fixed-20261015-ust71pmc/sigmoid/anchor.json",
+        "sha256": "sha256:0323d28ddd1a048d6d6b4f1b0eb980fc7c581dec133fc189946ae08564ffbc6d"
+      },
+      "budget_policy": "time_only_v1",
+      "state": "closed_exp_profile_stream_parse_failed_sigmoid_not_run",
+      "scope": "fresh finite one-attempt-per-operator campaign with boundary binding repaired; all prior failures retained; no promotion or publication",
+      "exp_progress": {
+        "observed_at": 1792054646.0733683,
+        "review_usage_tokens": 45893,
+        "review": {
+          "path": "/tmp/aprof-teacher-boundary-fixed-20261015-ust71pmc/exp/reviewer/worker.json",
+          "sha256": "sha256:3cfc5917c6ac47a593b681e84934a97e0f6584b7862aeea995a7e22105b310b0"
+        },
+        "correctness": {
+          "path": "/tmp/aprof-teacher-boundary-fixed-20261015-ust71pmc/exp/correctness/report.json",
+          "sha256": "sha256:481d92c4076551049467eba088fdd9c6cd5cb88b62453d9611469f2b29d125c0"
+        },
+        "boundary": {
+          "path": "/tmp/aprof-teacher-boundary-fixed-20261015-ust71pmc/exp/boundary/report.json",
+          "sha256": "sha256:578677f0160a18d0c241a5acad5ef8ecf7a6ddd746247dce8a6be59c256f54f5"
+        },
+        "original_cases": 20,
+        "boundary_cases": 42,
+        "status": "task_failed_after_formal_timing_no_promotion",
+        "token_limit": null,
+        "budget_seconds": 3600,
+        "outer_seconds": 2821.4238690808415,
+        "controller_result": {
+          "path": "/tmp/aprof-teacher-boundary-fixed-20261015-ust71pmc/exp/controller-result.json",
+          "sha256": "sha256:d4dc736acf04e2fedd9716abe67b1f68675ab7775c4dc5a5c0bc07d27561184a"
+        },
+        "measurement_report": {
+          "path": "/tmp/aprof-teacher-boundary-fixed-20261015-ust71pmc/exp/measurement/measurement_report.json",
+          "sha256": "sha256:642649af6a241679362f66039a40e35aef3d49b3adae5685113ccca51a2bfc89"
+        },
+        "reported_speedup": 1.1885722798015388,
+        "reported_speedup_lcb95": 1.1882032839175058
+      },
+      "replay": {
+        "path": "/tmp/aprof-stream-rejection-replay-20261015-47plqa1g/summary.json",
+        "sha256": "sha256:cc642e9f655fcfacf7172749dd7c64d24120783c3a53ead5c0c521e3bc61cbcd"
+      },
+      "sigmoid_closure": {
+        "path": "/tmp/aprof-teacher-boundary-fixed-20261015-ust71pmc/sigmoid/not-run.json",
+        "sha256": "sha256:4392da261d900334990c172c80161cb03d423d1d7934a861093be1f40d7540a6"
+      }
+    },
+    {
+      "state": "both_failed_independent_review_before_build_no_hardware",
+      "campaign": {
+        "path": "/dev/shm/aprof-teacher-adjustable-budget-20261015-mye7mbxn/campaign.json",
+        "sha256": "sha256:5a34f062cbb6a3552a5f6d3b9012e9111a04b3a96e7e72e466900acc92f731c5"
+      },
+      "budget_calibration": {
+        "path": "/dev/shm/aprof-teacher-adjustable-budget-20261015-mye7mbxn/budget-calibration.json",
+        "sha256": "sha256:caebb5bf11c5596794858cce1d15df30668a034a4e0703a5ecc779d8c286f27d"
+      },
+      "budget_seconds": 5400,
+      "collection_stop_policy": {
+        "kind": "finish_started_unit_v1",
+        "pmu_unit_seconds": 540,
+        "reserve_seconds": 600,
+        "task_unit_seconds": 300,
+        "terminal_seconds": 60
+      },
+      "model": {
+        "name": "gpt-6-sol",
+        "reasoning_effort": "max"
+      },
+      "token_limit": null,
+      "attempts": {
+        "exp": {
+          "anchor": {
+            "path": "/dev/shm/aprof-teacher-adjustable-budget-20261015-mye7mbxn/exp/anchor.json",
+            "sha256": "sha256:38cf4c40ec5c64f17ddf231a8abe695a5e599b307dcf15aca271e7236b371427"
+          },
+          "prepared": {
+            "path": "/dev/shm/aprof-teacher-adjustable-budget-20261015-mye7mbxn/exp/prepared.json",
+            "sha256": "sha256:506cbfacbfbfdcc38db0c92a7818533b06961d7729679753d7ab479b1c8173b1"
+          },
+          "state": "failed_source_review",
+          "execution": {
+            "path": "/dev/shm/aprof-teacher-adjustable-budget-20261015-mye7mbxn/exp/job/execution.json",
+            "sha256": "sha256:2c7d75a83a55c6b114df6f41a18fb7733d9cd1c56e51adc470e6c3ab64767575"
+          },
+          "dispatcher_result": {
+            "path": "/dev/shm/aprof-teacher-adjustable-budget-20261015-mye7mbxn/exp/dispatcher-result.json",
+            "sha256": "sha256:554291f3c3fa25b587ea815e0afa929465a8369303e9e0f084c3a87510efb220"
+          },
+          "review": {
+            "path": "/dev/shm/aprof-teacher-adjustable-budget-20261015-mye7mbxn/exp/worker/root/work/candidate_review.json",
+            "sha256": "sha256:2adf83af8625f395e85465efb3eacc734bb103e67bc46d719c9da46cd380387a"
+          },
+          "review_tokens": 62726,
+          "actual_elapsed_seconds": 240.4155836030841,
+          "actual_builds": 0,
+          "hardware_stages_started": 0,
+          "rejected_obligations": {
+            "ub_capacity_alignment": {
+              "status": "unknown",
+              "reason": "At 8192 elements, explicit live buffers total 98,304 bytes for float16/bfloat16 or 65,536 bytes for float32, with 32-byte-aligned sizes, below the specified 196,608-byte UB. The supplied evidence does not bound Exp’s implicit temporary storage or compiler/runtime UB reservation, so total capacity cannot be certified.",
+              "anchors": [
+                {
+                  "path": "candidate/op_kernel/exp_tiling.h",
+                  "line": 25
+                },
+                {
+                  "path": "candidate/op_kernel/exp_kernel.asc",
+                  "line": 16
+                },
+                {
+                  "path": "candidate/op_kernel/exp_kernel.asc",
+                  "line": 18
+                },
+                {
+                  "path": "candidate/op_kernel/exp_kernel.asc",
+                  "line": 60
+                }
+              ]
+            }
+          }
+        },
+        "sigmoid": {
+          "anchor": {
+            "path": "/dev/shm/aprof-teacher-adjustable-budget-20261015-mye7mbxn/sigmoid/anchor.json",
+            "sha256": "sha256:d9fa17a0064cb5be756625f1ccfcb4940c93044e79fe63c02ac7119ac8e3cded"
+          },
+          "prepared": {
+            "path": "/dev/shm/aprof-teacher-adjustable-budget-20261015-mye7mbxn/sigmoid/prepared.json",
+            "sha256": "sha256:4fd41b084aed8121784c2c948fb88f91da30ebe421e099da7843668a4f5934bb"
+          },
+          "state": "failed_source_review",
+          "execution": {
+            "path": "/dev/shm/aprof-teacher-adjustable-budget-20261015-mye7mbxn/sigmoid/job/execution.json",
+            "sha256": "sha256:2647861562e264069981776a1b7d35ef602df42bd195c6500e1b28b2cf9f78c2"
+          },
+          "dispatcher_result": {
+            "path": "/dev/shm/aprof-teacher-adjustable-budget-20261015-mye7mbxn/sigmoid/dispatcher-result.json",
+            "sha256": "sha256:645a5cf0ff77c77db949ca0d8572c09ec81c0b3ceabc378126dc1b9be0a00104"
+          },
+          "review": {
+            "path": "/dev/shm/aprof-teacher-adjustable-budget-20261015-mye7mbxn/sigmoid/worker/root/work/candidate_review.json",
+            "sha256": "sha256:e9de589fbee7a060284ef307810842c2930b3a2fbeb7bbada015f1458b6cb948"
+          },
+          "review_tokens": 39956,
+          "actual_elapsed_seconds": 118.47032893821597,
+          "actual_builds": 0,
+          "hardware_stages_started": 0,
+          "rejected_obligations": {
+            "ub_capacity_alignment": {
+              "status": "unknown",
+              "reason": "The doubled queues plus cast buffers explicitly reserve 65,536 bytes for every dtype, with 32-byte-aligned full-tile allocations, against 196,608 bytes of UB. The supplied sources do not bound Sigmoid's internal temporaries or compiler/runtime reservations, so the remaining 131,072 bytes cannot be certified sufficient.",
+              "anchors": [
+                {
+                  "path": "candidate/op_kernel/sigmoid_kernel.asc",
+                  "line": 17
+                },
+                {
+                  "path": "candidate/op_kernel/sigmoid_kernel.asc",
+                  "line": 18
+                },
+                {
+                  "path": "candidate/op_kernel/sigmoid_kernel.asc",
+                  "line": 21
+                },
+                {
+                  "path": "candidate/op_kernel/sigmoid_kernel.asc",
+                  "line": 72
+                },
+                {
+                  "path": "baseline/op_kernel/sigmoid_tiling.h",
+                  "line": 26
+                }
+              ]
+            },
+            "buffer_lifetime_synchronization": {
+              "status": "unknown",
+              "reason": "Two queue entries cover the queued input and output tiles, but the next Compute reuses the single fpIn/fpOut scratch pair before CopyOut dequeues the preceding output. No explicit intervening barrier is shown, and the supplied evidence does not establish that the preceding vector cast has retired before that scratch is reused.",
+              "anchors": [
+                {
+                  "path": "candidate/op_kernel/sigmoid_kernel.asc",
+                  "line": 45
+                },
+                {
+                  "path": "candidate/op_kernel/sigmoid_kernel.asc",
+                  "line": 46
+                },
+                {
+                  "path": "candidate/op_kernel/sigmoid_kernel.asc",
+                  "line": 69
+                },
+                {
+                  "path": "candidate/op_kernel/sigmoid_kernel.asc",
+                  "line": 77
+                }
+              ]
+            }
+          }
+        }
+      },
+      "archive_performed": true,
+      "budget_failure": false,
+      "post_task_archive": {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-1.0.0/task-v5-adjustable-budget-review-rejections-20261015/summary.json",
+        "sha256": "sha256:6b33a33c7f2124f649a82505071fa596d152831636997c5998953d115e9fc016"
+      },
+      "archive_cost_scope": "post_task",
+      "archive_elapsed_seconds": 42.410159938037395
+    },
+    {
+      "state": "both_failed_independent_review_before_build_no_hardware",
+      "campaign": {
+        "path": "/dev/shm/aprof-teacher-sdk-evidence-20261015-dd4tlcr7/campaign.json",
+        "sha256": "sha256:b668a6d69a911999a4f562dc15c45cebd8b9019d4280c6820907145fb404dde9"
+      },
+      "evidence_amendment": {
+        "path": "/dev/shm/aprof-teacher-sdk-evidence-20261015-dd4tlcr7/evidence-amendment.json",
+        "sha256": "sha256:1ab06e6b308def9a56abba5b969c5bd9b99f61a652da9c26d15d2e8f0345bf13"
+      },
+      "budget_calibration": {
+        "path": "/dev/shm/aprof-teacher-adjustable-budget-20261015-mye7mbxn/budget-calibration.json",
+        "sha256": "sha256:caebb5bf11c5596794858cce1d15df30668a034a4e0703a5ecc779d8c286f27d"
+      },
+      "budget_seconds": 5400,
+      "collection_stop_policy": {
+        "kind": "finish_started_unit_v1",
+        "pmu_unit_seconds": 540,
+        "reserve_seconds": 600,
+        "task_unit_seconds": 300,
+        "terminal_seconds": 60
+      },
+      "model": {
+        "name": "gpt-6-sol",
+        "reasoning_effort": "max"
+      },
+      "token_limit": null,
+      "attempts": {
+        "exp": {
+          "anchor": {
+            "path": "/dev/shm/aprof-teacher-sdk-evidence-20261015-dd4tlcr7/exp/anchor.json",
+            "sha256": "sha256:27d2ed53e945ce27442551ecae1fa6555512940bfae47d0e394ff71f5162b063"
+          },
+          "prepared": {
+            "path": "/dev/shm/aprof-teacher-sdk-evidence-20261015-dd4tlcr7/exp/prepared.json",
+            "sha256": "sha256:4ecdda3872639350622f2f28a94a9253663ae06758b5bbaef8ab9f6f709571bd"
+          },
+          "state": "failed_source_review",
+          "execution": {
+            "path": "/dev/shm/aprof-teacher-sdk-evidence-20261015-dd4tlcr7/exp/job/execution.json",
+            "sha256": "sha256:f16c02ef8194f439b53d2ffdb16ddde97a8ca0c4466aee8c34214dd3b817bdb5"
+          },
+          "dispatcher_result": {
+            "path": "/dev/shm/aprof-teacher-sdk-evidence-20261015-dd4tlcr7/exp/dispatcher-result.json",
+            "sha256": "sha256:9797a87d9c5ee74681b483a4b849c4a58d240977cbc00b85212351c681aa5754"
+          },
+          "review": {
+            "path": "/dev/shm/aprof-teacher-sdk-evidence-20261015-dd4tlcr7/exp/worker/root/work/candidate_review.json",
+            "sha256": "sha256:d2d9e591597a5c2035c66b3ec12e94c53625bc52b364c6681263fd8ba431af0b"
+          },
+          "actual_elapsed_seconds": 189.29940719157457,
+          "actual_builds": 0,
+          "hardware_stages_started": 0,
+          "rejected_obligations": {
+            "ub_capacity_alignment": {
+              "status": "unknown",
+              "reason": "At 8192 elements, explicit one-slot queues and float intermediates total 98,304 bytes for half/bfloat16 or 65,536 for float32, with aligned allocations and bounded local padding. These fit the supplied 188,416-byte vector-local boundary, but the supplied evidence does not bound role-compiled UB allocations, stack/spills, or instrumentation; total resource admission cannot be proved.",
+              "anchors": [
+                {
+                  "path": "candidate/op_kernel/exp_tiling.h",
+                  "line": 25
+                },
+                {
+                  "path": "candidate/op_kernel/exp_kernel.asc",
+                  "line": 16
+                },
+                {
+                  "path": "candidate/op_kernel/exp_kernel.asc",
+                  "line": 22
+                }
+              ]
+            },
+            "buffer_lifetime_synchronization": {
+              "status": "unknown",
+              "reason": "Queue DeQue/FreeTensor ordering covers DMA-to-vector, vector-to-DMA, and inter-tile queue reuse. The dependent Cast–Muls–Adds–Exp–Cast chain also reuses unqueued fi/fo vector buffers without a PIPE_V barrier; the supplied evidence does not establish completion of those intra-pipeline reads and writes before dependent operations.",
+              "anchors": [
+                {
+                  "path": "candidate/op_kernel/exp_kernel.asc",
+                  "line": 55
+                },
+                {
+                  "path": "candidate/op_kernel/exp_kernel.asc",
+                  "line": 57
+                },
+                {
+                  "path": "candidate/op_kernel/exp_kernel.asc",
+                  "line": 64
+                },
+                {
+                  "path": "candidate/op_kernel/exp_kernel.asc",
+                  "line": 71
+                }
+              ]
+            }
+          },
+          "review_tokens": 56483
+        },
+        "sigmoid": {
+          "anchor": {
+            "path": "/dev/shm/aprof-teacher-sdk-evidence-20261015-dd4tlcr7/sigmoid/anchor.json",
+            "sha256": "sha256:2b38f8582e421bc4fdd251009ec0475bfcdab1383f9f4200ad97ee4b00165d03"
+          },
+          "prepared": {
+            "path": "/dev/shm/aprof-teacher-sdk-evidence-20261015-dd4tlcr7/sigmoid/prepared.json",
+            "sha256": "sha256:f7fba9495844b89b3394c36f9035b87659807b04c8d0d58118f46b02f697b9b4"
+          },
+          "state": "failed_source_review",
+          "execution": {
+            "path": "/dev/shm/aprof-teacher-sdk-evidence-20261015-dd4tlcr7/sigmoid/job/execution.json",
+            "sha256": "sha256:294cb5d0bb6e4b0bf62eb3b33cd0a1e340ae471ea5f6a98c64de7f7a60b56ea6"
+          },
+          "dispatcher_result": {
+            "path": "/dev/shm/aprof-teacher-sdk-evidence-20261015-dd4tlcr7/sigmoid/dispatcher-result.json",
+            "sha256": "sha256:679c624fe2f0d02ec1253baca43409294c5cdb9fc30b6ff82f66e3c15f5d2bc5"
+          },
+          "review": {
+            "path": "/dev/shm/aprof-teacher-sdk-evidence-20261015-dd4tlcr7/sigmoid/worker/root/work/candidate_review.json",
+            "sha256": "sha256:af073e6d60ce0e05f3c5fb2a3b2a90ef7e0d3802a51e16351d882759c128812c"
+          },
+          "actual_elapsed_seconds": 108.0501409098506,
+          "review_tokens": 322452,
+          "actual_builds": 0,
+          "hardware_stages_started": 0,
+          "rejected_obligations": {
+            "ub_capacity_alignment": {
+              "status": "unknown",
+              "reason": "The two-deep queues and cast buffers request 65,536 bytes for every dtype; the supplied SDK source bounds reachable Sigmoid temporary accesses by another 16,384 bytes. These known spans are aligned and below the supplied vector-local boundary. However, the evidence gives no candidate-build upper bound for compiler-generated UB use or reserved resources, so total live UB occupancy cannot be certified against capacity.",
+              "anchors": [
+                {
+                  "path": "candidate/op_kernel/sigmoid_kernel.asc",
+                  "line": 17
+                },
+                {
+                  "path": "candidate/op_kernel/sigmoid_kernel.asc",
+                  "line": 19
+                },
+                {
+                  "path": "candidate/op_kernel/sigmoid_kernel.asc",
+                  "line": 68
+                }
+              ]
+            }
+          }
+        }
+      },
+      "archive_performed": true,
+      "canonical_producers_frozen": false,
+      "archive_summary": {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-1.0.0/task-v5-sdk-evidence-review-rejections-20261015/summary.json",
+        "sha256": "sha256:2ea4227016dc12a4bae521a1e53e589ad678c7ac907242f858166e1d221e6f29"
+      },
+      "archive_inventory": {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-1.0.0/task-v5-sdk-evidence-review-rejections-20261015/archive-inventory.json",
+        "sha256": "sha256:8006b54d545b36f093883dc0bf3ddf50ea2c99c6bb5e5ecd81c37444d29ee653"
+      },
+      "producer_snapshot": {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-1.0.0/task-v5-sdk-evidence-review-rejections-20261015/producer-index.json",
+        "sha256": "sha256:5bb83b9feb2b38af5131a7d02432207e52921fe2d2c92a161ec903dbd7413a60"
+      },
+      "post_task_archive_seconds": 53.01427998766303,
+      "post_task_replay_seconds": 15.630401708185673
+    }
+  ],
+  "baseline_cost_probe": {
+    "state": "original_complete_calls_observed_not_qualified",
+    "prepared": {
+      "path": "/dev/shm/aprof-baseline-call-cost-observation-20261015-v2/prepared.json",
+      "sha256": "sha256:6810714e963943073d1751c960b8e145fb3130c42479b1424404027c674c5e79"
+    },
+    "observations": {
+      "gqa": {
+        "report": {
+          "path": "/dev/shm/aprof-baseline-call-cost-observation-20261015-v2/gqa/cost-report.json",
+          "sha256": "sha256:4ff6ad0dd71a999fff1ed3bada21ab6ea2c8b104413b9dec1a66c8f798359ba2"
+        },
+        "elapsed_seconds": 69.78938476368785,
+        "cases": [
+          {
+            "case_id": 14,
+            "complete_task_count": 2051,
+            "task_sum_us": "2826906.628",
+            "task_span_us": "2855341.928",
+            "oracle_passed": true,
+            "capture_process_seconds": 9.070351153612137
+          },
+          {
+            "case_id": 17,
+            "complete_task_count": 2051,
+            "task_sum_us": "3284289.600",
+            "task_span_us": "3315575.544",
+            "oracle_passed": true,
+            "capture_process_seconds": 10.045582629740238
+          }
+        ]
+      },
+      "weight_quant_batch_matmul": {
+        "report": {
+          "path": "/dev/shm/aprof-baseline-call-cost-observation-20261015-v2/weight_quant_batch_matmul/cost-report.json",
+          "sha256": "sha256:d1694c0e2c6ccd25fa140e2a7f848823144000abd9a90904106ce94e9815f9fa"
+        },
+        "elapsed_seconds": 55.194556310772896,
+        "cases": [
+          {
+            "case_id": 20,
+            "complete_task_count": 3,
+            "task_sum_us": "18316789.528",
+            "task_span_us": "18317174.916",
+            "oracle_passed": true,
+            "capture_process_seconds": 26.05597696080804
+          }
+        ]
+      }
+    },
+    "qualification_granted": false,
+    "formal_measurement": false,
+    "profile_mode": "whole_app_TaskTime_l1_and_PipeUtilization",
+    "cost_caveat": "One profiled complete call per selected case; not unprofiled latency or a formal calibration. Whole-process launch/export and oracle cost must not be multiplied as per-call time.",
+    "prior_probe": {
+      "report": {
+        "path": "/dev/shm/aprof-baseline-call-cost-observation-20261015-v1/gqa/cost-report.json",
+        "sha256": "sha256:0adea96e5716681bcdbee9c4c8f93ded534602b1c23819893e2907ba8f48d132"
+      },
+      "state": "failed_before_capture_json_parser_on_non_json_oracle_pointer",
+      "wq": "not_started"
+    },
+    "purpose": "original_baseline_cost_calibration_only_no_candidate_or_skill_feedback"
+  },
+  "sampling_protocol_proposal": {
+    "state": "not_scheduled_45_run_comparison_not_in_current_scope",
+    "proposal": {
+      "path": "/tmp/aprof-duration-aware-task-proposal-20261015.md",
+      "sha256": "sha256:aeb0985ba1c239bf456d9f39aca8e2e8a1548d6f6843de4dde87245dc2167ca7"
+    },
+    "production_protocol_changed": false,
+    "preserved": [
+      "full_20_cases",
+      "six_cycles",
+      "30_formal_pairs",
+      "30_before_AA_pairs",
+      "30_after_AA_pairs",
+      "numeric_gates"
+    ],
+    "proposed": "Shared baseline-only calibration freezes duration-aware per-case repeat/warmup/prime for all arms and seeds; minimum one complete call.",
+    "budget_pending": "Complete five-baseline method qualification costs needed before freezing comparison B and unit reserve; 5400s Teacher budget is not the comparison budget.",
+    "previous_state": "awaiting_user_answer_original_repeat_warmup_constraints"
+  },
+  "sdk_resource_evidence": {
+    "state": "source_sdk_ub_review_criterion_approved_historical_review_failures_unchanged",
+    "index": {
+      "path": "/tmp/aprof-sdk-resource-evidence-20261015-v1/index.json",
+      "sha256": "sha256:a91d05b293370f76decb1abfbeb07300b9f37ac428939281e177ab90bc3d23d3"
+    },
+    "overall_compiler_resource_bound": "unknown",
+    "old_reviews_unchanged": true,
+    "anonymous_contract_draft": {
+      "path": "/tmp/aprof-review-sdk-contract-draft-20261015-v3/index.json",
+      "sha256": "sha256:91366d1a7fca98832a63e922d1c4636c40db48aae03c7628a666441e119549ec"
+    },
+    "new_review_started": true,
+    "toolchain_facility_checks": [
+      {
+        "path": "/tmp/aprof-sdk-abi-facility-20261015-v1/index.json",
+        "sha256": "sha256:413b8cb32267c2387abb1d8eec2dc9cbd39b2c24e99daeeef0a092e1f4c250d4"
+      },
+      {
+        "path": "/tmp/aprof-sdk-abi-facility-20261015-v2/index.json",
+        "sha256": "sha256:9fa815c80bd460f4cb67dc0c9737fe8d0ec454eb470d091d7d78544b0adf7fae"
+      }
+    ],
+    "view_capacity_bound": "SDK-only syntax check proves sizeof(KfcMsg)<=8192 under the selected dav-2201 facility flags, hence PopStackBuffer end>=184KiB; not total candidate compiler UB admission",
+    "actual_platform_ub_capacity_bytes": 196352,
+    "sdk_configuration_ub_capacity_bytes": 196608,
+    "capacity_scope": "SDK platform capacity and configuration values retained separately; no compiler resource admission inferred.",
+    "actual_build_binding": {
+      "state": "applied_cpu_verified_not_reached_due_to_source_review_rejection",
+      "patch_index": {
+        "path": "/tmp/aprof-sdk-build-binding-draft-20261015/index.json",
+        "sha256": "sha256:1ad8eb9ebb5352fd4b29d06e8e780f2d95a7e0b48789d3693ece452fb3a34dfc"
+      },
+      "checks": {
+        "passed": 34,
+        "seconds": 21.29,
+        "log": {
+          "path": "/tmp/aprof-sdk-build-binding-applied-20261015.log",
+          "sha256": "sha256:57570a102d5f0b41397123fbba9b96318e93f9a4315c56f43cddbf79a9538df9"
+        }
+      },
+      "scope": "Explicit configure/build environment, reviewed SDK and tool hashes, actual CMake flags/dependency record; not total compiler UB admission."
+    },
+    "compiler_resource_report_research": {
+      "path": "/tmp/aprof-bisheng-ub-report-readonly-20261015-v1/index.json",
+      "sha256": "sha256:9f9feb9abcb5094ba8451ec4b38267ca445ee56495ea8f40a342b38ca7d8466c"
+    },
+    "review_build_scope_proposal": {
+      "state": "approved_by_user_source_sdk_provable_ub_scope",
+      "index": {
+        "path": "/tmp/aprof-review-build-responsibility-draft-20261015-v1/index.json",
+        "sha256": "sha256:e2a2f4b3364889a0fcaf13ddf565f37022f51a10ba56cbfb08d4a38ed8467730"
+      },
+      "reason": "The user approved the source/SDK-provable UB criterion. Prior failed reviews and the unknown total compiler resource bound remain unchanged; this approval does not itself admit a candidate.",
+      "new_review_started": false,
+      "previous_state": "awaiting_user_answer_not_applied",
+      "historical_reason": "Original frozen rules reject critical unknown; current contract was interpreted as requiring a total compiled UB bound before the only build. Existing diagnostics do not establish that bound. Proposed supported source/SDK scope needs an explicit decision; no failed attempt is upgraded."
+    },
+    "auto_sync_source": "CANN 9.0 documents default compiler PIPE_V insertion for applicable kernel-launch projects with inline calls and valid Ascend C programming model; actual build conditions remain required.",
+    "previous_state": "both_sdk_v3_reviews_rejected_no_build_or_hardware"
+  },
+  "baseline_source_diagnosis": {
+    "state": "gqa_source_sync_derivation_applied_cpu_verified_actual_context_qualification_pending",
+    "files": {
+      "scaffolding/collection/scripts/task_baseline_context.py": {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-restructured/scaffolding/collection/scripts/task_baseline_context.py",
+        "sha256": "sha256:fb73c6b0a3ef7548543744b0cc3d760f8d9021e8121ab933498003990bc0eaef"
+      },
+      "scaffolding/tests/test_task_baseline_context_gqa.py": {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-restructured/scaffolding/tests/test_task_baseline_context_gqa.py",
+        "sha256": "sha256:034c5bad41cfcf2ef8ecba1f1b1197d45f89b840545125f9cd51485a40469f7c"
+      }
+    },
+    "checks": {
+      "passed": 36,
+      "scope": "existing GroupNorm plus original GQA source/case bindings"
+    },
+    "predicate": "predicate.source.sync_inside_tile_loop",
+    "proof_scope": "source_sync_structure_only",
+    "barrier_removal_authorized": false,
+    "other_predicates": "unknown",
+    "hardware_run": false
+  },
+  "task_evaluator_integration": {
+    "state": "applied_cpu_verified_not_hardware_qualified",
+    "checks": {
+      "passed": 80,
+      "seconds": 10.54,
+      "log": {
+        "path": "/tmp/aprof-task-evaluator-final-cpu-v3-20261015.log",
+        "sha256": "sha256:9c65eb391f269db1af05c0080c1f0ba08ea770ba5dde74848b961978b493dc1f"
+      }
+    },
+    "producers": [
+      {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-restructured/scaffolding/collection/scripts/evaluate_skill_release.py",
+        "sha256": "sha256:6468c4390392db1ca4bb58e02a9b3221043dba7473f679cd3f4ebc8464b7092a"
+      },
+      {
+        "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-restructured/scaffolding/collection/scripts/task_validation_trial.py",
+        "sha256": "sha256:f7c1bea7e86dd20336beb1b4c95e5a09971244a2afe0a199bed0790ec0c3e367"
+      }
+    ],
+    "original_deadline_shared": true,
+    "local_root_frozen": true,
+    "raw_profile_copy": false,
+    "task_archive_replay_after_local_deletion": false,
+    "actual_model_runs": 0,
+    "actual_candidate_builds": 0,
+    "actual_npu_runs": 0,
+    "launch_requirements": [
+      "five_complete_baseline_qualifications_and_contexts",
+      "independent_Teacher_promotion",
+      "frozen_common_budget",
+      "qualified_measurement_protocol"
+    ]
+  },
+  "status_history": [
+    {
+      "recorded_date": "2026-10-15",
+      "state": "adjustable_budget_implemented_sdk_review_failures_archived_sampling_and_ub_scope_answers_pending",
+      "publication_state": "blocked_no_independently_qualified_rule",
+      "superseded_by": "explicit_exp_only_prefix_reuse_authorization"
+    },
+    {
+      "recorded_date": "2026-10-15",
+      "state": "exp_only_prefix_reuse_authorized_source_sdk_ub_approved_candidate_pmu_and_final_admission_pending",
+      "publication_state": "not_published_exp_only_release_authorized_after_independent_acceptance",
+      "active_task_campaign": {
+        "state": "exp_only_continuation_authorized_not_started",
+        "operators": [
+          "exp"
+        ],
+        "parent_task_directory": "/tmp/aprof-teacher-boundary-fixed-20261015-ust71pmc/exp",
+        "parent_execution": {
+          "path": "/tmp/aprof-teacher-boundary-fixed-20261015-ust71pmc/exp/job/execution.json",
+          "sha256": "sha256:65621870a31dadfdd494003cea2ef19cf6d7675e7fd428d79b62e43f035fe030"
+        },
+        "parent_dispatcher_result": {
+          "path": "/tmp/aprof-teacher-boundary-fixed-20261015-ust71pmc/exp/dispatcher-result.json",
+          "sha256": "sha256:21dca4e79a9a8dd1d9075a6aebb43ef2853d0577c37864a210eb60cebdbd5c44"
+        },
+        "parent_original_status": "failed",
+        "parent_original_exit_code": 2,
+        "parent_duration_seconds": 2821.4238690808415,
+        "completed_prefix_stages": [
+          "correctness",
+          "boundary",
+          "screen",
+          "task_measurement"
+        ],
+        "prefix_reuse_requires_independent_binding_replay": true,
+        "remaining_work": [
+          "candidate_pmu",
+          "independent_final_admission"
+        ],
+        "new_attempt_started": false,
+        "overall_admission_granted": false,
+        "historical_failure_upgraded": false
+      },
+      "superseded_by": "exp_only_machine_accepted_teacher_edit_applied_seal_pending"
+    }
+  ],
+  "current_authorization": {
+    "date": "2026-10-15",
+    "authority": "explicit_user_instruction",
+    "release_candidate": "graph-base/1.0.0",
+    "target": {
+      "device": "910C",
+      "architecture": "A3",
+      "cann_version": "9.0.0"
+    },
+    "operators": [
+      "exp"
+    ],
+    "ub_review_criterion": "approved_source_and_sdk_provable_allocation_bounds",
+    "ub_scope": "Use source and bound SDK evidence for explicit and implicit allocation, alignment and usable capacity; retain actual SDK/build identity checks. No total compiler UB guarantee or retrospective review acceptance is asserted.",
+    "validation_45": "not_run",
+    "postseal_full_tests": "not_run",
+    "sigmoid_rerun": "not_run",
+    "other_rules": "draft",
+    "reuse_policy": "Completed: independently replayed the historical exp prefix, captured only the missing candidate PMU once, then completed the machine gate in a separate CPU-only task. Original failed exits, deadlines and costs remain unchanged; no full-trial restart or new timing samples.",
+    "release_condition": "Exp-only machine acceptance and the single canonical Teacher skill edit are complete. Scoped independent publication audit and sealing remain pending; no stable manifest or default switch is claimed.",
+    "prior_failures_unchanged": true,
+    "new_hardware_started_by_this_document_update": false,
+    "archive_cost_scope": "post_task_separate"
+  },
+  "postseal_full_tests": {
+    "state": "not_run",
+    "reason": "explicit_user_instruction",
+    "scheduled": false
+  },
+  "stable_default": "graph-base/0.5.1",
+  "limited_exp_acceptance": {
+    "state": "production_safe_gain_teacher_edit_applied_seal_pending",
+    "operator": "exp",
+    "target": {
+      "device": "910C",
+      "architecture": "A3",
+      "cann_version": "9.0.0"
+    },
+    "source_review": {
+      "accepted": true,
+      "reused": true,
+      "actual_tokens": 45893
+    },
+    "candidate_builds": 1,
+    "correctness_cases_per_role": 20,
+    "boundary_cases_per_role": 42,
+    "exploration_cases": 6,
+    "exploration_pairs_per_case": 6,
+    "formal_cases": 20,
+    "formal_pairs_per_case": 30,
+    "aa_before_pairs_per_case": 30,
+    "aa_after_pairs_per_case": 30,
+    "formal_measurement_reused": true,
+    "speedup": 1.1885722798,
+    "speedup_lcb95": 1.1882032839,
+    "all_20_cases_faster": true,
+    "case_regressions": 0,
+    "pmu": {
+      "warmups_per_role": 10,
+      "captures_per_role": 5,
+      "baseline_reused": true,
+      "candidate_captured_once": true,
+      "metric": "mte2_instructions",
+      "expected_direction": "decrease"
+    },
+    "final_gate": "production_safe_gain",
+    "executions": [
+      {
+        "stage": "original_trial",
+        "status": "failed",
+        "exit_code": 2,
+        "duration_seconds": 2821.4238690808415,
+        "execution": {
+          "path": "/tmp/aprof-teacher-boundary-fixed-20261015-ust71pmc/exp/job/execution.json",
+          "sha256": "sha256:65621870a31dadfdd494003cea2ef19cf6d7675e7fd428d79b62e43f035fe030"
+        },
+        "dispatcher_result": {
+          "path": "/tmp/aprof-teacher-boundary-fixed-20261015-ust71pmc/exp/dispatcher-result.json",
+          "sha256": "sha256:21dca4e79a9a8dd1d9075a6aebb43ef2853d0577c37864a210eb60cebdbd5c44"
+        }
+      },
+      {
+        "stage": "candidate_pmu_continuation",
+        "status": "failed",
+        "exit_code": 2,
+        "duration_seconds": 337.8998682834208,
+        "execution": {
+          "path": "/dev/shm/aprof-exp-pmu-continuation-20261015-y9sfeq4x/job/execution.json",
+          "sha256": "sha256:49782f1738737758105f468c1ef691edfbf418f8111ebebfd6d462b20932b824"
+        },
+        "dispatcher_result": {
+          "path": "/dev/shm/aprof-exp-pmu-continuation-20261015-y9sfeq4x/dispatcher-result.json",
+          "sha256": "sha256:988b88ca11bc8f12d1fcccef7769c6c847e894c28031d5eae76bbd4c8a25e211"
+        }
+      },
+      {
+        "stage": "gate_only_completion",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_seconds": 286.8037262894213,
+        "execution": {
+          "path": "/dev/shm/aprof-exp-gate-completion-20261015-rys12h6p/job/execution.json",
+          "sha256": "sha256:273260327feb660baeb34c8056c86733efdabc7ebcad3b57b479ce7bb1145bab"
+        },
+        "dispatcher_result": {
+          "path": "/dev/shm/aprof-exp-gate-completion-20261015-rys12h6p/dispatcher-result.json",
+          "sha256": "sha256:bafe7eca85b05b66b2315638557c229f65041767224babc9c3ed4a2be2f30fea"
+        }
+      }
+    ],
+    "actual_execution_seconds_sum": 3446.1274636536837,
+    "cumulative_online_seconds_including_continuation_launch_windows": 3446.129386663437,
+    "cumulative_budget_seconds": 5400,
+    "archive_cost_scope": "post_task_separate",
+    "historical_failures_unchanged": true,
+    "gate_only_new_builds": 0,
+    "gate_only_new_timing_pairs": 0,
+    "gate_only_new_captures": 0,
+    "teacher_edit_applied": true,
+    "target_skill": "skills/ascendc-aprof-optimization/SKILL.md",
+    "promotion": {
+      "path": "validation-graph-base-1.0.0/exp-teacher-promotion-20261015/promotion.json",
+      "sha256": "sha256:33be3448ee471db6899fa9278dc1524fdf7b073ee6ee44425f93c5752c95095c"
+    },
+    "validation_45": "not_run",
+    "postseal_full_tests": "not_run",
+    "sigmoid": "not_run_in_current_scope_draft",
+    "other_rules": "draft",
+    "generalized_gain_claim": false,
+    "stable_manifest": "pending",
+    "stable_default": "graph-base/0.5.1"
+  }
+}

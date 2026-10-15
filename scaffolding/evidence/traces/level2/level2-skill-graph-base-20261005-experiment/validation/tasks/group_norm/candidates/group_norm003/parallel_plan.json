@@ -1,0 +1,153 @@
+{
+  "architecture_profile_ref": "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+  "groups": [
+    {
+      "algorithm": "One whole small FP32 group per owner; K8 Welford lane moments, ordered tail/lane merges, exact binary64 rstd pipeline and software fused affine.",
+      "alternatives": [
+        "Hardware vmadd/vmla are rejected: isolated device probes did not reproduce required IEEE fused rounding.",
+        "Full software arithmetic over all groups was deferred because it would affect99M benchmark elements and likely regress performance substantially.",
+        "FP64 mathematical moments or approximate reciprocal sqrt are rejected: each failed the unchanged original oracle on retained/adversarial small groups."
+      ],
+      "group_id": "exact_small_fp32",
+      "memory_requirements": {
+        "UB": 1024
+      },
+      "ownership": "One owner reads each complete group before writing it. Cross-owner output starts are64B aligned. Gamma/beta are immutable shared reads; no output staging in GM and no added global workspace.",
+      "reduction": "K8 matches the actual frozen CPU RowwiseMoments order; at most16 vectors (128 elements), one chunk, no hierarchical inter-core reduction. Integer software FP32 Add/Mul/Div/FMA preserves each rounding step.",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:4bef9f33999d2b480c4aac957c8cbae55aa14395c37d206f228669d4a1361000",
+        "sha256:681433048156db9b16b00455e46f5f083f913411873c1f51a7d302b72c833d3d",
+        "sha256:0c3fbbba25e5aace45e2575ee6e99934dc2c6e7cbdc82d3af46bc8defb8c21ab",
+        "sha256:8d6447fb93bb21e557cd94e4661a0c80937fc8db18aa4843dec81e7b983bf2b2",
+        "sha256:78200319dabef9ff41d46acf8bd22ed689347f6225bd6df424d521650318b59b"
+      ],
+      "synchronization": "MTE2_S after input DMA before scalar UB reads; S_MTE3 after scalar UB writes; MTE3_S before buffer reuse. Existing queue ownership retained; single kernel launch.",
+      "task_partition": "Contiguous complete-group intervals capped at32 original baseline cores; groupsPerBlock rounds upward to64/gcd(group_elements*4,64). Only final owner has a short group-count tail.",
+      "workspace_bytes": 0,
+      "workspace_formula": "0 global bytes. Two512B UB queues=1024B declared UB. Exact-arithmetic automatic arrays/stack are additional compiler-managed scalar storage; actual total stack/spill high-water must be inspected after build."
+    },
+    {
+      "algorithm": "Original baseline vector normalization for129..4096 element groups",
+      "alternatives": [
+        "Retain the original baseline route while the focused small-FP32 route is tested."
+      ],
+      "group_id": "small_group",
+      "memory_requirements": {
+        "UB": 82048
+      },
+      "ownership": "Original baseline whole-group owner; no new cross-group or cross-kernel dependency.",
+      "reduction": "FP32 sum and squared sum per group",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:4bef9f33999d2b480c4aac957c8cbae55aa14395c37d206f228669d4a1361000",
+        "sha256:681433048156db9b16b00455e46f5f083f913411873c1f51a7d302b72c833d3d",
+        "sha256:0c3fbbba25e5aace45e2575ee6e99934dc2c6e7cbdc82d3af46bc8defb8c21ab",
+        "sha256:8d6447fb93bb21e557cd94e4661a0c80937fc8db18aa4843dec81e7b983bf2b2",
+        "sha256:78200319dabef9ff41d46acf8bd22ed689347f6225bd6df424d521650318b59b"
+      ],
+      "synchronization": "MTE/vector reductions then scalar mean/rstd then vector affine",
+      "task_partition": "Original baseline cyclic complete groups: group=blockIdx; group<groupCount; group+=blockNum, blockNum=min(groupCount,32).",
+      "workspace_bytes": 0,
+      "workspace_formula": "0; existing two-pass group moments, UB allocation and per-group numerical order unchanged"
+    },
+    {
+      "algorithm": "Whole-group tiled two-pass normalization",
+      "alternatives": [
+        "Retain the original baseline route while the focused small-FP32 route is tested."
+      ],
+      "group_id": "many_groups",
+      "memory_requirements": {
+        "UB": 82048
+      },
+      "ownership": "Original baseline whole-group owner; no new cross-group or cross-kernel dependency.",
+      "reduction": "Tile sums accumulated FP32 within owner",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:4bef9f33999d2b480c4aac957c8cbae55aa14395c37d206f228669d4a1361000",
+        "sha256:681433048156db9b16b00455e46f5f083f913411873c1f51a7d302b72c833d3d",
+        "sha256:0c3fbbba25e5aace45e2575ee6e99934dc2c6e7cbdc82d3af46bc8defb8c21ab",
+        "sha256:8d6447fb93bb21e557cd94e4661a0c80937fc8db18aa4843dec81e7b983bf2b2",
+        "sha256:78200319dabef9ff41d46acf8bd22ed689347f6225bd6df424d521650318b59b"
+      ],
+      "synchronization": "Input copied twice; explicit scalar/vector dependencies",
+      "task_partition": "Original baseline cyclic complete groups: group=blockIdx; group<groupCount; group+=blockNum, blockNum=min(groupCount,32).",
+      "workspace_bytes": 0,
+      "workspace_formula": "0; existing two-pass group moments, UB allocation and per-group numerical order unchanged"
+    },
+    {
+      "algorithm": "Whole-group tiled normalization with workload-limited parallelism",
+      "alternatives": [
+        "Retain the original baseline route while the focused small-FP32 route is tested."
+      ],
+      "group_id": "few_groups",
+      "memory_requirements": {
+        "UB": 82048
+      },
+      "ownership": "Original baseline whole-group owner; no new cross-group or cross-kernel dependency.",
+      "reduction": "Serial accumulation of tile sums and squares per group",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:4bef9f33999d2b480c4aac957c8cbae55aa14395c37d206f228669d4a1361000",
+        "sha256:681433048156db9b16b00455e46f5f083f913411873c1f51a7d302b72c833d3d",
+        "sha256:0c3fbbba25e5aace45e2575ee6e99934dc2c6e7cbdc82d3af46bc8defb8c21ab",
+        "sha256:8d6447fb93bb21e557cd94e4661a0c80937fc8db18aa4843dec81e7b983bf2b2",
+        "sha256:78200319dabef9ff41d46acf8bd22ed689347f6225bd6df424d521650318b59b"
+      ],
+      "synchronization": "Single-core moment completion before affine pass",
+      "task_partition": "Original baseline cyclic complete groups: group=blockIdx; group<groupCount; group+=blockNum, blockNum=min(groupCount,32).",
+      "workspace_bytes": 0,
+      "workspace_formula": "0; existing two-pass group moments, UB allocation and per-group numerical order unchanged"
+    },
+    {
+      "algorithm": "Original baseline vector correctness fallback, including FP16/BF16 groups of1..128 elements",
+      "alternatives": [
+        "Retain the original baseline route while the focused small-FP32 route is tested."
+      ],
+      "group_id": "generic",
+      "memory_requirements": {
+        "UB": 82048
+      },
+      "ownership": "Original baseline whole-group owner; no new cross-group or cross-kernel dependency.",
+      "reduction": "FP32 moment reduction with clamp",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:4bef9f33999d2b480c4aac957c8cbae55aa14395c37d206f228669d4a1361000",
+        "sha256:681433048156db9b16b00455e46f5f083f913411873c1f51a7d302b72c833d3d",
+        "sha256:0c3fbbba25e5aace45e2575ee6e99934dc2c6e7cbdc82d3af46bc8defb8c21ab",
+        "sha256:8d6447fb93bb21e557cd94e4661a0c80937fc8db18aa4843dec81e7b983bf2b2",
+        "sha256:78200319dabef9ff41d46acf8bd22ed689347f6225bd6df424d521650318b59b"
+      ],
+      "synchronization": "Conservative existing dependencies",
+      "task_partition": "Original baseline cyclic complete groups: group=blockIdx; group<groupCount; group+=blockNum, blockNum=min(groupCount,32).",
+      "workspace_bytes": 0,
+      "workspace_formula": "0; existing two-pass group moments, UB allocation and per-group numerical order unchanged"
+    }
+  ],
+  "operator": "group_norm",
+  "plan_id": "group_norm-small-fp32-k8-welford-exact-affine-r2",
+  "precision_invariants": [
+    "Original PyTorch2.10 oracle and original dtype-specific guard/checker thresholds are unchanged.",
+    "Key33 reproduces the observed local CPU K8 Welford float32 operation order with integer IEEE round-to-nearest/ties-to-even operations, then binary64 (variance+epsilon), binary64 sqrt/reciprocal and FP32 rstd conversion; exact software FMA computes affine bias and output.",
+    "All other keys retain original baseline vector arithmetic unchanged. Sampled component compatibility is not full-kernel correctness, universal proof or speedup evidence."
+  ],
+  "schema_version": "1.0.0",
+  "semantic_invariants": [
+    "Normalize each N/group over channelsPerGroup*spatial: y=(x-mean)/sqrt(var+epsilon)*gamma[channel]+beta[channel], preserve NCHW flattening.",
+    "Each group is independent; baseline computes first/second moments then rereads x to normalize, and affine values depend on channel.",
+    "num_groups divides C, epsilon>0, gamma/beta shapeC. Supported dtype half/FP32/BF16; no value-distribution specialization.",
+    "Nonempty dimensions required. Dispatch uses only dtype and shape-derived group_elements/group_count, never case identity or tensor values.",
+    "Order-independent dispatch: key33 FP32L1..128; key30 L129..4096; keys31/32 L>4096 bygroupcount; lowprecision L1..128 uses original baseline fallbackkey0. Every route remains one named kernel entry."
+  ],
+  "source_hash": "sha256:81e3e1cb44b80054689e0efe213adc2cadf80846d618b6e7f7918a7f15569d8f"
+}

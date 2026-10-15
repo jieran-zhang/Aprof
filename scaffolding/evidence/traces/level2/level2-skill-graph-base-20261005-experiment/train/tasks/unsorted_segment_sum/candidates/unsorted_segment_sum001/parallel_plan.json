@@ -1,0 +1,69 @@
+{
+  "architecture_profile_ref": "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+  "groups": [
+    {
+      "algorithm": "Disjoint inner-coordinate slabs, each retaining the complete ordered input-row traversal",
+      "alternatives": [
+        "Serial fallback for narrow inner dimension",
+        "Index bucketing only as a separately budgeted multi-launch algorithm"
+      ],
+      "group_id": "column_owner",
+      "memory_requirements": {
+        "UB": 65536
+      },
+      "ownership": "Each core exclusively owns aligned accumulator columns; no inter-core reduction",
+      "reduction": "Original input-row order",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:ea120b0b8c43d8ede27abbdebd782f2afbc0a09dc06f37153623af08e2bef118",
+        "sha256:9573203422c496baea8080fc6ae814c48ae5a459ad0f95d069e2e844d78c217b",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:d458d1428c09233b8c39e1666c4fa75c0c7490ed37a6ea8c0879b9667553c1bb"
+      ],
+      "synchronization": "Same explicit runner stream; retain source producer/consumer barriers until separately justified",
+      "task_partition": "Aligned inner slabs across available AIV, independently updating every segment",
+      "workspace_bytes": 1073741824,
+      "workspace_formula": "num_segments * ceil(inner/16)*16 * accumulator_item_bytes; maximum instantiated bytes shown"
+    },
+    {
+      "algorithm": "Original sequential segment accumulation",
+      "alternatives": [
+        "Parallelize aligned finish rows after measured feedback"
+      ],
+      "group_id": "generic",
+      "memory_requirements": {
+        "UB": 65536
+      },
+      "ownership": "Single writer to accumulator; all output segments covered",
+      "reduction": "Original input-row order",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:ea120b0b8c43d8ede27abbdebd782f2afbc0a09dc06f37153623af08e2bef118",
+        "sha256:9573203422c496baea8080fc6ae814c48ae5a459ad0f95d069e2e844d78c217b",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:d458d1428c09233b8c39e1666c4fa75c0c7490ed37a6ea8c0879b9667553c1bb"
+      ],
+      "synchronization": "Same explicit runner stream; retain source producer/consumer barriers until separately justified",
+      "task_partition": "One AIV for accumulation and source-compatible output projection",
+      "workspace_bytes": 1073741824,
+      "workspace_formula": "num_segments * ceil(inner/16)*16 * accumulator_item_bytes; maximum instantiated bytes shown"
+    }
+  ],
+  "operator": "unsorted_segment_sum",
+  "plan_id": "unsorted-segment-sum-r1-column-ownership",
+  "precision_invariants": [
+    "FP16/bfloat16 accumulate in FP32 and cast once; FP32 and integer accumulation retain original order.",
+    "Do not introduce atomics, partial-tree reassociation or integer narrowing without a new numerical proof."
+  ],
+  "schema_version": "1.0.0",
+  "semantic_invariants": [
+    "For every segment and inner coordinate, sum rows whose segment ID matches, in original input-row order.",
+    "Per-call accumulator reset and final output projection/conversion are mandatory complete-call operations.",
+    "All segment outputs, including empty segments, must be emitted."
+  ],
+  "source_hash": "sha256:fffa07816b0575ff7b4a375a62511b2df0f4d0b85f749faa80660444908aff8f"
+}

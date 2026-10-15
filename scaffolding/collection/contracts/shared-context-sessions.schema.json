@@ -1,0 +1,577 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aprof.local/schemas/shared-context-sessions.schema.json",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "session_id": {
+        "type": "string",
+        "minLength": 1
+      },
+      "pid": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "host": {
+        "type": "string",
+        "minLength": 1
+      },
+      "started_at": {
+        "type": "number",
+        "exclusiveMinimum": 0
+      },
+      "ended_at": {
+        "type": "number",
+        "exclusiveMinimum": 0
+      },
+      "context_id": {
+        "type": "string",
+        "minLength": 1
+      },
+      "stream_id": {
+        "type": "string",
+        "minLength": 1
+      },
+      "exit_code": {
+        "type": "integer"
+      },
+      "identities": {
+        "type": "object",
+        "properties": {
+          "A": {
+            "type": "object",
+            "properties": {
+              "source_hash": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "binary_hash": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "entry": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "source_hash",
+              "binary_hash",
+              "entry"
+            ],
+            "additionalProperties": false
+          },
+          "B": {
+            "type": "object",
+            "properties": {
+              "source_hash": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "binary_hash": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "entry": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "source_hash",
+              "binary_hash",
+              "entry"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "A",
+          "B"
+        ],
+        "additionalProperties": false
+      },
+      "samples": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "sample_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "session_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "case_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "buffer_config": {
+              "enum": [
+                "normal",
+                "swapped"
+              ]
+            },
+            "pair_id": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 29
+            },
+            "role": {
+              "enum": [
+                "A",
+                "B"
+              ]
+            },
+            "order": {
+              "enum": [
+                "AB",
+                "BA"
+              ]
+            },
+            "position": {
+              "enum": [
+                0,
+                1
+              ]
+            },
+            "started_at": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "ended_at": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "raw_duration": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "raw_unit": {
+              "enum": [
+                "ms",
+                "us",
+                "ns"
+              ]
+            },
+            "to_ns": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "repeat": {
+              "const": 100
+            },
+            "ns_per_call": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "launches_per_call": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "context_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "stream_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "sample_id",
+            "session_id",
+            "case_id",
+            "buffer_config",
+            "pair_id",
+            "role",
+            "order",
+            "position",
+            "started_at",
+            "ended_at",
+            "raw_duration",
+            "raw_unit",
+            "to_ns",
+            "repeat",
+            "ns_per_call",
+            "launches_per_call",
+            "context_id",
+            "stream_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "outputs": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "case_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "buffer_config": {
+              "enum": [
+                "normal",
+                "swapped"
+              ]
+            },
+            "role": {
+              "enum": [
+                "A",
+                "B"
+              ]
+            },
+            "passed": {
+              "type": "boolean"
+            },
+            "validation_scope": {
+              "const": "last_formal_sample_final_output"
+            },
+            "pair_id": {
+              "const": 29
+            }
+          },
+          "required": [
+            "case_id",
+            "buffer_config",
+            "role",
+            "passed",
+            "validation_scope",
+            "pair_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "resource_events": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "case_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "buffer_config": {
+              "enum": [
+                "normal",
+                "swapped"
+              ]
+            },
+            "role": {
+              "enum": [
+                "A",
+                "B"
+              ]
+            },
+            "allocation_order": {
+              "enum": [
+                "AB"
+              ]
+            },
+            "input_policy": {
+              "enum": [
+                "separate_identical_files"
+              ]
+            },
+            "buffers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "index": {
+                    "type": "integer"
+                  },
+                  "kind": {
+                    "enum": [
+                      "input",
+                      "output",
+                      "workspace",
+                      "tiling"
+                    ]
+                  },
+                  "bytes": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "address": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "index",
+                  "kind",
+                  "bytes",
+                  "address"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "case_id",
+            "buffer_config",
+            "role",
+            "allocation_order",
+            "input_policy",
+            "buffers"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "lifecycle_events": {
+        "type": "array",
+        "items": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "const": "session_start"
+                },
+                "session_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "pid": {
+                  "type": "integer"
+                },
+                "host": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "started_at": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "load_order": {
+                  "enum": [
+                    "AB",
+                    "BA"
+                  ]
+                },
+                "first_order": {
+                  "enum": [
+                    "AB",
+                    "BA"
+                  ]
+                },
+                "context_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "stream_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "device": {
+                  "type": "integer"
+                },
+                "vector_cores": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "type",
+                "session_id",
+                "pid",
+                "host",
+                "started_at",
+                "load_order",
+                "first_order",
+                "context_id",
+                "stream_id",
+                "device",
+                "vector_cores"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "const": "session_end"
+                },
+                "session_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "exit_code": {
+                  "type": "integer"
+                },
+                "ended_at": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "context_destroyed": {
+                  "const": true
+                },
+                "stream_destroyed": {
+                  "const": true
+                }
+              },
+              "required": [
+                "type",
+                "session_id",
+                "exit_code",
+                "ended_at",
+                "context_destroyed",
+                "stream_destroyed"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "const": "case_start"
+                },
+                "session_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "case_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "buffer_config": {
+                  "enum": [
+                    "normal",
+                    "swapped"
+                  ]
+                },
+                "case_index": {
+                  "type": "integer"
+                },
+                "warmup_per_role": {
+                  "const": 10
+                },
+                "pairs": {
+                  "const": 30
+                },
+                "repeat": {
+                  "const": 100
+                }
+              },
+              "required": [
+                "type",
+                "session_id",
+                "case_id",
+                "buffer_config",
+                "case_index",
+                "warmup_per_role",
+                "pairs",
+                "repeat"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "const": "warmup_complete"
+                },
+                "session_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "case_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "buffer_config": {
+                  "enum": [
+                    "normal",
+                    "swapped"
+                  ]
+                },
+                "calls_per_role": {
+                  "const": 10
+                }
+              },
+              "required": [
+                "type",
+                "session_id",
+                "case_id",
+                "buffer_config",
+                "calls_per_role"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "const": "outputs_verified"
+                },
+                "session_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "case_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "buffer_config": {
+                  "enum": [
+                    "normal",
+                    "swapped"
+                  ]
+                },
+                "validator": {
+                  "const": "external_oracle_ack"
+                }
+              },
+              "required": [
+                "type",
+                "session_id",
+                "case_id",
+                "buffer_config",
+                "validator"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "argv": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "cwd": {
+        "type": "string",
+        "minLength": 1
+      },
+      "log_hash": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      }
+    },
+    "required": [
+      "session_id",
+      "pid",
+      "host",
+      "started_at",
+      "ended_at",
+      "context_id",
+      "stream_id",
+      "exit_code",
+      "identities",
+      "samples",
+      "outputs",
+      "resource_events",
+      "lifecycle_events",
+      "argv",
+      "cwd",
+      "log_hash"
+    ],
+    "additionalProperties": false
+  }
+}

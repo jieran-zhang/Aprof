@@ -1,0 +1,99 @@
+{
+  "dispatch_plan": {
+    "architecture_profile_ref": "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+    "dispatch_id": "dynamic_quant-r3-short-wordmask-dispatch",
+    "entries": [
+      {
+        "conditions": [
+          {
+            "field": "attributes.row_length",
+            "op": "ge",
+            "value": 1
+          },
+          {
+            "field": "attributes.row_length",
+            "op": "le",
+            "value": 128
+          },
+          {
+            "field": "dtype",
+            "op": "in",
+            "value": [
+              "float16",
+              "bfloat16"
+            ]
+          }
+        ],
+        "group_id": "short_rows",
+        "kernel_entry": "dynamic_quant_short_rows",
+        "required_capabilities": [
+          "vector"
+        ],
+        "tiling_key": 20
+      },
+      {
+        "conditions": [
+          {
+            "field": "attributes.row_length",
+            "op": "gt",
+            "value": 128
+          },
+          {
+            "field": "attributes.row_length",
+            "op": "le",
+            "value": 16384
+          },
+          {
+            "field": "dtype",
+            "op": "in",
+            "value": [
+              "float16",
+              "bfloat16"
+            ]
+          }
+        ],
+        "group_id": "full_rows",
+        "kernel_entry": "dynamic_quant_full_rows",
+        "required_capabilities": [
+          "vector"
+        ],
+        "tiling_key": 21
+      }
+    ],
+    "fallback": {
+      "conditions": [],
+      "group_id": "generic",
+      "kernel_entry": "dynamic_quant_generic",
+      "required_capabilities": [],
+      "tiling_key": 0
+    },
+    "implementation_source_hash": "sha256:d5cc3fd8531fe5361403fc92c89b84aee02cec2c40f585dd61bb8559ac68552e",
+    "operator": "dynamic_quant",
+    "parallel_plan_ref": "sha256:20bcdd458894f26a06ace96a47eb638336901281750ba5d894a72ece8926ed80",
+    "plan_basis_source_hash": "sha256:a80a045dc0e5c9714441af4cf54e92a75f718035083db6055f907c6f56fdc232",
+    "schema_version": "1.0.0",
+    "source_hash": "sha256:d5cc3fd8531fe5361403fc92c89b84aee02cec2c40f585dd61bb8559ac68552e"
+  },
+  "sequences": {
+    "0": {
+      "auxiliary_tasks": [],
+      "kernels": [
+        "dynamic_quant_generic"
+      ]
+    },
+    "20": {
+      "auxiliary_tasks": [],
+      "kernels": [
+        "dynamic_quant_short_rows"
+      ]
+    },
+    "21": {
+      "auxiliary_tasks": [],
+      "kernels": [
+        "dynamic_quant_full_rows"
+      ]
+    }
+  },
+  "source_sha256": "6eae3a0d205f84764613ff5df495504064a5bf8bd32b7995b722329655a34bb9",
+  "version": "level2_dispatch_launch_v1"
+}

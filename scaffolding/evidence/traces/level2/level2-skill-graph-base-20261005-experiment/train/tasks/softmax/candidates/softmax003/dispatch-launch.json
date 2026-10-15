@@ -1,0 +1,125 @@
+{
+  "dispatch_plan": {
+    "architecture_profile_ref": "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+    "dispatch_id": "softmax-r3-transpose-local32x32-dispatch",
+    "entries": [
+      {
+        "conditions": [
+          {
+            "field": "attributes.inner",
+            "op": "eq",
+            "value": 1
+          },
+          {
+            "field": "attributes.reduce",
+            "op": "gt",
+            "value": 128
+          },
+          {
+            "field": "attributes.ub_bytes",
+            "op": "le",
+            "value": 196352
+          }
+        ],
+        "group_id": "contiguous",
+        "kernel_entry": "softmax_contiguous",
+        "required_capabilities": [
+          "vector"
+        ],
+        "tiling_key": 20
+      },
+      {
+        "conditions": [
+          {
+            "field": "attributes.inner",
+            "op": "gt",
+            "value": 1
+          },
+          {
+            "field": "attributes.gather_safe",
+            "op": "eq",
+            "value": true
+          },
+          {
+            "field": "attributes.ub_bytes",
+            "op": "le",
+            "value": 196352
+          }
+        ],
+        "group_id": "strided",
+        "kernel_entry": "softmax_strided",
+        "required_capabilities": [
+          "vector"
+        ],
+        "tiling_key": 21
+      },
+      {
+        "conditions": [
+          {
+            "field": "attributes.inner",
+            "op": "eq",
+            "value": 1
+          },
+          {
+            "field": "attributes.reduce",
+            "op": "ge",
+            "value": 1
+          },
+          {
+            "field": "attributes.reduce",
+            "op": "le",
+            "value": 128
+          }
+        ],
+        "group_id": "short_rows",
+        "kernel_entry": "softmax_short_rows",
+        "required_capabilities": [
+          "vector"
+        ],
+        "tiling_key": 22
+      }
+    ],
+    "fallback": {
+      "conditions": [],
+      "group_id": "generic",
+      "kernel_entry": "softmax_generic",
+      "required_capabilities": [],
+      "tiling_key": 0
+    },
+    "implementation_source_hash": "sha256:b1cef0f479f4b76f52000ed802c7a535cb498a9a8b9e28204421c8e8913d206a",
+    "operator": "softmax",
+    "parallel_plan_ref": "sha256:c3f635f8f4e7608ea14a367d8423a95000056844da82a44b42678a6c7d546388",
+    "plan_basis_source_hash": "sha256:cbb297f9936574b6da2d4be2497b3960cc06e302fc5ef0bcad8918654c246494",
+    "schema_version": "1.0.0",
+    "source_hash": "sha256:b1cef0f479f4b76f52000ed802c7a535cb498a9a8b9e28204421c8e8913d206a"
+  },
+  "sequences": {
+    "0": {
+      "auxiliary_tasks": [],
+      "kernels": [
+        "softmax_generic"
+      ]
+    },
+    "20": {
+      "auxiliary_tasks": [],
+      "kernels": [
+        "softmax_contiguous"
+      ]
+    },
+    "21": {
+      "auxiliary_tasks": [],
+      "kernels": [
+        "softmax_transpose",
+        "softmax_strided"
+      ]
+    },
+    "22": {
+      "auxiliary_tasks": [],
+      "kernels": [
+        "softmax_short_rows"
+      ]
+    }
+  },
+  "source_sha256": "a64493474a5c6f59ef43967529a5d0bc04b4d88c0a5c364af6e46ceed708461d",
+  "version": "level2_dispatch_launch_v1"
+}

@@ -1,0 +1,357 @@
+{
+  "candidate_id": "group_norm002",
+  "source_hash": "sha256:33897ceba354048afaf470303f635a9fde3fb205508ab268dcea50da05b11f03",
+  "reason": "选择完整已登记且已闭合实测的 group_norm002 作为正确性替代：原 baseline 在同七项合法 guard 中仅5项通过，channel_scalar_tail 和 rstd_midpoint_three 出现真实数值失败；002/003均通过相同七项及完整20项正确性/runtime。003在002之上仅增加执行拷贝消除，但其额外性能收益未获得可靠确认，因此采用现有已测实现中干预较少的002。此选择不宣称加速、普遍正确性或无退化保证，不新增第四源码、不拼接key/case。",
+  "selection_policy": "whole_source_correctness_replacement_after_baseline_legal_guard_failure",
+  "performance_claim": "no_confirmed_speedup",
+  "formal_admission": "not_evaluated",
+  "graph_policy_eligible": false,
+  "episode_ref": null,
+  "metric": "operator_task_sum_us",
+  "baseline_guard_status": "numeric_failed_selection_pending",
+  "baseline_guards_passed_count": 5,
+  "baseline_guards_total": 7,
+  "baseline_failed_guard_cases": [
+    "channel_scalar_tail",
+    "rstd_midpoint_three"
+  ],
+  "research_candidate_id": "group_norm003_exec",
+  "evidence": [
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/selection-correctness-01/review.json",
+      "sha256": "sha256:02220429567a9ec6bdc35984f86eb25190f6b7aaad17712d6ee4a9d9ed29f185"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/selection-correctness-01/task-events-prefix.jsonl",
+      "sha256": "sha256:dc310d9112ead2a98e577fb21c58d41dd145e54b95735e9d5b661a7479a53764"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/selection-correctness-01/validation-ledger-prefix.jsonl",
+      "sha256": "sha256:85714200ddfda73b3f72ee1baa35e4f8debff8f45ebb5eea661e2eae11c43e27"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/selection-correctness-01/original-global-selection-index.json",
+      "sha256": "sha256:e06c09161b060ac4eb9ae8ddefe5293ba8c202888bca54a4c67df0034aea870c"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/completion.json",
+      "sha256": "sha256:e2908a304ac6df9517379c4a5ea9e5084a39e4a9be917238473716102cddd82b"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/request.json",
+      "sha256": "sha256:c15bc1d7d81b6f00402e8a07db5ef6ed3fe89a1a0d3b9ec1880bd4a900e9ce23"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/evidence-closure.json",
+      "sha256": "sha256:4112f2dbd8865f7f79f7cfd933dd53dc75d8f87b7294d00cb6c8182d263ab0a7"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/executions/tile_before/execution.json",
+      "sha256": "sha256:fa77d6f7113cdd4060eaebeeb781e95f40932e35f6dc8a21775666bf7c09a7cf"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/executions/tile_before/stdout.log",
+      "sha256": "sha256:a278e8776e1b6820f850a2a319abae9ddc7445683cda6d259869b04cb6642838"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/executions/tile_before/stderr.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/executions/tile_equal/execution.json",
+      "sha256": "sha256:b0019d743696ea1a5456d7c0bbb0939102800166fc23bd5a814073a3b2d0914b"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/executions/tile_equal/stdout.log",
+      "sha256": "sha256:2ebf22a268e0f14dd116a71c17c9f8b223e8c0428fbf216f66a2d6f4082b27cd"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/executions/tile_equal/stderr.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/executions/tile_after/execution.json",
+      "sha256": "sha256:72250a26b62f50b999e6c4b17d32b73a09d5cb7e7f044156aafbb8ead9105d05"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/executions/tile_after/stdout.log",
+      "sha256": "sha256:1c7e57b92a4dce7fd0cd56912f455c51c0391c0c1f0f4234bddfeea7806cbbdb"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/executions/tile_after/stderr.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/executions/cores_before/execution.json",
+      "sha256": "sha256:0c0fca30394133407294ebca980d35b0725a69205549f8898605546342b3a304"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/executions/cores_before/stdout.log",
+      "sha256": "sha256:5d55d302cb80c42ad875b5897e45d3ab69ba5ccb9e6078726890620c0920e4f8"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/executions/cores_before/stderr.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/executions/cores_equal/execution.json",
+      "sha256": "sha256:8b2a124c81ba198acbf4673d39b3c8ee90445b06dfd928535b27856775a58522"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/executions/cores_equal/stdout.log",
+      "sha256": "sha256:78b398cce0135d13917442509cb61d53f25361529c9deb2e6d7f833f2e5f7909"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/executions/cores_equal/stderr.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/executions/channel_scalar_tail/execution.json",
+      "sha256": "sha256:13eb2c463c8f1deaa330f060bdeecadaa3b1cdc7333ae45db7fc21300900e27f"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/executions/channel_scalar_tail/stdout.log",
+      "sha256": "sha256:e9958a56720aa5e652a49295c22bb45bd0ce6c0d6634d96bea1096b603c01054"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/executions/channel_scalar_tail/stderr.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/executions/rstd_midpoint_three/execution.json",
+      "sha256": "sha256:4543bb690d41317e213c0fbb22622b27fa778f25840ba71be1328f2787700cda"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/executions/rstd_midpoint_three/stdout.log",
+      "sha256": "sha256:19183453b733240b9c3f145061dd71caeddcffdfdab50bf3f51dfefb87125721"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/executions/rstd_midpoint_three/stderr.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/health-before.json",
+      "sha256": "sha256:b06e4a1a28b228fcc7739dea3445eb05231cfd434ae0f460dc8c18a05df44ca3"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/health-after.json",
+      "sha256": "sha256:2816019d0d5bc3d28819f7f6eabf2c9f497f7a0697d3876e9a9e5749f62593fb"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/inputs/verification.json",
+      "sha256": "sha256:01e2591d5f3d533605a10a5a3ac2c1017499aa3a544801a6fae408864217a755"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/verify/execution.json",
+      "sha256": "sha256:9653c190c8e7b3cebb763a9c95e2975a01b88bb3e32b7c2139156e8f4db04b24"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/verify/stdout.log",
+      "sha256": "sha256:f8a5775e5f483df926fc98d4ceb9309b2ccd1feb64ee9cb5dca64992ce4599f7"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/baseline-semantic-guards-01/verify/stderr.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/build/build_manifest.json",
+      "sha256": "sha256:229e4d960568a63c821b1b439f37b4252b647b1555e8e82928a85371651cf233"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/bootstrap/frozen-engineering-023.json",
+      "sha256": "sha256:15e423658e4407cb18db3cebbf16365a589002fe9832f5bed2698dac71cbb500"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/completion.json",
+      "sha256": "sha256:5f55786014ba821a26090abb08a16ae848bce5b859037054de3144248e341484"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/request.json",
+      "sha256": "sha256:7edc64b966f44a021bf93eb0d364670cf69cb95b5203f14a9b9f4412dd170f8a"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/report-attestation-78f5649eca55a856/attestation.json",
+      "sha256": "sha256:a977dc38618a5af9556a5413553398ddcb0a665df28a2faf1e8ba0a0529e407c"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/report-attestation-78f5649eca55a856/request.json",
+      "sha256": "sha256:d9a45e9ab681f8c99653bb7d8c3a38caa4ce4759598c26f8c9c8ab82d96b7462"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm002/boundary-validation/completion.json",
+      "sha256": "sha256:4b0735370799be059e7dbcffdc219ce2b608609ef78385f5cb8c22d5421a897f"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm002/boundary-validation/request.json",
+      "sha256": "sha256:35cf2ab5b09b5fb11845beb8ca8b7f28ac7af1b046a82c54bcb7c74ba852304d"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm002/semantic-guards/contract.json",
+      "sha256": "sha256:7ef89bf7387bda72782acb5e4638c14183f2f5714c3208de6997f4628dab0de6"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm002/boundary-validation/evidence-closure.json",
+      "sha256": "sha256:75e6d14bf554197eac66baa41cce0d1656bd80c3a11c00c897a00ff4c32106bb"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm002/boundary-validation/executions/tile_before/execution.json",
+      "sha256": "sha256:587cfc9839d9d4dc7bb120850dbe233d6f00376310f715f70eb4657c47e4b94c"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm002/boundary-validation/executions/tile_equal/execution.json",
+      "sha256": "sha256:add62f8ffec982ef46f516d39c22694ec612077f5fefd021fdda931d6d5e3c09"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm002/boundary-validation/executions/tile_after/execution.json",
+      "sha256": "sha256:a04f235dd4ab5f33c13ce42da95c6defffc2c88e9cd037b8aa17449c945f70d4"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm002/boundary-validation/executions/cores_before/execution.json",
+      "sha256": "sha256:c168e026e6189814c0b08e5f56f00e88735b345d617cd66e4ecba883b5f87ee9"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm002/boundary-validation/executions/cores_equal/execution.json",
+      "sha256": "sha256:0ddf090cb5e9fb8e3aa7eb81d58a51ab489fe98340f1fbe3d935c8db7d2cce28"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm002/boundary-validation/executions/channel_scalar_tail/execution.json",
+      "sha256": "sha256:cead4905c275340646367c054ba3fabc659e18edaa8c109ee5fde4176f9e2f53"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm002/boundary-validation/executions/rstd_midpoint_three/execution.json",
+      "sha256": "sha256:5630e4e47259654ad679129c3e7ba729960e0a81244876240db0518f4d1dd6e9"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm002/boundary-validation/health-before.json",
+      "sha256": "sha256:9ec53448b21a6b9aeb7c9bbf7e7c4aaa8f94dc1d44f84b0f5e730bb31bd637b2"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm002/boundary-validation/health-after.json",
+      "sha256": "sha256:802a2985c16a1352821a3b3ce91a2921aaa999ac8ac3bf1bf5d810b4a8606aa4"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm002/boundary-validation/inputs/verification.json",
+      "sha256": "sha256:67919cff23f9aa58ed5c7360014193912c82bf3166f0c62dee91a076825dcb70"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/feedback/group_norm002.json",
+      "sha256": "sha256:4c17bf04962cd24d0816bcf4fd4dda12d93ca90296ff1184fe9921c982c07ccf"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm002/stages/build/result.json",
+      "sha256": "sha256:56b6777951b2e60411026b81a036f41558f03a1b87238d9377d9c0f1f41c0ae7"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm002/stages/correctness/result.json",
+      "sha256": "sha256:ec861a5503f1d569f8d88712e80bfe6cf9d412dcdcae23d58edb7a387007d694"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm002/stages/runtime/result.json",
+      "sha256": "sha256:be6c0a73e0bbd1e25e1e3b468bdedebbfeae9c8a327e63de880c60716162e86e"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm002/stages/search/result.json",
+      "sha256": "sha256:e2967f58cdf57d11adb9cf37b11b472977951dd4a1d86c1d2a99f7c75e3743d2"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm002/stages/final/result.recovery-01.json",
+      "sha256": "sha256:ef1a1adb76898e108bd6b8e89c247df218b899dc031df6855dd31c66c0ede18d"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm003_exec/boundary-validation/completion.json",
+      "sha256": "sha256:f11a9df3d8da7ccfbab88ee4a12ba5a61408dfcd2454406ee509d60a4a7a8619"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm003_exec/boundary-validation/request.json",
+      "sha256": "sha256:09b09ea3eb7fe45d3c985c7e2c9349836be15b7e2b5a0ea2fdc806f4fffcbdea"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm003_exec/semantic-guards/contract.json",
+      "sha256": "sha256:12dcd099ffcc43a9f88246daf5bbef421ad7d527e2bd9cc9d3b4db36d9d885f3"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm003_exec/boundary-validation/evidence-closure.json",
+      "sha256": "sha256:bd2c6990eefd1bd1ea0d97f546d195697ffffb7f497dc781a4cef6dd55c62d1f"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm003_exec/boundary-validation/executions/tile_before/execution.json",
+      "sha256": "sha256:fe309d08b1399116ef678447238e65ee38dc147ba3eb37d9c5aa9d776197cf34"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm003_exec/boundary-validation/executions/tile_equal/execution.json",
+      "sha256": "sha256:1b4af4144292af29d94e717d87f1466c3c34788be9c1f6628abd4476259b9c8f"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm003_exec/boundary-validation/executions/tile_after/execution.json",
+      "sha256": "sha256:405ce951f24ee86c2922a17e62d7a593ac9a74f0b6f0e67bea1b7f06b22bfd63"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm003_exec/boundary-validation/executions/cores_before/execution.json",
+      "sha256": "sha256:6242535e1f91c784668c4b3bf4b502cf56d288f69c89a01a76124ff646077c7a"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm003_exec/boundary-validation/executions/cores_equal/execution.json",
+      "sha256": "sha256:69777836dab5d3f81c5c9513ceeef3b82f0a787cff047ac15c0b6201a8a53fdf"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm003_exec/boundary-validation/executions/channel_scalar_tail/execution.json",
+      "sha256": "sha256:ddf74b97db7bb41e4f782712363791425fe3234c81d0aa3400d87a90359ba737"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm003_exec/boundary-validation/executions/rstd_midpoint_three/execution.json",
+      "sha256": "sha256:2a7fbe707c8fcf03bb49786d3022f4dd2ff5b7b3d3deef5b21ffcc35a969b7ab"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm003_exec/boundary-validation/health-before.json",
+      "sha256": "sha256:43d7a7bfcfbd9ea5f6a5d967fc3e25b34e200b92ff9206607102080ae4d6d9e3"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm003_exec/boundary-validation/health-after.json",
+      "sha256": "sha256:fd9beb5f5663b76074cc0387d96a497f51e36764b2c1265bc44bca89dc8167e5"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm003_exec/boundary-validation/inputs/verification.json",
+      "sha256": "sha256:67919cff23f9aa58ed5c7360014193912c82bf3166f0c62dee91a076825dcb70"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/feedback/group_norm003_exec.json",
+      "sha256": "sha256:a6ccaea8c43e78ae0ebb932d7b1d0b70a873d030ac522e470c7f9de7ec338f63"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm003_exec/stages/build/result.json",
+      "sha256": "sha256:9fb53e571900283f7d7daf155fcbb5fb78023b0dcf5d2c30748754a446cc41fd"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm003_exec/stages/correctness/result.json",
+      "sha256": "sha256:10415c6dc786c76aaa27f14388c1973aac849309b2261cbfa829bc74fcf38c76"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm003_exec/stages/runtime/result.json",
+      "sha256": "sha256:24af8868ce8348c7434d6f3bc6e2ffedc085349395be70c0fcd376250242e922"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm003_exec/stages/search/result.json",
+      "sha256": "sha256:4167a307f0637ec34ba94017660ee6ac8aeebea9f09117b0e9fcca1e6ae414d2"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm003_exec/stages/final/result.json",
+      "sha256": "sha256:99c5c1dd3c8d2da50a2825fc6641a9a8a2a9dc7d7365a26ab0de9b1e0ba8f6dd"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm002/stages/final/direct_parent/report.json",
+      "sha256": "sha256:60c3b109b77dba914ff8bf4cc03cf997e078ba613e05e0ec5e960f2598290c42"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm003_exec/stages/final/direct_parent/report.json",
+      "sha256": "sha256:37b9f13f3d32197c0a6d6951627c8bd35d4021ed1230f092bf44d84d6a2eddf0"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/candidates/group_norm003_exec/stages/final/original_baseline/report.json",
+      "sha256": "sha256:c69c779dd970e4c8457352bff9f17147d8741977ee6013fc1f6a1e81f95f1496"
+    },
+    {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof/.aprof/runs/level2-skill-graph-base-20261005-experiment/validation/tasks/group_norm/finalization/selection-correctness-01/SUPPLEMENT.txt",
+      "sha256": "sha256:2397396a947235912d6d434a145ee0f46b5657435f89e9aabb58c8816420d393"
+    }
+  ]
+}

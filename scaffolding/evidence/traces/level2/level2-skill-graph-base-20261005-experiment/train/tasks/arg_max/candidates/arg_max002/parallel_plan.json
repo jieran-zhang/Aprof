@@ -1,0 +1,127 @@
+{
+  "architecture_profile_ref": "sha256:a74404f51c8b785164fc6bc0cb8c51510e3f4258ebe01d13d7c99a1178037cb6",
+  "groups": [
+    {
+      "algorithm": "Row-owned first-index argmax over floating data",
+      "alternatives": [
+        "Reduce scalar NaN-mask scan after proof",
+        "Capacity-bounded tile"
+      ],
+      "group_id": "contiguous",
+      "memory_requirements": {
+        "UB": 103456
+      },
+      "ownership": "One core owns complete reduction and output scalar",
+      "reduction": "Ordered max with first-NaN and minimum-index tie winner",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:d8e213baec8dfd1d816d3678d25e34630c8962e34d002f127f18761c3cafb8fe",
+        "sha256:974a40199a98d7e04de9cf8cd5ba825629216e2bb957e3135505b3ba6c857680",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:a45bc53b3516012beec55c0295d0bacf4b2a8c59f2c2b4cce2e256d9b1ffc0cd"
+      ],
+      "synchronization": "MTE2_V and V_S between reductions/scalar merge",
+      "task_partition": "Distribute output rows over AIV, contiguous reduction axis",
+      "workspace_bytes": 0,
+      "workspace_formula": "0; no global intermediate; any future split/merge must create a new plan with counted workspace"
+    },
+    {
+      "algorithm": "Long contiguous floating reduction with few outputs",
+      "alternatives": [
+        "Split long axis into partial value/index/nan then global merge",
+        "Retain one-row kernel when extra launch dominates"
+      ],
+      "group_id": "long_contiguous",
+      "memory_requirements": {
+        "UB": 103456
+      },
+      "ownership": "Owner preserves ordered tie state across chunks",
+      "reduction": "Max/first NaN/min index; any split requires explicit global merge",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:d8e213baec8dfd1d816d3678d25e34630c8962e34d002f127f18761c3cafb8fe",
+        "sha256:974a40199a98d7e04de9cf8cd5ba825629216e2bb957e3135505b3ba6c857680",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:a45bc53b3516012beec55c0295d0bacf4b2a8c59f2c2b4cce2e256d9b1ffc0cd"
+      ],
+      "synchronization": "Current row synchronization; proposed multi-kernel merge counted",
+      "task_partition": "Initially one owner per row; split/merge is an alternative requiring new plan",
+      "workspace_bytes": 0,
+      "workspace_formula": "0; no global intermediate; any future split/merge must create a new plan with counted workspace"
+    },
+    {
+      "algorithm": "Independent adjacent output-column argmax",
+      "alternatives": [
+        "Scale mask work to actual aligned count",
+        "Larger tile from exact UB model"
+      ],
+      "group_id": "strided",
+      "memory_requirements": {
+        "UB": 13568
+      },
+      "ownership": "Disjoint output intervals aligned for int64 writes",
+      "reduction": "Per-column ordered max, first NaN and first tie",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:d8e213baec8dfd1d816d3678d25e34630c8962e34d002f127f18761c3cafb8fe",
+        "sha256:974a40199a98d7e04de9cf8cd5ba825629216e2bb957e3135505b3ba6c857680",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:a45bc53b3516012beec55c0295d0bacf4b2a8c59f2c2b4cce2e256d9b1ffc0cd"
+      ],
+      "synchronization": "MTE2_V then vector masks/select; V_S before index stores",
+      "task_partition": "One AIV processes contiguous output-column tile across reduce planes",
+      "workspace_bytes": 0,
+      "workspace_formula": "0; no global intermediate; any future split/merge must create a new plan with counted workspace"
+    },
+    {
+      "algorithm": "Native int32/int64 greater-than reduction preserving first equal index; float generic delegates unchanged baseline",
+      "alternatives": [
+        "Native integer scalar fallback",
+        "Exact wordwise integer vector compare after SDK validation"
+      ],
+      "group_id": "generic",
+      "memory_requirements": {
+        "UB": 103456
+      },
+      "ownership": "One AIV owns each complete output reduction and int64 result",
+      "reduction": "Native signed comparison without narrowing; first index retained on equal values",
+      "required_capabilities": [
+        "vector",
+        "datacopypad_int32_gm2ub_extparams"
+      ],
+      "selection_evidence": [
+        "sha256:d8e213baec8dfd1d816d3678d25e34630c8962e34d002f127f18761c3cafb8fe",
+        "sha256:974a40199a98d7e04de9cf8cd5ba825629216e2bb957e3135505b3ba6c857680",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:a45bc53b3516012beec55c0295d0bacf4b2a8c59f2c2b4cce2e256d9b1ffc0cd",
+        "sha256:4fe944d7a95dca95a4840d2ad78d0a369fc1bfb2d507054f9ceac5678efe4914",
+        "sha256:500b9b7d79770bb5d36877d54d5240c6dc0b309bf687ccd3b778fcceaaf3cdd9",
+        "sha256:4a18713ec294d0226be5b9cdf327c75de3fd0cb6e2c609de9f25bec3cadb5e31",
+        "sha256:b7025cf37033bb017745778f1fe66b2c55d83697987c5aaeb85171d3ddcae45c"
+      ],
+      "synchronization": "Strided int32: exact-byte plane DMA to one UB buffer, MTE2_S before scalar reads, S_MTE2 before reuse; other integer paths retain ordered GM scalar reads; disjoint int64 output stores unchanged.",
+      "task_partition": "Existing disjoint output intervals aligned to 64-byte int64 stores; one full reduction per output owner",
+      "workspace_bytes": 0,
+      "workspace_formula": "0; no global intermediate; any future split/merge must create a new plan with counted workspace"
+    }
+  ],
+  "operator": "arg_max",
+  "plan_id": "arg-max-int32-plane-staging-execution-r2",
+  "precision_invariants": [
+    "Indices compared exactly, never via tolerance.",
+    "Integer->float loses ordering beyond 2^24; int64->int32 also loses upper bits. No benchmark range guard is legal."
+  ],
+  "schema_version": "1.0.0",
+  "semantic_invariants": [
+    "Return int64 index of first maximal value along normalized dim; keepdim changes shape only.",
+    "For floating input preserve first NaN winner and first-index tie semantics including across tiles.",
+    "Integer comparison must be native exact over entire signed int32/int64 domain; no value-range assumptions."
+  ],
+  "source_hash": "sha256:941e110f40999118a288d45c07034e82e2c44a7b181e6293d88a0018aecff2a1"
+}
