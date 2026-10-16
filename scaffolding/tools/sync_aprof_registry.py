@@ -11,7 +11,9 @@ from aprof_layout import release_module, skill_lib
 
 
 def load_registry(root):
-    return json.loads((Path(root) / 'skillgraph/registry.json').read_text())
+    root = Path(root)
+    path = root / ('skills/registry.json' if (root / 'skills/registry.json').is_file() else 'skillgraph/registry.json')
+    return json.loads(path.read_text())
 
 
 def check_artifacts(root, registry=None):

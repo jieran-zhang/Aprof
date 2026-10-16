@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aprof.local/schemas/unified-timing-declaration.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "operator": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "case_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      }
+    },
+    "correctness_case_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      }
+    },
+    "reuse_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_age_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "max_ab_gap_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "required": [
+        "max_age_seconds",
+        "max_ab_gap_seconds"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "operator",
+    "created_at",
+    "case_ids",
+    "correctness_case_ids",
+    "reuse_policy"
+  ]
+}

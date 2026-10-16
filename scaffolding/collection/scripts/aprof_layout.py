@@ -48,7 +48,7 @@ def skill_lib():
     if not selected:
         raise ValueError('select a release with --skill-lib or APROF_SKILL_LIB; no implicit latest is used')
     root = Path(selected).resolve()
-    if not (root / 'runtime/src/aprof_runtime').is_dir() or not (root / 'skillgraph/registry.json').is_file():
+    if not (root / 'runtime/src/aprof_runtime').is_dir() or not any((root / name).is_file() for name in ('skills/registry.json', 'skillgraph/registry.json')):
         raise ValueError(f'not a complete skill release: {root}')
     if binding and _sha(root / 'release.json') != binding['manifest_sha256']:
         raise ValueError('frozen skill release manifest changed')

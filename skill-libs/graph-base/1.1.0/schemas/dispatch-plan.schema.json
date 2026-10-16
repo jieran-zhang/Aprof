@@ -1,0 +1,375 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aprof.local/schemas/dispatch-plan.schema.json",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.0.0"
+        },
+        "dispatch_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "architecture_profile_ref": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "parallel_plan_ref": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "group_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "tiling_key": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 18446744073709551615
+              },
+              "kernel_entry": {
+                "type": "string",
+                "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+              },
+              "conditions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "field": {
+                      "type": "string",
+                      "pattern": "^(dtype|layout|numel|shape\\.[0-9]+|attributes\\.[A-Za-z][A-Za-z0-9_]*)$"
+                    },
+                    "op": {
+                      "enum": [
+                        "eq",
+                        "ne",
+                        "lt",
+                        "le",
+                        "gt",
+                        "ge",
+                        "in"
+                      ]
+                    },
+                    "value": {
+                      "anyOf": [
+                        {
+                          "type": [
+                            "string",
+                            "number",
+                            "boolean"
+                          ]
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": [
+                              "string",
+                              "number",
+                              "boolean"
+                            ]
+                          },
+                          "minItems": 1
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "field",
+                    "op",
+                    "value"
+                  ]
+                }
+              },
+              "required_capabilities": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "group_id",
+              "tiling_key",
+              "kernel_entry",
+              "conditions",
+              "required_capabilities"
+            ]
+          }
+        },
+        "fallback": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "group_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tiling_key": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 18446744073709551615
+            },
+            "kernel_entry": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            },
+            "conditions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "field": {
+                    "type": "string",
+                    "pattern": "^(dtype|layout|numel|shape\\.[0-9]+|attributes\\.[A-Za-z][A-Za-z0-9_]*)$"
+                  },
+                  "op": {
+                    "enum": [
+                      "eq",
+                      "ne",
+                      "lt",
+                      "le",
+                      "gt",
+                      "ge",
+                      "in"
+                    ]
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": [
+                          "string",
+                          "number",
+                          "boolean"
+                        ]
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": [
+                            "string",
+                            "number",
+                            "boolean"
+                          ]
+                        },
+                        "minItems": 1
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "field",
+                  "op",
+                  "value"
+                ]
+              }
+            },
+            "required_capabilities": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "group_id",
+            "tiling_key",
+            "kernel_entry",
+            "conditions",
+            "required_capabilities"
+          ]
+        },
+        "plan_basis_source_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "implementation_source_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "schema_version",
+        "dispatch_id",
+        "operator",
+        "source_hash",
+        "architecture_profile_ref",
+        "parallel_plan_ref",
+        "entries",
+        "fallback"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.0.0"
+        },
+        "dispatch_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "architecture_profile_ref": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "parallel_plan_ref": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "plan_basis_source_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "implementation_source_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "mode": {
+          "const": "unkeyed_complete_call"
+        },
+        "scope": {
+          "const": "declared_workloads_only"
+        },
+        "source_review_ref": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "declared_workloads": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "metadata_ref": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "workload": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "shape": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "dtype": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "layout": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "attributes": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": [
+                        "string",
+                        "number",
+                        "boolean"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "shape",
+                  "dtype",
+                  "layout",
+                  "attributes"
+                ]
+              },
+              "group_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "role_kernel_names": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "baseline": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^aprof_baseline_[A-Za-z_][A-Za-z0-9_]*$"
+                    },
+                    "minItems": 1
+                  },
+                  "candidate": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^aprof_candidate_[A-Za-z_][A-Za-z0-9_]*$"
+                    },
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "baseline",
+                  "candidate"
+                ]
+              }
+            },
+            "required": [
+              "metadata_ref",
+              "workload",
+              "group_id",
+              "role_kernel_names"
+            ]
+          },
+          "minItems": 20,
+          "maxItems": 20
+        }
+      },
+      "required": [
+        "schema_version",
+        "dispatch_id",
+        "operator",
+        "source_hash",
+        "architecture_profile_ref",
+        "parallel_plan_ref",
+        "plan_basis_source_hash",
+        "implementation_source_hash",
+        "mode",
+        "scope",
+        "source_review_ref",
+        "declared_workloads"
+      ]
+    }
+  ]
+}

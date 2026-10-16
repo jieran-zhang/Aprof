@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aprof.local/schemas/unified-timing-result.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "unified_timing_result"
+    },
+    "protocol": {
+      "const": "single_role_l2_clean_task_v1"
+    },
+    "metric": {
+      "const": "msprof.Task_Duration.complete_call"
+    },
+    "operator": {
+      "type": "string",
+      "minLength": 1
+    },
+    "candidate_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ]
+    },
+    "evaluated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "verdict": {
+      "enum": [
+        "accepted",
+        "rejected",
+        "inconclusive"
+      ]
+    },
+    "speedup": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "max_case_regression": {
+      "type": "number"
+    },
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min_speedup": {
+          "const": 1.03
+        },
+        "max_case_regression": {
+          "const": 0.03
+        },
+        "max_within_process_cv": {
+          "const": 0.05
+        }
+      },
+      "required": [
+        "min_speedup",
+        "max_case_regression",
+        "max_within_process_cv"
+      ]
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "case_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "baseline_capture_ref": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "candidate_capture_ref": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "baseline_median_us": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "candidate_median_us": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "speedup": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "regression": {
+            "type": "number"
+          },
+          "baseline_within_process_cv": {
+            "type": "number",
+            "minimum": 0
+          },
+          "candidate_within_process_cv": {
+            "type": "number",
+            "minimum": 0
+          },
+          "ab_gap_seconds": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "case_id",
+          "baseline_capture_ref",
+          "candidate_capture_ref",
+          "baseline_median_us",
+          "candidate_median_us",
+          "speedup",
+          "regression",
+          "baseline_within_process_cv",
+          "candidate_within_process_cv",
+          "ab_gap_seconds"
+        ]
+      }
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "authority": {
+      "const": "performance_engineering_only"
+    },
+    "replication_recommended": {
+      "type": "boolean"
+    },
+    "uncertainty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "decision_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  },
+  "required": [
+    "schema_version",
+    "kind",
+    "protocol",
+    "metric",
+    "operator",
+    "candidate_id",
+    "request",
+    "evaluated_at",
+    "verdict",
+    "speedup",
+    "max_case_regression",
+    "thresholds",
+    "cases",
+    "reasons",
+    "authority",
+    "replication_recommended",
+    "uncertainty",
+    "decision_hash"
+  ]
+}

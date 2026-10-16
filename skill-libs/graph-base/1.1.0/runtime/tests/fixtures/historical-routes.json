@@ -1,0 +1,1163 @@
+{
+  "source_graph_runtime_hash": "sha256:0cf1cf5dd266cc03707fb082091ab124d58ac309e31950e70716e9ac740ac252",
+  "policies": {
+    "v0001": {
+      "algorithm": "fixed_graph_shrunk_edge_bias_v1",
+      "base_graph_hash": "sha256:59c1f7e8d77ab900c64ee4b3383a0368e5199858266c0a2bb1c737773ec45e9f",
+      "checkpoint_hash": "sha256:bf77e994a10f29f035caa6e162c7511b69bcbf0ba4ab510e59462ff6bcc13afd",
+      "config": {
+        "allowed_runtime_prefixes": [
+          "aprof-runtime/"
+        ],
+        "learning_rate": 1.0,
+        "max_abs_bias": 0.5,
+        "max_abs_signal": 1.0,
+        "max_importance_weight": 4.0,
+        "max_measurement_cv": 0.05,
+        "min_measurement_pairs": 30,
+        "min_support": 2,
+        "negative_verdict_utilities": {},
+        "require_known_producer_hashes": true,
+        "shrinkage": 4.0,
+        "use_recorded_propensity": true
+      },
+      "config_hash": "sha256:0b12a8d920fe395ff3045436d8b3001726a3257aaf5b94b7e5a1b92c162396df",
+      "edge_updates": [
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.capacity.noop",
+          "effective_logit": -1.0,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": -1.0,
+          "reliability": 0.0,
+          "source_id": "mechanism.onchip_capacity_pressure",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.capacity.reuse",
+          "effective_logit": 2.4,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 2.4,
+          "reliability": 0.0,
+          "source_id": "mechanism.onchip_capacity_pressure",
+          "support_count": 0,
+          "target_id": "transformation.reuse_disjoint_onchip_buffers",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.conflict.noop",
+          "effective_logit": -1.0,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": -1.0,
+          "reliability": 0.0,
+          "source_id": "mechanism.ub_bank_conflict",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.conflict.pad",
+          "effective_logit": 2.8,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 2.8,
+          "reliability": 0.0,
+          "source_id": "mechanism.ub_bank_conflict",
+          "support_count": 0,
+          "target_id": "transformation.pad_ub_layout",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.pipeline.noop",
+          "effective_logit": -1.0,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": -1.0,
+          "reliability": 0.0,
+          "source_id": "mechanism.pipeline_serialization",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.pipeline.software_pipeline",
+          "effective_logit": 2.7,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 2.7,
+          "reliability": 0.0,
+          "source_id": "mechanism.pipeline_serialization",
+          "support_count": 0,
+          "target_id": "transformation.software_pipeline_stages",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.roundtrip.keep_onchip",
+          "effective_logit": 2.7,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 2.7,
+          "reliability": 0.0,
+          "source_id": "mechanism.redundant_gm_round_trip",
+          "support_count": 0,
+          "target_id": "transformation.keep_intermediate_onchip",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.roundtrip.noop",
+          "effective_logit": -1.0,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": -1.0,
+          "reliability": 0.0,
+          "source_id": "mechanism.redundant_gm_round_trip",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.scalar.noop",
+          "effective_logit": -1.0,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": -1.0,
+          "reliability": 0.0,
+          "source_id": "mechanism.scalar_control_hot_loop",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.scalar.vectorize",
+          "effective_logit": 2.5,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 2.5,
+          "reliability": 0.0,
+          "source_id": "mechanism.scalar_control_hot_loop",
+          "support_count": 0,
+          "target_id": "transformation.vectorize_scalar_loop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.sync.narrow",
+          "effective_logit": 2.6,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 2.6,
+          "reliability": 0.0,
+          "source_id": "mechanism.excessive_sync_scope",
+          "support_count": 0,
+          "target_id": "transformation.narrow_sync_scope",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.sync.noop",
+          "effective_logit": -0.8,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": -0.8,
+          "reliability": 0.0,
+          "source_id": "mechanism.excessive_sync_scope",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.tail.balance",
+          "effective_logit": 2.6,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 2.6,
+          "reliability": 0.0,
+          "source_id": "mechanism.core_tail_imbalance",
+          "support_count": 0,
+          "target_id": "transformation.balance_tail_assignment",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.tail.noop",
+          "effective_logit": -1.0,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": -1.0,
+          "reliability": 0.0,
+          "source_id": "mechanism.core_tail_imbalance",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.tiny_copy.coalesce",
+          "effective_logit": 2.8,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 2.8,
+          "reliability": 0.0,
+          "source_id": "mechanism.tiny_transfer_setup_amplification",
+          "support_count": 0,
+          "target_id": "transformation.coalesce_contiguous_transfers",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.tiny_copy.noop",
+          "effective_logit": -0.8,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": -0.8,
+          "reliability": 0.0,
+          "source_id": "mechanism.tiny_transfer_setup_amplification",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.underused.dynamic_tasks",
+          "effective_logit": 2.8,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 2.8,
+          "reliability": 0.0,
+          "source_id": "mechanism.underused_task_parallelism",
+          "support_count": 0,
+          "target_id": "transformation.decompose_tasks_dynamically",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.underused.noop",
+          "effective_logit": -0.7,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": -0.7,
+          "reliability": 0.0,
+          "source_id": "mechanism.underused_task_parallelism",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.unknown.noop",
+          "effective_logit": 3.0,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 3.0,
+          "reliability": 0.0,
+          "source_id": "mechanism.unknown_unresolved",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.vector.batch",
+          "effective_logit": 2.7,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 2.7,
+          "reliability": 0.0,
+          "source_id": "mechanism.vector_api_fragmentation",
+          "support_count": 0,
+          "target_id": "transformation.batch_vector_api_calls",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.vector.noop",
+          "effective_logit": -1.0,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": -1.0,
+          "reliability": 0.0,
+          "source_id": "mechanism.vector_api_fragmentation",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.workload.noop",
+          "effective_logit": 3.0,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 3.0,
+          "reliability": 0.0,
+          "source_id": "mechanism.workload_limited",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        }
+      ],
+      "graph_version": "v0001",
+      "input_episode_hashes": [],
+      "objective_semantics": "observational_machine_gate_outcome_update_not_causal_attribution",
+      "policy_version": "frozen-expert-replay",
+      "schema_version": "1.0.0",
+      "training_data_hashes": [],
+      "training_summary": {
+        "input_record_count": 0,
+        "skip_reasons": {},
+        "training_episode_count": 0,
+        "unique_valid_episode_count": 0,
+        "updated_edge_count": 0
+      }
+    },
+    "v0002": {
+      "algorithm": "fixed_graph_shrunk_edge_bias_v1",
+      "base_graph_hash": "sha256:4d18205d52b089bce811dedfa3508ad0605d19d33fdcdb7f59109a043b7261aa",
+      "checkpoint_hash": "sha256:812ecbf0eada28d0176779abf73de4003e39df32995040b99534a85dd05a4349",
+      "config": {
+        "allowed_runtime_prefixes": [
+          "aprof-runtime/"
+        ],
+        "learning_rate": 1.0,
+        "max_abs_bias": 0.5,
+        "max_abs_signal": 1.0,
+        "max_importance_weight": 4.0,
+        "max_measurement_cv": 0.05,
+        "min_measurement_pairs": 30,
+        "min_support": 2,
+        "negative_verdict_utilities": {},
+        "require_known_producer_hashes": true,
+        "shrinkage": 4.0,
+        "use_recorded_propensity": true
+      },
+      "config_hash": "sha256:0b12a8d920fe395ff3045436d8b3001726a3257aaf5b94b7e5a1b92c162396df",
+      "edge_updates": [
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.capacity.noop",
+          "effective_logit": -1.0,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": -1.0,
+          "reliability": 0.0,
+          "source_id": "mechanism.onchip_capacity_pressure",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.capacity.reuse",
+          "effective_logit": 2.4,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 2.4,
+          "reliability": 0.0,
+          "source_id": "mechanism.onchip_capacity_pressure",
+          "support_count": 0,
+          "target_id": "transformation.reuse_disjoint_onchip_buffers",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.conflict.noop",
+          "effective_logit": -1.0,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": -1.0,
+          "reliability": 0.0,
+          "source_id": "mechanism.ub_bank_conflict",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.conflict.pad",
+          "effective_logit": 2.8,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 2.8,
+          "reliability": 0.0,
+          "source_id": "mechanism.ub_bank_conflict",
+          "support_count": 0,
+          "target_id": "transformation.pad_ub_layout",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.pipeline.noop",
+          "effective_logit": -1.0,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": -1.0,
+          "reliability": 0.0,
+          "source_id": "mechanism.pipeline_serialization",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.pipeline.software_pipeline",
+          "effective_logit": 2.7,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 2.7,
+          "reliability": 0.0,
+          "source_id": "mechanism.pipeline_serialization",
+          "support_count": 0,
+          "target_id": "transformation.software_pipeline_stages",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.roundtrip.keep_onchip",
+          "effective_logit": 2.7,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 2.7,
+          "reliability": 0.0,
+          "source_id": "mechanism.redundant_gm_round_trip",
+          "support_count": 0,
+          "target_id": "transformation.keep_intermediate_onchip",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.roundtrip.noop",
+          "effective_logit": -1.0,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": -1.0,
+          "reliability": 0.0,
+          "source_id": "mechanism.redundant_gm_round_trip",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.scalar.noop",
+          "effective_logit": -1.0,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": -1.0,
+          "reliability": 0.0,
+          "source_id": "mechanism.scalar_control_hot_loop",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.scalar.vectorize",
+          "effective_logit": 2.5,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 2.5,
+          "reliability": 0.0,
+          "source_id": "mechanism.scalar_control_hot_loop",
+          "support_count": 0,
+          "target_id": "transformation.vectorize_scalar_loop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.sync.narrow",
+          "effective_logit": 2.6,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 2.6,
+          "reliability": 0.0,
+          "source_id": "mechanism.excessive_sync_scope",
+          "support_count": 0,
+          "target_id": "transformation.narrow_sync_scope",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.sync.noop",
+          "effective_logit": -0.8,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": -0.8,
+          "reliability": 0.0,
+          "source_id": "mechanism.excessive_sync_scope",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.tail.balance",
+          "effective_logit": 2.6,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 2.6,
+          "reliability": 0.0,
+          "source_id": "mechanism.core_tail_imbalance",
+          "support_count": 0,
+          "target_id": "transformation.balance_tail_assignment",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.tail.noop",
+          "effective_logit": -1.0,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": -1.0,
+          "reliability": 0.0,
+          "source_id": "mechanism.core_tail_imbalance",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.tiny_copy.coalesce",
+          "effective_logit": 2.8,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 2.8,
+          "reliability": 0.0,
+          "source_id": "mechanism.tiny_transfer_setup_amplification",
+          "support_count": 0,
+          "target_id": "transformation.coalesce_contiguous_transfers",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.tiny_copy.noop",
+          "effective_logit": -0.8,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": -0.8,
+          "reliability": 0.0,
+          "source_id": "mechanism.tiny_transfer_setup_amplification",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.underused.dynamic_tasks",
+          "effective_logit": 2.8,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 2.8,
+          "reliability": 0.0,
+          "source_id": "mechanism.underused_task_parallelism",
+          "support_count": 0,
+          "target_id": "transformation.decompose_tasks_dynamically",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.underused.noop",
+          "effective_logit": -0.7,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": -0.7,
+          "reliability": 0.0,
+          "source_id": "mechanism.underused_task_parallelism",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.unknown.noop",
+          "effective_logit": 3.0,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 3.0,
+          "reliability": 0.0,
+          "source_id": "mechanism.unknown_unresolved",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.vector.batch",
+          "effective_logit": 2.7,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 2.7,
+          "reliability": 0.0,
+          "source_id": "mechanism.vector_api_fragmentation",
+          "support_count": 0,
+          "target_id": "transformation.batch_vector_api_calls",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.vector.noop",
+          "effective_logit": -1.0,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": -1.0,
+          "reliability": 0.0,
+          "source_id": "mechanism.vector_api_fragmentation",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.prior.workload.noop",
+          "effective_logit": 3.0,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 3.0,
+          "reliability": 0.0,
+          "source_id": "mechanism.workload_limited",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.v2.algorithm.noop",
+          "effective_logit": -1.0,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": -1.0,
+          "reliability": 0.0,
+          "source_id": "mechanism.algorithm_decomposition_choice",
+          "support_count": 0,
+          "target_id": "transformation.noop",
+          "weighted_support": 0.0
+        },
+        {
+          "bias": 0.0,
+          "edge_id": "edge.v2.algorithm.select",
+          "effective_logit": 1.0,
+          "negative_count": 0,
+          "positive_count": 0,
+          "prior_logit": 1.0,
+          "reliability": 0.0,
+          "source_id": "mechanism.algorithm_decomposition_choice",
+          "support_count": 0,
+          "target_id": "transformation.select_parallel_algorithm",
+          "weighted_support": 0.0
+        }
+      ],
+      "graph_version": "v0002",
+      "input_episode_hashes": [],
+      "objective_semantics": "observational_machine_gate_outcome_update_not_causal_attribution",
+      "policy_version": "frozen-expert-replay",
+      "schema_version": "1.0.0",
+      "training_data_hashes": [],
+      "training_summary": {
+        "input_record_count": 0,
+        "skip_reasons": {},
+        "training_episode_count": 0,
+        "unique_valid_episode_count": 0,
+        "updated_edge_count": 0
+      }
+    }
+  },
+  "cases": [
+    {
+      "graph_version": "v0001",
+      "context": {
+        "budget": {
+          "candidate_limit": 1
+        },
+        "evidence": {
+          "predicate_states": {}
+        },
+        "hardware_fingerprint": "ascend:test",
+        "operator": "fixture",
+        "schema_version": "1.0.0",
+        "task_id": "historical-replay",
+        "workload": {
+          "shape": [
+            1024
+          ]
+        }
+      },
+      "policy": false,
+      "expected_route_hash": "sha256:15e1f61e264cb5c9455da66fcf258786b10d0251c8c7641572e3ed71f6f0222e"
+    },
+    {
+      "graph_version": "v0001",
+      "context": {
+        "budget": {
+          "candidate_limit": 1
+        },
+        "evidence": {
+          "predicate_states": {}
+        },
+        "hardware_fingerprint": "ascend:test",
+        "operator": "fixture",
+        "schema_version": "1.0.0",
+        "task_id": "historical-replay",
+        "workload": {
+          "shape": [
+            1024
+          ]
+        }
+      },
+      "policy": true,
+      "expected_route_hash": "sha256:8ec87e51890ce83c200a93bd208b72eb0f63df53c890d02c910c038d77f234fa"
+    },
+    {
+      "graph_version": "v0001",
+      "context": {
+        "budget": {
+          "candidate_limit": 1
+        },
+        "evidence": {
+          "predicate_states": {
+            "predicate.profile.scalar_hot": true,
+            "predicate.source.scalar_element_loop": true
+          }
+        },
+        "hardware_fingerprint": "ascend:test",
+        "operator": "fixture",
+        "schema_version": "1.0.0",
+        "task_id": "historical-replay",
+        "workload": {
+          "shape": [
+            1024
+          ]
+        }
+      },
+      "policy": false,
+      "expected_route_hash": "sha256:b4450a110b6ba9f568f29e0da2651a714574566d0e205746aab084d09a38bcd5"
+    },
+    {
+      "graph_version": "v0001",
+      "context": {
+        "budget": {
+          "candidate_limit": 1
+        },
+        "evidence": {
+          "predicate_states": {
+            "predicate.profile.scalar_hot": true,
+            "predicate.source.scalar_element_loop": true
+          }
+        },
+        "hardware_fingerprint": "ascend:test",
+        "operator": "fixture",
+        "schema_version": "1.0.0",
+        "task_id": "historical-replay",
+        "workload": {
+          "shape": [
+            1024
+          ]
+        }
+      },
+      "policy": true,
+      "expected_route_hash": "sha256:819c58abc6d022a52125bf512565fc2d9961cc4806cb72bfdaf4a6ac7a42a582"
+    },
+    {
+      "graph_version": "v0001",
+      "context": {
+        "budget": {
+          "candidate_limit": 1
+        },
+        "evidence": {
+          "predicate_states": {
+            "predicate.profile.tasks_below_available_cores": true,
+            "predicate.workload.tiny_or_overhead_limited": true
+          }
+        },
+        "hardware_fingerprint": "ascend:test",
+        "operator": "fixture",
+        "schema_version": "1.0.0",
+        "task_id": "historical-replay",
+        "workload": {
+          "shape": [
+            1024
+          ]
+        }
+      },
+      "policy": false,
+      "expected_route_hash": "sha256:cf1197f2e798e732214e4886807a89814f81efb62acdc8e2906118f6ced0ad1a"
+    },
+    {
+      "graph_version": "v0001",
+      "context": {
+        "budget": {
+          "candidate_limit": 1
+        },
+        "evidence": {
+          "predicate_states": {
+            "predicate.profile.tasks_below_available_cores": true,
+            "predicate.workload.tiny_or_overhead_limited": true
+          }
+        },
+        "hardware_fingerprint": "ascend:test",
+        "operator": "fixture",
+        "schema_version": "1.0.0",
+        "task_id": "historical-replay",
+        "workload": {
+          "shape": [
+            1024
+          ]
+        }
+      },
+      "policy": true,
+      "expected_route_hash": "sha256:ccec0952c58e3715ff8270f1660e472465261487a512f71e84ec29b20a3b7ed9"
+    },
+    {
+      "graph_version": "v0001",
+      "context": {
+        "budget": {
+          "candidate_limit": 1
+        },
+        "evidence": {
+          "predicate_states": {
+            "predicate.profile.mte_setup_dominated": true,
+            "predicate.source.inner_loop_copy": true
+          }
+        },
+        "hardware_fingerprint": "ascend:test",
+        "operator": "fixture",
+        "schema_version": "1.0.0",
+        "task_id": "historical-replay",
+        "workload": {
+          "shape": [
+            1024
+          ]
+        }
+      },
+      "policy": false,
+      "expected_route_hash": "sha256:9b18d07eed42f29023924f655b87367dde60f3939e2958c687980c4b6c66874a"
+    },
+    {
+      "graph_version": "v0001",
+      "context": {
+        "budget": {
+          "candidate_limit": 1
+        },
+        "evidence": {
+          "predicate_states": {
+            "predicate.profile.mte_setup_dominated": true,
+            "predicate.source.inner_loop_copy": true
+          }
+        },
+        "hardware_fingerprint": "ascend:test",
+        "operator": "fixture",
+        "schema_version": "1.0.0",
+        "task_id": "historical-replay",
+        "workload": {
+          "shape": [
+            1024
+          ]
+        }
+      },
+      "policy": true,
+      "expected_route_hash": "sha256:5796a230c7ac5b03ea143df6f8e9d0c58c39b7405a776ae6f313cd297af6de12"
+    },
+    {
+      "graph_version": "v0001",
+      "context": {
+        "budget": {
+          "candidate_limit": 1
+        },
+        "evidence": {
+          "predicate_states": {
+            "predicate.source.algorithm_parallel_plan_required": true
+          }
+        },
+        "hardware_fingerprint": "ascend:test",
+        "operator": "fixture",
+        "schema_version": "1.0.0",
+        "task_id": "historical-replay",
+        "workload": {
+          "shape": [
+            1024
+          ]
+        }
+      },
+      "policy": false,
+      "expected_route_hash": "sha256:15e1f61e264cb5c9455da66fcf258786b10d0251c8c7641572e3ed71f6f0222e"
+    },
+    {
+      "graph_version": "v0001",
+      "context": {
+        "budget": {
+          "candidate_limit": 1
+        },
+        "evidence": {
+          "predicate_states": {
+            "predicate.source.algorithm_parallel_plan_required": true
+          }
+        },
+        "hardware_fingerprint": "ascend:test",
+        "operator": "fixture",
+        "schema_version": "1.0.0",
+        "task_id": "historical-replay",
+        "workload": {
+          "shape": [
+            1024
+          ]
+        }
+      },
+      "policy": true,
+      "expected_route_hash": "sha256:8ec87e51890ce83c200a93bd208b72eb0f63df53c890d02c910c038d77f234fa"
+    },
+    {
+      "graph_version": "v0002",
+      "context": {
+        "budget": {
+          "candidate_limit": 1
+        },
+        "evidence": {
+          "predicate_states": {}
+        },
+        "hardware_fingerprint": "ascend:test",
+        "operator": "fixture",
+        "schema_version": "1.0.0",
+        "task_id": "historical-replay",
+        "workload": {
+          "shape": [
+            1024
+          ]
+        }
+      },
+      "policy": false,
+      "expected_route_hash": "sha256:53adf4126fc0fcf66831eb690740959bc4a191187d09d5db8f2765cd18057d94"
+    },
+    {
+      "graph_version": "v0002",
+      "context": {
+        "budget": {
+          "candidate_limit": 1
+        },
+        "evidence": {
+          "predicate_states": {}
+        },
+        "hardware_fingerprint": "ascend:test",
+        "operator": "fixture",
+        "schema_version": "1.0.0",
+        "task_id": "historical-replay",
+        "workload": {
+          "shape": [
+            1024
+          ]
+        }
+      },
+      "policy": true,
+      "expected_route_hash": "sha256:6ff8f18f4cf9461ae176850430366c7df18f9bbb41b4d5d5800e46c716f68ea0"
+    },
+    {
+      "graph_version": "v0002",
+      "context": {
+        "budget": {
+          "candidate_limit": 1
+        },
+        "evidence": {
+          "predicate_states": {
+            "predicate.profile.scalar_hot": true,
+            "predicate.source.scalar_element_loop": true
+          }
+        },
+        "hardware_fingerprint": "ascend:test",
+        "operator": "fixture",
+        "schema_version": "1.0.0",
+        "task_id": "historical-replay",
+        "workload": {
+          "shape": [
+            1024
+          ]
+        }
+      },
+      "policy": false,
+      "expected_route_hash": "sha256:a2b6763e56f34d5dadd15837ce285169b6d0ecdd552518207a88ecd5f2fb9e17"
+    },
+    {
+      "graph_version": "v0002",
+      "context": {
+        "budget": {
+          "candidate_limit": 1
+        },
+        "evidence": {
+          "predicate_states": {
+            "predicate.profile.scalar_hot": true,
+            "predicate.source.scalar_element_loop": true
+          }
+        },
+        "hardware_fingerprint": "ascend:test",
+        "operator": "fixture",
+        "schema_version": "1.0.0",
+        "task_id": "historical-replay",
+        "workload": {
+          "shape": [
+            1024
+          ]
+        }
+      },
+      "policy": true,
+      "expected_route_hash": "sha256:878ca48d2bac221e8f02f7ef933613292bf412f2fa1bf796bc93adf2c055c9e5"
+    },
+    {
+      "graph_version": "v0002",
+      "context": {
+        "budget": {
+          "candidate_limit": 1
+        },
+        "evidence": {
+          "predicate_states": {
+            "predicate.profile.tasks_below_available_cores": true,
+            "predicate.workload.tiny_or_overhead_limited": true
+          }
+        },
+        "hardware_fingerprint": "ascend:test",
+        "operator": "fixture",
+        "schema_version": "1.0.0",
+        "task_id": "historical-replay",
+        "workload": {
+          "shape": [
+            1024
+          ]
+        }
+      },
+      "policy": false,
+      "expected_route_hash": "sha256:8c5351bb5bf0a305a7b2402a8b61fedd2cea5f2c7e2f479d8d93cad40ef64fae"
+    },
+    {
+      "graph_version": "v0002",
+      "context": {
+        "budget": {
+          "candidate_limit": 1
+        },
+        "evidence": {
+          "predicate_states": {
+            "predicate.profile.tasks_below_available_cores": true,
+            "predicate.workload.tiny_or_overhead_limited": true
+          }
+        },
+        "hardware_fingerprint": "ascend:test",
+        "operator": "fixture",
+        "schema_version": "1.0.0",
+        "task_id": "historical-replay",
+        "workload": {
+          "shape": [
+            1024
+          ]
+        }
+      },
+      "policy": true,
+      "expected_route_hash": "sha256:d9e3b066c3f8b2feaadf6a13f8fec7221a858d8308be09e65f6110a38ca1fd86"
+    },
+    {
+      "graph_version": "v0002",
+      "context": {
+        "budget": {
+          "candidate_limit": 1
+        },
+        "evidence": {
+          "predicate_states": {
+            "predicate.profile.mte_setup_dominated": true,
+            "predicate.source.inner_loop_copy": true
+          }
+        },
+        "hardware_fingerprint": "ascend:test",
+        "operator": "fixture",
+        "schema_version": "1.0.0",
+        "task_id": "historical-replay",
+        "workload": {
+          "shape": [
+            1024
+          ]
+        }
+      },
+      "policy": false,
+      "expected_route_hash": "sha256:ea7e649397ccc2d4a5b42fa4f5a10f2bd01d1360db00d19284c5a27dae5405e8"
+    },
+    {
+      "graph_version": "v0002",
+      "context": {
+        "budget": {
+          "candidate_limit": 1
+        },
+        "evidence": {
+          "predicate_states": {
+            "predicate.profile.mte_setup_dominated": true,
+            "predicate.source.inner_loop_copy": true
+          }
+        },
+        "hardware_fingerprint": "ascend:test",
+        "operator": "fixture",
+        "schema_version": "1.0.0",
+        "task_id": "historical-replay",
+        "workload": {
+          "shape": [
+            1024
+          ]
+        }
+      },
+      "policy": true,
+      "expected_route_hash": "sha256:e289411cf0b14d60989bbca31ba0e52010c766d08bd6500aed9e82b92e8b73c9"
+    },
+    {
+      "graph_version": "v0002",
+      "context": {
+        "budget": {
+          "candidate_limit": 1
+        },
+        "evidence": {
+          "predicate_states": {
+            "predicate.source.algorithm_parallel_plan_required": true
+          }
+        },
+        "hardware_fingerprint": "ascend:test",
+        "operator": "fixture",
+        "schema_version": "1.0.0",
+        "task_id": "historical-replay",
+        "workload": {
+          "shape": [
+            1024
+          ]
+        }
+      },
+      "policy": false,
+      "expected_route_hash": "sha256:e97478132339ef8b6eea1a83faa510f7fef9ea0bc184fdea90de09a4cce9b175"
+    },
+    {
+      "graph_version": "v0002",
+      "context": {
+        "budget": {
+          "candidate_limit": 1
+        },
+        "evidence": {
+          "predicate_states": {
+            "predicate.source.algorithm_parallel_plan_required": true
+          }
+        },
+        "hardware_fingerprint": "ascend:test",
+        "operator": "fixture",
+        "schema_version": "1.0.0",
+        "task_id": "historical-replay",
+        "workload": {
+          "shape": [
+            1024
+          ]
+        }
+      },
+      "policy": true,
+      "expected_route_hash": "sha256:d339946bc8db5e2d83759c4b4ad36b65b6f341bfc332de4ba65870f6d3164aba"
+    }
+  ]
+}

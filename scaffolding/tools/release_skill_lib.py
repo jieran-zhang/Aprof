@@ -69,7 +69,10 @@ def seal(root, source_commit, source_version, validation_run=None, measurement_v
     errors = tool.registry_errors(root)
     if errors:
         raise ValueError('; '.join(errors))
-    registry = json.loads((root / 'skillgraph/registry.json').read_text())
+    registry_path = root / ('skills/registry.json' if (root / 'skills/registry.json').is_file() else 'skillgraph/registry.json')
+    registry = json.loads(registry_path.read_text())
+    if hasattr(tool, 'verify_knowledge') and registry.get('knowledge'):
+        tool.verify_knowledge(root)
     version = registry['library']['version']
     if root.name != version:
         raise ValueError('version directory and registry differ')
@@ -78,7 +81,8 @@ def seal(root, source_commit, source_version, validation_run=None, measurement_v
         scoped_publication=scoped_publication, scope_amendment_sha256=scope_amendment_sha256)
     runtime = tomllib.loads((root / 'runtime/pyproject.toml').read_text())['project']['version']
     graphs = {}
-    for path in sorted((root / 'skillgraph/versions').iterdir()):
+    paths = tool.graph_paths(root) if hasattr(tool, 'graph_paths') else sorted((root / 'skillgraph/versions').iterdir())
+    for path in paths:
         if not path.is_dir():
             continue
         subprocess.run([str(root / 'tools/aprofctl'), 'graph', 'validate', '--graph', str(path)], check=True,
@@ -88,7 +92,7 @@ def seal(root, source_commit, source_version, validation_run=None, measurement_v
     if qualification is not None and files != candidate_files:
         raise ValueError('candidate changed while verifying publication evidence')
     value = {'schema_version': 1, 'status': 'stable', 'release_id': f'{root.parent.name}/{version}',
-             'skill_version': version, 'runtime_version': runtime, 'default_graph': 'v0002',
+             'skill_version': version, 'runtime_version': runtime, 'default_graph': registry.get('default_graph_version', 'v0002'),
              'source_commit': source_commit, 'source_skill_version': source_version,
              'graphs': graphs, 'files': files}
     if qualification is not None:
