@@ -1,5 +1,9 @@
 # AProf 后续训练方向与训练方法
 
+> 历史研究路线：以下 Wiki、固定图 policy 与旧配对计时要求描述原阶段，不能套用到 1.1.0。
+> 新 graph/两个 knowledge 的离线学习以 [Teacher skill](../skills/aprof-train-knowledge/SKILL.md)
+> 及其版本化准入策略为准；采集入口见 [脚手架说明](../README.md)。
+
 本文给出 AProf 从当前 expert-seeded SkillGraph 走向可验证后训练系统的实施路线。它描述工程训练协议，不替代论文 proposal；“已实现”和“后续能力”在文中明确分开。
 
 ## graph-base/1.0.0：技能文件演化与固定图训练分轨

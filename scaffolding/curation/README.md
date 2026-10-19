@@ -1,5 +1,9 @@
 # graph-base/1.0.0 teacher snapshot
 
+> 本目录是 1.0.0 Teacher/Wiki 及旧测量研究的历史审计材料。
+> 新任务的 memory 学习入口在 [aprof-train-knowledge](../skills/aprof-train-knowledge/SKILL.md)，
+> 不将这里的旧发布门槛或旧奖励资格自动继承给 1.1.0。
+
 0.5.1 的 Task v4 测量修复已封存并成为默认版本。1.0.0 候选已同步其
 runtime 0.2.2、本地优化证据和任务后归档分工；Teacher 绑定真实稳定 manifest。
 66 条来源、当前 split、10 篇 Wiki 与 v0002 校验通过，尚无规则晋升。

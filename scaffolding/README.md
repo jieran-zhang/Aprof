@@ -25,7 +25,7 @@ flowchart TD
   V --> N[通过才形成可晋升候选；否则保留原版本与失败提案]
 ```
 
-两个 skill 是本仓库的上层研究能力，不安装进算子使用的 1.1.0 包。registry 在 [skills/registry.json](skills/registry.json)。本轮提供操作规范、严格记录格式和 CPU 完整性校验；调度由宿主 agent 执行，Teacher 按 skill 编辑候选。没有新增自动训练服务，也没有运行硬件、更新知识权重或发布版本。
+两个 skill 是本仓库的上层研究能力，不安装进算子使用的 skill-lib 包。registry 在 [skills/registry.json](skills/registry.json)。本轮提供操作规范、严格记录格式和 CPU 完整性校验；调度由宿主 agent 执行，Teacher 按 skill 编辑候选。没有新增自动训练服务，也没有运行硬件、更新知识权重或发布版本。
 
 ## 文件夹治理
 
@@ -45,7 +45,7 @@ flowchart TD
 
 这里采用**活动入口收敛、历史路径保留**：旧 producer 及证据引用包含路径和 hash，直接搬走脚本或改写旧协议会破坏回放。旧字节继续留在原处，后续逐个迁移必须有调用者与回放验证；不建立一份重复的活动副本。CANNBench 现有 49 个实体算子工程保持不变。
 
-新任务产生的工作区、源码快照、原始 CSV 和大型证据放 Git 外；推荐 `.aprof/batches/<batch_id>/`。Git 维护 skill、契约、工具和脱敏的小型验证材料。运行目录布局与归档闭包见 [memory 规范](skills/aprof-optimize-batch/references/memory.md)。
+1.2.0 新任务产生的工作区、源码快照、原始 CSV 和大型证据放 `/dev/shm/aprof-<task-id>`，不自动回写共享盘；历史版本按其冻结协议回放。Git 维护 skill、契约、工具和脱敏的小型验证材料。运行目录布局与归档闭包见 [memory 规范](skills/aprof-optimize-batch/references/memory.md)。
 
 ## CPU 检查
 
@@ -57,4 +57,4 @@ python3 -m pytest scaffolding/tests/test_learning_records.py -q
 
 `--root` 是所有新引用的共同根；校验器只读，不执行记录中的命令。检查通过表示格式、文件 hash、角色、候选覆盖和版本关联可用，**不代表硬件证据已重放或知识可以晋升**。Teacher 的验证职责见 [学习门槛](skills/aprof-train-knowledge/references/admission.md)。
 
-本轮源码审读还发现：[exp](benchmarks/cannbench/operators/exp/scripts/verify_result.py) / [sigmoid](benchmarks/cannbench/operators/sigmoid/scripts/verify_result.py) 的原 oracle 包含 BF16 和 mean/max-relative 误差口径，而当前 [1.1.0 统一回放器](../skill-libs/graph-base/1.1.0/runtime/src/aprof_runtime/unified_timing.py) 的 dtype/逐元素容差接口尚未直接覆盖。新批次应在 C0 明确报该适配缺项，不删除 case 或改变 oracle。本轮演练只验证离线交接、归档和拒绝不足证据的行为，没有证明这两个算子的完整硬件流程已可执行。
+1.1.0 runtime 0.2.6 已纳入 [original_python_v1](../skill-libs/graph-base/1.1.0/skills/ascendc-aprof-profiling/references/original-oracle.md)，通过冻结原程序保留 exp / sigmoid 的 BF16 和自定义误差规则；完整配置能力预检与实际输出验证仍是独立步骤。1.2.0 新任务使用软目标与本地工作区，版本边界及执行入口见 [维护说明](../MAINTENANCE-1.2.0.md)。旧演练和归档的缺项状态不因源码更新而改变。

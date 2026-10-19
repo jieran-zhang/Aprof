@@ -1,5 +1,9 @@
 # Repository layout and migration
 
+1.1.0 的脚手架活动入口已收敛到 [两个高层 skill](../README.md)。
+它们维护批次组织、独立 memory v3 与三个知识区的离线学习；旧 collection、
+curation 和 evidence 留在原路径支持历史回放。以下描述原仓库迁移边界。
+
 Two business roots own the project: complete canonical releases under
 `skill-libs/`, and development/collection/evidence under `scaffolding/`.
 `migration/paths.json` maps the old tracked paths to the new layout;

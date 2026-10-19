@@ -1,6 +1,6 @@
 # graph-base/1.2.0 / runtime 0.3.0（未封版）
 
-新任务入口为 `skill-libs/graph-base/1.2.0/workflows/aprof-performance-workflow.md`，执行策略 `soft_targets_local_v1`。1.1.0 与原历史协议不变；当前推送分支 `maintenance/soft-targets-20261019-push` 继承原仓库 `c8d1609`，纳入 1.2.0 及其所需 batch/memory 契约、校验器和脚手架；未带入原工作树中其他 1.1.0 修改。旧的完整工作区快照保留在本地 `maintenance/soft-targets-20261019` 分支，仅用于追溯，不应使用 `git push --all` 推送。不要将本版冒充 stability-v4 输入锁。
+新任务入口为 `skill-libs/graph-base/1.2.0/workflows/aprof-performance-workflow.md`，执行策略 `soft_targets_local_v1`。1.1.0 保留其历史执行策略；当前推送分支 `maintenance/soft-targets-20261019-push` 继承原仓库 `c8d1609`，纳入 1.2.0 及其所需 batch/memory 契约、校验器和脚手架；原工作树中 1.1.0 的 original oracle、bounded outlier、runtime 0.2.6 和配套文档另以新 commit 纳入。旧的完整工作区快照保留在本地 `maintenance/soft-targets-20261019` 分支，仅用于追溯，不应使用 `git push --all` 推送。不要将本版冒充 stability-v4 输入锁。
 
 - task_budget_v2、runner、oracle、collector、report 使用软目标，记录超支并继续。v1 仅保留历史回放语义。真实退出错误与用户取消仍生效。
 - baseline 默认 assumed，绑定源码/二进制身份，无数值检查；候选必须完整验证。实际全部输出内容一致才复用带任务认证的验证记录。独立审计显式 `APROF_ORACLE_AUDIT=1`。
