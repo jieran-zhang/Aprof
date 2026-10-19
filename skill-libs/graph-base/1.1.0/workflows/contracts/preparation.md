@@ -17,7 +17,7 @@
 | 执行命令 | build/verify/run argv、cwd、必要环境；算子 native adapter 的完整调用/清 L2/输出接口 |
 | 采集声明 | 完整 timing/correctness case 集、输入/oracle、代表/回归集、比较关系、复用及异常/临界复验规则 |
 | 准备状态 | 构建、输入、完整正确性、已有 A 的覆盖和新鲜度；每项注明证据或缺项 |
-| 预算 | 原始截止时间和候选/构建/计时等限制，复用与新执行都计入原任务 |
+| 预算 | 冻结 policy 引用（如有）、原始单调起点/总 deadline、C0 阶段限与有效 deadline、候选/构建/计时等限制；按[阶段预算绑定](../references/workflow-details.md#stage-budget-policy)统一传递和计费 |
 
 ## 输出引用与完成条件
 
@@ -25,7 +25,9 @@
 
 完整 correctness 的 JSON 来自 [统一采集器](../../skills/ascendc-aprof-profiling/references/unified-timing.md) 的 correctness-only 路径，或引用同协议下仍匹配的既有证据；普通旧正确性日志不能冒充该格式。代表集与复验规则写在本文，不向严格 declaration JSON 添字段。后续只补缺少的 A，不要求准备阶段采全 case。
 
-只有 kernel 时用 [直调技能](../../skills/ascendc-kernel-direct-invoke/SKILL.md) 接入完整工程。未知硬件、缺 adapter 或 oracle 不兼容，返回 needs_input，不能用旧计时回退。
+只有 kernel 时用 [直调技能](../../skills/ascendc-kernel-direct-invoke/SKILL.md) 接入完整工程。原精度不是逐元素容差时使用 [原始 oracle adapter](../../skills/ascendc-aprof-profiling/references/original-oracle.md)，先对全部 case 做 capability preflight，再执行完整正确性。上层已有匹配包/adapter/环境的能力证据时复用，不重新调查共同缺项。
+
+未知硬件或缺 adapter/环境返回 needs_input，并在正文记录具体 reason 与缺失能力；只有原 oracle 对本次实际输出返回 false 才称 numerical_mismatch。不能用旧计时回退或放宽精度。开发包修复另立版本/快照，已冻结任务不原地换包。
 
 仅诊断/规划范围内，完成已请求的准备可标记 completed，未执行构建/正确性/采集明确列在缺项中；其下游只能进行允许的分析，不能据此直接计时。
 

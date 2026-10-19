@@ -23,7 +23,11 @@ C1 交 action 内容快照；C2 交模板快照、方案比较、参数和自由
 
 反馈与收尾均用 [single_role_l2_clean_task_v1](skills/ascendc-aprof-profiling/references/unified-timing.md)：每 case/实现一个新进程，5 次预热、20 次逐轮清 L2、按完整调用全部目标 Task 求和后取中位数。有效 A 复用，只采 B；全量收尾补缺项，不因“正式”重复采集。合格 B 可作下轮 A。
 
-`timing finalize` 使用点估计工程判定，不把新数据冒充旧配对/95% 下界。现有实验和约 66 秒估算的适用范围仍有限，10 分钟是待验证目标。新权重未校准，模板只完成来源审读；本轮无 NPU 实验。
+`timing finalize` 使用点估计工程判定，不把新数据冒充旧配对/95% 下界。现有实验和约 66 秒估算的适用范围仍有限，10 分钟是待验证目标。新权重未校准，模板只完成来源审读。
+
+runtime 0.2.5 增加 [original_python_v1](skills/ascendc-aprof-profiling/references/original-oracle.md)，live 与离线回放执行冻结原程序，保留 BF16、自定义误差和特殊值规则。先对完整配置执行能力预检，再验证实际算子链路；归档完成、能力支持和性能验收是独立状态。旧轮次冻结副本不被本次开发包修复覆盖。
+
+runtime 0.2.6 增加预声明的 `bounded_outlier_v1`：20 次完整调用中最多剔除 2 个对称异常，保留样本仍须通过 5% CV；原始值、异常索引与原始 CV 一并输出。未启用的新字段不会改变旧记录判定。具体规则与 A/B 连续采集安排见[统一计时](skills/ascendc-aprof-profiling/references/unified-timing.md)。
 
 ## 独立安装和维护
 

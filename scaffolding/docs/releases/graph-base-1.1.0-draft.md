@@ -6,7 +6,7 @@
 
 ## 本次决定
 
-代表 case 反馈与全量性能收尾统一采用 `single_role_l2_clean_task_v1`：每 case/实现一个新进程，5 次预热、20 次逐轮清 L2 的完整调用，逐轮汇总全部目标 Task 后取中位数。驱逐、输入准备、传输和输出检查不计入目标 Task 时长。
+代表 case 反馈与全量性能收尾统一采用 `single_role_l2_clean_task_v1`：每 case/实现一个新进程，5 次预热、20 次逐轮清 L2 的完整调用，逐轮汇总全部目标 Task 后，按采集前声明的统计策略计算中位数。驱逐、输入准备、传输和输出检查不计入目标 Task 时长。
 
 不再把这种方法限定为“快筛”，也不在收尾时重跑旧 Task v5、30 对样本或固定多进程流程。旧实现只保留历史回放用途；不能把旧 manifest 改名后送入新入口。1.0.1、历史证据和不可变图快照保持原有内容。
 
@@ -19,7 +19,7 @@
 5. 全集证据齐备后执行一次 `tools/aprofctl timing finalize --request <comparison.json> --output <new-result.json>`。反馈阶段合格的采集直接参与收尾，不再接旧 `candidate gate → episode finalize`。
 6. 交付候选、比较父版本、覆盖范围、结果和成本。继续迭代时，上轮 B 的原始记录可作为下一轮 A；只有过期、身份/环境不兼容或触发预声明复验规则时才重新采集。
 
-完整配置和可执行命令见[统一计时协议](../../../skill-libs/graph-base/1.1.0/skills/ascendc-aprof-profiling/references/unified-timing.md)。正式工程门槛为等权几何平均加速比 ≥ 1.03、任一 case 回归 ≤ 3%、轮内 CV ≤ 5%。过期、A/B 时间间隔超限或轮内波动过大返回 `inconclusive`。
+完整配置和可执行命令见[统一计时协议](../../../skill-libs/graph-base/1.1.0/skills/ascendc-aprof-profiling/references/unified-timing.md)。正式工程门槛为等权几何平均加速比 ≥ 1.03、任一 case 回归 ≤ 3%、轮内 CV ≤ 5%。runtime 0.2.6 支持采集前声明 `bounded_outlier_v1`：相对原始中位数偏差超过 max(3 × 1.482602218505602 × MAD, 10% × 中位数) 的完整调用可一次性剔除，最多 2/20，保留至少 18 次；CV 和性能中位数基于保留样本。原始 20 次、原始 CV、阈值及剔除索引全部保留，超过 2 次异常不作剔除并返回 `inconclusive`。没有声明该策略的历史记录继续使用全部样本。过期、A/B 时间间隔超限或轮内波动过大同样返回 `inconclusive`。
 
 这是中位数比的工程点估计，20 轮不是 20 次独立进程实验，不提供旧配对方法的 95% 置信下界。结果权限为 `performance_engineering_only`；不自动证明机制归因、生产范围、合法图动作或策略奖励。语义和范围等其他契约仍需分别满足。
 
@@ -47,7 +47,7 @@ exp 重测的[阶段成本记录](../../../../acceptance-vector-1.0.1-retest3-20
 
 静止文件状态下最终补测 32 项通过：新协议 29 项（parser 7、collector 11、timing 11）和归档回归 3 项。较早全套测试为 86 项通过、3 项因并行编辑改变包身份失败；这 3 项已在最终补测中全部通过。未封版结构、不可变 v0002 图和全部 21 个技能入口的结构检查通过。
 
-当前通用 controller 仍需算子工程提供完整调用与真实清 L2 callback、设备状态 probe 和对应配置。支持的数值 oracle adapter 为小端二进制 float16/32/64、整数和 bool 的冻结逐元素容差；BF16、自定义格式或其他误差判据必须接入保留原精度标准的 adapter，不能删 case、放宽精度或改用旧计时来完成验收。源码和二进制被绑定与回放，不代表 runtime 重新编译证明了两者对应关系；构建来源仍需工程审查。
+当前通用 controller 仍需算子工程提供完整调用与真实清 L2 callback、设备状态 probe 和对应配置。runtime 0.2.5 已增加 [原始 Python oracle adapter](../../../skill-libs/graph-base/1.1.0/skills/ascendc-aprof-profiling/references/original-oracle.md)，live 与离线回放执行冻结原程序；BF16、自定义误差和特殊值遵循原规则。逐元素 adapter 只用于本来就是逐元素容差的契约，不能删 case、放宽精度或改用旧计时来完成验收。源码和二进制被绑定与回放，不代表 runtime 重新编译证明了两者对应关系；构建来源仍需工程审查。
 
 后续在恢复 NPU 实验后，应覆盖完整 case 集与实际设备、验证跨时段同源 A/A 漂移和 A/B 复用时限，并计入快照与输出回放的端到端成本。单轮反馈低于 600 秒仍是待实测目标。本次没有以这些待验收项为由保留第二套默认计时流程。
 

@@ -6,6 +6,8 @@
 
 当前入口为 `scripts/single_role_task.py`，具体配置见 [统一协议](unified-timing.md)和该脚本 `--help`。它调用已有 native adapter，记录完整正确性、设备状态、采集、导出及输出校验；真实完整调用和清 L2 callback 必须由算子工程提供。
 
+BF16 或自定义精度使用 [original_python_v1](original-oracle.md) 绑定并回放原程序。`--preflight-only` 在任何 native 执行前检查全部 case 的 adapter/环境；能力通过后仍需 correctness-only 和真实计时。缺 adapter、缺环境、oracle 执行异常和数值失败分别报告，不把能力缺项误写成原始精度失败。
+
 代表 case 反馈与全 case 收尾共用这条路径。后者用 `tools/aprofctl timing finalize --request <comparison.json> --output <result.json>` 一次核验；没有旧 Task v5 再采集阶段。早期 fast manifest 不能改协议名充当完整证据。
 
 ## 冻结已安装工具链

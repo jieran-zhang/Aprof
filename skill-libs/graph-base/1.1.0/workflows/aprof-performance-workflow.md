@@ -84,7 +84,7 @@ C3 只有在审查、构建、完整正确性和采集准备齐备后才可进�
 
 ### 5. profiling 接收 C0/C3/请求 → C4
 
-新计时唯一方法为 [single_role_l2_clean_task_v1](../skills/ascendc-aprof-profiling/references/unified-timing.md)：每 case/实现一个新进程、5 次预热、20 次逐轮清 L2 的完整调用，逐轮全部目标 Task 求和后取中位数。
+新计时唯一方法为 [single_role_l2_clean_task_v1](../skills/ascendc-aprof-profiling/references/unified-timing.md)：每 case/实现一个新进程、5 次预热、20 次逐轮清 L2 的完整调用，逐轮全部目标 Task 求和后按预声明异常策略取中位数；新任务使用 `bounded_outlier_v1`，原始 20 次和剔除明细全部保留。
 
 复用有效 A，只采 B；先看预声明代表/回归集。需要完整结论时，协调者用 C5 请求 C4 只补缺少 case。合格采集直接进入全量收尾，不因“正式”标签重采。
 
@@ -96,7 +96,7 @@ mechanism 请求遵守独立 PMU 来源和统计要求；其结果用于诊断�
 
 代表集 C4 completed 仅表示该请求完成。只有完整 timing 集的两侧记录、完整 correctness 和原始回执齐备，才创建 comparison 并调用一次 timing finalize。
 
-runtime 回放原始来源、输出、完整调用和复用条件，计算各 case 中位数、轮内 CV、回归及等权几何平均加速比。工程目标为 speedup≥1.03、任一 case 回归≤3%、轮内 CV≤5%；这是点估计，没有旧配对 95% 下界承诺。
+runtime 回放原始来源、输出、完整调用和复用条件，计算各 case 中位数、轮内 CV、回归及等权几何平均加速比。工程目标为 speedup≥1.03、任一 case 回归≤3%、保留样本轮内 CV≤5%、异常最多 2/20；旧 declaration 未启用异常策略时保持原始 CV 判据。这是点估计，没有旧配对 95% 下界承诺。
 
 C5 引用 accepted/rejected/inconclusive；未收尾写 not_evaluated 和覆盖/缺项。不要再串行执行旧 candidate gate → episode finalize。新结果为 performance_engineering_only，不自动授予机制归因、生产 best 或策略奖励。语义、范围、可移植性与合法路由继续按各自契约核验。
 

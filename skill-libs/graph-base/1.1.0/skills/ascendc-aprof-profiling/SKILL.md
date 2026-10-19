@@ -11,15 +11,15 @@ description: 为 Ascend C 算子执行统一 L2 清理 Task 计时、完整调�
 
 ## 性能计时
 
-反馈与正式收尾唯一协议为 [统一计时](references/unified-timing.md)：`single_role_l2_clean_task_v1`。每 case/实现一个新进程，5 次预热、20 次逐轮清 L2 的完整调用，以逐轮全部目标 Task 之和的中位数计时。
+反馈与正式收尾唯一协议为 [统一计时](references/unified-timing.md)：`single_role_l2_clean_task_v1`。每 case/实现一个新进程，5 次预热、20 次逐轮清 L2 的完整调用，以逐轮全部目标 Task 之和、按预声明异常策略计算的中位数计时。
 
 - 先确认该源码已构建并通过完整声明正确性。复用原回执，不因增加 profiling 视图重新构建或重新生成输入。
 - 先声明 case 集、输入、设备、比较父版本和复用/复验策略；检查 source-bound native adapter 的完整调用、清 L2 和输出路径。
 - 使用 `scripts/single_role_task.py` 调度预构建 adapter、导出和校验。设备稳态准备在计时外完成；真实驱逐 callback 由算子工程提供。
 - 采集记录独立于 A/B 比较角色；相同来源和有效条件下可复用。每轮只为缺失的实现/case 采集。
 - 代表集给反馈；完整声明集合及证据齐备后交由协调者调用 `tools/aprofctl timing finalize` 一次收尾。不再切换 v5 或串行调用旧 gate/finalize。
-- 单进程 CV 只反映轮内波动。新门槛是中位数比点估计，不是 paired/95% LCB。复用超时、环境变化和预声明的异常复验仍用同一方法。
-- 不丢慢 Task，不挑有利前缀，不把多 kernel 调用简化成最长 kernel 或各 kernel 中位数之和；缺 Task、乱序、流不明或变化必须拒绝。
+- 原始与剔除后的 CV 都记录，剔除数超限保持 inconclusive。单进程 CV 只反映轮内波动。新门槛是中位数比点估计，不是 paired/95% LCB。复用超时、环境变化和预声明的异常复验仍用同一方法。
+- 原始 Task 全部保留；新任务预声明 `bounded_outlier_v1`，仅按统一计时文档的一次性、对称、最多 2/20 规则剔除异常，再检查保留样本 CV。不挑有利前缀，不把多 kernel 调用简化成最长 kernel 或各 kernel 中位数之和；缺 Task、乱序、流不明或变化必须拒绝。
 - 缺少 adapter 或兼容证据时报告缺项，不静默回退旧计时。失败采集保留日志与实际成本。
 
 正式性能结果不等于语义、生产范围、图路由或机制归因均已通过；也不自动成为策略 episode。

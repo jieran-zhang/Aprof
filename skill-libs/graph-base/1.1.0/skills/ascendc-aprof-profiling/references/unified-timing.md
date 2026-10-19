@@ -21,9 +21,15 @@
 
 优先 kernel_details.csv，仅在它不存在时使用 op_summary。原始表不做 task-name、时长或迭代过滤。每个清 L2 marker 后必须是该实现预注册的完整有序 kernel 序列，重复名字仍作为独立 Task 保留。
 
-恰好重建 20 次完整调用，各次求目标 Task Duration 之和，然后取中位数。禁止先对各 kernel 取中位数再相加、取最长 kernel 或丢慢样本。Stream ID 必须存在且整次采集一致，缺项、额外 Task、乱序或流变化拒绝。Task 总和不是重叠多流 workload 的整体延迟。
+恰好重建 20 次完整调用，各次求目标 Task Duration 之和，然后按预声明统计策略取中位数。禁止先对各 kernel 取中位数再相加、取最长 kernel 或改写原始样本。Stream ID 必须存在且整次采集一致，缺项、额外 Task、乱序或流变化拒绝。Task 总和不是重叠多流 workload 的整体延迟。
 
 20 次是同一个进程内重复，不是 20 个独立进程，也不是 20 对 A/B。轮内 CV 仅反映轮内波动。
+
+## 有界异常值处理
+
+新任务在 declaration.json 中预声明 `stability_policy: "bounded_outlier_v1"`。从全部 20 个完整调用时长计算中位数 m 和 MAD；仅当 |x−m| > max(3×1.482602218505602×MAD, 0.10×m) 时标记异常。最多剔除 2/20，保留至少 18 个样本；对保留样本计算中位数与样本 CV，CV 仍须 ≤5%。两侧用相同规则，快慢异常对称处理且只计算一轮，不能反复剔除直到通过。超过 2 个异常则不剔除并判 inconclusive。原始 CSV、全部 20 个值、阈值、异常/剔除索引和原始 CV 都保留。未声明此字段的旧记录继续按原始 20 值判定，不追改历史结论。
+
+这是确定性的工程稳定性规则，不是异常原因鉴定或统计置信区间。新设备/采集方式应先用包含短 case 的独立进程复验检查中位数可重复性；剔除异常不能修复跨进程漂移。
 
 ## 先声明，再执行
 
@@ -33,6 +39,7 @@
 {
   "schema_version": 1,
   "operator": "exp",
+  "stability_policy": "bounded_outlier_v1",
   "created_at": "2026-10-16T00:00:00+00:00",
   "case_ids": [1],
   "correctness_case_ids": [1],
@@ -107,11 +114,13 @@ source_files、adapter_files 和 toolchain_files 必须列全影响行为的依�
 
 ### 当前 oracle adapter 范围
 
-原 oracle 命令真实执行，且核验前后实际输出不能被改写。当前离线数值回放支持小端 float16/32/64、int/uint 8/16/32/64 和 bool，使用冻结的逐元素 atol/rtol/equal_nan 与 golden 文件。
+runtime 0.2.5 增加 [原始 Python oracle 回放](original-oracle.md)：live 与离线回放执行同一份冻结程序，绑定依赖、输入/golden/native 参考、参数、完整原始输出与环境。BF16、mean/max-relative、区域错误计数和特殊值规则由原程序决定，不额外叠加逐元素判据。
 
-这不是通用 oracle 翻译器。BF16、自定义压缩输出、mean/max-relative 等不同判据需要接入保持原语义的 adapter；不能为了通过而换容差或换判据。当前不支持的契约应明确报告不可用。源码完整性、oracle 语义与真实清 L2 实现仍需要受信准备/审查。
+上方旧配置示例仍适用于原契约就是逐元素 atol/rtol/equal_nan 的 float16/32/64、整数和 bool。非逐元素原 oracle 使用新模式；不能为了适配而删 case、换容差或改判据。先用 `--preflight-only` 检查完整配置，随后仍须构建、全量真实正确性和采集。依赖/适配缺失与原 oracle 的 numerical_mismatch 分开记录。
 
 ## 比较与正式收尾
+
+全量 A/B 比较前先完成两侧构建、输入、完整正确性和存储准备，再连续采集两侧；不要把修复、归档搬迁或额外模型调查插在有效 A 与 B 之间。若已有 A 的剩余有效窗口不足以完成 B，按预声明规则在当前预算内更新 A，保留旧记录；不能通过放宽复用窗口续用过期 A。
 
 采集 artifact 不保存 baseline/candidate 角色；以下请求指定比较关系：
 
@@ -141,9 +150,9 @@ tools/aprofctl timing verify --result <result.json>
 
 runtime 从原始证据计算：
 
-- 每 case：A/B 各 20 次完整调用中位数，speedup = median(A) / median(B)，回归 = median(B) / median(A) - 1。
+- 每 case：A/B 各自重建全部 20 次调用，按冻结策略得到中位数，speedup = median(A) / median(B)，回归 = median(B) / median(A) - 1。
 - 全集合：每 case 加速比的等权几何平均，收益目标 ≥1.03。
-- 任一 case 回归不得超过 3%；每侧每 case 轮内 CV 不超过 5%。
+- 任一 case 回归不得超过 3%；每侧每 case 按预声明策略计算的轮内 CV 不超过 5%，异常数量不得超限。
 - 复用时间、A→B 间隔按预声明策略检查；超限或波动过大保持不确定，不能按有利时段挑样本。
 
 结果是 `performance_engineering_only`，输出 accepted/rejected/inconclusive 及原因，不输出 paired count、95% LCB、生产 best 或策略 reward。正式收尾只有这一次入口，不再调用旧 gate/finalize。verify 回放既有证据，不启动 NPU。
@@ -156,4 +165,4 @@ A/B 必须具有相同 case/workload、输入、实际设备、工具链、采�
 
 临界结果、环境变化或异常按预声明规则用同一方法独立复验。不要择优选进程，不重复直到通过；多次尝试全部留存。点估计目标与统计置信下界是不同承诺，轮内 CV 不能证明跨时段稳定。
 
-本版仍未封版。此前三个 case 的 clean 实验支持设计，但完整集合、跨时段与新 controller 的 NPU 验证尚待执行。66 秒只来自旧实验条件下 B 计时的估算，新增回放/快照等开销需单独实测；不能宣布 10 分钟正式验收已达成。
+本版仍未封版。此前三个 case 的 clean 实验支持计时设计；后续维护记录单独提供原 oracle 全量接入和有界异常统计的硬件验证，不能据此宣称所有算子、设备或跨时段条件均已验证。66 秒只来自旧实验条件下 B 计时的估算，新增回放/快照等开销需单独实测；不能宣布 10 分钟正式验收已达成。

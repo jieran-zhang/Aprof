@@ -45,6 +45,17 @@
 <a id="task-workspace-and-budget-commands"></a>
 ## 工作区与预算命令
 
+<a id="stage-budget-policy"></a>
+### 阶段预算绑定
+
+任务带入冻结的外层 `budget_policy_ref` 时，先核对 policy 与任务预算一致。`task_budget_seconds` 用于总 deadline；`stage_timeout_seconds.C0_capability` 用于 C0 指令、阶段检查和成本判断。C0 从任务接收 seed 的原始单调起点开始，包含技能读取、模型/工具等待与交付后的排队；有效 C0 deadline 为 `min(task_deadline, task_started_monotonic + C0_capability)`。每个依赖调用的 timeout 不超过所属阶段与总任务的剩余时间，子角色和 continuation 继承原期限。
+
+阶段耗时、限额、是否超限及超限秒数使用同一 policy 与原始时钟计算。1.1.0 Vector 验收的具体额度由批次冻结策略提供，不能以旧 run 的 180 秒 C0 常量覆盖；其他任务不自动套用 Vector 额度。阶段或总期限耗尽后停止依赖执行，已确认的硬阻塞及时返回 needs_input/blocked。独立归档预算另计，不用于补跑已停止任务。扩大总预算不会扩大已冻结的测量复用有效期。
+
+policy 引用及阶段控制字段写外层 manifest/C0 文本，不加入严格 Context 或 runtime budget plan；runtime 保持接收调用者的真实预算和原始期限。新策略只用于新任务，不能改写历史 launch、失败、超限或成本记录。
+
+### runtime 命令
+
 全程使用同一包的 `tools/aprofctl`：
 
 ```bash
