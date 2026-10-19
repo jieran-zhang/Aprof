@@ -16,6 +16,7 @@ import struct
 from .errors import ContractError
 from .jsonio import content_hash
 from .unified_task_samples import complete_calls
+from .task_statistics import BOUNDED_OUTLIER_POLICY, bounded_statistics
 
 PROTOCOL = "single_role_l2_clean_task_v1"
 CORRECTNESS_PROTOCOL = "single_role_correctness_case_v1"
@@ -90,7 +91,11 @@ def inventory(root, ref):
 
 def declaration(root, ref):
     value = read_json(reference(root, ref))
-    fields(value, {"schema_version", "operator", "created_at", "case_ids", "correctness_case_ids", "reuse_policy"}, "预声明")
+    names = {"schema_version", "operator", "created_at", "case_ids", "correctness_case_ids", "reuse_policy"}
+    if isinstance(value, dict) and "stability_policy" in value:
+        names.add("stability_policy")
+        require(value["stability_policy"] == BOUNDED_OUTLIER_POLICY, "未知 stability_policy")
+    fields(value, names, "预声明")
     require(value["schema_version"] == 1 and isinstance(value["operator"], str) and value["operator"], "预声明身份无效")
     for key in ("case_ids", "correctness_case_ids"):
         ids = value[key]
@@ -103,7 +108,7 @@ def declaration(root, ref):
     return value
 
 
-def replay_oracle(root, receipt, output_ref, limits):
+def replay_oracle(root, receipt, output_ref, limits, *, deadline=None, logs=None, verified=None):
     """重算冻结 golden 与实际输出的差异，不信任 passed 标签。"""
     require(receipt.get("status") == "passed", "oracle 未通过")
     output = inventory(root, output_ref)
@@ -111,6 +116,14 @@ def replay_oracle(root, receipt, output_ref, limits):
     reference(root, receipt["oracle_source"])
     checks = receipt.get("checks")
     require(isinstance(checks, list) and checks, "oracle 缺少逐输出检查")
+    if isinstance(limits, dict) and limits.get("mode") == "original_python_v1":
+        from .original_oracle import execute
+        actuals = [check["actual"] for check in checks]
+        expected_outputs = [{key: entry[key] for key in ("path", "sha256")} for entry in output["files"]]
+        require(len(actuals) == len(expected_outputs) and sorted(actuals, key=lambda x: x["path"]) == sorted(expected_outputs, key=lambda x: x["path"]), "oracle 未完整覆盖输出清单")
+        execute(root, receipt, limits, deadline=deadline, logs=logs, verified=verified, reuse=True)
+        return
+    require("replay" not in receipt, "原 oracle 回放缺少 workload 契约绑定")
     fields(limits, {"atol", "rtol", "equal_nan"}, "预注册精度限制")
     for key in ("atol", "rtol"):
         require(type(limits[key]) in (int, float) and math.isfinite(limits[key]) and limits[key] >= 0, "精度限制无效")
@@ -156,7 +169,7 @@ def replay_stages(root, execution, names):
     return stages
 
 
-def _base(path):
+def _base(path, *, deadline=None, verified=None):
     path = Path(path).resolve()
     capture = read_json(path)
     require(isinstance(capture, dict), "采集记录必须为对象")
@@ -185,22 +198,29 @@ def _base(path):
             require(record.get(key) == identity[key], f"回执 {key} 绑定不符")
         require(record.get("case_id") == capture["case_id"], "回执 case 绑定不符")
     require(execution.get("oracle_receipt_sha256") == artifacts["oracle_receipt"]["sha256"], "执行与 oracle 回执绑定不符")
-    replay_oracle(root, receipt, artifacts["output"], workload.get("oracle_limits"))
+    replay_oracle(root, receipt, artifacts["output"], workload.get("oracle_limits"), deadline=deadline, verified=verified)
     return root, capture, decl, execution
 
 
-def oracle_signature(root, capture):
-    receipt = read_json(reference(root, capture["artifacts"]["oracle_receipt"]))
+def receipt_signature(receipt):
+    if "replay" in receipt:
+        from .original_oracle import contract
+        return {"oracle_source_sha256": receipt["oracle_source"]["sha256"],
+                "original_oracle_contract": contract(receipt["replay"])}
     checks = sorted(receipt["checks"], key=lambda check: check["actual"]["path"])
     return {"oracle_source_sha256": receipt["oracle_source"]["sha256"], "checks": [
         {"actual_path": check["actual"]["path"], "expected_sha256": check["expected"]["sha256"],
          **{key: check[key] for key in ("dtype", "atol", "rtol", "equal_nan")}} for check in checks]}
 
 
-def replay_capture(path):
+def oracle_signature(root, capture):
+    return receipt_signature(read_json(reference(root, capture["artifacts"]["oracle_receipt"])))
+
+
+def replay_capture(path, *, deadline=None, verified=None):
     """核验无 A/B 角色的快照，逐完整调用重建 20 个原始 Task 样本。"""
     try:
-        root, capture, decl, execution = _base(path)
+        root, capture, decl, execution = _base(path, deadline=deadline, verified=verified)
         fields(capture, CAPTURE_FIELDS, "采集记录")
         fields(capture["identity"], IDENTITY, "采集 identity")
         artifacts, identity = capture["artifacts"], capture["identity"]
@@ -247,12 +267,18 @@ def replay_capture(path):
         csv = reference(root, artifacts["task_csv"])
         parsed = complete_calls(csv if capture["task_table"] == "kernel_details" else None, csv if capture["task_table"] == "op_summary" else None, capture["kernel_names"], eviction_type=policy["eviction_kernel"])
         cv = statistics.stdev(parsed["values_us"]) / statistics.fmean(parsed["values_us"])
-        return {"capture": capture, "capture_ref": file_hash(path), "captured_at": capture["captured_at"], "values_us": parsed["values_us"], "median_us": parsed["median_us"], "within_process_cv": cv, "oracle_signature": oracle_signature(root, capture)}
+        result = {"capture": capture, "capture_ref": file_hash(path), "captured_at": capture["captured_at"], "values_us": parsed["values_us"], "median_us": parsed["median_us"], "within_process_cv": cv, "oracle_signature": oracle_signature(root, capture)}
+        if decl.get("stability_policy") == BOUNDED_OUTLIER_POLICY:
+            stats = bounded_statistics(parsed["values_us"])
+            result.update(sample_statistics=stats, median_us=stats["median_us"], within_process_cv=stats["cv"])
+        return result
     except (KeyError, TypeError, ValueError) as exc:
+        if hasattr(exc, "reason"):
+            raise
         raise ContractError(f"统一计时证据无效：{exc}") from exc
 
 
-def _replay_correctness(path, *, source, operator, declaration_ref, case_ids):
+def _replay_correctness(path, *, source, operator, declaration_ref, case_ids, deadline=None, verified=None):
     """完整正确性独立于计时；可复用逐 case 原始输出，但不可只提交 passed。"""
     path = Path(path).resolve()
     value = read_json(path)
@@ -264,7 +290,7 @@ def _replay_correctness(path, *, source, operator, declaration_ref, case_ids):
     oracles = {}
     for ref in value["cases"]:
         case_path = reference(path.parent, ref)
-        root, case, decl, execution = _base(case_path)
+        root, case, decl, execution = _base(case_path, deadline=deadline, verified=verified)
         require(case["protocol"] in (CORRECTNESS_PROTOCOL, PROTOCOL), "正确性证据协议无效")
         require(case["identity"]["source_sha256"] == source and case["operator"] == operator and case["declaration_ref"] == declaration_ref, "正确性 case 身份不符")
         require(case["case_id"] not in seen, "正确性 case 重复")
@@ -278,10 +304,12 @@ def _replay_correctness(path, *, source, operator, declaration_ref, case_ids):
     return {"manifest_ref": file_hash(path), "cases": identities, "oracle_signatures": oracles}
 
 
-def replay_correctness(path, *, source, operator, declaration_ref, case_ids):
+def replay_correctness(path, *, source, operator, declaration_ref, case_ids, deadline=None, verified=None):
     try:
-        return _replay_correctness(path, source=source, operator=operator, declaration_ref=declaration_ref, case_ids=case_ids)
+        return _replay_correctness(path, source=source, operator=operator, declaration_ref=declaration_ref, case_ids=case_ids, deadline=deadline, verified=verified)
     except (KeyError, TypeError, ValueError, OverflowError) as exc:
+        if hasattr(exc, "reason"):
+            raise
         raise ContractError(f"完整正确性证据无效：{exc}") from exc
 
 
@@ -297,15 +325,16 @@ def _evaluate_request(path, *, evaluated_at=None):
     now = timestamp(when)
     roles = {}
     reasons = []
+    verified = set()
     for role in ("baseline", "candidate"):
         source = request[role + "_source_sha256"]
         correctness = reference(path.parent, request[role + "_correctness"])
-        correct = replay_correctness(correctness, source=source, operator=request["operator"], declaration_ref=declared_ref, case_ids=decl["correctness_case_ids"])
+        correct = replay_correctness(correctness, source=source, operator=request["operator"], declaration_ref=declared_ref, case_ids=decl["correctness_case_ids"], verified=verified)
         captures = request[role + "_captures"]
         require(isinstance(captures, list) and captures, "采集列表为空")
         by_case = {}
         for ref in captures:
-            replay = replay_capture(reference(path.parent, ref))
+            replay = replay_capture(reference(path.parent, ref), verified=verified)
             capture = replay["capture"]
             require(capture["operator"] == request["operator"] and capture["identity"]["source_sha256"] == source and capture["declaration_ref"] == declared_ref, f"{role} source/operator/declaration 绑定不符")
             case = capture["case_id"]
@@ -318,6 +347,8 @@ def _evaluate_request(path, *, evaluated_at=None):
             require(age >= 0, "采集记录来自未来")
             if age > decl["reuse_policy"]["max_age_seconds"]:
                 reasons.append(f"{role}/case {case} 超出预声明复用时限")
+            if replay.get("sample_statistics", {}).get("exclusion_limit_exceeded"):
+                reasons.append(f"{role}/case {case} 异常值超过预声明的 2/20 上限")
             if replay["within_process_cv"] > 0.05:
                 reasons.append(f"{role}/case {case} 轮内 CV 超过 5%")
         require(set(by_case) == set(decl["case_ids"]), f"{role} 计时 case 覆盖不全或超出声明")
@@ -332,6 +363,8 @@ def _evaluate_request(path, *, evaluated_at=None):
         if gap > decl["reuse_policy"]["max_ab_gap_seconds"]:
             reasons.append(f"case {case} A/B 间隔超出预声明范围")
         results.append({"case_id": case, "baseline_capture_ref": a["capture_ref"], "candidate_capture_ref": b["capture_ref"], "baseline_median_us": a["median_us"], "candidate_median_us": b["median_us"], "speedup": a["median_us"] / b["median_us"], "regression": b["median_us"] / a["median_us"] - 1, "baseline_within_process_cv": a["within_process_cv"], "candidate_within_process_cv": b["within_process_cv"], "ab_gap_seconds": gap})
+        if "stability_policy" in decl:
+            results[-1].update(baseline_statistics=a["sample_statistics"], candidate_statistics=b["sample_statistics"])
     speedup = math.exp(statistics.fmean(math.log(item["speedup"]) for item in results))
     regression = max(item["regression"] for item in results)
     if reasons:
@@ -345,6 +378,8 @@ def _evaluate_request(path, *, evaluated_at=None):
     else:
         verdict = "accepted"
     result = {"schema_version": 1, "kind": "unified_timing_result", "protocol": PROTOCOL, "metric": METRIC, "operator": request["operator"], "candidate_id": request["candidate_id"], "request": {"path": str(path), "sha256": file_hash(path)}, "evaluated_at": when, "verdict": verdict, "speedup": speedup, "max_case_regression": regression, "thresholds": {"min_speedup": 1.03, "max_case_regression": 0.03, "max_within_process_cv": 0.05}, "cases": results, "reasons": reasons, "authority": "performance_engineering_only", "replication_recommended": math.isclose(speedup, 1.03) or math.isclose(regression, 0.03), "uncertainty": "单进程轮内 CV；不证明跨进程置信度、硬件资格或路由/语义正确性"}
+    if "stability_policy" in decl:
+        result.update(stability_policy=decl["stability_policy"], uncertainty="预声明异常值剔除后的中位数与轮内 CV；原始样本和剔除索引保留；不证明跨进程置信度、硬件资格或路由/语义正确性")
     return {**result, "decision_hash": content_hash(result)}
 
 
@@ -352,6 +387,8 @@ def evaluate_request(path, *, evaluated_at=None):
     try:
         return _evaluate_request(path, evaluated_at=evaluated_at)
     except (KeyError, TypeError, ValueError, OverflowError) as exc:
+        if hasattr(exc, "reason"):
+            raise
         raise ContractError(f"性能验收请求无效：{exc}") from exc
 
 

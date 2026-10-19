@@ -9,6 +9,7 @@ import time
 import pytest
 
 from aprof_runtime import local_archive as archive
+from aprof_runtime import __version__
 from aprof_runtime import task_budget
 from aprof_runtime.errors import ContractError, StoreError
 from aprof_runtime.jsonio import file_hash
@@ -31,7 +32,7 @@ def finished(tmp_path, code=2):
 def collect(tmp_path, local, result, completion):
     receipt = tmp_path/'archive'/'receipt.json'
     value = archive.archive(result['local_index'],completion,tmp_path/'archive'/'trace.sqlite',receipt,
-        expected_release_version='1.1.0',expected_runtime_version='0.2.4')
+        expected_release_version='1.1.0',expected_runtime_version=__version__)
     return receipt, value
 
 
@@ -52,7 +53,7 @@ def test_real_process_terminal_and_complete_archive(tmp_path,code,status):
     assert value['archive_complete'] is True and value['admission_authority'] is False
     assert value['task_cost_seconds'] > 0 and value['elapsed_seconds'] > 0
     assert value['package_identity']['release_version'] == '1.1.0'
-    assert value['package_identity']['runtime_version'] == '0.2.4'
+    assert value['package_identity']['runtime_version'] == __version__
     index = json.loads(Path(result['local_index']).read_text())
     assert value['artifact_refs'] == sorted(index['artifacts'])
     # Delete only this fixture's scratch; package producers are indexed in place.
@@ -160,7 +161,7 @@ def test_installed_runtime_finds_package_and_rejects_different_source(tmp_path):
         'from aprof_runtime import local_archive as a; print(a.PACKAGE); print(a.package_identity()["runtime_version"])']
     result=subprocess.run(command,cwd=tmp_path,env=environment,capture_output=True,text=True)
     assert result.returncode==0,result.stderr
-    assert result.stdout.splitlines()==[str(package),'0.2.4']
+    assert result.stdout.splitlines()==[str(package),__version__]
     source=package/'runtime/src/aprof_runtime/local_archive.py'
     source.write_text(source.read_text()+'\n# source drift\n')
     rejected=subprocess.run(command,cwd=tmp_path,env=environment,capture_output=True,text=True)

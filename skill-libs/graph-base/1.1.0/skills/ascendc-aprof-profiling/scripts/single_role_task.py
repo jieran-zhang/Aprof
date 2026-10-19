@@ -76,6 +76,7 @@ class SnapshotStore:
         self.linked_bytes = 0
         self.elapsed_seconds = 0.0
         self.replay_seconds = 0.0
+        self.verified_oracles = set()
 
     @staticmethod
     def identity(path):
@@ -232,6 +233,50 @@ def hardware_report(root, stage, device):
     return value
 
 
+def original_spec(case, *, root=None, store=None):
+    """Freeze the original program and data; its contract ignores archive paths."""
+    from aprof_runtime.original_oracle import validate
+    spec = dict(case["oracle_replay"])
+    files = {}
+    for index, (name, source) in enumerate(spec["files"].items()):
+        path = original_file(source)
+        files[name] = (snapshot(root, source, "oracle_bundle", index, store) if store is not None
+                       else {"path": str(path.relative_to("/")), "sha256": sha256(path)})
+    spec["files"] = files
+    source = original_file(case["oracle_source"])
+    oracle_source = (snapshot(root, source, "oracle", 0, store) if store is not None
+                     else {"path": str(source.relative_to("/")), "sha256": sha256(source)})
+    validate(root if store is not None else Path("/"), spec, oracle_source, case["workload"]["oracle_limits"])
+    return spec, oracle_source
+
+
+def preflight(config, *, deadline=None):
+    """Check every oracle before launching any case; this is not NPU validation."""
+    from aprof_runtime.unified_timing import FORMATS
+    from aprof_runtime.original_oracle import OracleFailure, check_environment
+    environments = set()
+    for case in config["cases"]:
+        if deadline is not None and time.monotonic() >= deadline:
+            raise TimeoutError("能力预检超过采集总预算")
+        if "oracle_replay" in case:
+            spec, _ = original_spec(case)
+            key = json.dumps(spec["environment"], sort_keys=True)
+            if key not in environments:
+                remaining = 30 if deadline is None else min(30, deadline - time.monotonic())
+                if remaining <= 0:
+                    raise TimeoutError("能力预检超过采集总预算")
+                check_environment(spec["environment"], remaining)
+                environments.add(key)
+        else:
+            if case["workload"]["oracle_limits"].get("mode"):
+                raise OracleFailure("oracle_adapter_unsupported", "原 oracle 缺少 replay bundle")
+            for check in case["checks"]:
+                if check["dtype"] not in FORMATS:
+                    raise OracleFailure("oracle_adapter_unsupported", f"case {case['case_id']} 的 {check['dtype']} 需要原 oracle adapter")
+    return {"status": "capability_checked", "case_ids": [case["case_id"] for case in config["cases"]],
+            "npu_executed": False}
+
+
 def collect_case(config, case, root, declaration, deadline, runner, store, *, correctness_only=False, verified=None):
     root.mkdir(mode=0o700)
     artifacts = {}
@@ -255,7 +300,9 @@ def collect_case(config, case, root, declaration, deadline, runner, store, *, co
     artifacts["workload"] = reference(root, root / "workload.json")
     limits = case["workload"]["oracle_limits"]
     native_command = command(case["correctness_command" if correctness_only else "command"])
-    oracle_command = command(case["oracle_command"])
+    original = "oracle_replay" in case
+    oracle_command = command([case["oracle_replay"]["environment"]["python"], case["oracle_source"]]
+                             if original else case["oracle_command"])
     if Path(native_command[0]) != Path(config["binary"]):
         raise ValueError("native 命令必须直接执行绑定的已构建 adapter")
     if verified is not None:
@@ -274,20 +321,31 @@ def collect_case(config, case, root, declaration, deadline, runner, store, *, co
         artifacts["toolchain"] = inventory(root, "toolchain", tool_files, store)
         collector_files = [str(SCRIPTS / "single_role_task.py"), str(SCRIPTS / "fast_task_samples.py"),
                            str(RELEASE / "runtime/src/aprof_runtime/unified_task_samples.py"),
+                           str(RELEASE / "runtime/src/aprof_runtime/unified_timing.py"),
+                           str(RELEASE / "runtime/src/aprof_runtime/task_statistics.py"),
+                           str(RELEASE / "runtime/src/aprof_runtime/original_oracle.py"),
                            *map(str, (SCRIPTS.parent / "assets").glob("device_*task*.h")),
                            str(SCRIPTS.parent / "assets/device_shared_timing.h"), *config["adapter_files"]]
         artifacts["collector"] = inventory(root, "collector", collector_files, store)
-    oracle_source = snapshot(root, case["oracle_source"], "oracle", 0, store)
+    if original:
+        replay, oracle_source = original_spec(case, root=root, store=store)
+        configured_checks = [{**value, "oracle_path": name} for name, value in replay["outputs"].items()]
+    else:
+        oracle_source = snapshot(root, case["oracle_source"], "oracle", 0, store)
+        configured_checks = case["checks"]
     checks = []
-    if not isinstance(case["checks"], list) or not case["checks"]:
+    if not isinstance(configured_checks, list) or not configured_checks:
         raise ValueError("每个 case 必须预声明输出数值检查")
     seen = set()
-    for index, check in enumerate(case["checks"]):
+    for index, check in enumerate(configured_checks):
         actual = safe_child(root, check["actual"])
         if actual.exists() or actual in seen or not str(actual.relative_to(root)).startswith("outputs/"):
             raise ValueError("输出必须为 outputs 下互不重复的新文件")
         seen.add(actual)
         actual.parent.mkdir(parents=True, exist_ok=True)
+        if original:
+            checks.append({"dtype": check["dtype"], "oracle_path": check["oracle_path"], "actual_path": actual})
+            continue
         for key in ("atol", "rtol"):
             if (type(check[key]) not in (int, float) or not math.isfinite(check[key])
                     or check[key] < 0 or check[key] > limits[key]):
@@ -299,11 +357,13 @@ def collect_case(config, case, root, declaration, deadline, runner, store, *, co
                        "equal_nan": check.get("equal_nan", False), "expected": expected,
                        "actual_path": actual})
     if verified is not None:
-        signature = {"oracle_source_sha256": oracle_source["sha256"], "checks": [
-            {"actual_path": str(check["actual_path"].relative_to(root)),
-             "expected_sha256": check["expected"]["sha256"],
-             **{key: check[key] for key in ("dtype", "atol", "rtol", "equal_nan")}}
-            for check in sorted(checks, key=lambda item: str(item["actual_path"]))]}
+        from aprof_runtime.unified_timing import receipt_signature
+        pending = {"oracle_source": oracle_source, "checks": [
+            {**{k: v for k, v in check.items() if k != "actual_path"},
+             "actual": {"path": str(check["actual_path"].relative_to(root))}} for check in checks]}
+        if original:
+            pending["replay"] = replay
+        signature = receipt_signature(pending)
         if signature != verified["oracle_signature"]:
             raise ValueError("计时 oracle 或 golden 与完整正确性不一致")
     env = os.environ.copy()
@@ -356,7 +416,14 @@ def collect_case(config, case, root, declaration, deadline, runner, store, *, co
     for check in checks:
         actual = safe_child(root, str(check["actual_path"].relative_to(root)))
         output_before_oracle[actual] = sha256(original_file(actual))
-    stages["oracle"] = run_stage(root, "oracle", oracle_command, env, deadline, runner)
+    if original:
+        from aprof_runtime.original_oracle import execute
+        pending = {"replay": replay, "oracle_source": oracle_source, "checks": [
+            {**{k: v for k, v in check.items() if k != "actual_path"},
+             "actual": reference(root, check["actual_path"])} for check in checks]}
+        stages["oracle"] = execute(root, pending, limits, deadline=deadline, logs=root / "logs", verified=store.verified_oracles)
+    else:
+        stages["oracle"] = run_stage(root, "oracle", oracle_command, env, deadline, runner)
     actual_files = []
     for check in checks:
         actual = check.pop("actual_path")
@@ -382,6 +449,8 @@ def collect_case(config, case, root, declaration, deadline, runner, store, *, co
                       "binary_sha256": identity["binary_sha256"], "input_ref": identity["input_ref"],
                       "output_sha256": artifacts["output"]["sha256"], "case_id": case_id,
                       "checks": checks, "oracle_source": oracle_source}
+    if original:
+        oracle_receipt["replay"] = replay
     write_json(root / "oracle_receipt.json", oracle_receipt)
     artifacts["oracle_receipt"] = reference(root, root / "oracle_receipt.json")
     execution = {"status": "passed", "returncode": 0, "source_sha256": identity["source_sha256"],
@@ -408,7 +477,8 @@ def collect_case(config, case, root, declaration, deadline, runner, store, *, co
     write_json(path, manifest)
     from aprof_runtime.unified_timing import replay_oracle
     replay_started = time.monotonic()
-    replay_oracle(root, oracle_receipt, artifacts["output"], limits)
+    if not original:
+        replay_oracle(root, oracle_receipt, artifacts["output"], limits, deadline=deadline)
     store.replay_seconds += time.monotonic() - replay_started
     return path
 
@@ -425,10 +495,13 @@ def collect(config, output_root, *, timeout_seconds=600, runner=subprocess_runne
     try:
         if config.get("schema_version") != 1 or config.get("protocol") != PROTOCOL:
             raise ValueError("采集配置协议不匹配")
+        preflight(config, deadline=deadline)
         declaration_path = original_file(config["declaration"]["path"])
         if sha256(declaration_path) != config["declaration"]["sha256"]:
             raise ValueError("预声明 hash 不匹配")
-        declaration = json.loads(declaration_path.read_text())
+        from aprof_runtime.unified_timing import declaration as validate_declaration
+        declaration = validate_declaration(declaration_path.parent,
+                                          {"path": declaration_path.name, "sha256": config["declaration"]["sha256"]})
         if datetime.fromisoformat(declaration["created_at"].replace("Z", "+00:00")) > datetime.now(timezone.utc):
             raise ValueError("必须先预声明再采集")
         case_ids = [case["case_id"] for case in config["cases"]]
@@ -447,7 +520,7 @@ def collect(config, output_root, *, timeout_seconds=600, runner=subprocess_runne
             correctness = json.loads(correctness_path.read_text())
             replay_started = time.monotonic()
             replayed = replay_correctness(correctness_path, source=correctness["source_sha256"], operator=config["operator"],
-                                          declaration_ref=config["declaration"]["sha256"], case_ids=declaration["correctness_case_ids"])
+                                          declaration_ref=config["declaration"]["sha256"], case_ids=declaration["correctness_case_ids"], deadline=deadline, verified=store.verified_oracles)
             store.replay_seconds += time.monotonic() - replay_started
             verified = {case_id: {"identity": identity, "oracle_signature": replayed["oracle_signatures"][case_id]}
                         for case_id, identity in replayed["cases"].items()}
@@ -465,7 +538,7 @@ def collect(config, output_root, *, timeout_seconds=600, runner=subprocess_runne
             write_json(root / "correctness.json", result)
             replay_started = time.monotonic()
             replay_correctness(root / "correctness.json", source=result["source_sha256"], operator=config["operator"],
-                               declaration_ref=result["declaration_ref"], case_ids=declaration["correctness_case_ids"])
+                               declaration_ref=result["declaration_ref"], case_ids=declaration["correctness_case_ids"], deadline=deadline, verified=store.verified_oracles)
             store.replay_seconds += time.monotonic() - replay_started
         else:
             result = {"protocol": PROTOCOL, "captures": [reference(root, path) for path in captures]}
@@ -474,7 +547,8 @@ def collect(config, output_root, *, timeout_seconds=600, runner=subprocess_runne
             raise TimeoutError("证据检查超过原始采集预算")
         return result
     except Exception as error:
-        write_json(root / "failure.json", {"error": type(error).__name__, "message": str(error), "failed_at": now()})
+        write_json(root / "failure.json", {"error": type(error).__name__, "reason": getattr(error, "reason", "evidence_or_execution_invalid"),
+                                           "message": str(error), "failed_at": now()})
         raise
     finally:
         write_json(root / "collection_costs.json", {"elapsed_seconds": time.monotonic() - started,
@@ -488,7 +562,13 @@ def main():
     parser.add_argument("--output", type=Path, required=True, help="尚不存在的任务本地证据目录")
     parser.add_argument("--timeout-seconds", type=float, default=600, help="全部子步骤共用的总预算秒数")
     parser.add_argument("--correctness-only", action="store_true", help="先执行完整正确性并生成可供计时复用的证据，不启动 profiler")
+    parser.add_argument("--preflight-only", action="store_true", help="在启动任何 native 进程前检查全部 case 的 oracle 能力；不代表设备链路已通过")
     args = parser.parse_args()
+    if args.preflight_only:
+        result = preflight(json.loads(args.config.read_text()), deadline=time.monotonic() + args.timeout_seconds)
+        write_json(args.output, result)
+        print(json.dumps(result, ensure_ascii=False))
+        return
     print(json.dumps(collect(json.loads(args.config.read_text()), args.output,
                              timeout_seconds=args.timeout_seconds, correctness_only=args.correctness_only), ensure_ascii=False))
 

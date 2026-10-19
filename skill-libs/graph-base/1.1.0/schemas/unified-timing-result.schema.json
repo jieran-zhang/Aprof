@@ -125,6 +125,12 @@
           "ab_gap_seconds": {
             "type": "number",
             "minimum": 0
+          },
+          "baseline_statistics": {
+            "$ref": "#/$defs/sample_statistics"
+          },
+          "candidate_statistics": {
+            "$ref": "#/$defs/sample_statistics"
           }
         },
         "required": [
@@ -161,6 +167,9 @@
     "decision_hash": {
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "stability_policy": {
+      "const": "bounded_outlier_v1"
     }
   },
   "required": [
@@ -182,5 +191,133 @@
     "replication_recommended",
     "uncertainty",
     "decision_hash"
+  ],
+  "$defs": {
+    "sample_statistics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "policy": {
+          "const": "bounded_outlier_v1"
+        },
+        "raw_values_us": {
+          "type": "array",
+          "minItems": 20,
+          "maxItems": 20,
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "raw_median_us": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "raw_cv": {
+          "type": "number",
+          "minimum": 0
+        },
+        "mad_us": {
+          "type": "number",
+          "minimum": 0
+        },
+        "outlier_threshold_us": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "outlier_indices": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
+        },
+        "excluded_indices": {
+          "type": "array",
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
+        },
+        "retained_count": {
+          "type": "integer",
+          "minimum": 18,
+          "maximum": 20
+        },
+        "median_us": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "cv": {
+          "type": "number",
+          "minimum": 0
+        },
+        "exclusion_limit_exceeded": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "policy",
+        "raw_values_us",
+        "raw_median_us",
+        "raw_cv",
+        "mad_us",
+        "outlier_threshold_us",
+        "outlier_indices",
+        "excluded_indices",
+        "retained_count",
+        "median_us",
+        "cv",
+        "exclusion_limit_exceeded"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "stability_policy"
+        ]
+      },
+      "then": {
+        "properties": {
+          "cases": {
+            "items": {
+              "required": [
+                "baseline_statistics",
+                "candidate_statistics"
+              ]
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "cases": {
+            "items": {
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "baseline_statistics"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "candidate_statistics"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
   ]
 }

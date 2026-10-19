@@ -34,13 +34,15 @@ class CaseRunner(FakeRunner):
             self.duration = configured
 
 
-def campaign(root, *, baseline_us=100, candidate_us=80, case_ids=(1,)):
+def campaign(root, *, baseline_us=100, candidate_us=80, case_ids=(1,), stability_policy=None, samples=None):
     """纯 CPU 联合集成样例；FakeRunner 不启动 NPU。"""
     config = capture_config(root / "inputs")
     declaration_path = Path(config["declaration"]["path"])
     declaration = json.loads(declaration_path.read_text())
     declaration["case_ids"] = list(case_ids)
     declaration["correctness_case_ids"] = list(case_ids)
+    if stability_policy is not None:
+        declaration["stability_policy"] = stability_policy
     write(declaration_path, declaration)
     config["declaration"]["sha256"] = file_hash(declaration_path)
     config["cases"] = [{**deepcopy(config["cases"][0]), "case_id": case} for case in case_ids]
@@ -56,7 +58,18 @@ def campaign(root, *, baseline_us=100, candidate_us=80, case_ids=(1,)):
             collect(config, root / f"{role}_correctness", runner=FakeRunner(config), correctness_only=True)
             correctness[role] = root / f"{role}_correctness/correctness.json"
             config["correctness"] = {"path": str(correctness[role]), "sha256": file_hash(correctness[role])}
-        collect(config, root / role, runner=CaseRunner(config, duration=duration))
+        class SampleRunner(CaseRunner):
+            def __call__(self, argv, *, cwd, env, timeout_seconds):
+                result = super().__call__(argv, cwd=cwd, env=env, timeout_seconds=timeout_seconds)
+                if samples and role in samples and Path(argv[1]).name == "msprof.py":
+                    table = Path(cwd) / "profile/PROF_test/kernel_details.csv"
+                    rows = table.read_text().splitlines()
+                    for call, value in enumerate(samples[role]):
+                        for offset, name in ((2, "first"), (3, "second")):
+                            rows[call * 3 + offset] = f"{name},Target,{value / 2},7"
+                    table.write_text("\n".join(rows) + "\n")
+                return result
+        collect(config, root / role, runner=SampleRunner(config, duration=duration))
         captures[role] = [root / role / f"case_{case}/capture.json" for case in case_ids]
         sources[role] = json.loads(captures[role][0].read_text())["identity"]["source_sha256"]
     request = {"schema_version": 1, "protocol": config["protocol"], "operator": config["operator"],

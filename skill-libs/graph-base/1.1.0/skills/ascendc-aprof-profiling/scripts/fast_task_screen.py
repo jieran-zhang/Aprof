@@ -24,7 +24,7 @@ def compare(baseline_path, candidate_path):
     for key in COMMON:
         if baseline["identity"][key] != candidate["identity"][key]:
             raise ValueError(f"A/B {key} differs")
-    return {
+    result = {
         "protocol": PROTOCOL, "metric": METRIC, "operator": baseline["operator"],
         "case_id": baseline["case_id"], "baseline_manifest_ref": a["capture_ref"],
         "candidate_manifest_ref": b["capture_ref"], "baseline_median_us": a["median_us"],
@@ -35,6 +35,10 @@ def compare(baseline_path, candidate_path):
         "formal_admission": "not_evaluated",
         "reason": "此命令只展示单 case 原始回放结果；正式收尾另行检查完整 case、正确性与复用策略",
     }
+    if "sample_statistics" in a:
+        result.update(stability_policy=a["sample_statistics"]["policy"],
+                      baseline_statistics=a["sample_statistics"], candidate_statistics=b["sample_statistics"])
+    return result
 
 
 def main():
