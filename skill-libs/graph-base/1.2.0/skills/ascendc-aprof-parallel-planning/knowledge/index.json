@@ -1,0 +1,2012 @@
+{
+  "generator": {
+    "id": "aprof_runtime.knowledge/v1",
+    "schema_hash": "sha256:69941aacfe8db7f58142fd4611c0c57922ca86f64662a98f2c03df183ace2ba2",
+    "sha256": "sha256:f09921f590f7306cd7777415784f3b894576d48cbc648a24dc0d43d199d70076"
+  },
+  "owner": "parallel-planning",
+  "records": [
+    {
+      "body": "# Elementwise / Broadcast 路由\n\n比较下列方案的任务数、所有权、容量、额外流量、合并与同步成本。可返回多个候选，不用模板顺序代替 C2 的方案比较。\n\n- [连续输出分区与均衡尾块](templates/continuous.md)\n- [广播复用与容量分块](templates/broadcast.md)",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.elementwise",
+      "kind": "router",
+      "learning": {},
+      "parent": "planning.root",
+      "references": [],
+      "routes": [
+        {
+          "exclude": [
+            {
+              "field": "excluded_templates",
+              "op": "contains",
+              "value": "planning.elementwise.continuous"
+            }
+          ],
+          "fallback": false,
+          "match": [],
+          "prior_score": 3,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.task_ownership",
+            "constraint.valid_lengths"
+          ],
+          "seed_reason": "直接适用的主方案，仍需所列语义/资源证据。",
+          "target": "planning.elementwise.continuous"
+        },
+        {
+          "exclude": [
+            {
+              "field": "excluded_templates",
+              "op": "contains",
+              "value": "planning.elementwise.broadcast"
+            }
+          ],
+          "fallback": false,
+          "match": [
+            {
+              "field": "features",
+              "op": "contains",
+              "value": "broadcast"
+            }
+          ],
+          "prior_score": 2,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.broadcast_semantics",
+            "constraint.reuse_domain"
+          ],
+          "seed_reason": "满足所列适用特征后比较资源、同步与合并成本的条件性方案。",
+          "target": "planning.elementwise.broadcast"
+        },
+        {
+          "exclude": [],
+          "fallback": true,
+          "match": [],
+          "prior_score": 0,
+          "required_evidence": [],
+          "seed_reason": "未知类型保留语义正确的现有方案并补证据。",
+          "target": "planning.elementwise.fallback"
+        }
+      ],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:6c76f4c20ab661d154b2b2b6e22d9047fa5a9f138f9765272742120e0359790f",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/ROUTER.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:40fd7187bf84f9c454fc5a53b0c5adc1e9594e6054901f21c518cae1ee3ad0ad",
+          "lines": [
+            1,
+            215
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/elewise/tiling.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/elewise/tiling.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:40fd7187bf84f9c454fc5a53b0c5adc1e9594e6054901f21c518cae1ee3ad0ad"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "Elementwise / Broadcast 路由",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 广播复用与容量分块\n\n## 适用域与算法骨架\n\n广播轴和连续内轴已确认；输出所有权按连续输出片定义。\n\n先合法合轴，区分连续轴和广播轴；将小输入块装入一次，重复参与一个输出 tile；扩大复用域前重算 UB。\n\n## 任务所有权、归约与同步\n\n每个输出 tile 唯一写；重复使用的输入只读，无全局同步。\n\n## 资源与成本公式\n\ninput_bytes=unique_input_elements*s_in；UB=input+expanded/output+tmp；reuse_gain≈重复读取字节−新临时流量。\n\n容量、可用核数、API 临时区由当前平台与 SDK 核验。所有容量使用字节，保留对齐和同时存活区间；不得把上游 4KB、固定 tile 或核数当通用约束。\n\n## 参数空间与替代方案\n\n合轴、splitAxis、tile、是否展开输入；NDDMA 能力和单位需按平台核实。\n\nUB 广播、批量 DMA、按轴迭代；不支持的 layout/dtype 回到通用广播。\n\n## 伪代码\n\n```text\nmerge only stride-compatible axes\nfor output tile owned by task:\n  load each unique broadcast input slice once\n  for output subtile within capacity: expand/index input -> compute -> write valid range\n```\n\n## 可复用 Ascend C 关键片段\n\n```cpp\n// 将复用输入与输出分别放入合法 LocalTensor；count 为有效元素。\nAscendC::Muls(outLocal, inLocal, scale, validCount);\n// 此片段仅覆盖标量广播乘法；一般广播使用核验后的 Broadcast API/stride。\n```\n\n片段省略工程与已声明的张量/变量，不是完整可运行算子；API 重载、作用域、别名和平台支持在 C3 核验。C2 冻结算法、所有权、合并顺序和数值语义；tile、局部 buffer/API 实现只在已声明容量/语义边界内调整。\n\n## 验证与证据状态\n\n来源审读完成，当前没有 NPU 性能验证。验证覆盖空/极小输入、对齐边界、尾块、多 task、特殊值和最大资源需求；完整正确性通过后才用统一计时协议比较。历史模板结果不构成当前性能承诺。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.elementwise.broadcast",
+      "kind": "template",
+      "learning": {},
+      "parent": "planning.elementwise",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:47a4cd8436fd10eaea2fb0a4457ffe253c35cb7b73d22c8cfa05d64b689ac358",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/broadcast.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:4aa3bffcf13401bfa2e2f2d13525a23bb107cf7ebf50f900db54bb08dccaa6ab",
+          "lines": [
+            1,
+            331
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/broadcast/ub-broadcast.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/broadcast/ub-broadcast.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:4aa3bffcf13401bfa2e2f2d13525a23bb107cf7ebf50f900db54bb08dccaa6ab"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "广播复用与容量分块",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 连续输出分区与均衡尾块\n\n## 适用域与算法骨架\n\n各元素独立，输出连续；N=0 由宿主空张量分支处理。\n\n把 N 个元素先按合法搬运粒度分成 Q 个块；各核分 q 或 q+1 块；核内按 UB tile 执行主循环与一个有效尾块。\n\n## 任务所有权、归约与同步\n\n每个输出块只有一个核写；不跨核归约。小 workload 比较较少核数，不能把低利用率直接当欠并行。\n\n## 资源与成本公式\n\nQ=ceil(N/alignmentElements)；q=Q//C，r=Q%C；UB_live=max_t Σ align(n_i(t)*s_i)*depth_i+tmp；所有量统一为字节。\n\n容量、可用核数、API 临时区由当前平台与 SDK 核验。所有容量使用字节，保留对齐和同时存活区间；不得把上游 4KB、固定 tile 或核数当通用约束。\n\n## 参数空间与替代方案\n\nC∈[1,min(Q,availableCores)]；tile 满足容量和 API 限制；最小每核字节由实测成本决定。\n\n较少核/更大 tile 与较多核/更小 tile 比较；fallback 为现有正确分区。\n\n## 伪代码\n\n```text\nQ=ceil_div(N, alignmentElements); choose C<=min(Q, availableCores)\n(q,r)=divmod(Q,C)\ncore c owns [c*q+min(c,r), (c+1)*q+min(c+1,r)) blocks\nfor each owned tile: load valid input -> compute -> write valid output\n```\n\n## 可复用 Ascend C 关键片段\n\n```cpp\nconst uint64_t id = AscendC::GetBlockIdx();\nconst uint64_t blocks = q + (id < r ? 1 : 0);\nconst uint64_t beginBlock = id * q + (id < r ? id : r);\n// beginBlock/blocks 用块为单位；映射元素后最后一块只处理 validCount。\n// GetBlockIdx 片段用于 kernel；q/r 由 host 以溢出安全的整数算术计算。\n```\n\n片段省略工程与已声明的张量/变量，不是完整可运行算子；API 重载、作用域、别名和平台支持在 C3 核验。C2 冻结算法、所有权、合并顺序和数值语义；tile、局部 buffer/API 实现只在已声明容量/语义边界内调整。\n\n## 验证与证据状态\n\n来源审读完成，当前没有 NPU 性能验证。验证覆盖空/极小输入、对齐边界、尾块、多 task、特殊值和最大资源需求；完整正确性通过后才用统一计时协议比较。历史模板结果不构成当前性能承诺。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.elementwise.continuous",
+      "kind": "template",
+      "learning": {},
+      "parent": "planning.elementwise",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:5432f3877df8b8ee6c884ed0dd9ad1bab206446569bfb252c689f8d17163deef",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:40fd7187bf84f9c454fc5a53b0c5adc1e9594e6054901f21c518cae1ee3ad0ad",
+          "lines": [
+            1,
+            215
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/elewise/tiling.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/elewise/tiling.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:40fd7187bf84f9c454fc5a53b0c5adc1e9594e6054901f21c518cae1ee3ad0ad"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "连续输出分区与均衡尾块",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# Elementwise / Broadcast 通用回退\n\n保留已验证的基线算法和输出所有权，记录当前缺失的容量、语义或 API 依据。新模板无法满足容量、精度或任务覆盖时退回该实现，不能用未验证方案填补缺项。C2 必须给出实际 fallback entry/key 和互斥元数据域。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.elementwise.fallback",
+      "kind": "strategy",
+      "learning": {},
+      "parent": "planning.elementwise",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:4c7d0f78c84102199f1f79e396ebf84f8a8b9c3425b882159050ade34d874c86",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/fallback.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:40fd7187bf84f9c454fc5a53b0c5adc1e9594e6054901f21c518cae1ee3ad0ad",
+          "lines": [
+            1,
+            215
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/elewise/tiling.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/elewise/tiling.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:40fd7187bf84f9c454fc5a53b0c5adc1e9594e6054901f21c518cae1ee3ad0ad"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "Elementwise / Broadcast 通用回退",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 未覆盖算子族的通用方案\n\n将算子分解为已知子操作，保留原始语义和有效实现。优先恢复任务所有权、资源预算与 fallback；没有专属模板时不能虚构硬件结论。Random/Convolution 等可引用相关子操作模板，专属性能结论保持未知。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.fallback",
+      "kind": "strategy",
+      "learning": {},
+      "parent": "planning.root",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:3aa91a59e8c8d8d26907f08f73d298c09eaaed6c03118511d86f7cd7bff29b0d",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/fallback.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:9036a42db1a5c59c0df65aa065346ee5b6e0e951ac7e22f0522b96c8bfb3bd9b",
+          "lines": [
+            1,
+            17
+          ],
+          "original_path": "skills/ascendc-tiling-design/references/algorithm-families.md",
+          "path": "workflows/migration/archive/skills/ascendc-tiling-design/references/algorithm-families.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:9036a42db1a5c59c0df65aa065346ee5b6e0e951ac7e22f0522b96c8bfb3bd9b",
+          "sha256": "sha256:9036a42db1a5c59c0df65aa065346ee5b6e0e951ac7e22f0522b96c8bfb3bd9b"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "未覆盖算子族的通用方案",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# FlashAttention 路由\n\n比较下列方案的任务数、所有权、容量、额外流量、合并与同步成本。可返回多个候选，不用模板顺序代替 C2 的方案比较。\n\n- [Task 并行、KV streaming 与 online softmax](templates/online.md)\n- [Decode split-KV 与稳定合并](templates/splitkv.md)",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.flash-attention",
+      "kind": "router",
+      "learning": {},
+      "parent": "planning.root",
+      "references": [],
+      "routes": [
+        {
+          "exclude": [
+            {
+              "field": "excluded_templates",
+              "op": "contains",
+              "value": "planning.flash-attention.online"
+            }
+          ],
+          "fallback": false,
+          "match": [],
+          "prior_score": 3,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.softmax_semantics",
+            "constraint.task_ownership"
+          ],
+          "seed_reason": "直接适用的主方案，仍需所列语义/资源证据。",
+          "target": "planning.flash-attention.online"
+        },
+        {
+          "exclude": [
+            {
+              "field": "excluded_templates",
+              "op": "contains",
+              "value": "planning.flash-attention.splitkv"
+            }
+          ],
+          "fallback": false,
+          "match": [
+            {
+              "field": "features",
+              "op": "contains",
+              "value": "kv_underparallel"
+            }
+          ],
+          "prior_score": 2,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.softmax_semantics",
+            "constraint.merge_semantics",
+            "constraint.workspace_ownership"
+          ],
+          "seed_reason": "满足所列适用特征后比较资源、同步与合并成本的条件性方案。",
+          "target": "planning.flash-attention.splitkv"
+        },
+        {
+          "exclude": [],
+          "fallback": true,
+          "match": [],
+          "prior_score": 0,
+          "required_evidence": [],
+          "seed_reason": "未知类型保留语义正确的现有方案并补证据。",
+          "target": "planning.flash-attention.fallback"
+        }
+      ],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:ffe814aa84288d46ec6553b3d49f61007de65ee62e990f11ed71e259ba0cebe3",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/flash-attention/ROUTER.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:83ed347947ce330ed2940beb797be67fdc3cc30d60b9cf376d81711d76ab09cb",
+          "lines": [
+            1,
+            634
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/flashattention/design.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/flashattention/design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:83ed347947ce330ed2940beb797be67fdc3cc30d60b9cf376d81711d76ab09cb"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "FlashAttention 路由",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# FlashAttention 通用回退\n\n保留已验证的基线算法和输出所有权，记录当前缺失的容量、语义或 API 依据。新模板无法满足容量、精度或任务覆盖时退回该实现，不能用未验证方案填补缺项。C2 必须给出实际 fallback entry/key 和互斥元数据域。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.flash-attention.fallback",
+      "kind": "strategy",
+      "learning": {},
+      "parent": "planning.flash-attention",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:b8d66f11276838115658e7c027a2ddf2a31789a14f6cfde4096f2aadea7b0fd6",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/flash-attention/fallback.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:83ed347947ce330ed2940beb797be67fdc3cc30d60b9cf376d81711d76ab09cb",
+          "lines": [
+            1,
+            634
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/flashattention/design.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/flashattention/design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:83ed347947ce330ed2940beb797be67fdc3cc30d60b9cf376d81711d76ab09cb"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "FlashAttention 通用回退",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# Task 并行、KV streaming 与 online softmax\n\n## 适用域与算法骨架\n\nMHA/GQA 等子族、mask、scale、head 映射已确认；适合按 batch/head/Qblock 分任务。\n\n每个 Qblock 顺序流过 KV chunks；保持 m,l,O 状态；新块最大值 m′=max(m,max(scores))，α=exp(m−m′)，更新 l′=αl+Σexp(scores−m′)，O′=αO+P V。最终 O/l。\n\n## 任务所有权、归约与同步\n\ntask 独占 Q 输出；KV 可共享只读。默认 s2 在 task 内顺序推进，避免无合并的跨核状态更新。\n\n## 资源与成本公式\n\n状态 O 大小=Br*D*sAcc，m/l=2*Br*sAcc；UB/L1/L0 逐层预算；容量不够时缩 Br 或按 D/row 分块并计 workspace 流量。\n\n容量、可用核数、API 临时区由当前平台与 SDK 核验。所有容量使用字节，保留对齐和同时存活区间；不得把上游 4KB、固定 tile 或核数当通用约束。\n\n## 参数空间与替代方案\n\nBr/Bc/Dchunk、KV 长度、AIC/AIV 比例、状态驻留位置。\n\n容量允许可驻留 O；容量不足才评估 streaming/workspace；不照搬上游一律搬 O 到 GM 的规则。\n\n## 伪代码\n\n```text\ntask owns (batch,head,Qblock); initialize m=-inf,l=0,O=0\nfor valid KV chunk:\n  scores=Q*K^T*scale+mask; mNew=max(m,rowMax(scores))\n  handle all-masked rows; alpha=exp(m-mNew); P=exp(scores-mNew)\n  O=alpha*O+P*V; l=alpha*l+rowSum(P); m=mNew\noutput=O/l with explicit l==0 semantics\n```\n\n## 可复用 Ascend C 关键片段\n\n```cpp\n// online rescale 中一行 O 的更新片段，alpha 来自 max 的稳定更新。\nAscendC::Muls(oldOLocal, oldOLocal, alpha, validD);\nAscendC::Add(newOLocal, oldOLocal, pvLocal, validD);\n// 全 mask 行须显式分支，避免 exp(-inf - -inf) 产生 NaN。\n```\n\n片段省略工程与已声明的张量/变量，不是完整可运行算子；API 重载、作用域、别名和平台支持在 C3 核验。C2 冻结算法、所有权、合并顺序和数值语义；tile、局部 buffer/API 实现只在已声明容量/语义边界内调整。\n\n## 验证与证据状态\n\n来源审读完成，当前没有 NPU 性能验证。验证覆盖空/极小输入、对齐边界、尾块、多 task、特殊值和最大资源需求；完整正确性通过后才用统一计时协议比较。历史模板结果不构成当前性能承诺。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.flash-attention.online",
+      "kind": "template",
+      "learning": {},
+      "parent": "planning.flash-attention",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:aa01470023bd642f0e7cb16008aeb0ac5f6867188923632f6361be72253697a1",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/flash-attention/templates/online.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:83ed347947ce330ed2940beb797be67fdc3cc30d60b9cf376d81711d76ab09cb",
+          "lines": [
+            1,
+            634
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/flashattention/design.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/flashattention/design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:83ed347947ce330ed2940beb797be67fdc3cc30d60b9cf376d81711d76ab09cb"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "Task 并行、KV streaming 与 online softmax",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# Decode split-KV 与稳定合并\n\n## 适用域与算法骨架\n\ndecode 独立 Q task 很少而 KV 很长；合并与 workspace 成本可接受。\n\n各 split 计算未归一化 (mi,li,Oi)；仅在非空 partial 上取 M=max_i mi，L=Σexp(mi−M)li，O=Σexp(mi−M)Oi/L；若存的是归一化 Oi，必须额外乘 li。\n\n## 任务所有权、归约与同步\n\n槽位键 (task,kvSplit) 唯一；等待所有 partial 完成后唯一合并者写 O。\n\n## 资源与成本公式\n\nworkspace≈tasks*S*(Br*D+2*Br)*sAcc；并行缩短的 KV 时间必须覆盖 partial 写读与合并成本。\n\n容量、可用核数、API 临时区由当前平台与 SDK 核验。所有容量使用字节，保留对齐和同时存活区间；不得把上游 4KB、固定 tile 或核数当通用约束。\n\n## 参数空间与替代方案\n\nS、KV chunk、partial dtype、merge tile、空 split 策略。\n\n空 split 用 m=-inf、l=0、O=0，并在合并时跳过 l=0 的 partial；所有 partial 空/全 mask 时直接按 oracle 返回，不能计算 exp(-inf−-inf)；收益不足回退 task streaming。\n\n## 伪代码\n\n```text\neach (task,split) independently computes unnormalized (mi,li,Oi)\nstore partials in unique workspace slots and complete producers\nignore empty partials (m=-inf,l=0,O=0); if all empty, take oracle branch\nmerge owner: M=max(mi); L=sum(exp(mi-M)*li)\nO=sum(exp(mi-M)*Oi)/L; handle empty/all-masked splits\nwrite each output exactly once\n```\n\n## 可复用 Ascend C 关键片段\n\n```cpp\n// 局部 O 未归一化的合并：weight=exp(mi-M)。\nAscendC::Muls(partLocal, partLocal, weight, validD);\nAscendC::Add(accLocal, accLocal, partLocal, validD);\n// 同时累计 weight*li，最后统一除 L；L==0 按 mask/特殊值契约处理。\n```\n\n片段省略工程与已声明的张量/变量，不是完整可运行算子；API 重载、作用域、别名和平台支持在 C3 核验。C2 冻结算法、所有权、合并顺序和数值语义；tile、局部 buffer/API 实现只在已声明容量/语义边界内调整。\n\n## 验证与证据状态\n\n来源审读完成，当前没有 NPU 性能验证。验证覆盖空/极小输入、对齐边界、尾块、多 task、特殊值和最大资源需求；完整正确性通过后才用统一计时协议比较。历史模板结果不构成当前性能承诺。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.flash-attention.splitkv",
+      "kind": "template",
+      "learning": {},
+      "parent": "planning.flash-attention",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:d023c19266ae46d95f2e6409e0fb8e0eb478c599872ca60641b9a69a2646cac6",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/flash-attention/templates/splitkv.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:83ed347947ce330ed2940beb797be67fdc3cc30d60b9cf376d81711d76ab09cb",
+          "lines": [
+            1,
+            634
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/flashattention/design.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/flashattention/design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:83ed347947ce330ed2940beb797be67fdc3cc30d60b9cf376d81711d76ab09cb"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "Decode split-KV 与稳定合并",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 布局转换 路由\n\n比较下列方案的任务数、所有权、容量、额外流量、合并与同步成本。可返回多个候选，不用模板顺序代替 C2 的方案比较。\n\n- [布局转换、有效宽度与对齐宽度](templates/transpose.md)",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.layout",
+      "kind": "router",
+      "learning": {},
+      "parent": "planning.root",
+      "references": [],
+      "routes": [
+        {
+          "exclude": [
+            {
+              "field": "excluded_templates",
+              "op": "contains",
+              "value": "planning.layout.transpose"
+            }
+          ],
+          "fallback": false,
+          "match": [],
+          "prior_score": 3,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.layout_semantics",
+            "constraint.valid_lengths"
+          ],
+          "seed_reason": "直接适用的主方案，仍需所列语义/资源证据。",
+          "target": "planning.layout.transpose"
+        },
+        {
+          "exclude": [],
+          "fallback": true,
+          "match": [],
+          "prior_score": 0,
+          "required_evidence": [],
+          "seed_reason": "未知类型保留语义正确的现有方案并补证据。",
+          "target": "planning.layout.fallback"
+        }
+      ],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:72f2914a3e3d264083cd73286f22108b45b66a0d052ccdaca36a8a94e923953e",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/ROUTER.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:3b11c42fec83631ee8b2c26eefd3ac7b16b2606b6a09ea7ad15991c0b806e306",
+          "lines": [
+            1,
+            261
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/conversion/patterns.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/conversion/patterns.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:3b11c42fec83631ee8b2c26eefd3ac7b16b2606b6a09ea7ad15991c0b806e306"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "布局转换 路由",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 布局转换 通用回退\n\n保留已验证的基线算法和输出所有权，记录当前缺失的容量、语义或 API 依据。新模板无法满足容量、精度或任务覆盖时退回该实现，不能用未验证方案填补缺项。C2 必须给出实际 fallback entry/key 和互斥元数据域。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.layout.fallback",
+      "kind": "strategy",
+      "learning": {},
+      "parent": "planning.layout",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:53264c1c95b2b0424196926461ec70250c4124f20cca54d98de72c8494f40eb4",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/fallback.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:3b11c42fec83631ee8b2c26eefd3ac7b16b2606b6a09ea7ad15991c0b806e306",
+          "lines": [
+            1,
+            261
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/conversion/patterns.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/conversion/patterns.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:3b11c42fec83631ee8b2c26eefd3ac7b16b2606b6a09ea7ad15991c0b806e306"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "布局转换 通用回退",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 布局转换、有效宽度与对齐宽度\n\n## 适用域与算法骨架\n\n明确输入输出 stride；转置不改变数值但可能涉及 padding、非连续输入。\n\n按连续内轴搬入对齐 tile，片上转换，再按输出连续块写回；把有效 curN 和存储 tileNA 分开。\n\n## 任务所有权、归约与同步\n\n每个输出矩形单 owner；相邻 tile 的边界有效范围不重叠。\n\n## 资源与成本公式\n\nUB=inAligned+outAligned+offsetTable+tmp；repeats 与 stride 不超过目标 API 限制；额外 padding 计入容量。\n\n容量、可用核数、API 临时区由当前平台与 SDK 核验。所有容量使用字节，保留对齐和同时存活区间；不得把上游 4KB、固定 tile 或核数当通用约束。\n\n## 参数空间与替代方案\n\ntileN、tileC、布局方案、repeat/mask；上限按 SDK/平台查询。\n\n不支持的 stride/尾块走通用转换；不从历史示例推导通用 255 repeat 限制。\n\n## 伪代码\n\n```text\nmap task to unique output rectangle\nload valid source using declared strides into aligned UB tile\nconvert using legal repeat/stride and offset table\nwrite curN valid columns; tileNA only describes UB storage\n```\n\n## 可复用 Ascend C 关键片段\n\n```cpp\n// 有效长度和存储跨度保持两个变量，元素偏移不乘 sizeof 两次。\nconst uint64_t valid = remaining < tileN ? remaining : tileN;\nconst uint64_t localRow = row * tileNA;\n// LocalTensor 分配/row offset 用 tileNA；GM 写回只覆盖 valid。\n```\n\n片段省略工程与已声明的张量/变量，不是完整可运行算子；API 重载、作用域、别名和平台支持在 C3 核验。C2 冻结算法、所有权、合并顺序和数值语义；tile、局部 buffer/API 实现只在已声明容量/语义边界内调整。\n\n## 验证与证据状态\n\n来源审读完成，当前没有 NPU 性能验证。验证覆盖空/极小输入、对齐边界、尾块、多 task、特殊值和最大资源需求；完整正确性通过后才用统一计时协议比较。历史模板结果不构成当前性能承诺。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.layout.transpose",
+      "kind": "template",
+      "learning": {},
+      "parent": "planning.layout",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:48a95744b10dddb0b833581fab3a434f4dda12d7c6026329738a94eae14be153",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:3b11c42fec83631ee8b2c26eefd3ac7b16b2606b6a09ea7ad15991c0b806e306",
+          "lines": [
+            1,
+            261
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/conversion/patterns.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/conversion/patterns.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:3b11c42fec83631ee8b2c26eefd3ac7b16b2606b6a09ea7ad15991c0b806e306"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "布局转换、有效宽度与对齐宽度",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# MatMul / GMM 路由\n\n比较下列方案的任务数、所有权、容量、额外流量、合并与同步成本。可返回多个候选，不用模板顺序代替 C2 的方案比较。\n\n- [MN 分块与 GMM 负载均衡](templates/mn.md)\n- [小侧驻留与 L1/L0 复用](templates/resident.md)\n- [split-K/StreamK 与部分结果合并](templates/splitk.md)",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.matmul",
+      "kind": "router",
+      "learning": {},
+      "parent": "planning.root",
+      "references": [],
+      "routes": [
+        {
+          "exclude": [
+            {
+              "field": "excluded_templates",
+              "op": "contains",
+              "value": "planning.matmul.mn"
+            }
+          ],
+          "fallback": false,
+          "match": [],
+          "prior_score": 3,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.task_ownership",
+            "constraint.l1_l0_budget"
+          ],
+          "seed_reason": "直接适用的主方案，仍需所列语义/资源证据。",
+          "target": "planning.matmul.mn"
+        },
+        {
+          "exclude": [
+            {
+              "field": "excluded_templates",
+              "op": "contains",
+              "value": "planning.matmul.resident"
+            }
+          ],
+          "fallback": false,
+          "match": [
+            {
+              "field": "features",
+              "op": "contains",
+              "value": "reusable_matrix_side"
+            }
+          ],
+          "prior_score": 2,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.l1_l0_budget",
+            "constraint.reuse_domain"
+          ],
+          "seed_reason": "满足所列适用特征后比较资源、同步与合并成本的条件性方案。",
+          "target": "planning.matmul.resident"
+        },
+        {
+          "exclude": [
+            {
+              "field": "excluded_templates",
+              "op": "contains",
+              "value": "planning.matmul.splitk"
+            }
+          ],
+          "fallback": false,
+          "match": [
+            {
+              "field": "features",
+              "op": "contains",
+              "value": "long_k_underparallel"
+            }
+          ],
+          "prior_score": 2,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.merge_semantics",
+            "constraint.workspace_ownership",
+            "constraint.precision"
+          ],
+          "seed_reason": "满足所列适用特征后比较资源、同步与合并成本的条件性方案。",
+          "target": "planning.matmul.splitk"
+        },
+        {
+          "exclude": [],
+          "fallback": true,
+          "match": [],
+          "prior_score": 0,
+          "required_evidence": [],
+          "seed_reason": "未知类型保留语义正确的现有方案并补证据。",
+          "target": "planning.matmul.fallback"
+        }
+      ],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:77b7156bdb938100a4f4a3d233613450cb86fc10977ca57532ae7ddd636154ad",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/matmul/ROUTER.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:90d9b2c693a9fb876326157a618e383413c28cf660e8d4f92941a96b6c593cb1",
+          "lines": [
+            1,
+            313
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/matmul/ascendc-api-gmm-tiling.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/matmul/ascendc-api-gmm-tiling.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:90d9b2c693a9fb876326157a618e383413c28cf660e8d4f92941a96b6c593cb1"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "MatMul / GMM 路由",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# MatMul / GMM 通用回退\n\n保留已验证的基线算法和输出所有权，记录当前缺失的容量、语义或 API 依据。新模板无法满足容量、精度或任务覆盖时退回该实现，不能用未验证方案填补缺项。C2 必须给出实际 fallback entry/key 和互斥元数据域。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.matmul.fallback",
+      "kind": "strategy",
+      "learning": {},
+      "parent": "planning.matmul",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:fdcc7c2b1ca817b3a354279beabd82db12549acf470f52ad700a8123eca5d6f5",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/matmul/fallback.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:90d9b2c693a9fb876326157a618e383413c28cf660e8d4f92941a96b6c593cb1",
+          "lines": [
+            1,
+            313
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/matmul/ascendc-api-gmm-tiling.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/matmul/ascendc-api-gmm-tiling.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:90d9b2c693a9fb876326157a618e383413c28cf660e8d4f92941a96b6c593cb1"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "MatMul / GMM 通用回退",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# MN 分块与 GMM 负载均衡\n\n## 适用域与算法骨架\n\nMatMul/GMM，组形状和 layout 已知；优先从输出 MN 任务独立性建立基线。\n\ntasks=Σg ceil(Mg/BM)*ceil(Ng/BN)；按任务估计的 K 工作量调度；K 在核内迭代，尾 M/N 保持有效长度。\n\n## 任务所有权、归约与同步\n\n一个 MN tile 的完整 K 由一个输出所有者完成；GMM 任务必须带 group 和独立基址。\n\n## 资源与成本公式\n\nL0A=BM*BK*sA，L0B=BK*BN*sB，L0C=BM*BN*sAcc；L1 计入所有槽与对齐；比较 max_core_work。\n\n容量、可用核数、API 临时区由当前平台与 SDK 核验。所有容量使用字节，保留对齐和同时存活区间；不得把上游 4KB、固定 tile 或核数当通用约束。\n\n## 参数空间与替代方案\n\nBM/BN/BK、任务顺序、核数、A/B 驻留；硬件 fragment 与 row stride 由平台核实。\n\n小 MN 长 K 转 split-K；末轮不均衡比较进一步 MN 切分；fallback 通用 MatMul。\n\n## 伪代码\n\n```text\ntasks = concatenate group-specific (mTile,nTile) grids\nschedule output tiles by estimated K work\nfor task: for kTile: load A/B -> accumulate C in declared precision\nfinal owner writes only valid M,N\n```\n\n## 可复用 Ascend C 关键片段\n\n```cpp\n// 核内任务枚举；任务表的组/输出所有权由 C2 给出。\nfor (uint64_t task = AscendC::GetBlockIdx(); task < totalTasks; task += usedCores) {\n    // 解码 group/m/n；执行当前 SDK 已核验的 MatMul 接口；仅写有效 M/N。\n}\n```\n\n片段省略工程与已声明的张量/变量，不是完整可运行算子；API 重载、作用域、别名和平台支持在 C3 核验。C2 冻结算法、所有权、合并顺序和数值语义；tile、局部 buffer/API 实现只在已声明容量/语义边界内调整。\n\n## 验证与证据状态\n\n来源审读完成，当前没有 NPU 性能验证。验证覆盖空/极小输入、对齐边界、尾块、多 task、特殊值和最大资源需求；完整正确性通过后才用统一计时协议比较。历史模板结果不构成当前性能承诺。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.matmul.mn",
+      "kind": "template",
+      "learning": {},
+      "parent": "planning.matmul",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:b12b187ede5f510fdf1aeb0fba852f3b6fbc278732942cc53207abdb8b91bfdb",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/matmul/templates/mn.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:90d9b2c693a9fb876326157a618e383413c28cf660e8d4f92941a96b6c593cb1",
+          "lines": [
+            1,
+            313
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/matmul/ascendc-api-gmm-tiling.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/matmul/ascendc-api-gmm-tiling.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:90d9b2c693a9fb876326157a618e383413c28cf660e8d4f92941a96b6c593cb1"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "MN 分块与 GMM 负载均衡",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 小侧驻留与 L1/L0 复用\n\n## 适用域与算法骨架\n\n一侧矩阵或 scale 可在明确的生命周期内驻留，且重复使用超过一次。\n\n驻留可复用侧，沿另一侧推进；分别规划 L1 端口、L0 片段、输出和 pingpong 占用。\n\n## 任务所有权、归约与同步\n\n仍按 MN 输出所有权；驻留数据不可在消费者完成前覆写。\n\n## 资源与成本公式\n\nsaved_read≈(reuseCount−1)*residentBytes；resident+streamSlots+otherL1≤availableL1；同时校验 L0A/B/C。\n\n容量、可用核数、API 临时区由当前平台与 SDK 核验。所有容量使用字节，保留对齐和同时存活区间；不得把上游 4KB、固定 tile 或核数当通用约束。\n\n## 参数空间与替代方案\n\nresidentSide、reuseWindow、streamTile、stageDepth。\n\n若 Cube 主导、复用不足或容量紧张，回退常规分块；不能泛化上游 L1/2 数值。\n\n## 伪代码\n\n```text\nload reusable matrix side into the budgeted L1 region\nfor streaming-side tile: load -> stage L0 -> compute -> consume result\nrelease resident region only after all consumers complete\n```\n\n## 可复用 Ascend C 关键片段\n\n```cpp\n// 使用 C2 的容量结果初始化相应 buffer；bytes 是字节，不是元素数。\npipe.InitBuffer(residentBuffer, residentBytes);\n// TBuf 位置和 MatMul API 由目标平台核验；这里只复用 InitBuffer 的单位契约。\n```\n\n片段省略工程与已声明的张量/变量，不是完整可运行算子；API 重载、作用域、别名和平台支持在 C3 核验。C2 冻结算法、所有权、合并顺序和数值语义；tile、局部 buffer/API 实现只在已声明容量/语义边界内调整。\n\n## 验证与证据状态\n\n来源审读完成，当前没有 NPU 性能验证。验证覆盖空/极小输入、对齐边界、尾块、多 task、特殊值和最大资源需求；完整正确性通过后才用统一计时协议比较。历史模板结果不构成当前性能承诺。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.matmul.resident",
+      "kind": "template",
+      "learning": {},
+      "parent": "planning.matmul",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:c86d8981ee94c6333d74067769662fa8deb0c1f806fe7603a6fb5f37d1e66dae",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/matmul/templates/resident.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:e96e583c3cddcfba079a664f273533ecef25eec7bdc48fae8c1ae4f50e755f50",
+          "lines": [
+            1,
+            344
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/reference/matmul/fullload_design.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-performance-best-practices/reference/matmul/fullload_design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:e96e583c3cddcfba079a664f273533ecef25eec7bdc48fae8c1ae4f50e755f50"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "小侧驻留与 L1/L0 复用",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# split-K/StreamK 与部分结果合并\n\n## 适用域与算法骨架\n\nMN 任务不足或末轮空核且 K 足够长；部分结果可稳定合并。\n\n把部分 MN tile 的 K 拆成 S 段；每段写高精度 partial；全部完成后由合并阶段求和并执行一次 epilogue。\n\n## 任务所有权、归约与同步\n\n唯一槽位键 (group,mTile,nTile,kSplit)；最终输出只写一次；bias/activation 不能每个 split 重复施加。\n\n## 资源与成本公式\n\nworkspace=splitTiles*S*BM*BN*sAcc；额外流量约 2*workspace；只有节省的关键路径大于合并/同步/启动成本才采用。\n\n容量、可用核数、API 临时区由当前平台与 SDK 核验。所有容量使用字节，保留对齐和同时存活区间；不得把上游 4KB、固定 tile 或核数当通用约束。\n\n## 参数空间与替代方案\n\nS、全量 split 或末轮 split、合并 tile、partial dtype。\n\n短 K、workspace 受限或精度不通过回退 MN；不复用上游固定 K 阈值。\n\n## 伪代码\n\n```text\nmap task -> (group,mTile,nTile,kSplit)\ncompute partial C over this K interval\nwrite unique partial slot -> signal completion\nmerge owner waits for all splits -> sum -> one epilogue -> one output write\n```\n\n## 可复用 Ascend C 关键片段\n\n```cpp\n// 合并已经同步完成的 partial，保留高精度到最后一次 cast。\nAscendC::Add(accLocal, accLocal, partLocal, validCount);\n// 合并完全部 S 段才加 bias、激活、转换输出 dtype。\n```\n\n片段省略工程与已声明的张量/变量，不是完整可运行算子；API 重载、作用域、别名和平台支持在 C3 核验。C2 冻结算法、所有权、合并顺序和数值语义；tile、局部 buffer/API 实现只在已声明容量/语义边界内调整。\n\n## 验证与证据状态\n\n来源审读完成，当前没有 NPU 性能验证。验证覆盖空/极小输入、对齐边界、尾块、多 task、特殊值和最大资源需求；完整正确性通过后才用统一计时协议比较。历史模板结果不构成当前性能承诺。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.matmul.splitk",
+      "kind": "template",
+      "learning": {},
+      "parent": "planning.matmul",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:9bc2040c66dc9fb9df6660ab5eca47dcaffd5aa16581bbb89abccd258f9b1bec",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/matmul/templates/splitk.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:7fbd5d30ca6333991a4d9cf8d30c7e0468dd9ed4d09d2a2f0abe6ba8d934edb9",
+          "lines": [
+            1,
+            374
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/reference/matmul/streamk_design.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-performance-best-practices/reference/matmul/streamk_design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:7fbd5d30ca6333991a4d9cf8d30c7e0468dd9ed4d09d2a2f0abe6ba8d934edb9"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "split-K/StreamK 与部分结果合并",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# Reduction / Norm / Softmax 路由\n\n比较下列方案的任务数、所有权、容量、额外流量、合并与同步成本。可返回多个候选，不用模板顺序代替 C2 的方案比较。\n\n- [AR/ARA FullLoad 与行所有权](templates/fullload.md)\n- [ColSplit/RowSplit 与分段合并](templates/split.md)\n- [方差、Norm 与 Softmax 数值状态](templates/statistics.md)\n\n- 按需回查 [norm-partials](examples/norm-partials.md) 的原协议和失败记录。\n\n- 按需回查 [norm-p-specialization](examples/norm-p-specialization.md) 的原协议和失败记录。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.reduction",
+      "kind": "router",
+      "learning": {},
+      "parent": "planning.root",
+      "references": [],
+      "routes": [
+        {
+          "exclude": [
+            {
+              "field": "excluded_templates",
+              "op": "contains",
+              "value": "planning.reduction.fullload"
+            }
+          ],
+          "fallback": false,
+          "match": [],
+          "prior_score": 3,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.reduction_semantics",
+            "constraint.full_load"
+          ],
+          "seed_reason": "直接适用的主方案，仍需所列语义/资源证据。",
+          "target": "planning.reduction.fullload"
+        },
+        {
+          "exclude": [
+            {
+              "field": "excluded_templates",
+              "op": "contains",
+              "value": "planning.reduction.split"
+            }
+          ],
+          "fallback": false,
+          "match": [],
+          "prior_score": 2,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.reduction_semantics",
+            "constraint.merge_semantics"
+          ],
+          "seed_reason": "满足所列适用特征后比较资源、同步与合并成本的条件性方案。",
+          "target": "planning.reduction.split"
+        },
+        {
+          "exclude": [
+            {
+              "field": "excluded_templates",
+              "op": "contains",
+              "value": "planning.reduction.statistics"
+            }
+          ],
+          "fallback": false,
+          "match": [
+            {
+              "field": "features",
+              "op": "contains",
+              "value": "statistics"
+            }
+          ],
+          "prior_score": 2,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.reduction_semantics",
+            "constraint.precision"
+          ],
+          "seed_reason": "满足所列适用特征后比较资源、同步与合并成本的条件性方案。",
+          "target": "planning.reduction.statistics"
+        },
+        {
+          "exclude": [],
+          "fallback": false,
+          "match": [
+            {
+              "field": "examples",
+              "op": "contains",
+              "value": "norm-partials"
+            }
+          ],
+          "prior_score": 1,
+          "required_evidence": [],
+          "seed_reason": "探索性参照，需要额外证据。",
+          "target": "planning.reduction.example.norm-partials"
+        },
+        {
+          "exclude": [],
+          "fallback": false,
+          "match": [
+            {
+              "field": "examples",
+              "op": "contains",
+              "value": "norm-p-specialization"
+            }
+          ],
+          "prior_score": 1,
+          "required_evidence": [],
+          "seed_reason": "探索性参照，需要额外证据。",
+          "target": "planning.reduction.example.norm-p-specialization"
+        },
+        {
+          "exclude": [],
+          "fallback": true,
+          "match": [],
+          "prior_score": 0,
+          "required_evidence": [],
+          "seed_reason": "未知类型保留语义正确的现有方案并补证据。",
+          "target": "planning.reduction.fallback"
+        }
+      ],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:ef7e7fb9bc6ecdce56e22522283284a1230ff705e307f3f23eedc306826f6f5c",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/ROUTER.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:c74ad927867806d42723213292831e22c84a2e84d75230e5aa615dee1500782a",
+          "lines": [
+            1,
+            151
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/reduction/ar-fullload.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/reduction/ar-fullload.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:c74ad927867806d42723213292831e22c84a2e84d75230e5aa615dee1500782a"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "Reduction / Norm / Softmax 路由",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# norm-p-specialization 历史案例\n\n此案例仅用于提出候选和识别失败边界；原始记录见[完整历史案例](../../../../../../workflows/migration/archive/wiki/norm-p-specialization.md)，其中硬件/工具链、shape、dtype、原协议、通过/拒绝记录和后续演化均保留原文。来源元数据同时绑定旧索引与 evolution 日志。\n\n本轮没有按 single_role_l2_clean_task_v1 重新测量。历史 validated 只限原实例和协议，不会自动转为当前候选资格。采用时 C2/C3 必须说明相同与不同的前提，并保留原失败记录。\n\nexp 的 tile8192 案例不能推广为通用 tile；预取案例须防止末轮越界；norm 案例须区分 p 特例、partial/广播开销和原始数值语义。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.reduction.example.norm-p-specialization",
+      "kind": "example",
+      "learning": {},
+      "parent": "planning.reduction",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:41e44949caa88bc782df7573082c9dedecefad67a34d04f7a47fda416eecb6ab",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/examples/norm-p-specialization.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:3fe41d83888487eb55920e0673f59530e94b2056cc2cee88bd3fd4937d7e0ee2",
+          "lines": [
+            1,
+            26
+          ],
+          "original_path": "wiki/norm-p-specialization.md",
+          "path": "workflows/migration/archive/wiki/norm-p-specialization.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:3fe41d83888487eb55920e0673f59530e94b2056cc2cee88bd3fd4937d7e0ee2",
+          "sha256": "sha256:3fe41d83888487eb55920e0673f59530e94b2056cc2cee88bd3fd4937d7e0ee2"
+        },
+        {
+          "excerpt_sha256": "sha256:dca7200b4542b6e6e54e51d956407a67d3a7b300e255cab77ac97e6932294c0b",
+          "lines": [
+            1,
+            388
+          ],
+          "original_path": "wiki/index.json",
+          "path": "workflows/migration/archive/wiki/index.json",
+          "revision": "aprof-1.1.0-pre-governance:sha256:dca7200b4542b6e6e54e51d956407a67d3a7b300e255cab77ac97e6932294c0b",
+          "sha256": "sha256:dca7200b4542b6e6e54e51d956407a67d3a7b300e255cab77ac97e6932294c0b"
+        },
+        {
+          "excerpt_sha256": "sha256:080bde3fc3eb67514d9075453b78f20c1d12dbd48f6db4f48407187da65917f4",
+          "lines": [
+            1,
+            15
+          ],
+          "original_path": "wiki/evolution.jsonl",
+          "path": "workflows/migration/archive/wiki/evolution.jsonl",
+          "revision": "aprof-1.1.0-pre-governance:sha256:080bde3fc3eb67514d9075453b78f20c1d12dbd48f6db4f48407187da65917f4",
+          "sha256": "sha256:080bde3fc3eb67514d9075453b78f20c1d12dbd48f6db4f48407187da65917f4"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "norm-p-specialization 历史案例",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# norm-partials 历史案例\n\n此案例仅用于提出候选和识别失败边界；原始记录见[完整历史案例](../../../../../../workflows/migration/archive/wiki/norm-partials.md)，其中硬件/工具链、shape、dtype、原协议、通过/拒绝记录和后续演化均保留原文。来源元数据同时绑定旧索引与 evolution 日志。\n\n本轮没有按 single_role_l2_clean_task_v1 重新测量。历史 validated 只限原实例和协议，不会自动转为当前候选资格。采用时 C2/C3 必须说明相同与不同的前提，并保留原失败记录。\n\nexp 的 tile8192 案例不能推广为通用 tile；预取案例须防止末轮越界；norm 案例须区分 p 特例、partial/广播开销和原始数值语义。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.reduction.example.norm-partials",
+      "kind": "example",
+      "learning": {},
+      "parent": "planning.reduction",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:ed90bfe7e320f689b32a8ed0a4c5018a5476129082ef51827c75278981125209",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/examples/norm-partials.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:f01f135530a55dbaf0223a5e43453e07438aaf98edeebadd9731e82930afd3e3",
+          "lines": [
+            1,
+            30
+          ],
+          "original_path": "wiki/norm-partials.md",
+          "path": "workflows/migration/archive/wiki/norm-partials.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:f01f135530a55dbaf0223a5e43453e07438aaf98edeebadd9731e82930afd3e3",
+          "sha256": "sha256:f01f135530a55dbaf0223a5e43453e07438aaf98edeebadd9731e82930afd3e3"
+        },
+        {
+          "excerpt_sha256": "sha256:dca7200b4542b6e6e54e51d956407a67d3a7b300e255cab77ac97e6932294c0b",
+          "lines": [
+            1,
+            388
+          ],
+          "original_path": "wiki/index.json",
+          "path": "workflows/migration/archive/wiki/index.json",
+          "revision": "aprof-1.1.0-pre-governance:sha256:dca7200b4542b6e6e54e51d956407a67d3a7b300e255cab77ac97e6932294c0b",
+          "sha256": "sha256:dca7200b4542b6e6e54e51d956407a67d3a7b300e255cab77ac97e6932294c0b"
+        },
+        {
+          "excerpt_sha256": "sha256:080bde3fc3eb67514d9075453b78f20c1d12dbd48f6db4f48407187da65917f4",
+          "lines": [
+            1,
+            15
+          ],
+          "original_path": "wiki/evolution.jsonl",
+          "path": "workflows/migration/archive/wiki/evolution.jsonl",
+          "revision": "aprof-1.1.0-pre-governance:sha256:080bde3fc3eb67514d9075453b78f20c1d12dbd48f6db4f48407187da65917f4",
+          "sha256": "sha256:080bde3fc3eb67514d9075453b78f20c1d12dbd48f6db4f48407187da65917f4"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "norm-partials 历史案例",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# Reduction / Norm / Softmax 通用回退\n\n保留已验证的基线算法和输出所有权，记录当前缺失的容量、语义或 API 依据。新模板无法满足容量、精度或任务覆盖时退回该实现，不能用未验证方案填补缺项。C2 必须给出实际 fallback entry/key 和互斥元数据域。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.reduction.fallback",
+      "kind": "strategy",
+      "learning": {},
+      "parent": "planning.reduction",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:6de9ba252c4d90f1fe20fd5fd0156d4ab38362efcb32d5b25eb823654d8cabf2",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/fallback.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:c74ad927867806d42723213292831e22c84a2e84d75230e5aa615dee1500782a",
+          "lines": [
+            1,
+            151
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/reduction/ar-fullload.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/reduction/ar-fullload.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:c74ad927867806d42723213292831e22c84a2e84d75230e5aa615dee1500782a"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "Reduction / Norm / Softmax 通用回退",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# AR/ARA FullLoad 与行所有权\n\n## 适用域与算法骨架\n\n归约输入抽象为 A1×R×A0；完整 R 段及临时区可容纳。AR 为 A0=1，ARA 按连续 A0 访问。\n\nAR 将完整行装入 UB 后归约；ARA 保留 A0 向量并沿 R 累积；按非归约维把独立行/列组分核。\n\n## 任务所有权、归约与同步\n\n每个输出行/列组归一个核，核内归约；variance/correction、norm 的 p、softmax 稳定变换分别定义。\n\n## 资源与成本公式\n\nUB=queueDepth*rows*R_align*A0_align*s+output+accum+apiTmp；R 的有效长度只用于数学归约。\n\n容量、可用核数、API 临时区由当前平台与 SDK 核验。所有容量使用字节，保留对齐和同时存活区间；不得把上游 4KB、固定 tile 或核数当通用约束。\n\n## 参数空间与替代方案\n\nrows、A0 tile、输入/累加 dtype、队列深度；tmp 使用当前 API 查询。\n\n容量失败转 ColSplit/RowSplit；A 很小而 R 大比较分段归约。\n\n## 伪代码\n\n```text\nmap task -> (A1 range, A0 range)\nload full valid R with aligned storage stride\nAR: reduce each row over R\nARA: vector accumulate A0 lanes across R\nwrite the owned output once\n```\n\n## 可复用 Ascend C 关键片段\n\n```cpp\n// AR 的 count 使用 rLength，行起点使用 rLengthAlign。\nAscendC::ReduceSum<T>(resultLocal, xLocal[row * rLengthAlign], tmpLocal,\n                     static_cast<int32_t>(rLength), false);\n// 使用前核实该 SDK 的类型、临时区、count 和别名约束。\n```\n\n片段省略工程与已声明的张量/变量，不是完整可运行算子；API 重载、作用域、别名和平台支持在 C3 核验。C2 冻结算法、所有权、合并顺序和数值语义；tile、局部 buffer/API 实现只在已声明容量/语义边界内调整。\n\n## 验证与证据状态\n\n来源审读完成，当前没有 NPU 性能验证。验证覆盖空/极小输入、对齐边界、尾块、多 task、特殊值和最大资源需求；完整正确性通过后才用统一计时协议比较。历史模板结果不构成当前性能承诺。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.reduction.fullload",
+      "kind": "template",
+      "learning": {},
+      "parent": "planning.reduction",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:35f7afb50c5965b0ffea5ccb3f45dd4447610589516d4eb1fcc4d366615ac5c8",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/fullload.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:c74ad927867806d42723213292831e22c84a2e84d75230e5aa615dee1500782a",
+          "lines": [
+            1,
+            151
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/reduction/ar-fullload.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/reduction/ar-fullload.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:c74ad927867806d42723213292831e22c84a2e84d75230e5aa615dee1500782a"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "AR/ARA FullLoad 与行所有权",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# ColSplit/RowSplit 与分段合并\n\n## 适用域与算法骨架\n\nR 或 A0 不能全载，或独立输出任务不足；允许的数学合并已定义。\n\nAR 切 R，ARA 根据连续内轴和 UB 预算选择 R chunk/A0 chunk；各段产生 partial，再由输出所有者合并。\n\n## 任务所有权、归约与同步\n\n若跨核分 R，每个 (output,split) 写独立槽，最终合并者唯一写输出；可用独立合并 kernel 建立同步。\n\n## 资源与成本公式\n\nS=ceil(R/Rc)；workspace=outputs*S*partialStateBytes；额外读写≈2*workspace；成本比较 parallel_compute+merge+launch。\n\n容量、可用核数、API 临时区由当前平台与 SDK 核验。所有容量使用字节，保留对齐和同时存活区间；不得把上游 4KB、固定 tile 或核数当通用约束。\n\n## 参数空间与替代方案\n\nRc、A0c、split 数、分层合并深度、partial dtype。\n\n若合并成本抵消并行收益，回退单核按 chunk 累加；不硬编码 chunk 阈值。\n\n## 伪代码\n\n```text\nmap task -> (output group, reduction split)\nfor R chunk: load -> local reduction -> update partial state\nwrite partial[output, split] to unique slot\nafter all producers complete: owner combines partials -> finalize -> output\n```\n\n## 可复用 Ascend C 关键片段\n\n```cpp\n// partial 的 index 由 C2 冻结；这里只展示合法向量加法合并。\nAscendC::Add(accLocal, accLocal, partialLocal, validOutputs);\n// Sum 可如此合并；Max、Welford、Softmax 状态必须使用各自合并公式。\n```\n\n片段省略工程与已声明的张量/变量，不是完整可运行算子；API 重载、作用域、别名和平台支持在 C3 核验。C2 冻结算法、所有权、合并顺序和数值语义；tile、局部 buffer/API 实现只在已声明容量/语义边界内调整。\n\n## 验证与证据状态\n\n来源审读完成，当前没有 NPU 性能验证。验证覆盖空/极小输入、对齐边界、尾块、多 task、特殊值和最大资源需求；完整正确性通过后才用统一计时协议比较。历史模板结果不构成当前性能承诺。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.reduction.split",
+      "kind": "template",
+      "learning": {},
+      "parent": "planning.reduction",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:eaeea5ef7c11804022bc15f3cec583f55a9fb94412ce606232eddc70336883c9",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/split.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:34e8f102983ce4ad564dd8f1a5b68552420f46fd01fd0345ca7d5afa962903b7",
+          "lines": [
+            1,
+            149
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/reduction/ar-colsplit.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/reduction/ar-colsplit.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:34e8f102983ce4ad564dd8f1a5b68552420f46fd01fd0345ca7d5afa962903b7"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "ColSplit/RowSplit 与分段合并",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 方差、Norm 与 Softmax 数值状态\n\n## 适用域与算法骨架\n\n分段统计或归一化；必须明确输出是方差、std、norm 还是 softmax。\n\n方差用 (n,mean,M2) 合并；norm 先按 p 特例/绝对值变换归约后还原；softmax 使用 max 平移后求和，禁止把三者当普通求和。\n\n## 任务所有权、归约与同步\n\n每个输出状态有唯一合并者；输出归一化需要再次访问输入时比较二遍读取与片上保留。\n\n## 资源与成本公式\n\nn=na+nb；δ=μb−μa；μ=μa+δ*nb/n；M2=M2a+M2b+δ²*na*nb/n；var=M2/(n−correction)。\n\n容量、可用核数、API 临时区由当前平台与 SDK 核验。所有容量使用字节，保留对齐和同时存活区间；不得把上游 4KB、固定 tile 或核数当通用约束。\n\n## 参数空间与替代方案\n\n累加精度、两遍/Welford、状态驻留、epsilon/correction、NaN/Inf 策略。\n\n小行全载可用两遍稳定计算；极端输入与特殊值按 oracle 回退通用语义。\n\n## 伪代码\n\n```text\nvariance: update/merge (count, mean, M2), then divide by count-correction\nnorm: apply p-specific transform -> reduce -> restore norm\nsoftmax: row max -> shifted exp sum -> normalized output\nhandle empty/special values per oracle, not a shared sum shortcut\n```\n\n## 可复用 Ascend C 关键片段\n\n```cpp\n// 向量化 Welford 更新片段：delta1/mean/tmp 为独立且容量足够的 UB 区。\nAscendC::Sub(delta1, xLocal, meanLocal, validCount);\nAscendC::Muls(tmpLocal, delta1, invCount, validCount);\nAscendC::Add(meanLocal, meanLocal, tmpLocal, validCount);\n// M2 用新 mean 再求 delta2；不能重复使用旧 mean 的平方差。\n```\n\n片段省略工程与已声明的张量/变量，不是完整可运行算子；API 重载、作用域、别名和平台支持在 C3 核验。C2 冻结算法、所有权、合并顺序和数值语义；tile、局部 buffer/API 实现只在已声明容量/语义边界内调整。\n\n## 验证与证据状态\n\n来源审读完成，当前没有 NPU 性能验证。验证覆盖空/极小输入、对齐边界、尾块、多 task、特殊值和最大资源需求；完整正确性通过后才用统一计时协议比较。历史模板结果不构成当前性能承诺。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.reduction.statistics",
+      "kind": "template",
+      "learning": {},
+      "parent": "planning.reduction",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:89a6db6e9a78a4c082edbdc71f23555349173ad59424f29948404b38ea6efcbf",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/statistics.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:6c8e784dad546cb1caa07867596721b3d1c8ecc746396df5392054f44d84eb28",
+          "lines": [
+            1,
+            74
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/reduction/alg-welford.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/reduction/alg-welford.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:6c8e784dad546cb1caa07867596721b3d1c8ecc746396df5392054f44d84eb28"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "方差、Norm 与 Softmax 数值状态",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 并行规划知识入口\n\n从 C1 的 action 内容快照、算子 family、workload、语义和架构证据进入。只读取匹配的分支；一个算子可同时匹配算子族与欠融合模式。输出 C2，无需打开 diagnosis/graph。\n\n- [Elementwise / Broadcast](families/elementwise/ROUTER.md)\n- [Reduction / Norm / Softmax](families/reduction/ROUTER.md)\n- [MatMul / GMM](families/matmul/ROUTER.md)\n- [欠融合模式](families/under-fusion/ROUTER.md)\n- [FlashAttention](families/flash-attention/ROUTER.md)\n- [Sort / TopK](families/sort-topk/ROUTER.md)\n- [布局转换](families/layout/ROUTER.md)",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.root",
+      "kind": "router",
+      "learning": {},
+      "parent": null,
+      "references": [],
+      "routes": [
+        {
+          "exclude": [],
+          "fallback": false,
+          "match": [
+            {
+              "field": "family",
+              "op": "contains",
+              "value": "elementwise"
+            }
+          ],
+          "prior_score": 3,
+          "required_evidence": [],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "planning.elementwise"
+        },
+        {
+          "exclude": [],
+          "fallback": false,
+          "match": [
+            {
+              "field": "family",
+              "op": "contains",
+              "value": "reduction"
+            }
+          ],
+          "prior_score": 3,
+          "required_evidence": [],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "planning.reduction"
+        },
+        {
+          "exclude": [],
+          "fallback": false,
+          "match": [
+            {
+              "field": "family",
+              "op": "contains",
+              "value": "matmul"
+            }
+          ],
+          "prior_score": 3,
+          "required_evidence": [],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "planning.matmul"
+        },
+        {
+          "exclude": [],
+          "fallback": false,
+          "match": [
+            {
+              "field": "family",
+              "op": "contains",
+              "value": "under-fusion"
+            }
+          ],
+          "prior_score": 3,
+          "required_evidence": [],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "planning.under-fusion"
+        },
+        {
+          "exclude": [],
+          "fallback": false,
+          "match": [
+            {
+              "field": "family",
+              "op": "contains",
+              "value": "flash-attention"
+            }
+          ],
+          "prior_score": 3,
+          "required_evidence": [],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "planning.flash-attention"
+        },
+        {
+          "exclude": [],
+          "fallback": false,
+          "match": [
+            {
+              "field": "family",
+              "op": "contains",
+              "value": "sort-topk"
+            }
+          ],
+          "prior_score": 3,
+          "required_evidence": [],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "planning.sort-topk"
+        },
+        {
+          "exclude": [],
+          "fallback": false,
+          "match": [
+            {
+              "field": "family",
+              "op": "contains",
+              "value": "layout"
+            }
+          ],
+          "prior_score": 3,
+          "required_evidence": [],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "planning.layout"
+        },
+        {
+          "exclude": [],
+          "fallback": true,
+          "match": [],
+          "prior_score": 0,
+          "required_evidence": [],
+          "seed_reason": "未知类型保留语义正确的现有方案并补证据。",
+          "target": "planning.fallback"
+        }
+      ],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:1aaf4b85716a65f7ca349bd821ae66c7e9181c39cf642a04fca1ea2e75444fe0",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/ROUTER.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:9036a42db1a5c59c0df65aa065346ee5b6e0e951ac7e22f0522b96c8bfb3bd9b",
+          "lines": [
+            1,
+            17
+          ],
+          "original_path": "skills/ascendc-tiling-design/references/algorithm-families.md",
+          "path": "workflows/migration/archive/skills/ascendc-tiling-design/references/algorithm-families.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:9036a42db1a5c59c0df65aa065346ee5b6e0e951ac7e22f0522b96c8bfb3bd9b",
+          "sha256": "sha256:9036a42db1a5c59c0df65aa065346ee5b6e0e951ac7e22f0522b96c8bfb3bd9b"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "并行规划知识入口",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# Sort / TopK 路由\n\n比较下列方案的任务数、所有权、容量、额外流量、合并与同步成本。可返回多个候选，不用模板顺序代替 C2 的方案比较。\n\n- [Sort/TopK 分块与层次归并](templates/merge.md)",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.sort-topk",
+      "kind": "router",
+      "learning": {},
+      "parent": "planning.root",
+      "references": [],
+      "routes": [
+        {
+          "exclude": [
+            {
+              "field": "excluded_templates",
+              "op": "contains",
+              "value": "planning.sort-topk.merge"
+            }
+          ],
+          "fallback": false,
+          "match": [],
+          "prior_score": 3,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.sort_semantics",
+            "constraint.merge_semantics"
+          ],
+          "seed_reason": "直接适用的主方案，仍需所列语义/资源证据。",
+          "target": "planning.sort-topk.merge"
+        },
+        {
+          "exclude": [],
+          "fallback": true,
+          "match": [],
+          "prior_score": 0,
+          "required_evidence": [],
+          "seed_reason": "未知类型保留语义正确的现有方案并补证据。",
+          "target": "planning.sort-topk.fallback"
+        }
+      ],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:b98bff0483839cac51aa299b11f85cf7e0de0976cf2405a2ca347bbb8e93eb4e",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/sort-topk/ROUTER.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:031b9829393ccd4f83ca8cd19d8a6ce47d42274e2975c247d487e9d87edcdcf6",
+          "lines": [
+            1,
+            681
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/sort/alg-two-level-mrgsort.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/sort/alg-two-level-mrgsort.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:031b9829393ccd4f83ca8cd19d8a6ce47d42274e2975c247d487e9d87edcdcf6"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "Sort / TopK 路由",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# Sort / TopK 通用回退\n\n保留已验证的基线算法和输出所有权，记录当前缺失的容量、语义或 API 依据。新模板无法满足容量、精度或任务覆盖时退回该实现，不能用未验证方案填补缺项。C2 必须给出实际 fallback entry/key 和互斥元数据域。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.sort-topk.fallback",
+      "kind": "strategy",
+      "learning": {},
+      "parent": "planning.sort-topk",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:2a870ba5a83f89849a201d515375037b285b2b8fc95f1aaa8101a42d81bea5d4",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/sort-topk/fallback.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:031b9829393ccd4f83ca8cd19d8a6ce47d42274e2975c247d487e9d87edcdcf6",
+          "lines": [
+            1,
+            681
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/sort/alg-two-level-mrgsort.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/sort/alg-two-level-mrgsort.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:031b9829393ccd4f83ca8cd19d8a6ce47d42274e2975c247d487e9d87edcdcf6"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "Sort / TopK 通用回退",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# Sort/TopK 分块与层次归并\n\n## 适用域与算法骨架\n\n排序键、稳定性、相等值顺序、NaN、index 语义已明确。\n\n先核内排序/归并，再按必要层级跨核合并；TopK 只有证明可剪枝时才减小保留集。\n\n## 任务所有权、归约与同步\n\n每轮 merge 对输出区间唯一写；各轮之间建立完成依赖；index 始终绑定原元素。\n\n## 资源与成本公式\n\nUB=data+index+proposal+ConcatTmp+SortTmp；tmp 由当前 API 查询；层数≈ceil(log_fanIn(totalTiles))。\n\n容量、可用核数、API 临时区由当前平台与 SDK 核验。所有容量使用字节，保留对齐和同时存活区间；不得把上游 4KB、固定 tile 或核数当通用约束。\n\n## 参数空间与替代方案\n\ntile、归并 fan-in、每轮保留数、核内轮数。\n\n任务少时单核排序；特殊语义或不支持 dtype 回退基线。\n\n## 伪代码\n\n```text\nquery tmp sizes; choose feasible tile and merge fan-in\nlocal sort -> local merge while ownership remains within core\nfor necessary cross-core levels: wait producers -> merge disjoint output intervals\nretain stable key/index/NaN semantics and TopK proof\n```\n\n## 可复用 Ascend C 关键片段\n\n```cpp\n// 任务分配片段；排序和归并 API 的 tmp 需求必须另行查询。\nconst uint64_t tile = AscendC::GetBlockIdx();\n// 仅合法 tile 进入排序；不以示例固定 tile 代替实际 tmp 容量计算。\n```\n\n片段省略工程与已声明的张量/变量，不是完整可运行算子；API 重载、作用域、别名和平台支持在 C3 核验。C2 冻结算法、所有权、合并顺序和数值语义；tile、局部 buffer/API 实现只在已声明容量/语义边界内调整。\n\n## 验证与证据状态\n\n来源审读完成，当前没有 NPU 性能验证。验证覆盖空/极小输入、对齐边界、尾块、多 task、特殊值和最大资源需求；完整正确性通过后才用统一计时协议比较。历史模板结果不构成当前性能承诺。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.sort-topk.merge",
+      "kind": "template",
+      "learning": {},
+      "parent": "planning.sort-topk",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:11a1b4deef549aea873a1d1b9fdd10634bcd8e2c1324aecf81d092818db082d7",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/sort-topk/templates/merge.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:031b9829393ccd4f83ca8cd19d8a6ce47d42274e2975c247d487e9d87edcdcf6",
+          "lines": [
+            1,
+            681
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/sort/alg-two-level-mrgsort.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/sort/alg-two-level-mrgsort.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:031b9829393ccd4f83ca8cd19d8a6ce47d42274e2975c247d487e9d87edcdcf6"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "Sort/TopK 分块与层次归并",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 欠融合模式 路由\n\n比较下列方案的任务数、所有权、容量、额外流量、合并与同步成本。可返回多个候选，不用模板顺序代替 C2 的方案比较。\n\n- [连续逐元素链片上融合](templates/chain.md)\n- [归约后广播融合](templates/reduce_broadcast.md)\n- [MatMul epilogue 融合](templates/epilogue.md)",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.under-fusion",
+      "kind": "router",
+      "learning": {},
+      "parent": "planning.root",
+      "references": [],
+      "routes": [
+        {
+          "exclude": [
+            {
+              "field": "excluded_templates",
+              "op": "contains",
+              "value": "planning.under-fusion.chain"
+            }
+          ],
+          "fallback": false,
+          "match": [],
+          "prior_score": 3,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.fusion_boundary",
+            "constraint.dependency_lifetime"
+          ],
+          "seed_reason": "直接适用的主方案，仍需所列语义/资源证据。",
+          "target": "planning.under-fusion.chain"
+        },
+        {
+          "exclude": [
+            {
+              "field": "excluded_templates",
+              "op": "contains",
+              "value": "planning.under-fusion.reduce_broadcast"
+            }
+          ],
+          "fallback": false,
+          "match": [
+            {
+              "field": "features",
+              "op": "contains",
+              "value": "reduce_broadcast"
+            }
+          ],
+          "prior_score": 2,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.reduction_semantics",
+            "constraint.fusion_boundary"
+          ],
+          "seed_reason": "满足所列适用特征后比较资源、同步与合并成本的条件性方案。",
+          "target": "planning.under-fusion.reduce_broadcast"
+        },
+        {
+          "exclude": [
+            {
+              "field": "excluded_templates",
+              "op": "contains",
+              "value": "planning.under-fusion.epilogue"
+            }
+          ],
+          "fallback": false,
+          "match": [
+            {
+              "field": "features",
+              "op": "contains",
+              "value": "matmul_epilogue"
+            }
+          ],
+          "prior_score": 2,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.fusion_boundary",
+            "constraint.cross_engine_dependencies"
+          ],
+          "seed_reason": "满足所列适用特征后比较资源、同步与合并成本的条件性方案。",
+          "target": "planning.under-fusion.epilogue"
+        },
+        {
+          "exclude": [],
+          "fallback": true,
+          "match": [],
+          "prior_score": 0,
+          "required_evidence": [],
+          "seed_reason": "未知类型保留语义正确的现有方案并补证据。",
+          "target": "planning.under-fusion.fallback"
+        }
+      ],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:f43b3771dcacdce34595464b3b00c938ea01c23c89f4a187399846f21c502090",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/ROUTER.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:422c329fdf4dcb62d095afc88371f7bb44f51aa624398cc977cdc0e995b8d5e3",
+          "lines": [
+            1,
+            342
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/reference/common/ub_resident_design.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-performance-best-practices/reference/common/ub_resident_design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:422c329fdf4dcb62d095afc88371f7bb44f51aa624398cc977cdc0e995b8d5e3"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "欠融合模式 路由",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 连续逐元素链片上融合\n\n## 适用域与算法骨架\n\n生产消费链共享输出分区，且中间张量没有外部可见消费者。\n\n把一个 tile 的整个计算链放在片上；按存活期复用临时区；减少 kernel 启动和 GM 中间张量。\n\n## 任务所有权、归约与同步\n\n一个 task 拥有该 tile 全链输出，无跨核依赖；输入别名和原地语义要核验。\n\n## 资源与成本公式\n\nsavedGM≈2*ΣintermediateBytes；UB_peak=max_live_aligned_bytes；成本加入更高寄存器/UB 占用造成的并行度损失。\n\n容量、可用核数、API 临时区由当前平台与 SDK 核验。所有容量使用字节，保留对齐和同时存活区间；不得把上游 4KB、固定 tile 或核数当通用约束。\n\n## 参数空间与替代方案\n\n融合边界、tile、计算 dtype、复用位置。\n\n无法容纳或有外部消费者就缩短融合链；保留原链作为 fallback。\n\n## 伪代码\n\n```text\nfor each uniquely owned output tile:\n  load source inputs\n  apply each operation preserving required intermediate rounding\n  recycle dead temporaries only after consumers complete\n  write final output once\n```\n\n## 可复用 Ascend C 关键片段\n\n```cpp\n// 仅展示经 API 核验后的局部算术链；中间舍入必须符合原语义。\nAscendC::Muls(tmpLocal, xLocal, scale, validCount);\nAscendC::Adds(outLocal, tmpLocal, bias, validCount);\n```\n\n片段省略工程与已声明的张量/变量，不是完整可运行算子；API 重载、作用域、别名和平台支持在 C3 核验。C2 冻结算法、所有权、合并顺序和数值语义；tile、局部 buffer/API 实现只在已声明容量/语义边界内调整。\n\n## 验证与证据状态\n\n来源审读完成，当前没有 NPU 性能验证。验证覆盖空/极小输入、对齐边界、尾块、多 task、特殊值和最大资源需求；完整正确性通过后才用统一计时协议比较。历史模板结果不构成当前性能承诺。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.under-fusion.chain",
+      "kind": "template",
+      "learning": {},
+      "parent": "planning.under-fusion",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:b2379ebe9bed6ebd39f2d99c5b951527a2f8b85c0cf26f6a2a2ac30991dd4cb1",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/templates/chain.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:422c329fdf4dcb62d095afc88371f7bb44f51aa624398cc977cdc0e995b8d5e3",
+          "lines": [
+            1,
+            342
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/reference/common/ub_resident_design.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-performance-best-practices/reference/common/ub_resident_design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:422c329fdf4dcb62d095afc88371f7bb44f51aa624398cc977cdc0e995b8d5e3"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "连续逐元素链片上融合",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# MatMul epilogue 融合\n\n## 适用域与算法骨架\n\nMatMul 输出紧跟 bias、Cast 或逐元素函数，消费者无额外全局依赖。\n\n在一次完整 K 累加或 split-K 合并之后执行 epilogue，再写 GM；比较 AIC/AIV 节拍和中间转换。\n\n## 任务所有权、归约与同步\n\n最终 MN owner 执行 epilogue；partial 不施加非线性或 bias。\n\n## 资源与成本公式\n\nUB=epilogue输入+中间+输出+tmp；省去 C 的一轮写读；增加 AIV 时间和跨引擎等待必须计成本。\n\n容量、可用核数、API 临时区由当前平台与 SDK 核验。所有容量使用字节，保留对齐和同时存活区间；不得把上游 4KB、固定 tile 或核数当通用约束。\n\n## 参数空间与替代方案\n\nepilogue 链、dtype、分块和槽数；Fixpipe layout 能力需确认。\n\n精度/接口不兼容或拖慢 Cube 时保留独立 epilogue。\n\n## 伪代码\n\n```text\nfinish complete K accumulation (including any split merge)\nconvert only at declared precision boundaries\napply bias/activation once on valid output\nwrite final C tile\n```\n\n## 可复用 Ascend C 关键片段\n\n```cpp\n// epilogue 只在最终累加结果上执行；count 为有效输出元素。\nAscendC::Adds(outLocal, accLocal, biasScalar, validCount);\n// 一般 bias tensor 使用匹配广播方案；不能把标量示例推广到所有 bias。\n```\n\n片段省略工程与已声明的张量/变量，不是完整可运行算子；API 重载、作用域、别名和平台支持在 C3 核验。C2 冻结算法、所有权、合并顺序和数值语义；tile、局部 buffer/API 实现只在已声明容量/语义边界内调整。\n\n## 验证与证据状态\n\n来源审读完成，当前没有 NPU 性能验证。验证覆盖空/极小输入、对齐边界、尾块、多 task、特殊值和最大资源需求；完整正确性通过后才用统一计时协议比较。历史模板结果不构成当前性能承诺。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.under-fusion.epilogue",
+      "kind": "template",
+      "learning": {},
+      "parent": "planning.under-fusion",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:f81a05fe1fa4e4d3b0ea32de0d846ae6b026fc5d71d32171f819e6cdc757fa02",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/templates/epilogue.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:595a41d757e618346bd981b603077f346471d990ee63ec8086369faf3b17f9d0",
+          "lines": [
+            1,
+            14
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/reference/matmul/guide.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-performance-best-practices/reference/matmul/guide.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:595a41d757e618346bd981b603077f346471d990ee63ec8086369faf3b17f9d0"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "MatMul epilogue 融合",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 欠融合模式 通用回退\n\n保留已验证的基线算法和输出所有权，记录当前缺失的容量、语义或 API 依据。新模板无法满足容量、精度或任务覆盖时退回该实现，不能用未验证方案填补缺项。C2 必须给出实际 fallback entry/key 和互斥元数据域。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.under-fusion.fallback",
+      "kind": "strategy",
+      "learning": {},
+      "parent": "planning.under-fusion",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:8bd3de74d182a7d0e5e79ea752452aa5f2c0b01fefc6b2bb5393c8aaa61066e9",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/fallback.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:422c329fdf4dcb62d095afc88371f7bb44f51aa624398cc977cdc0e995b8d5e3",
+          "lines": [
+            1,
+            342
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/reference/common/ub_resident_design.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-performance-best-practices/reference/common/ub_resident_design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:422c329fdf4dcb62d095afc88371f7bb44f51aa624398cc977cdc0e995b8d5e3"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "欠融合模式 通用回退",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 归约后广播融合\n\n## 适用域与算法骨架\n\n行内统计供同行广播/归一化使用，输出所有权能够保持在同一任务内。\n\n先产生行统计，再对同一行/分块应用统计；完整行可驻留则单次读，否则比较二遍读取与保存中间值。\n\n## 任务所有权、归约与同步\n\n行 owner 同时拥有统计和输出；跨核 split 后必须等待统计合并才能广播。\n\n## 资源与成本公式\n\nUB=rowData+state+output+tmp；分段二遍读≈2*inputBytes；保存中间需计 workspace 读写。\n\n容量、可用核数、API 临时区由当前平台与 SDK 核验。所有容量使用字节，保留对齐和同时存活区间；不得把上游 4KB、固定 tile 或核数当通用约束。\n\n## 参数空间与替代方案\n\n行 tile、统计状态、是否二遍、融合 affine/activation。\n\n跨行依赖或容量不满足时保留归约+广播两个阶段。\n\n## 伪代码\n\n```text\nowner loads row/chunk and computes local statistics\nif cross-task reduction: finish the declared merge first\nreuse resident row or reread valid row chunks\napply statistic/affine transform -> write owned output\n```\n\n## 可复用 Ascend C 关键片段\n\n```cpp\n// mean/std 已依照原数值语义计算；scale 可来自归约输出。\nAscendC::Muls(outLocal, centeredLocal, invStd, validCount);\n// epsilon 加在 variance 还是 sqrt 后必须与 oracle 一致。\n```\n\n片段省略工程与已声明的张量/变量，不是完整可运行算子；API 重载、作用域、别名和平台支持在 C3 核验。C2 冻结算法、所有权、合并顺序和数值语义；tile、局部 buffer/API 实现只在已声明容量/语义边界内调整。\n\n## 验证与证据状态\n\n来源审读完成，当前没有 NPU 性能验证。验证覆盖空/极小输入、对齐边界、尾块、多 task、特殊值和最大资源需求；完整正确性通过后才用统一计时协议比较。历史模板结果不构成当前性能承诺。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "planning.under-fusion.reduce_broadcast",
+      "kind": "template",
+      "learning": {},
+      "parent": "planning.under-fusion",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:7e8bca78588ddaace2959faac1a83735f3e099f6816d28b7c64ce579eb97c59c",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/templates/reduce_broadcast.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:621e3770b5ad87c0a852eb639fac7bfea7b7c231380d66414aa2ba06cd50a1e2",
+          "lines": [
+            1,
+            228
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/reduction/ara-fullload.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/reduction/ara-fullload.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:621e3770b5ad87c0a852eb639fac7bfea7b7c231380d66414aa2ba06cd50a1e2"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "归约后广播融合",
+      "version": "1.0.0"
+    }
+  ],
+  "schema_version": "aprof.knowledge/v1",
+  "source_hashes": {
+    "skills/ascendc-aprof-parallel-planning/knowledge/REGION.json": "sha256:6c192beae8979102a209ae170d73a2c95253a6f6112fbdbc2ed9bd452d9fb3c3",
+    "skills/ascendc-aprof-parallel-planning/knowledge/ROUTER.md": "sha256:1aaf4b85716a65f7ca349bd821ae66c7e9181c39cf642a04fca1ea2e75444fe0",
+    "skills/ascendc-aprof-parallel-planning/knowledge/fallback.md": "sha256:3aa91a59e8c8d8d26907f08f73d298c09eaaed6c03118511d86f7cd7bff29b0d",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/ROUTER.md": "sha256:6c76f4c20ab661d154b2b2b6e22d9047fa5a9f138f9765272742120e0359790f",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/fallback.md": "sha256:4c7d0f78c84102199f1f79e396ebf84f8a8b9c3425b882159050ade34d874c86",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/broadcast.md": "sha256:47a4cd8436fd10eaea2fb0a4457ffe253c35cb7b73d22c8cfa05d64b689ac358",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md": "sha256:5432f3877df8b8ee6c884ed0dd9ad1bab206446569bfb252c689f8d17163deef",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/flash-attention/ROUTER.md": "sha256:ffe814aa84288d46ec6553b3d49f61007de65ee62e990f11ed71e259ba0cebe3",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/flash-attention/fallback.md": "sha256:b8d66f11276838115658e7c027a2ddf2a31789a14f6cfde4096f2aadea7b0fd6",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/flash-attention/templates/online.md": "sha256:aa01470023bd642f0e7cb16008aeb0ac5f6867188923632f6361be72253697a1",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/flash-attention/templates/splitkv.md": "sha256:d023c19266ae46d95f2e6409e0fb8e0eb478c599872ca60641b9a69a2646cac6",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/ROUTER.md": "sha256:72f2914a3e3d264083cd73286f22108b45b66a0d052ccdaca36a8a94e923953e",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/fallback.md": "sha256:53264c1c95b2b0424196926461ec70250c4124f20cca54d98de72c8494f40eb4",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md": "sha256:48a95744b10dddb0b833581fab3a434f4dda12d7c6026329738a94eae14be153",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/matmul/ROUTER.md": "sha256:77b7156bdb938100a4f4a3d233613450cb86fc10977ca57532ae7ddd636154ad",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/matmul/fallback.md": "sha256:fdcc7c2b1ca817b3a354279beabd82db12549acf470f52ad700a8123eca5d6f5",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/matmul/templates/mn.md": "sha256:b12b187ede5f510fdf1aeb0fba852f3b6fbc278732942cc53207abdb8b91bfdb",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/matmul/templates/resident.md": "sha256:c86d8981ee94c6333d74067769662fa8deb0c1f806fe7603a6fb5f37d1e66dae",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/matmul/templates/splitk.md": "sha256:9bc2040c66dc9fb9df6660ab5eca47dcaffd5aa16581bbb89abccd258f9b1bec",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/ROUTER.md": "sha256:ef7e7fb9bc6ecdce56e22522283284a1230ff705e307f3f23eedc306826f6f5c",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/examples/norm-p-specialization.md": "sha256:41e44949caa88bc782df7573082c9dedecefad67a34d04f7a47fda416eecb6ab",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/examples/norm-partials.md": "sha256:ed90bfe7e320f689b32a8ed0a4c5018a5476129082ef51827c75278981125209",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/fallback.md": "sha256:6de9ba252c4d90f1fe20fd5fd0156d4ab38362efcb32d5b25eb823654d8cabf2",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/fullload.md": "sha256:35f7afb50c5965b0ffea5ccb3f45dd4447610589516d4eb1fcc4d366615ac5c8",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/split.md": "sha256:eaeea5ef7c11804022bc15f3cec583f55a9fb94412ce606232eddc70336883c9",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/statistics.md": "sha256:89a6db6e9a78a4c082edbdc71f23555349173ad59424f29948404b38ea6efcbf",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/sort-topk/ROUTER.md": "sha256:b98bff0483839cac51aa299b11f85cf7e0de0976cf2405a2ca347bbb8e93eb4e",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/sort-topk/fallback.md": "sha256:2a870ba5a83f89849a201d515375037b285b2b8fc95f1aaa8101a42d81bea5d4",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/sort-topk/templates/merge.md": "sha256:11a1b4deef549aea873a1d1b9fdd10634bcd8e2c1324aecf81d092818db082d7",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/ROUTER.md": "sha256:f43b3771dcacdce34595464b3b00c938ea01c23c89f4a187399846f21c502090",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/fallback.md": "sha256:8bd3de74d182a7d0e5e79ea752452aa5f2c0b01fefc6b2bb5393c8aaa61066e9",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/templates/chain.md": "sha256:b2379ebe9bed6ebd39f2d99c5b951527a2f8b85c0cf26f6a2a2ac30991dd4cb1",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/templates/epilogue.md": "sha256:f81a05fe1fa4e4d3b0ea32de0d846ae6b026fc5d71d32171f819e6cdc757fa02",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/templates/reduce_broadcast.md": "sha256:7e8bca78588ddaace2959faac1a83735f3e099f6816d28b7c64ce579eb97c59c"
+  },
+  "version": "v0001"
+}

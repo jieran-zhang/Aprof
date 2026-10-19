@@ -1,0 +1,209 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aprof:scaffolding:knowledge-update",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "aprof.knowledge-update/v1"
+    },
+    "proposal_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "base_skill_lib_ref": {
+      "$ref": "#/$defs/artifact"
+    },
+    "owner": {
+      "enum": [
+        "diagnosis",
+        "parallel-planning",
+        "optimization"
+      ]
+    },
+    "change_type": {
+      "enum": [
+        "parameters",
+        "content",
+        "structure"
+      ]
+    },
+    "base_knowledge_ref": {
+      "$ref": "#/$defs/artifact"
+    },
+    "candidate_artifact_ref": {
+      "$ref": "#/$defs/artifact"
+    },
+    "policy_ref": {
+      "$ref": "#/$defs/artifact"
+    },
+    "training_memory_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/artifact"
+      },
+      "minItems": 1
+    },
+    "validation_memory_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/artifact"
+      },
+      "minItems": 0
+    },
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "target_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "operation": {
+            "enum": [
+              "add",
+              "refine",
+              "split",
+              "merge",
+              "deprecate",
+              "reweight"
+            ]
+          },
+          "before_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/artifact"
+            },
+            "minItems": 0
+          },
+          "after_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/artifact"
+            },
+            "minItems": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "signals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "memory_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "attempt_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "claim_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1
+                }
+              },
+              "required": [
+                "memory_id",
+                "attempt_id",
+                "claim_ids"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "target_id",
+          "operation",
+          "before_refs",
+          "after_refs",
+          "reason",
+          "signals"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "evaluation_ref": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/artifact"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "status": {
+      "enum": [
+        "candidate",
+        "deferred",
+        "rejected",
+        "validated_candidate"
+      ]
+    },
+    "previous_proposal_ref": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/artifact"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0
+    }
+  },
+  "required": [
+    "schema_version",
+    "proposal_id",
+    "base_skill_lib_ref",
+    "owner",
+    "change_type",
+    "base_knowledge_ref",
+    "candidate_artifact_ref",
+    "policy_ref",
+    "training_memory_refs",
+    "validation_memory_refs",
+    "changes",
+    "evaluation_ref",
+    "status",
+    "previous_proposal_ref",
+    "limitations"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

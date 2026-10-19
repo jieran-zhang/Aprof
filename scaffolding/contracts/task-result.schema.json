@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aprof:scaffolding:task-result",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "aprof.task-result/v1"
+    },
+    "batch_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "optimizer_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "journal_ref": {
+      "$ref": "#/$defs/artifact"
+    },
+    "status": {
+      "enum": [
+        "completed",
+        "failed",
+        "blocked",
+        "cancelled",
+        "noop"
+      ]
+    },
+    "attempts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "attempt_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "completed",
+              "failed",
+              "blocked",
+              "cancelled",
+              "noop"
+            ]
+          },
+          "terminal_ref": {
+            "$ref": "#/$defs/artifact"
+          }
+        },
+        "required": [
+          "attempt_id",
+          "status",
+          "terminal_ref"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "selected_attempt_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "optimization_seconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "stop_reason": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "batch_id",
+    "task_id",
+    "optimizer_id",
+    "journal_ref",
+    "status",
+    "attempts",
+    "selected_attempt_id",
+    "optimization_seconds",
+    "stop_reason"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

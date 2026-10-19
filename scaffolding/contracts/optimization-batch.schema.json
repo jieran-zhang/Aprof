@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aprof:scaffolding:optimization-batch",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "aprof.optimization-batch/v1"
+    },
+    "batch_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "skill_lib_ref": {
+      "$ref": "#/$defs/artifact"
+    },
+    "knowledge_refs": {
+      "type": "object",
+      "properties": {
+        "diagnosis": {
+          "$ref": "#/$defs/artifact"
+        },
+        "parallel-planning": {
+          "$ref": "#/$defs/artifact"
+        },
+        "optimization": {
+          "$ref": "#/$defs/artifact"
+        }
+      },
+      "required": [
+        "diagnosis",
+        "parallel-planning",
+        "optimization"
+      ],
+      "additionalProperties": false
+    },
+    "override_refs": {
+      "type": "object",
+      "properties": {
+        "diagnosis": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/artifact"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parallel-planning": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/artifact"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "optimization": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/artifact"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "diagnosis",
+        "parallel-planning",
+        "optimization"
+      ],
+      "additionalProperties": false
+    },
+    "split_refs": {
+      "type": "object",
+      "properties": {
+        "train": {
+          "$ref": "#/$defs/artifact"
+        },
+        "validation": {
+          "$ref": "#/$defs/artifact"
+        },
+        "test": {
+          "$ref": "#/$defs/artifact"
+        }
+      },
+      "required": [
+        "train",
+        "validation",
+        "test"
+      ],
+      "additionalProperties": false
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1
+    },
+    "prompt_ref": {
+      "$ref": "#/$defs/artifact"
+    },
+    "timing_protocol": {
+      "const": "single_role_l2_clean_task_v1"
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "operator": {
+            "type": "string",
+            "minLength": 1
+          },
+          "group_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "split": {
+            "enum": [
+              "train",
+              "validation",
+              "test"
+            ]
+          },
+          "source_ref": {
+            "$ref": "#/$defs/artifact"
+          },
+          "source_hash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "workload_ref": {
+            "$ref": "#/$defs/artifact"
+          },
+          "optimizer_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "budget_seconds": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "max_attempts": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "task_id",
+          "operator",
+          "group_id",
+          "split",
+          "source_ref",
+          "source_hash",
+          "workload_ref",
+          "optimizer_id",
+          "budget_seconds",
+          "max_attempts"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "schema_version",
+    "batch_id",
+    "skill_lib_ref",
+    "knowledge_refs",
+    "override_refs",
+    "split_refs",
+    "model",
+    "prompt_ref",
+    "timing_protocol",
+    "tasks"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
