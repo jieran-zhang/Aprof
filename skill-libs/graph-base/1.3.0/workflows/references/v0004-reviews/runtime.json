@@ -1,0 +1,135 @@
+{
+  "schema_version": "aprof.independent-runtime-review/v1",
+  "reviewer": "review_diagnosis_runtime_safety",
+  "mode": "read_only_source_review_with_isolated_CPU_negative_probes",
+  "scope": [
+    "diagnosis.py",
+    "diagnosis_reasoning.py",
+    "bindings.py",
+    "CLI/graph/policy/release/schema integration",
+    "test_diagnosis_v4.py",
+    "test_action_handoff_v3.py"
+  ],
+  "method": "Existing fixture generators were used only to construct a frozen independent v4 package from the historical 195-record v3 seed. New negative cases were written outside the package and run directly against runtime validators; they are not the pre-existing pytest assertions.",
+  "conclusion": {
+    "confirmed_findings": 7,
+    "open_confirmed_findings": 0,
+    "resolved_confirmed_findings": 7,
+    "independent_negative_recheck": "All original malicious payloads reject under updated runtime; last RT-07 source-integrity recheck also rejects.",
+    "remaining_verification_owner": "Implementation agents are completing their combined pytest runs; this runtime reviewer independently ran the preserved CPU probes and read the new source checks."
+  },
+  "findings": [
+    {
+      "id": "RT-01",
+      "severity": "P1",
+      "status": "resolved_original_negative_probe_rejected_after_fix",
+      "title": "Proposal eligibility trusts contradictory review and validation files without binding their identities",
+      "location": "runtime/src/aprof_runtime/diagnosis_reasoning.py:validate_proposal",
+      "observed": "eligible=True accepted despite review_ref for proposal.other with decision=rejected and independent=false, validation_ref status=failed for proposal.other, and target_version=v0003 while base is v0004. Inline control flags were sufficient.",
+      "expected": "Verify structured review/validation contents against proposal basis hash, proposal ID, exact base knowledge hash, target new version, declared reviewer and independent decision; failed or other-record evidence must reject.",
+      "impact": "A pending/unreviewed source proposal can be declared eligible with unrelated rejected review files; no automatic graph mutation occurs, but the promotion gate is bypassed.",
+      "observed_after_fix": "See final-recheck-results.json: old target version rejected; malformed review files rejected by new structured schema; missing frozen bundle/C3/independent review case rejected."
+    },
+    {
+      "id": "RT-02",
+      "severity": "P1",
+      "status": "resolved_original_negative_probe_rejected_after_fix",
+      "title": "A validated_case can contain missing raw results, a different timing request operator and nonexistent selected instances",
+      "location": "runtime/src/aprof_runtime/diagnosis_reasoning.py:_validate_case_identity",
+      "observed": "validate_case accepted evidence_status=validated_case/outcome=accepted even though request operator differs from timing operator, timing request declaration/captures and correctness case refs all point to NONEXISTENT-raw-capture.json, selected_action_instances is [instance.DOES_NOT_EXIST], and no execution/C3 evidence is bound.",
+      "expected": "Revalidate complete raw timing/correctness evidence and operator/source/workload identities; require selected instance identity and executed C3 binding before upgrading a record to validated_case/case_support; independent review must itself bind the case.",
+      "impact": "A paper wrapper of invented accepted measurements can become validated_case and later satisfy claim.case_refs case_support.",
+      "observed_after_fix": "See final-recheck-results.json: old target version rejected; malformed review files rejected by new structured schema; missing frozen bundle/C3/independent review case rejected.",
+      "positive_validation": {
+        "source": "implement_diagnosis_runtime agent reported execution; test source independently read by reviewer",
+        "result": "6 case tests PASS in 52.86s",
+        "coverage": [
+          "full FakeRunner CPU raw capture/oracle + C1/C2/C3 + implementation/workload identities + frozen routing bundle + independent case review positive",
+          "selected nonexistent instance rejected",
+          "cross-operator timing request rejected",
+          "nonexistent raw capture rejected",
+          "rejected independent case review rejected",
+          "tampered correctness output bytes rejected"
+        ],
+        "note": "This positive fixture is explicitly synthetic and makes no hardware or causal claim."
+      }
+    },
+    {
+      "id": "RT-03",
+      "severity": "P2",
+      "status": "resolved_and_negative_probe_retested",
+      "title": "P_KEEP/O_CHANGE accepted implemented with identical parent source and no changed dispatch or parameters",
+      "location": "runtime/src/aprof_runtime/bindings.py:validate_chain implemented branch",
+      "observed_before_fix": "Identical parent source hash, identical behavioral dispatch and unchanged parameters passed with one actual_changes line description, yielding implemented/new candidate.",
+      "observed_after_fix": "Original saved probe rejects with 未发生源码、实际分发或参数变化，不能申报implemented."
+    },
+    {
+      "id": "RT-04",
+      "severity": "P2",
+      "status": "resolved_and_negative_probe_retested",
+      "title": "Double KEEP reported NOOP despite changed actual dispatch when dispatch_domain was in freedom",
+      "location": "runtime/src/aprof_runtime/bindings.py:validate_chain NOOP branch",
+      "observed_before_fix": "P_KEEP/O_KEEP plus dispatch_domain freedom allowed actual fallback.kernel_entry=changed_despite_NOOP while confirmed plan said paper_kernel; returned NOOP.",
+      "observed_after_fix": "Original saved probe rejects with 双 KEEP 必须是 NOOP，不能伪造执行或新候选."
+    },
+    {
+      "id": "RT-05",
+      "severity": "P2",
+      "status": "resolved_and_negative_probe_retested",
+      "title": "Numeric parameter enum [1] accepts boolean true",
+      "location": "runtime/src/aprof_runtime/bindings.py:_domain",
+      "observed": "Full C1/C2/C3 chain accepted actual_parameters.tile=true under explicit allowed values=[1]. Python membership conflates True with 1.",
+      "expected": "Use JSON-aware enum validation that distinguishes booleans from numeric values.",
+      "observed_after_fix": "Original malicious type values preserved; with new routing config snapshot hash re-bound, validator rejects at parameter freedom or instance identity gate."
+    },
+    {
+      "id": "RT-06",
+      "severity": "P1",
+      "status": "resolved_and_negative_probe_retested",
+      "title": "C2 instance content can disagree with its exact instance_hash through bool/number equality",
+      "location": "runtime/src/aprof_runtime/bindings.py:routing_context and validate_chain instance comparisons",
+      "observed": "C1 parameters.tile=1 and C2 selection.instance.parameters.tile=true were treated as identical. selection.instance_hash stayed the hash of the integer-valued C1 instance, although selected C2 instance content hash differed; full chain returned implemented.",
+      "expected": "Compare exact instance/file/KEEP/plan identity with canonical JSON/hash, and explicitly verify content_hash(selection.instance)==selection.instance_hash. Review all arbitrary-parameter/contract equality sites for the same Python type conflation.",
+      "observed_after_fix": "Original malicious type values preserved; with new routing config snapshot hash re-bound, validator rejects at parameter freedom or instance identity gate."
+    },
+    {
+      "id": "RT-07",
+      "severity": "P2",
+      "status": "resolved_and_negative_probe_retested",
+      "title": "Frozen P/O bundle replay skips integrity checks of archived source evidence",
+      "location": "runtime/src/aprof_runtime/bindings.py:_frozen_artifacts",
+      "observed": "After modifying one archived P source file exclusively referenced by P/O, load_frozen_bundle still succeeds with unchanged frozen index/config. The declared source sha256 and actual bytes disagree. Live compile would reject this changed source.",
+      "safety": "Only the copied /tmp source was changed; original bytes were restored in finally.",
+      "expected": "Verify every frozen P/O record.sources entry against package-local file sha256, valid line interval and excerpt_sha256, without requiring the current live Markdown/REGION metadata to remain identical.",
+      "impact": "A supposedly provenance-verified historical case or handoff replay can silently accept missing/corrupt archived source evidence.",
+      "observed_after_fix": "Original /tmp archived-source corruption probe now rejects with 任务证据文件 hash 不匹配 and the exact changed P source path.",
+      "fix_review": "_validate_frozen_sources is called by common _routing_inputs for every P/O artifact, including explicit artifacts= callers. It checks actual package-local sha256, UTF-8, valid line interval and excerpt hash, while avoiding live Markdown/REGION checks."
+    }
+  ],
+  "verified_boundaries_without_findings": [
+    "Hard preconditions bind canonical predicates and permit aliases only with matching predicate.",
+    "False-valued hard preconditions are preserved; unknown/proxy facts cannot make C3 ready.",
+    "Compound registered symptoms require all declared component predicates for known truth values and use false-priority all-of semantics.",
+    "Derived evidence dependency cycles and reuse of exact raw hash+locator across independent groups are rejected.",
+    "Instance/fact scopes bind task, implementation, workload, complete targets and stage.",
+    "Hints accept owner subtree IDs only and cannot carry facts or attributes.",
+    "First planning without parent permits P_CHANGE conditional analysis and forbids P_KEEP.",
+    "Current diagnosis schema is refused by legacy SPA route and fixed-graph policy training.",
+    "C3 reads actual source files, validates line locators and binds confirmed plan file content."
+  ],
+  "limitations": [
+    "No NPU/hardware, new training, network or performance experiments were run.",
+    "Negative fixture uses the frozen 195-record migration package for runtime gates; the current 200-entry curated catalog was not rebuilt or independently substantively reviewed by this runtime reviewer.",
+    "Source semantic equivalence, causal mechanism correctness and real hardware authenticity are beyond these structural validators.",
+    "Retrieval refactor and source curation were intentionally excluded because other agents were changing them concurrently."
+  ],
+  "regression_sources": [
+    "runtime/tests/test_diagnosis_v4.py",
+    "runtime/tests/test_action_handoff_v3.py",
+    "runtime/tests/test_diagnosis_integration_v130.py"
+  ],
+  "notes": [
+    "7项原始独立负例均已复测拒绝；不以CPU合成采集证明硬件或机制收益。",
+    "一次性工作路径不属于包的运行依赖；可复现负例保存在上述包内测试模块。"
+  ]
+}

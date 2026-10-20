@@ -1,0 +1,1837 @@
+{
+  "schema_version": "aprof.diagnosis-knowledge-gaps/v1",
+  "version": "v0004",
+  "scope": "source_review_only",
+  "observed_frequency": "unknown",
+  "profiling_case_count": 0,
+  "case_support_claim_count": 0,
+  "records": [
+    {
+      "id": "symptom.profile.broadcast_strategy_mismatch",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "DAV_2201静态Broadcast与DAV_3510动态/NDDMA不可互代",
+        "原始shape的约束必须保留，不能拿padding假满足"
+      ]
+    },
+    {
+      "id": "symptom.profile.cache_policy_mismatch",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "不同产品支持情况按源API表复核",
+        "禁止以枚举存在推断PERSISTENT可用"
+      ]
+    },
+    {
+      "id": "symptom.profile.chunk_merge_overhead",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Split-K、Split-KV与排序merge的数学合并不同，不能直接替换算法",
+        "本轮只有来源推导，无段数最优值或收益承诺"
+      ]
+    },
+    {
+      "id": "symptom.profile.control_metadata_overhead",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "不改变host/kernel ABI",
+        "跨paged/non-paged或mask分支必须重新证明不变量"
+      ]
+    },
+    {
+      "id": "symptom.profile.dynamic_shape_mismatch",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "不把来源阈值硬编码为目标最优边界",
+        "SquaredRelu host与kernel只证明dtype key的连接结构，不证明该算子存在shape失配"
+      ]
+    },
+    {
+      "id": "symptom.profile.fragmented_writeback",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Fixpipe和MTE3能力、对齐与尾写语义必须分别核验",
+        "归约标量输出本身很小，不能仅凭大小认定碎片化"
+      ]
+    },
+    {
+      "id": "symptom.profile.gm_traffic_amplified",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "跨kernel/跨核通信不能凭片上可放下就取消",
+        "文档的向量链例子不证明任意计算图可融合"
+      ]
+    },
+    {
+      "id": "symptom.profile.insufficient_input_reuse",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "常驻需要目标平台容量及同步证明",
+        "arch35常驻文档仅提供原则，不能搬用其bank几何到其他型号"
+      ]
+    },
+    {
+      "id": "symptom.profile.l1_l0_reuse_deficit",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "arch22文档的L0 cache/NBuffer33是具体适用形态，不能作为所有Matmul API能力",
+        "API已内部管理时需查看实际配置而非复制手排方案"
+      ]
+    },
+    {
+      "id": "symptom.profile.memory_bandwidth_saturation",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "无目标持续带宽基准时不判饱和",
+        "数据搬运样例的峰值估算和具体收益不跨平台使用"
+      ]
+    },
+    {
+      "id": "symptom.profile.missing_kernel_fusion",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Vector寄存器链融合文档只支持存活分析原则，跨kernel可行性须单独证明",
+        "本轮没有融合实测案例，不声称通用收益"
+      ]
+    },
+    {
+      "id": "symptom.profile.mixed_pipeline_imbalance",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "混合核的角色不同，不能把逐核时间差直接当负载不均",
+        "arch22 FA阶段示例不证明其他混合算子的通路相同"
+      ]
+    },
+    {
+      "id": "symptom.profile.mte_setup_dominated",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "来源粒度阈值属于910B经验；其他型号不沿用固定256B/4KB判据",
+        "当前任务没有采集数据，不能把文档样例收益写为本任务收益"
+      ]
+    },
+    {
+      "id": "symptom.profile.noncontiguous_access",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "DataCopy stride的字节/datablock单位按具体API核对",
+        "不把arch35 NDDMA能力用于arch22"
+      ]
+    },
+    {
+      "id": "symptom.profile.overlap_low",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "num=2不等于实际重叠成立",
+        "不复制来源80%等重叠率或收益为目标承诺"
+      ]
+    },
+    {
+      "id": "symptom.profile.per_core_time_imbalanced",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "任务数相等不代表变长任务成本相等",
+        "不能把样例固定核数当平台拓扑"
+      ]
+    },
+    {
+      "id": "symptom.profile.reduction_strategy_mismatch",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "API scratch需按目标SDK查询/规则计算，不沿用文档4KB等样例常量",
+        "归约后广播是另一个成本点，不能只调R"
+      ]
+    },
+    {
+      "id": "symptom.profile.redundant_cast",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Cast产品及dtype支持按固定API文档核对",
+        "必须保持原A的精度与语义前提，不能以时延替代精度"
+      ]
+    },
+    {
+      "id": "symptom.profile.register_spill",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "编译器版本和优化选项改变结论，需绑定artifact",
+        "源码审读不声称已证实spill"
+      ]
+    },
+    {
+      "id": "symptom.profile.scalar_hot",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Scalar比例阈值不跨架构使用",
+        "没有PC/指令映射时只保留来源推导"
+      ]
+    },
+    {
+      "id": "symptom.profile.steady_overlap",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "num=2不等于实际重叠成立",
+        "不复制来源80%等重叠率或收益为目标承诺"
+      ]
+    },
+    {
+      "id": "symptom.profile.tail_slow_path",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Count接口不保证每个API/目标都支持",
+        "不能用aligned length代替有效count导致越界或归约污染"
+      ]
+    },
+    {
+      "id": "symptom.profile.tasks_below_available_cores",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "小workload是该解释的条件性反证，不能跨shape推广",
+        "StreamK源阈值属于该代码，不设为通用分界"
+      ]
+    },
+    {
+      "id": "symptom.profile.transfer_compute_contention",
+      "state": "gap",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "来源对布局与流水耦合提供原理，未给本任务并发冲突实测",
+        "目标计数器或通路语义未核对时保持假设",
+        "固定新来源说明bank访问与流水重叠，但没有直接核验本机制的目标Vector-MTE计数器语义或同scope争用案例；保留条件推导，需硬件文档/任务profile补证。"
+      ]
+    },
+    {
+      "id": "symptom.profile.ub_conflict_high",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "arch22与arch35读读条件不同，禁止互用固定padding和几何",
+        "通用冲突字段必须映射到目标后端实际计数器"
+      ]
+    },
+    {
+      "id": "symptom.profile.vector_granularity_low",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "API理论利用率必须由目标指令和dtype推导",
+        "没有自动extractor，本轮不声称已采样到repeat分布"
+      ]
+    },
+    {
+      "id": "symptom.profile.workspace_overallocation",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "FA按并发槽分配规则只对其生命周期成立的段适用",
+        "SquaredRelu入口不足以证明其host保留区可删除，不能据固定16MB直接断言浪费"
+      ]
+    },
+    {
+      "id": "symptom.source.broadcast_strategy_mismatch",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "DAV_2201静态Broadcast与DAV_3510动态/NDDMA不可互代",
+        "原始shape的约束必须保留，不能拿padding假满足"
+      ]
+    },
+    {
+      "id": "symptom.source.cache_policy_mismatch",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "不同产品支持情况按源API表复核",
+        "禁止以枚举存在推断PERSISTENT可用"
+      ]
+    },
+    {
+      "id": "symptom.source.chunk_merge_overhead",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Split-K、Split-KV与排序merge的数学合并不同，不能直接替换算法",
+        "本轮只有来源推导，无段数最优值或收益承诺"
+      ]
+    },
+    {
+      "id": "symptom.source.control_metadata_overhead",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "不改变host/kernel ABI",
+        "跨paged/non-paged或mask分支必须重新证明不变量"
+      ]
+    },
+    {
+      "id": "symptom.source.dynamic_shape_mismatch",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "不把来源阈值硬编码为目标最优边界",
+        "SquaredRelu host与kernel只证明dtype key的连接结构，不证明该算子存在shape失配"
+      ]
+    },
+    {
+      "id": "symptom.source.fixed_or_undersubscribed_tasking",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "小workload是该解释的条件性反证，不能跨shape推广",
+        "StreamK源阈值属于该代码，不设为通用分界"
+      ]
+    },
+    {
+      "id": "symptom.source.fragmented_writeback",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Fixpipe和MTE3能力、对齐与尾写语义必须分别核验",
+        "归约标量输出本身很小，不能仅凭大小认定碎片化"
+      ]
+    },
+    {
+      "id": "symptom.source.gm_intermediate_roundtrip",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "跨kernel/跨核通信不能凭片上可放下就取消",
+        "文档的向量链例子不证明任意计算图可融合"
+      ]
+    },
+    {
+      "id": "symptom.source.inner_loop_copy",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "来源粒度阈值属于910B经验；其他型号不沿用固定256B/4KB判据",
+        "当前任务没有采集数据，不能把文档样例收益写为本任务收益"
+      ]
+    },
+    {
+      "id": "symptom.source.insufficient_input_reuse",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "常驻需要目标平台容量及同步证明",
+        "arch35常驻文档仅提供原则，不能搬用其bank几何到其他型号"
+      ]
+    },
+    {
+      "id": "symptom.source.l1_l0_reuse_deficit",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "arch22文档的L0 cache/NBuffer33是具体适用形态，不能作为所有Matmul API能力",
+        "API已内部管理时需查看实际配置而非复制手排方案"
+      ]
+    },
+    {
+      "id": "symptom.source.memory_bandwidth_saturation",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "无目标持续带宽基准时不判饱和",
+        "数据搬运样例的峰值估算和具体收益不跨平台使用"
+      ]
+    },
+    {
+      "id": "symptom.source.missing_kernel_fusion",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Vector寄存器链融合文档只支持存活分析原则，跨kernel可行性须单独证明",
+        "本轮没有融合实测案例，不声称通用收益"
+      ]
+    },
+    {
+      "id": "symptom.source.mixed_pipeline_imbalance",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "混合核的角色不同，不能把逐核时间差直接当负载不均",
+        "arch22 FA阶段示例不证明其他混合算子的通路相同"
+      ]
+    },
+    {
+      "id": "symptom.source.noncontiguous_access",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "DataCopy stride的字节/datablock单位按具体API核对",
+        "不把arch35 NDDMA能力用于arch22"
+      ]
+    },
+    {
+      "id": "symptom.source.reduction_strategy_mismatch",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "API scratch需按目标SDK查询/规则计算，不沿用文档4KB等样例常量",
+        "归约后广播是另一个成本点，不能只调R"
+      ]
+    },
+    {
+      "id": "symptom.source.redundant_cast",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Cast产品及dtype支持按固定API文档核对",
+        "必须保持原A的精度与语义前提，不能以时延替代精度"
+      ]
+    },
+    {
+      "id": "symptom.source.register_spill",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "编译器版本和优化选项改变结论，需绑定artifact",
+        "源码审读不声称已证实spill"
+      ]
+    },
+    {
+      "id": "symptom.source.scalar_element_loop",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Scalar比例阈值不跨架构使用",
+        "没有PC/指令映射时只保留来源推导"
+      ]
+    },
+    {
+      "id": "symptom.source.serial_queue_or_event_order",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "num=2不等于实际重叠成立",
+        "不复制来源80%等重叠率或收益为目标承诺"
+      ]
+    },
+    {
+      "id": "symptom.source.sync_inside_tile_loop",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "只在完整同步契约可替代时实施",
+        "归并的核内group与跨核round示例不能推广为所有SyncAll可删除"
+      ]
+    },
+    {
+      "id": "symptom.source.tail_concentrated",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "任务数相等不代表变长任务成本相等",
+        "不能把样例固定核数当平台拓扑"
+      ]
+    },
+    {
+      "id": "symptom.source.tail_slow_path",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Count接口不保证每个API/目标都支持",
+        "不能用aligned length代替有效count导致越界或归约污染"
+      ]
+    },
+    {
+      "id": "symptom.source.transfer_compute_contention",
+      "state": "gap",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "来源对布局与流水耦合提供原理，未给本任务并发冲突实测",
+        "目标计数器或通路语义未核对时保持假设",
+        "固定新来源说明bank访问与流水重叠，但没有直接核验本机制的目标Vector-MTE计数器语义或同scope争用案例；保留条件推导，需硬件文档/任务profile补证。"
+      ]
+    },
+    {
+      "id": "symptom.source.ub_live_bytes_near_capacity",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "资源上限、保留区和对齐取目标平台查询值",
+        "不能把节省buffer直接等同于时延收益"
+      ]
+    },
+    {
+      "id": "symptom.source.ub_stride_conflict_risk",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "arch22与arch35读读条件不同，禁止互用固定padding和几何",
+        "通用冲突字段必须映射到目标后端实际计数器"
+      ]
+    },
+    {
+      "id": "symptom.source.workspace_overallocation",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "FA按并发槽分配规则只对其生命周期成立的段适用",
+        "SquaredRelu入口不足以证明其host保留区可删除，不能据固定16MB直接断言浪费"
+      ]
+    },
+    {
+      "id": "symptom.workload.tiny_or_overhead_limited",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "小workload是该解释的条件性反证，不能跨shape推广",
+        "StreamK源阈值属于该代码，不设为通用分界"
+      ]
+    },
+    {
+      "id": "problem.broadcast_strategy_mismatch",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "DAV_2201静态Broadcast与DAV_3510动态/NDDMA不可互代",
+        "原始shape的约束必须保留，不能拿padding假满足"
+      ]
+    },
+    {
+      "id": "problem.cache_policy_mismatch",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "不同产品支持情况按源API表复核",
+        "禁止以枚举存在推断PERSISTENT可用"
+      ]
+    },
+    {
+      "id": "problem.chunk_merge_overhead",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Split-K、Split-KV与排序merge的数学合并不同，不能直接替换算法",
+        "本轮只有来源推导，无段数最优值或收益承诺"
+      ]
+    },
+    {
+      "id": "problem.control_metadata_overhead",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "不改变host/kernel ABI",
+        "跨paged/non-paged或mask分支必须重新证明不变量"
+      ]
+    },
+    {
+      "id": "problem.core_tail_imbalance",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "任务数相等不代表变长任务成本相等",
+        "不能把样例固定核数当平台拓扑"
+      ]
+    },
+    {
+      "id": "problem.dynamic_shape_mismatch",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "不把来源阈值硬编码为目标最优边界",
+        "SquaredRelu host与kernel只证明dtype key的连接结构，不证明该算子存在shape失配"
+      ]
+    },
+    {
+      "id": "problem.excessive_sync_scope",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "只在完整同步契约可替代时实施",
+        "归并的核内group与跨核round示例不能推广为所有SyncAll可删除"
+      ]
+    },
+    {
+      "id": "problem.fragmented_writeback",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Fixpipe和MTE3能力、对齐与尾写语义必须分别核验",
+        "归约标量输出本身很小，不能仅凭大小认定碎片化"
+      ]
+    },
+    {
+      "id": "problem.insufficient_input_reuse",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "常驻需要目标平台容量及同步证明",
+        "arch35常驻文档仅提供原则，不能搬用其bank几何到其他型号"
+      ]
+    },
+    {
+      "id": "problem.l1_l0_reuse_deficit",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "arch22文档的L0 cache/NBuffer33是具体适用形态，不能作为所有Matmul API能力",
+        "API已内部管理时需查看实际配置而非复制手排方案"
+      ]
+    },
+    {
+      "id": "problem.memory_bandwidth_saturation",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "无目标持续带宽基准时不判饱和",
+        "数据搬运样例的峰值估算和具体收益不跨平台使用"
+      ]
+    },
+    {
+      "id": "problem.missing_kernel_fusion",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Vector寄存器链融合文档只支持存活分析原则，跨kernel可行性须单独证明",
+        "本轮没有融合实测案例，不声称通用收益"
+      ]
+    },
+    {
+      "id": "problem.mixed_pipeline_imbalance",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "混合核的角色不同，不能把逐核时间差直接当负载不均",
+        "arch22 FA阶段示例不证明其他混合算子的通路相同"
+      ]
+    },
+    {
+      "id": "problem.noncontiguous_access",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "DataCopy stride的字节/datablock单位按具体API核对",
+        "不把arch35 NDDMA能力用于arch22"
+      ]
+    },
+    {
+      "id": "problem.onchip_capacity_pressure",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "资源上限、保留区和对齐取目标平台查询值",
+        "不能把节省buffer直接等同于时延收益"
+      ]
+    },
+    {
+      "id": "problem.pipeline_serialization",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "num=2不等于实际重叠成立",
+        "不复制来源80%等重叠率或收益为目标承诺"
+      ]
+    },
+    {
+      "id": "problem.reduction_strategy_mismatch",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "API scratch需按目标SDK查询/规则计算，不沿用文档4KB等样例常量",
+        "归约后广播是另一个成本点，不能只调R"
+      ]
+    },
+    {
+      "id": "problem.redundant_cast",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Cast产品及dtype支持按固定API文档核对",
+        "必须保持原A的精度与语义前提，不能以时延替代精度"
+      ]
+    },
+    {
+      "id": "problem.redundant_gm_round_trip",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "跨kernel/跨核通信不能凭片上可放下就取消",
+        "文档的向量链例子不证明任意计算图可融合"
+      ]
+    },
+    {
+      "id": "problem.register_spill",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "编译器版本和优化选项改变结论，需绑定artifact",
+        "源码审读不声称已证实spill"
+      ]
+    },
+    {
+      "id": "problem.scalar_control_hot_loop",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Scalar比例阈值不跨架构使用",
+        "没有PC/指令映射时只保留来源推导"
+      ]
+    },
+    {
+      "id": "problem.tail_slow_path",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Count接口不保证每个API/目标都支持",
+        "不能用aligned length代替有效count导致越界或归约污染"
+      ]
+    },
+    {
+      "id": "problem.tiny_transfer_setup_amplification",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "来源粒度阈值属于910B经验；其他型号不沿用固定256B/4KB判据",
+        "当前任务没有采集数据，不能把文档样例收益写为本任务收益"
+      ]
+    },
+    {
+      "id": "problem.transfer_compute_contention",
+      "state": "gap",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "来源对布局与流水耦合提供原理，未给本任务并发冲突实测",
+        "目标计数器或通路语义未核对时保持假设",
+        "固定新来源说明bank访问与流水重叠，但没有直接核验本机制的目标Vector-MTE计数器语义或同scope争用案例；保留条件推导，需硬件文档/任务profile补证。"
+      ]
+    },
+    {
+      "id": "problem.ub_bank_conflict",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "arch22与arch35读读条件不同，禁止互用固定padding和几何",
+        "通用冲突字段必须映射到目标后端实际计数器"
+      ]
+    },
+    {
+      "id": "problem.underused_task_parallelism",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "小workload是该解释的条件性反证，不能跨shape推广",
+        "StreamK源阈值属于该代码，不设为通用分界"
+      ]
+    },
+    {
+      "id": "problem.vector_api_fragmentation",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "API理论利用率必须由目标指令和dtype推导",
+        "没有自动extractor，本轮不声称已采样到repeat分布"
+      ]
+    },
+    {
+      "id": "problem.workspace_overallocation",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "FA按并发槽分配规则只对其生命周期成立的段适用",
+        "SquaredRelu入口不足以证明其host保留区可删除，不能据固定16MB直接断言浪费"
+      ]
+    },
+    {
+      "id": "action.align_cache_policy",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "不同产品支持情况按源API表复核",
+        "禁止以枚举存在推断PERSISTENT可用"
+      ]
+    },
+    {
+      "id": "action.amortize_partial_merge",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Split-K、Split-KV与排序merge的数学合并不同，不能直接替换算法",
+        "本轮只有来源推导，无段数最优值或收益承诺"
+      ]
+    },
+    {
+      "id": "action.balance_tail_assignment",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "任务数相等不代表变长任务成本相等",
+        "不能把样例固定核数当平台拓扑"
+      ]
+    },
+    {
+      "id": "action.batch_vector_api_calls",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "API理论利用率必须由目标指令和dtype推导",
+        "没有自动extractor，本轮不声称已采样到repeat分布"
+      ]
+    },
+    {
+      "id": "action.batch_writeback",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Fixpipe和MTE3能力、对齐与尾写语义必须分别核验",
+        "归约标量输出本身很小，不能仅凭大小认定碎片化"
+      ]
+    },
+    {
+      "id": "action.coalesce_cast",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Cast产品及dtype支持按固定API文档核对",
+        "必须保持原A的精度与语义前提，不能以时延替代精度"
+      ]
+    },
+    {
+      "id": "action.coalesce_contiguous_transfers",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "来源粒度阈值属于910B经验；其他型号不沿用固定256B/4KB判据",
+        "当前任务没有采集数据，不能把文档样例收益写为本任务收益"
+      ]
+    },
+    {
+      "id": "action.decompose_tasks_dynamically",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "小workload是该解释的条件性反证，不能跨shape推广",
+        "StreamK源阈值属于该代码，不设为通用分界"
+      ]
+    },
+    {
+      "id": "action.dispatch_by_workload",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "不把来源阈值硬编码为目标最优边界",
+        "SquaredRelu host与kernel只证明dtype key的连接结构，不证明该算子存在shape失配"
+      ]
+    },
+    {
+      "id": "action.fuse_kernel_chain",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Vector寄存器链融合文档只支持存活分析原则，跨kernel可行性须单独证明",
+        "本轮没有融合实测案例，不声称通用收益"
+      ]
+    },
+    {
+      "id": "action.hoist_invariant_control",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "不改变host/kernel ABI",
+        "跨paged/non-paged或mask分支必须重新证明不变量"
+      ]
+    },
+    {
+      "id": "action.keep_intermediate_onchip",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "跨kernel/跨核通信不能凭片上可放下就取消",
+        "文档的向量链例子不证明任意计算图可融合"
+      ]
+    },
+    {
+      "id": "action.narrow_sync_scope",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "只在完整同步契约可替代时实施",
+        "归并的核内group与跨核round示例不能推广为所有SyncAll可删除"
+      ]
+    },
+    {
+      "id": "action.pad_ub_layout",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "arch22与arch35读读条件不同，禁止互用固定padding和几何",
+        "通用冲突字段必须映射到目标后端实际计数器"
+      ]
+    },
+    {
+      "id": "action.rebalance_mixed_stages",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "混合核的角色不同，不能把逐核时间差直接当负载不均",
+        "arch22 FA阶段示例不证明其他混合算子的通路相同"
+      ]
+    },
+    {
+      "id": "action.reduce_memory_traffic",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "无目标持续带宽基准时不判饱和",
+        "数据搬运样例的峰值估算和具体收益不跨平台使用"
+      ]
+    },
+    {
+      "id": "action.reorder_contiguous_access",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "DataCopy stride的字节/datablock单位按具体API核对",
+        "不把arch35 NDDMA能力用于arch22"
+      ]
+    },
+    {
+      "id": "action.restructure_broadcast",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "DAV_2201静态Broadcast与DAV_3510动态/NDDMA不可互代",
+        "原始shape的约束必须保留，不能拿padding假满足"
+      ]
+    },
+    {
+      "id": "action.restructure_reduction",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "API scratch需按目标SDK查询/规则计算，不沿用文档4KB等样例常量",
+        "归约后广播是另一个成本点，不能只调R"
+      ]
+    },
+    {
+      "id": "action.retain_matrix_tiles",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "arch22文档的L0 cache/NBuffer33是具体适用形态，不能作为所有Matmul API能力",
+        "API已内部管理时需查看实际配置而非复制手排方案"
+      ]
+    },
+    {
+      "id": "action.reuse_disjoint_onchip_buffers",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "资源上限、保留区和对齐取目标平台查询值",
+        "不能把节省buffer直接等同于时延收益"
+      ]
+    },
+    {
+      "id": "action.reuse_input_tiles",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "常驻需要目标平台容量及同步证明",
+        "arch35常驻文档仅提供原则，不能搬用其bank几何到其他型号"
+      ]
+    },
+    {
+      "id": "action.shorten_scalar_lifetimes",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "编译器版本和优化选项改变结论，需绑定artifact",
+        "源码审读不声称已证实spill"
+      ]
+    },
+    {
+      "id": "action.size_workspace_by_shape",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "FA按并发槽分配规则只对其生命周期成立的段适用",
+        "SquaredRelu入口不足以证明其host保留区可删除，不能据固定16MB直接断言浪费"
+      ]
+    },
+    {
+      "id": "action.software_pipeline_stages",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "num=2不等于实际重叠成立",
+        "不复制来源80%等重叠率或收益为目标承诺"
+      ]
+    },
+    {
+      "id": "action.stagger_resource_access",
+      "state": "gap",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "来源对布局与流水耦合提供原理，未给本任务并发冲突实测",
+        "目标计数器或通路语义未核对时保持假设",
+        "固定新来源说明bank访问与流水重叠，但没有直接核验本机制的目标Vector-MTE计数器语义或同scope争用案例；保留条件推导，需硬件文档/任务profile补证。"
+      ]
+    },
+    {
+      "id": "action.vectorize_scalar_loop",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Scalar比例阈值不跨架构使用",
+        "没有PC/指令映射时只保留来源推导"
+      ]
+    },
+    {
+      "id": "action.vectorize_tail",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Count接口不保证每个API/目标都支持",
+        "不能用aligned length代替有效count导致越界或归约污染"
+      ]
+    },
+    {
+      "id": "edge.action.broadcast_strategy_mismatch",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "DAV_2201静态Broadcast与DAV_3510动态/NDDMA不可互代",
+        "原始shape的约束必须保留，不能拿padding假满足"
+      ]
+    },
+    {
+      "id": "edge.action.cache_policy_mismatch",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "不同产品支持情况按源API表复核",
+        "禁止以枚举存在推断PERSISTENT可用"
+      ]
+    },
+    {
+      "id": "edge.action.chunk_merge_overhead",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Split-K、Split-KV与排序merge的数学合并不同，不能直接替换算法",
+        "本轮只有来源推导，无段数最优值或收益承诺"
+      ]
+    },
+    {
+      "id": "edge.action.control_metadata_overhead",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "不改变host/kernel ABI",
+        "跨paged/non-paged或mask分支必须重新证明不变量"
+      ]
+    },
+    {
+      "id": "edge.action.dynamic_shape_mismatch",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "不把来源阈值硬编码为目标最优边界",
+        "SquaredRelu host与kernel只证明dtype key的连接结构，不证明该算子存在shape失配"
+      ]
+    },
+    {
+      "id": "edge.action.fragmented_writeback",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Fixpipe和MTE3能力、对齐与尾写语义必须分别核验",
+        "归约标量输出本身很小，不能仅凭大小认定碎片化"
+      ]
+    },
+    {
+      "id": "edge.action.insufficient_input_reuse",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "常驻需要目标平台容量及同步证明",
+        "arch35常驻文档仅提供原则，不能搬用其bank几何到其他型号"
+      ]
+    },
+    {
+      "id": "edge.action.l1_l0_reuse_deficit",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "arch22文档的L0 cache/NBuffer33是具体适用形态，不能作为所有Matmul API能力",
+        "API已内部管理时需查看实际配置而非复制手排方案"
+      ]
+    },
+    {
+      "id": "edge.action.memory_bandwidth_saturation",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "无目标持续带宽基准时不判饱和",
+        "数据搬运样例的峰值估算和具体收益不跨平台使用"
+      ]
+    },
+    {
+      "id": "edge.action.missing_kernel_fusion",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Vector寄存器链融合文档只支持存活分析原则，跨kernel可行性须单独证明",
+        "本轮没有融合实测案例，不声称通用收益"
+      ]
+    },
+    {
+      "id": "edge.action.mixed_pipeline_imbalance",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "混合核的角色不同，不能把逐核时间差直接当负载不均",
+        "arch22 FA阶段示例不证明其他混合算子的通路相同"
+      ]
+    },
+    {
+      "id": "edge.action.noncontiguous_access",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "DataCopy stride的字节/datablock单位按具体API核对",
+        "不把arch35 NDDMA能力用于arch22"
+      ]
+    },
+    {
+      "id": "edge.action.reduction_strategy_mismatch",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "API scratch需按目标SDK查询/规则计算，不沿用文档4KB等样例常量",
+        "归约后广播是另一个成本点，不能只调R"
+      ]
+    },
+    {
+      "id": "edge.action.redundant_cast",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Cast产品及dtype支持按固定API文档核对",
+        "必须保持原A的精度与语义前提，不能以时延替代精度"
+      ]
+    },
+    {
+      "id": "edge.action.register_spill",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "编译器版本和优化选项改变结论，需绑定artifact",
+        "源码审读不声称已证实spill"
+      ]
+    },
+    {
+      "id": "edge.action.tail_slow_path",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Count接口不保证每个API/目标都支持",
+        "不能用aligned length代替有效count导致越界或归约污染"
+      ]
+    },
+    {
+      "id": "edge.action.transfer_compute_contention",
+      "state": "gap",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "来源对布局与流水耦合提供原理，未给本任务并发冲突实测",
+        "目标计数器或通路语义未核对时保持假设",
+        "固定新来源说明bank访问与流水重叠，但没有直接核验本机制的目标Vector-MTE计数器语义或同scope争用案例；保留条件推导，需硬件文档/任务profile补证。"
+      ]
+    },
+    {
+      "id": "edge.action.workspace_overallocation",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "FA按并发槽分配规则只对其生命周期成立的段适用",
+        "SquaredRelu入口不足以证明其host保留区可删除，不能据固定16MB直接断言浪费"
+      ]
+    },
+    {
+      "id": "edge.prior.capacity.reuse",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "资源上限、保留区和对齐取目标平台查询值",
+        "不能把节省buffer直接等同于时延收益"
+      ]
+    },
+    {
+      "id": "edge.prior.conflict.pad",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "arch22与arch35读读条件不同，禁止互用固定padding和几何",
+        "通用冲突字段必须映射到目标后端实际计数器"
+      ]
+    },
+    {
+      "id": "edge.prior.pipeline.software_pipeline",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "num=2不等于实际重叠成立",
+        "不复制来源80%等重叠率或收益为目标承诺"
+      ]
+    },
+    {
+      "id": "edge.prior.roundtrip.keep_onchip",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "跨kernel/跨核通信不能凭片上可放下就取消",
+        "文档的向量链例子不证明任意计算图可融合"
+      ]
+    },
+    {
+      "id": "edge.prior.scalar.vectorize",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Scalar比例阈值不跨架构使用",
+        "没有PC/指令映射时只保留来源推导"
+      ]
+    },
+    {
+      "id": "edge.prior.sync.narrow",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "只在完整同步契约可替代时实施",
+        "归并的核内group与跨核round示例不能推广为所有SyncAll可删除"
+      ]
+    },
+    {
+      "id": "edge.prior.tail.balance",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "任务数相等不代表变长任务成本相等",
+        "不能把样例固定核数当平台拓扑"
+      ]
+    },
+    {
+      "id": "edge.prior.tiny_copy.coalesce",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "来源粒度阈值属于910B经验；其他型号不沿用固定256B/4KB判据",
+        "当前任务没有采集数据，不能把文档样例收益写为本任务收益"
+      ]
+    },
+    {
+      "id": "edge.prior.underused.dynamic_tasks",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "小workload是该解释的条件性反证，不能跨shape推广",
+        "StreamK源阈值属于该代码，不设为通用分界"
+      ]
+    },
+    {
+      "id": "edge.prior.vector.batch",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "API理论利用率必须由目标指令和dtype推导",
+        "没有自动extractor，本轮不声称已采样到repeat分布"
+      ]
+    },
+    {
+      "id": "edge.refute.bandwidth.tiny_transfer",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "来源粒度阈值属于910B经验；其他型号不沿用固定256B/4KB判据",
+        "当前任务没有采集数据，不能把文档样例收益写为本任务收益"
+      ]
+    },
+    {
+      "id": "edge.refute.overlap.serial",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "num=2不等于实际重叠成立",
+        "不复制来源80%等重叠率或收益为目标承诺"
+      ]
+    },
+    {
+      "id": "edge.refute.tiny.underused",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "小workload是该解释的条件性反证，不能跨shape推广",
+        "StreamK源阈值属于该代码，不设为通用分界"
+      ]
+    },
+    {
+      "id": "edge.support.broadcast_strategy_mismatch.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "DAV_2201静态Broadcast与DAV_3510动态/NDDMA不可互代",
+        "原始shape的约束必须保留，不能拿padding假满足"
+      ]
+    },
+    {
+      "id": "edge.support.broadcast_strategy_mismatch.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "DAV_2201静态Broadcast与DAV_3510动态/NDDMA不可互代",
+        "原始shape的约束必须保留，不能拿padding假满足"
+      ]
+    },
+    {
+      "id": "edge.support.cache_policy_mismatch.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "不同产品支持情况按源API表复核",
+        "禁止以枚举存在推断PERSISTENT可用"
+      ]
+    },
+    {
+      "id": "edge.support.cache_policy_mismatch.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "不同产品支持情况按源API表复核",
+        "禁止以枚举存在推断PERSISTENT可用"
+      ]
+    },
+    {
+      "id": "edge.support.capacity.capacity",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "资源上限、保留区和对齐取目标平台查询值",
+        "不能把节省buffer直接等同于时延收益"
+      ]
+    },
+    {
+      "id": "edge.support.chunk_merge_overhead.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Split-K、Split-KV与排序merge的数学合并不同，不能直接替换算法",
+        "本轮只有来源推导，无段数最优值或收益承诺"
+      ]
+    },
+    {
+      "id": "edge.support.chunk_merge_overhead.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Split-K、Split-KV与排序merge的数学合并不同，不能直接替换算法",
+        "本轮只有来源推导，无段数最优值或收益承诺"
+      ]
+    },
+    {
+      "id": "edge.support.conflict.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "arch22与arch35读读条件不同，禁止互用固定padding和几何",
+        "通用冲突字段必须映射到目标后端实际计数器"
+      ]
+    },
+    {
+      "id": "edge.support.conflict.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "arch22与arch35读读条件不同，禁止互用固定padding和几何",
+        "通用冲突字段必须映射到目标后端实际计数器"
+      ]
+    },
+    {
+      "id": "edge.support.control_metadata_overhead.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "不改变host/kernel ABI",
+        "跨paged/non-paged或mask分支必须重新证明不变量"
+      ]
+    },
+    {
+      "id": "edge.support.control_metadata_overhead.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "不改变host/kernel ABI",
+        "跨paged/non-paged或mask分支必须重新证明不变量"
+      ]
+    },
+    {
+      "id": "edge.support.dynamic_shape_mismatch.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "不把来源阈值硬编码为目标最优边界",
+        "SquaredRelu host与kernel只证明dtype key的连接结构，不证明该算子存在shape失配"
+      ]
+    },
+    {
+      "id": "edge.support.dynamic_shape_mismatch.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "不把来源阈值硬编码为目标最优边界",
+        "SquaredRelu host与kernel只证明dtype key的连接结构，不证明该算子存在shape失配"
+      ]
+    },
+    {
+      "id": "edge.support.fragmented_writeback.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Fixpipe和MTE3能力、对齐与尾写语义必须分别核验",
+        "归约标量输出本身很小，不能仅凭大小认定碎片化"
+      ]
+    },
+    {
+      "id": "edge.support.fragmented_writeback.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Fixpipe和MTE3能力、对齐与尾写语义必须分别核验",
+        "归约标量输出本身很小，不能仅凭大小认定碎片化"
+      ]
+    },
+    {
+      "id": "edge.support.insufficient_input_reuse.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "常驻需要目标平台容量及同步证明",
+        "arch35常驻文档仅提供原则，不能搬用其bank几何到其他型号"
+      ]
+    },
+    {
+      "id": "edge.support.insufficient_input_reuse.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "常驻需要目标平台容量及同步证明",
+        "arch35常驻文档仅提供原则，不能搬用其bank几何到其他型号"
+      ]
+    },
+    {
+      "id": "edge.support.l1_l0_reuse_deficit.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "arch22文档的L0 cache/NBuffer33是具体适用形态，不能作为所有Matmul API能力",
+        "API已内部管理时需查看实际配置而非复制手排方案"
+      ]
+    },
+    {
+      "id": "edge.support.l1_l0_reuse_deficit.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "arch22文档的L0 cache/NBuffer33是具体适用形态，不能作为所有Matmul API能力",
+        "API已内部管理时需查看实际配置而非复制手排方案"
+      ]
+    },
+    {
+      "id": "edge.support.memory_bandwidth_saturation.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "无目标持续带宽基准时不判饱和",
+        "数据搬运样例的峰值估算和具体收益不跨平台使用"
+      ]
+    },
+    {
+      "id": "edge.support.memory_bandwidth_saturation.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "无目标持续带宽基准时不判饱和",
+        "数据搬运样例的峰值估算和具体收益不跨平台使用"
+      ]
+    },
+    {
+      "id": "edge.support.missing_kernel_fusion.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Vector寄存器链融合文档只支持存活分析原则，跨kernel可行性须单独证明",
+        "本轮没有融合实测案例，不声称通用收益"
+      ]
+    },
+    {
+      "id": "edge.support.missing_kernel_fusion.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Vector寄存器链融合文档只支持存活分析原则，跨kernel可行性须单独证明",
+        "本轮没有融合实测案例，不声称通用收益"
+      ]
+    },
+    {
+      "id": "edge.support.mixed_pipeline_imbalance.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "混合核的角色不同，不能把逐核时间差直接当负载不均",
+        "arch22 FA阶段示例不证明其他混合算子的通路相同"
+      ]
+    },
+    {
+      "id": "edge.support.mixed_pipeline_imbalance.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "混合核的角色不同，不能把逐核时间差直接当负载不均",
+        "arch22 FA阶段示例不证明其他混合算子的通路相同"
+      ]
+    },
+    {
+      "id": "edge.support.noncontiguous_access.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "DataCopy stride的字节/datablock单位按具体API核对",
+        "不把arch35 NDDMA能力用于arch22"
+      ]
+    },
+    {
+      "id": "edge.support.noncontiguous_access.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "DataCopy stride的字节/datablock单位按具体API核对",
+        "不把arch35 NDDMA能力用于arch22"
+      ]
+    },
+    {
+      "id": "edge.support.overlap.pipeline",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "num=2不等于实际重叠成立",
+        "不复制来源80%等重叠率或收益为目标承诺"
+      ]
+    },
+    {
+      "id": "edge.support.reduction_strategy_mismatch.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "API scratch需按目标SDK查询/规则计算，不沿用文档4KB等样例常量",
+        "归约后广播是另一个成本点，不能只调R"
+      ]
+    },
+    {
+      "id": "edge.support.reduction_strategy_mismatch.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "API scratch需按目标SDK查询/规则计算，不沿用文档4KB等样例常量",
+        "归约后广播是另一个成本点，不能只调R"
+      ]
+    },
+    {
+      "id": "edge.support.redundant_cast.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Cast产品及dtype支持按固定API文档核对",
+        "必须保持原A的精度与语义前提，不能以时延替代精度"
+      ]
+    },
+    {
+      "id": "edge.support.redundant_cast.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Cast产品及dtype支持按固定API文档核对",
+        "必须保持原A的精度与语义前提，不能以时延替代精度"
+      ]
+    },
+    {
+      "id": "edge.support.register_spill.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "编译器版本和优化选项改变结论，需绑定artifact",
+        "源码审读不声称已证实spill"
+      ]
+    },
+    {
+      "id": "edge.support.register_spill.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "编译器版本和优化选项改变结论，需绑定artifact",
+        "源码审读不声称已证实spill"
+      ]
+    },
+    {
+      "id": "edge.support.roundtrip.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "跨kernel/跨核通信不能凭片上可放下就取消",
+        "文档的向量链例子不证明任意计算图可融合"
+      ]
+    },
+    {
+      "id": "edge.support.roundtrip.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "跨kernel/跨核通信不能凭片上可放下就取消",
+        "文档的向量链例子不证明任意计算图可融合"
+      ]
+    },
+    {
+      "id": "edge.support.scalar.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Scalar比例阈值不跨架构使用",
+        "没有PC/指令映射时只保留来源推导"
+      ]
+    },
+    {
+      "id": "edge.support.scalar.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Scalar比例阈值不跨架构使用",
+        "没有PC/指令映射时只保留来源推导"
+      ]
+    },
+    {
+      "id": "edge.support.serial.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "num=2不等于实际重叠成立",
+        "不复制来源80%等重叠率或收益为目标承诺"
+      ]
+    },
+    {
+      "id": "edge.support.sync.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "只在完整同步契约可替代时实施",
+        "归并的核内group与跨核round示例不能推广为所有SyncAll可删除"
+      ]
+    },
+    {
+      "id": "edge.support.tail.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "任务数相等不代表变长任务成本相等",
+        "不能把样例固定核数当平台拓扑"
+      ]
+    },
+    {
+      "id": "edge.support.tail.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "任务数相等不代表变长任务成本相等",
+        "不能把样例固定核数当平台拓扑"
+      ]
+    },
+    {
+      "id": "edge.support.tail_slow_path.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Count接口不保证每个API/目标都支持",
+        "不能用aligned length代替有效count导致越界或归约污染"
+      ]
+    },
+    {
+      "id": "edge.support.tail_slow_path.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "Count接口不保证每个API/目标都支持",
+        "不能用aligned length代替有效count导致越界或归约污染"
+      ]
+    },
+    {
+      "id": "edge.support.tasks.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "小workload是该解释的条件性反证，不能跨shape推广",
+        "StreamK源阈值属于该代码，不设为通用分界"
+      ]
+    },
+    {
+      "id": "edge.support.tasks.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "小workload是该解释的条件性反证，不能跨shape推广",
+        "StreamK源阈值属于该代码，不设为通用分界"
+      ]
+    },
+    {
+      "id": "edge.support.tiny_copy.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "来源粒度阈值属于910B经验；其他型号不沿用固定256B/4KB判据",
+        "当前任务没有采集数据，不能把文档样例收益写为本任务收益"
+      ]
+    },
+    {
+      "id": "edge.support.tiny_copy.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "来源粒度阈值属于910B经验；其他型号不沿用固定256B/4KB判据",
+        "当前任务没有采集数据，不能把文档样例收益写为本任务收益"
+      ]
+    },
+    {
+      "id": "edge.support.transfer_compute_contention.profile",
+      "state": "gap",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "来源对布局与流水耦合提供原理，未给本任务并发冲突实测",
+        "目标计数器或通路语义未核对时保持假设",
+        "固定新来源说明bank访问与流水重叠，但没有直接核验本机制的目标Vector-MTE计数器语义或同scope争用案例；保留条件推导，需硬件文档/任务profile补证。"
+      ]
+    },
+    {
+      "id": "edge.support.transfer_compute_contention.source",
+      "state": "gap",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "来源对布局与流水耦合提供原理，未给本任务并发冲突实测",
+        "目标计数器或通路语义未核对时保持假设",
+        "固定新来源说明bank访问与流水重叠，但没有直接核验本机制的目标Vector-MTE计数器语义或同scope争用案例；保留条件推导，需硬件文档/任务profile补证。"
+      ]
+    },
+    {
+      "id": "edge.support.vector.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "API理论利用率必须由目标指令和dtype推导",
+        "没有自动extractor，本轮不声称已采样到repeat分布"
+      ]
+    },
+    {
+      "id": "edge.support.workspace_overallocation.profile",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "FA按并发槽分配规则只对其生命周期成立的段适用",
+        "SquaredRelu入口不足以证明其host保留区可删除，不能据固定16MB直接断言浪费"
+      ]
+    },
+    {
+      "id": "edge.support.workspace_overallocation.source",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "FA按并发槽分配规则只对其生命周期成立的段适用",
+        "SquaredRelu入口不足以证明其host保留区可删除，不能据固定16MB直接断言浪费"
+      ]
+    },
+    {
+      "id": "edge.mechanism.capacity_pipeline",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "资源上限、保留区和对齐取目标平台查询值",
+        "不能把节省buffer直接等同于时延收益"
+      ]
+    },
+    {
+      "id": "edge.mechanism.sync_pipeline",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "只在完整同步契约可替代时实施",
+        "归并的核内group与跨核round示例不能推广为所有SyncAll可删除"
+      ]
+    },
+    {
+      "id": "edge.mechanism.tiny_bandwidth",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "来源粒度阈值属于910B经验；其他型号不沿用固定256B/4KB判据",
+        "当前任务没有采集数据，不能把文档样例收益写为本任务收益"
+      ]
+    },
+    {
+      "id": "edge.mechanism.bank_contention",
+      "state": "gap",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "arch22与arch35读读条件不同，禁止互用固定padding和几何",
+        "通用冲突字段必须映射到目标后端实际计数器",
+        "固定新来源说明bank访问与流水重叠，但没有直接核验本机制的目标Vector-MTE计数器语义或同scope争用案例；保留条件推导，需硬件文档/任务profile补证。"
+      ]
+    },
+    {
+      "id": "edge.mechanism.underused_tail",
+      "state": "reviewed_with_limits",
+      "gaps": [
+        "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+        "小workload是该解释的条件性反证，不能跨shape推广",
+        "StreamK源阈值属于该代码，不设为通用分界"
+      ]
+    }
+  ],
+  "pending_decisions": [
+    {
+      "id": "vector_mte_counter_semantics",
+      "affected_problem": "problem.transfer_compute_contention",
+      "status": "needs_evidence",
+      "needed": "目标型号Vector-MTE冲突计数器定义、并发拓扑和同scope时间线；未补齐前不确认因果。"
+    },
+    {
+      "id": "workspace_library_reservation",
+      "affected_problem": "problem.workspace_overallocation",
+      "status": "needs_evidence",
+      "needed": "具体目标host、下层kernel Process、框架/库workspace ABI与并发实例生命周期；固定host字节值不足以授权删除。"
+    },
+    {
+      "id": "source_threshold_transfer",
+      "status": "requires_target_validation",
+      "needed": "910B DMA阈值、arch22/35 bank规则、StreamK源阈值和示例核数不得直接迁入目标参数。"
+    }
+  ]
+}

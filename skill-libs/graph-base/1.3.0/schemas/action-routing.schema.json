@@ -1,0 +1,322 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aprof:action-routing:v1",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "aprof.action-routing/v1"
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "bases": {
+      "type": "object",
+      "properties": {
+        "diagnosis": {
+          "type": "object",
+          "properties": {
+            "version": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "file_sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          },
+          "required": [
+            "version",
+            "sha256",
+            "path",
+            "file_sha256"
+          ],
+          "additionalProperties": false
+        },
+        "parallel-planning": {
+          "type": "object",
+          "properties": {
+            "version": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "file_sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          },
+          "required": [
+            "version",
+            "sha256",
+            "path",
+            "file_sha256"
+          ],
+          "additionalProperties": false
+        },
+        "optimization": {
+          "type": "object",
+          "properties": {
+            "version": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "file_sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          },
+          "required": [
+            "version",
+            "sha256",
+            "path",
+            "file_sha256"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "diagnosis",
+        "parallel-planning",
+        "optimization"
+      ],
+      "additionalProperties": false
+    },
+    "policy": {
+      "type": "string",
+      "minLength": 1
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "review_state": {
+            "const": "reviewed_with_limits"
+          },
+          "planning_subtrees": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "optimization_subtrees": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "keep_boundary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "replan_triggers": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "limits": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "intent": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "action_id",
+          "review_state",
+          "planning_subtrees",
+          "optimization_subtrees",
+          "keep_boundary",
+          "replan_triggers",
+          "limits",
+          "intent"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "variant_reviews": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "variant_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "action_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "review_state": {
+            "enum": [
+              "reviewed_with_limits",
+              "unsupported"
+            ]
+          },
+          "scope": {
+            "type": "string",
+            "minLength": 1
+          },
+          "keep_boundary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "replan_triggers": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "routing_note": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limits": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "reviewed_variants": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 2,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "variant_id",
+          "action_id",
+          "review_state",
+          "scope",
+          "keep_boundary",
+          "replan_triggers",
+          "routing_note",
+          "limits",
+          "reviewed_variants"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "proposals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "proposed_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "const": "pending_source_review"
+          },
+          "intent": {
+            "type": "string",
+            "minLength": 1
+          },
+          "routing_subtrees": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "retained_reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "promotion_requirements": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "proposed_id",
+          "status",
+          "intent",
+          "routing_subtrees",
+          "retained_reason",
+          "promotion_requirements"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "support_entries": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "schema_version",
+    "version",
+    "bases",
+    "policy",
+    "actions",
+    "variant_reviews",
+    "proposals",
+    "support_entries"
+  ],
+  "additionalProperties": false
+}

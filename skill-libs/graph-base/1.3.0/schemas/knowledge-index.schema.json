@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aprof:knowledge-index:v1",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "aprof.knowledge/v1"
+    },
+    "owner": {
+      "enum": [
+        "diagnosis",
+        "parallel-planning",
+        "optimization"
+      ]
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generator": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "schema_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "id",
+        "sha256",
+        "schema_hash"
+      ],
+      "additionalProperties": false
+    },
+    "source_hashes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      }
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "graph_version": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "schema_version",
+    "owner",
+    "version",
+    "generator",
+    "source_hashes",
+    "records"
+  ],
+  "additionalProperties": false
+}

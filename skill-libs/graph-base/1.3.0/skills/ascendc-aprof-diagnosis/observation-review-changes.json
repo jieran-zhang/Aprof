@@ -1,0 +1,2740 @@
+{
+  "schema_version": "aprof.diagnosis-observation-review/v1",
+  "scope": "全审55S；3条P承接可选干预检查；1条A增加必需producer/consumer阶段绑定。所有原A硬前提/invariants、边、固定来源档案及冻结v3保持原值。",
+  "result": "structural_and_scope_checks_passed",
+  "symptoms_reviewed": 55,
+  "problem_checks_moved": 3,
+  "changes": [
+    {
+      "id": "symptom.profile.broadcast_strategy_mismatch",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.broadcast_strategy_mismatch.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.broadcast_strategy_mismatch.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：广播重复读或标量开销随广播轴放大"
+        },
+        {
+          "id": "symptom.profile.broadcast_strategy_mismatch.component_2",
+          "description": "重复读量或Scalar/展开开销随广播轴和输出复用倍数增长"
+        },
+        {
+          "id": "symptom.profile.broadcast_strategy_mismatch.component_3",
+          "description": "对应输入流量可与唯一输入模型对齐"
+        },
+        {
+          "id": "symptom.profile.broadcast_strategy_mismatch.component_4",
+          "description": "排除仅输出总元素增大和平台API分支差异"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.broadcast_strategy_mismatch.component_1",
+          "description": "当前实现的已有观测中，重复读字节或Scalar/展开时间相对有效输出工作偏高，并与广播轴或输入复用倍数对应"
+        },
+        {
+          "id": "symptom.profile.broadcast_strategy_mismatch.component_2",
+          "description": "每个输入的当前shape、零stride广播轴、有效输出元素及唯一输入字节模型已绑定到该窗口"
+        },
+        {
+          "id": "symptom.profile.broadcast_strategy_mismatch.component_3",
+          "description": "原始读字节、Scalar/展开时间及分母来自同一目标后端和明确窗口；跨shape比较使用当前同一parent实现且注明变化的工作量"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:ecd31fb079803e554ab4711d60c97fbed078400716178828373524f5ad1a36eb",
+      "new_file_sha256": "sha256:e39cf9eb7a56136d5c3b6a7ca755966405cada46bbb77e787e44f2aa021b96c2"
+    },
+    {
+      "id": "symptom.profile.cache_policy_mismatch",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.cache_policy_mismatch.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.cache_policy_mismatch.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：有复用需求时 L2 命中低且重复读流量增加"
+        },
+        {
+          "id": "symptom.profile.cache_policy_mismatch.component_2",
+          "description": "在确有复用需求的窗口L2命中低且重复GM读量升高"
+        },
+        {
+          "id": "symptom.profile.cache_policy_mismatch.component_3",
+          "description": "策略/工作集变化和目标tensor访问窗口相符"
+        },
+        {
+          "id": "symptom.profile.cache_policy_mismatch.component_4",
+          "description": "排除首次冷读、其他并发工作集与统计分母变化"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.cache_policy_mismatch.component_1",
+          "description": "当前存在地址和值不变的重复访问，其目标L2命中指标相对已注明参照偏低且GM重复读字节偏高"
+        },
+        {
+          "id": "symptom.profile.cache_policy_mismatch.component_2",
+          "description": "当前GlobalTensor缓存设置、访问次数、复用距离及同时工作集有同scope来源"
+        },
+        {
+          "id": "symptom.profile.cache_policy_mismatch.component_3",
+          "description": "命中/访问计数与GM读字节采用目标后端真实口径，并标明冷读、并发访问和统计窗口的覆盖范围"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:67fecc7cccddc2a5a56abd9acf95dab5abb37af76ff6be0c5458818ac653ea94",
+      "new_file_sha256": "sha256:2c4fee52db2974369103e90ce6539b359c59e7033443eba0490b044358aa4580"
+    },
+    {
+      "id": "symptom.profile.chunk_merge_overhead",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.chunk_merge_overhead.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.chunk_merge_overhead.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：partial 写读和合并时间主导增长"
+        },
+        {
+          "id": "symptom.profile.chunk_merge_overhead.component_2",
+          "description": "partial读写和merge持续时间随段数增长"
+        },
+        {
+          "id": "symptom.profile.chunk_merge_overhead.component_3",
+          "description": "计时覆盖主阶段、同步和最终输出整个链"
+        },
+        {
+          "id": "symptom.profile.chunk_merge_overhead.component_4",
+          "description": "同工作量比较能分离主阶段缩短与merge增量"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.chunk_merge_overhead.component_1",
+          "description": "当前调用的partial写读和merge阶段在全链有效时间或流量中占据较大份额，比较分母已注明"
+        },
+        {
+          "id": "symptom.profile.chunk_merge_overhead.component_2",
+          "description": "当前chunk数量、每段有效工作和实际partial格式/字节有对应host与kernel引用"
+        },
+        {
+          "id": "symptom.profile.chunk_merge_overhead.component_3",
+          "description": "同一次全链计时包含主阶段、partial写读、同步、merge和最终输出；各阶段区间可对应，未要求改变chunk数"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:3e3639c5de6fe4ec3ce7baca1263f8399b099c9200c4c6fdf059448d37b4d8ae",
+      "new_file_sha256": "sha256:aeda56ae17a234a66fa3bd9d7051d160b903285f1aa1049804f113970929d7a6"
+    },
+    {
+      "id": "symptom.profile.control_metadata_overhead",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.control_metadata_overhead.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.control_metadata_overhead.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：Scalar 窗口与控制指令重复且工作量足以摊薄启动"
+        },
+        {
+          "id": "symptom.profile.control_metadata_overhead.component_2",
+          "description": "trace/汇编中重复控制或字段加载占据实际热区"
+        },
+        {
+          "id": "symptom.profile.control_metadata_overhead.component_3",
+          "description": "工作量足以摊薄启动而重复开销随迭代增长"
+        },
+        {
+          "id": "symptom.profile.control_metadata_overhead.component_4",
+          "description": "排除同步等待和ICache停顿等不同来源"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.control_metadata_overhead.component_1",
+          "description": "当前热区的Scalar控制或字段加载重复出现，其时间或指令数相对已注明有效窗口偏高"
+        },
+        {
+          "id": "symptom.profile.control_metadata_overhead.component_2",
+          "description": "当前PC/trace/汇编能把重复开销定位到mask、索引、分支或TilingData读取"
+        },
+        {
+          "id": "symptom.profile.control_metadata_overhead.component_3",
+          "description": "当前循环迭代数与有效工作量已注明，启动/初始化、同步和ICache指标采用可分辨的口径；不要求先排除所有替代机制"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:123e17bac62aa459e8b8711bf67a00ec7b2c7b1628c59c8e5c07fd5936cfd086",
+      "new_file_sha256": "sha256:c84a59aa8079e7a8f301927e0a5419dcea49a625de9ef74583f13b37d23ba2f3"
+    },
+    {
+      "id": "symptom.profile.dynamic_shape_mismatch",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.dynamic_shape_mismatch.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.dynamic_shape_mismatch.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：不同 shape 区间分别欠并行、开销高或流量放大"
+        },
+        {
+          "id": "symptom.profile.dynamic_shape_mismatch.component_2",
+          "description": "各shape区间重复测得的任务、逐核、流量或启动成本存在不同模式"
+        },
+        {
+          "id": "symptom.profile.dynamic_shape_mismatch.component_3",
+          "description": "每组profile精确关联其tiling参数与构建artifact"
+        },
+        {
+          "id": "symptom.profile.dynamic_shape_mismatch.component_4",
+          "description": "排除换编译器、平台、缓存状态或计时范围导致的差异"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.dynamic_shape_mismatch.component_1",
+          "description": "当前parent实现已支持的多个shape区间呈现不同任务活跃、逐核耗时、启动占比或流量模式"
+        },
+        {
+          "id": "symptom.profile.dynamic_shape_mismatch.component_2",
+          "description": "每份既有profile绑定其真实shape、dtype、feature、tiling参数及当前构建身份"
+        },
+        {
+          "id": "symptom.profile.dynamic_shape_mismatch.component_3",
+          "description": "跨区间比较注明平台、编译、缓存和计时范围，以及实际发生变化的工作量；不要求先新增dispatch"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:4976133d1d79300a87343550af214f6680304c48e601c3e13d0aa117b7c20135",
+      "new_file_sha256": "sha256:4b56eec4019fd227a8805ea67bc9de7e9090c16f794f77f80dc2f3b4341cb769"
+    },
+    {
+      "id": "symptom.profile.fragmented_writeback",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.fragmented_writeback.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.fragmented_writeback.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：MTE3/Fixpipe 有效字节小而发射密集"
+        },
+        {
+          "id": "symptom.profile.fragmented_writeback.component_2",
+          "description": "同一输出区间写回指令密集且每指令有效字节小"
+        },
+        {
+          "id": "symptom.profile.fragmented_writeback.component_3",
+          "description": "MTE3或Fixpipe窗口与输出关键路径相交"
+        },
+        {
+          "id": "symptom.profile.fragmented_writeback.component_4",
+          "description": "写放大量或小包分布相对连续写回基准异常"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.fragmented_writeback.component_1",
+          "description": "当前同一输出有效区间由密集MTE3或Fixpipe发射写回，每指令有效字节相对注明参照偏小"
+        },
+        {
+          "id": "symptom.profile.fragmented_writeback.component_2",
+          "description": "当前输出地址区间、实际写字节与写回指令可对应到同一owner、通路和窗口"
+        },
+        {
+          "id": "symptom.profile.fragmented_writeback.component_3",
+          "description": "当前MTE3/Fixpipe时段、指令分母及有效输出字节已按后端单位标注，未要求先批量合并写回"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:d360d259f8b39194c3cf6c8cfe8db11b648e90ff4e9ff5071a4a23bf8b598668",
+      "new_file_sha256": "sha256:ab3891112a018d2bbf0dcf008d7cdaf80c8936835faa2fab787446a8525523b8"
+    },
+    {
+      "id": "symptom.profile.gm_traffic_amplified",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.gm_traffic_amplified.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.gm_traffic_amplified.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：实测 GM 流量高于算法下界"
+        },
+        {
+          "id": "symptom.profile.gm_traffic_amplified.component_2",
+          "description": "实际读写字节超过算法输入输出及必要workspace模型"
+        },
+        {
+          "id": "symptom.profile.gm_traffic_amplified.component_3",
+          "description": "额外字节能定位到同一中间tensor的写回/读回"
+        },
+        {
+          "id": "symptom.profile.gm_traffic_amplified.component_4",
+          "description": "该往返或相应等待与关键路径相关"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.gm_traffic_amplified.component_1",
+          "description": "当前实测GM读写字节高于已注明的算法输入输出及必要workspace字节模型"
+        },
+        {
+          "id": "symptom.profile.gm_traffic_amplified.component_2",
+          "description": "该额外流量的当前地址/阶段可对应到同一中间tensor的GM写回与读回"
+        },
+        {
+          "id": "symptom.profile.gm_traffic_amplified.component_3",
+          "description": "实际读写计数、理论有效字节、padding及必要协议流量采用同一有效域和窗口；不要求先消除往返"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:760d50182a2eb4c24f278a45a0efcb4b4cab932b41afb6f3b8f89b9bc2011939",
+      "new_file_sha256": "sha256:a864688622315d272c669ceafcbbc70d6e79b643db0f32bc15c6d09f62783a61"
+    },
+    {
+      "id": "symptom.profile.insufficient_input_reuse",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.insufficient_input_reuse.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.insufficient_input_reuse.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：输入流量高于按复用次数计算的下界"
+        },
+        {
+          "id": "symptom.profile.insufficient_input_reuse.component_2",
+          "description": "实测输入读字节超过按有效复用模型的必要读量"
+        },
+        {
+          "id": "symptom.profile.insufficient_input_reuse.component_3",
+          "description": "能把重复流量定位到该切片或循环窗口"
+        },
+        {
+          "id": "symptom.profile.insufficient_input_reuse.component_4",
+          "description": "排除模型遗漏、padding和cache口径后仍有重复读"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.insufficient_input_reuse.component_1",
+          "description": "当前输入读字节高于已注明复用窗口中唯一输入及必要读取模型"
+        },
+        {
+          "id": "symptom.profile.insufficient_input_reuse.component_2",
+          "description": "重复读取对应当前相同地址和值不变的输入切片或循环区间"
+        },
+        {
+          "id": "symptom.profile.insufficient_input_reuse.component_3",
+          "description": "当前计数器缓存层级、padding、有效元素及字节模型有明确口径；模型未覆盖部分保持unknown"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:bac0579eb2565bff42ef827671c79fad71a330c31d3fab91af434d9faff28896",
+      "new_file_sha256": "sha256:19ecd612b657512e68e2951b9b2fa80076b701fcc96315cec145dd54aaf0a462"
+    },
+    {
+      "id": "symptom.profile.l1_l0_reuse_deficit",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.l1_l0_reuse_deficit.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.l1_l0_reuse_deficit.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：MTE1/MTE2 搬运超过数据复用模型且 Cube 等待"
+        },
+        {
+          "id": "symptom.profile.l1_l0_reuse_deficit.component_2",
+          "description": "MTE1/MTE2字节超过分层复用模型"
+        },
+        {
+          "id": "symptom.profile.l1_l0_reuse_deficit.component_3",
+          "description": "Cube等待与重复装入对应窗口相关"
+        },
+        {
+          "id": "symptom.profile.l1_l0_reuse_deficit.component_4",
+          "description": "已排除必要K推进和格式转换字节"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.l1_l0_reuse_deficit.component_1",
+          "description": "当前MTE1或MTE2实际字节高于已注明的相应层级必要搬运模型"
+        },
+        {
+          "id": "symptom.profile.l1_l0_reuse_deficit.component_2",
+          "description": "当前Cube等待区间与相关装载区间可在同一tile/阶段时间线上定位"
+        },
+        {
+          "id": "symptom.profile.l1_l0_reuse_deficit.component_3",
+          "description": "GM→L1、L1→L0、必要K推进和格式转换字节分层记账，目标后端字段与窗口已明确"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:1e7106a1f909b28a30d2a7e060f8efb3c83ab8e8133d9789aa2acdf9fbbef223",
+      "new_file_sha256": "sha256:c400f334b02b2be94d47cd6e5f14f6075b7fc20b3f5401cfa16471101ae18953"
+    },
+    {
+      "id": "symptom.profile.memory_bandwidth_saturation",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.memory_bandwidth_saturation.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.memory_bandwidth_saturation.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：大块连续搬运接近已校准带宽上限"
+        },
+        {
+          "id": "symptom.profile.memory_bandwidth_saturation.component_2",
+          "description": "同一有效时间窗内实际读写字节和MTE持续时间可对齐"
+        },
+        {
+          "id": "symptom.profile.memory_bandwidth_saturation.component_3",
+          "description": "同平台同方向同并发条件存在可追溯的持续带宽校准"
+        },
+        {
+          "id": "symptom.profile.memory_bandwidth_saturation.component_4",
+          "description": "有效带宽接近该基准且timeline显示搬运在关键路径"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.memory_bandwidth_saturation.component_1",
+          "description": "当前大块连续搬运窗口的实际B/s接近已注明的同平台可达带宽参照"
+        },
+        {
+          "id": "symptom.profile.memory_bandwidth_saturation.component_2",
+          "description": "当前实际读写字节、方向、MTE持续时间和足够工作量属于同一窗口"
+        },
+        {
+          "id": "symptom.profile.memory_bandwidth_saturation.component_3",
+          "description": "参照具有可追溯的平台、方向、并发与缓存条件；接近程度及容差有来源，不用跨平台峰值或干预后的收益代替"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:afbc6225717d566207ddeaf22d87c4d0c1be52417b0a57a505c1b3ba791c25f4",
+      "new_file_sha256": "sha256:17cd7136c2d2cfcbfcda05be9aa67bba7c919b8d4972393833e8b9a26c5645b3"
+    },
+    {
+      "id": "symptom.profile.missing_kernel_fusion",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.missing_kernel_fusion.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.missing_kernel_fusion.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：调用启动和中间流量相对有用计算明显"
+        },
+        {
+          "id": "symptom.profile.missing_kernel_fusion.component_2",
+          "description": "完整kernel序列的launch/间隙与中间GM字节可计量"
+        },
+        {
+          "id": "symptom.profile.missing_kernel_fusion.component_3",
+          "description": "相对有用计算，启动及中间写读构成可定位成本"
+        },
+        {
+          "id": "symptom.profile.missing_kernel_fusion.component_4",
+          "description": "没有遗漏框架缓存、异步重叠或其他消费者"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.missing_kernel_fusion.component_1",
+          "description": "当前完整launch链中启动/间隙及GM中间写读相对有效计算时间或必要字节明显，比较分母已注明"
+        },
+        {
+          "id": "symptom.profile.missing_kernel_fusion.component_2",
+          "description": "当前launch顺序、中间tensor及实际读写地址能绑定到生产者与消费者"
+        },
+        {
+          "id": "symptom.profile.missing_kernel_fusion.component_3",
+          "description": "现有计时范围覆盖整条链并注明异步重叠、缓存及其他消费者；不要求先证明可以融合或已有融合收益"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:be45c72e5ec19411f059c2ce9f043e3004a9c2746c58c59efa03a81d3feb9f68",
+      "new_file_sha256": "sha256:27c2d1324636d0ab4cb298f7e9e0a7e998faf22cae2630c79c9339d38768526a"
+    },
+    {
+      "id": "symptom.profile.mixed_pipeline_imbalance",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.mixed_pipeline_imbalance.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.mixed_pipeline_imbalance.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：AIC/AIV 时间差与阶段等待相关"
+        },
+        {
+          "id": "symptom.profile.mixed_pipeline_imbalance.component_2",
+          "description": "同一tile对应的AIC/AIV阶段时间差可对齐"
+        },
+        {
+          "id": "symptom.profile.mixed_pipeline_imbalance.component_3",
+          "description": "wait区间与该生产消费依赖关联，非独立任务统计差"
+        },
+        {
+          "id": "symptom.profile.mixed_pipeline_imbalance.component_4",
+          "description": "阶段工作量足够且排除startup/排空及不合法同步"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.mixed_pipeline_imbalance.component_1",
+          "description": "当前同一tile相关AIC/AIV阶段存在已注明的耗时差与交接等待"
+        },
+        {
+          "id": "symptom.profile.mixed_pipeline_imbalance.component_2",
+          "description": "当前AIC/AIV角色、交接tensor和wait区间可对应到同一生产消费阶段"
+        },
+        {
+          "id": "symptom.profile.mixed_pipeline_imbalance.component_3",
+          "description": "各阶段时长、有效工作和序言/稳态/排空范围采用可比较口径；无需先调整阶段分担"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:82c7b88701db779f26b1ceb60c4c29282f4f65ef0dd1eafd0a287cb7a12599a7",
+      "new_file_sha256": "sha256:2cada48cfc09f4c3dc2739e9e7e0da73a81cfd3bb78720928036d483a408b190"
+    },
+    {
+      "id": "symptom.profile.mte_setup_dominated",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.mte_setup_dominated.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.mte_setup_dominated.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：MTE 占比高且单位指令有效搬运小、带宽低"
+        },
+        {
+          "id": "symptom.profile.mte_setup_dominated.component_2",
+          "description": "同一稳定窗口MTE发射数与有效搬运字节均可定位到该切片"
+        },
+        {
+          "id": "symptom.profile.mte_setup_dominated.component_3",
+          "description": "每指令有效字节偏低且有效带宽低于同平台同方向可达基准"
+        },
+        {
+          "id": "symptom.profile.mte_setup_dominated.component_4",
+          "description": "timeline或缩减发射的单因素比较支持setup/等待占成本"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.mte_setup_dominated.component_1",
+          "description": "当前有效窗口MTE占比偏高、每指令有效搬运字节偏小且有效带宽偏低，参照及分母已注明"
+        },
+        {
+          "id": "symptom.profile.mte_setup_dominated.component_2",
+          "description": "当前MTE发射数、有效字节和持续时间可定位到同一切片与方向"
+        },
+        {
+          "id": "symptom.profile.mte_setup_dominated.component_3",
+          "description": "当前timeline可标出发射、搬运与等待区间；字段不够分辨setup与其他等待时只保留该复合现象，不要求先缩减发射"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:aeaa606a830c0ae2a64d0ed7841d24131add276c36784a0e4ba6559fb5a27637",
+      "new_file_sha256": "sha256:3c2f606870d18d8a33d533dcb48963acecf2c6951b2f22d54fbd1d9720b7a440"
+    },
+    {
+      "id": "symptom.profile.noncontiguous_access",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.noncontiguous_access.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.noncontiguous_access.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：同等有效字节下离散搬运多、有效带宽下降"
+        },
+        {
+          "id": "symptom.profile.noncontiguous_access.component_2",
+          "description": "相同有效字节下MTE指令或实际搬运字节较连续参照更多"
+        },
+        {
+          "id": "symptom.profile.noncontiguous_access.component_3",
+          "description": "该输入的有效字节/时间下降且窗口、缓存条件可比"
+        },
+        {
+          "id": "symptom.profile.noncontiguous_access.component_4",
+          "description": "实际profile与对应stride分支或尾段相关"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.noncontiguous_access.component_1",
+          "description": "当前同等有效字节下离散搬运次数或实际事务字节相对注明的连续模型偏多，有效B/s偏低"
+        },
+        {
+          "id": "symptom.profile.noncontiguous_access.component_2",
+          "description": "当前profile与输入/输出的实际stride、地址区间、分支或尾段可以对应"
+        },
+        {
+          "id": "symptom.profile.noncontiguous_access.component_3",
+          "description": "连续参照来自地址模型或已有同parent可比记录，并注明缓存、有效字节和窗口；不要求先改成连续布局"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:7a8b9e31cfa287e32730ce45dc92bcb707b99110eed6320d90498547f491a6fc",
+      "new_file_sha256": "sha256:afe013995c44112634acfec8b42f9723f9734d737a1bb39f911d3c108192be4f"
+    },
+    {
+      "id": "symptom.profile.overlap_low",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.overlap_low.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.overlap_low.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：搬运与计算在时间线上缺少重叠"
+        },
+        {
+          "id": "symptom.profile.overlap_low.component_2",
+          "description": "同一稳态多tile窗口的Copy与Compute时间区间缺少重叠"
+        },
+        {
+          "id": "symptom.profile.overlap_low.component_3",
+          "description": "wait区间能对应事件/队列依赖而非资源饱和"
+        },
+        {
+          "id": "symptom.profile.overlap_low.component_4",
+          "description": "已排除单tile序言/尾声统计占比造成的假串行"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.overlap_low.component_1",
+          "description": "当前同一稳态多tile窗口内Copy与Compute时间区间缺少重叠，重叠分母与覆盖范围已注明"
+        },
+        {
+          "id": "symptom.profile.overlap_low.component_2",
+          "description": "当前timeline的Copy、Compute和wait区间绑定同一target、tile及其直接依赖阶段"
+        },
+        {
+          "id": "symptom.profile.overlap_low.component_3",
+          "description": "序言、排空和不同任务/核的聚合统计已分开；无需先证明等待来自事件安排或排除资源瓶颈"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:48b0a99b6b09b958309e752437c961403703330acbfec84396b09638cba95157",
+      "new_file_sha256": "sha256:13896f7f2e997ff1cc7eef2a9186ebb8ed7cae77674fd4bcbc765c66a0a4f9ff"
+    },
+    {
+      "id": "symptom.profile.per_core_time_imbalanced",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.per_core_time_imbalanced.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.per_core_time_imbalanced.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：同次调用的逐核耗时不均"
+        },
+        {
+          "id": "symptom.profile.per_core_time_imbalanced.component_2",
+          "description": "同次调用逐核有效执行时间不均"
+        },
+        {
+          "id": "symptom.profile.per_core_time_imbalanced.component_3",
+          "description": "最长核与更多tile、尾元素或更高任务成本对应"
+        },
+        {
+          "id": "symptom.profile.per_core_time_imbalanced.component_4",
+          "description": "排除不同核角色、测量口径和外部干扰"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.per_core_time_imbalanced.component_1",
+          "description": "当前同次调用同类核的有效执行耗时分布不均，已注明差异指标及参照"
+        },
+        {
+          "id": "symptom.profile.per_core_time_imbalanced.component_2",
+          "description": "当前逐核时间对应各核实际tile数、有效元素、尾部或变长任务成本"
+        },
+        {
+          "id": "symptom.profile.per_core_time_imbalanced.component_3",
+          "description": "核角色、计时起止及空闲/初始化/有效执行口径已区分；不要求先证明不均可通过调度消除"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:b1711b9b1ed268e087bfc7fc6b3c573dbd09fc9ea107cfed721f021259dd8260",
+      "new_file_sha256": "sha256:60be3fdc87820fb2ceaa0229a965c0b5a1fc96a96eed7ea018456bc40d80d3b5"
+    },
+    {
+      "id": "symptom.profile.reduction_strategy_mismatch",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.reduction_strategy_mismatch.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.reduction_strategy_mismatch.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：任务不足或重复读与归约轴大小关联"
+        },
+        {
+          "id": "symptom.profile.reduction_strategy_mismatch.component_2",
+          "description": "任务不足、重复读或合并开销随A/R区间变化且可定位对应分支"
+        },
+        {
+          "id": "symptom.profile.reduction_strategy_mismatch.component_3",
+          "description": "有效归约元素、必要字节与profile统计口径一致"
+        },
+        {
+          "id": "symptom.profile.reduction_strategy_mismatch.component_4",
+          "description": "对比shape时核数、dtype和feature变化已记录"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.reduction_strategy_mismatch.component_1",
+          "description": "当前已支持A/R区间中，任务不足、重复读或合并成本与归约轴形态存在可定位关联"
+        },
+        {
+          "id": "symptom.profile.reduction_strategy_mismatch.component_2",
+          "description": "当前A1/R/A0、有效归约元素、实际分支和partial字节模型绑定到相应profile"
+        },
+        {
+          "id": "symptom.profile.reduction_strategy_mismatch.component_3",
+          "description": "跨shape记录注明当前核数、dtype、feature及计时范围，不要求先实施其他归约策略"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:2d34954a1e65039bf6a553f93c3c53ac4f30f1d2b0954d8366e95da884a3d83e",
+      "new_file_sha256": "sha256:86537b3d9bbd7373ffc97bfd6c7e7ffe3281394a2b2bb00dc2512abf9cad55e9"
+    },
+    {
+      "id": "symptom.profile.redundant_cast",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.redundant_cast.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.redundant_cast.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：Cast 指令占用明显且不承担必要精度边界"
+        },
+        {
+          "id": "symptom.profile.redundant_cast.component_2",
+          "description": "Cast在同一绑定计算链的trace/指令窗口有可观成本"
+        },
+        {
+          "id": "symptom.profile.redundant_cast.component_3",
+          "description": "重复转换对应的有效元素数和算法精度边界已核对"
+        },
+        {
+          "id": "symptom.profile.redundant_cast.component_4",
+          "description": "排除必要FP32归约累计及最终输出转换"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.redundant_cast.component_1",
+          "description": "当前局部链存在多次Cast且转换指令在有效窗口中占据已注明份额"
+        },
+        {
+          "id": "symptom.profile.redundant_cast.component_2",
+          "description": "当前trace/指令可对应每次Cast的src/dst dtype、round mode、有效元素及消费者"
+        },
+        {
+          "id": "symptom.profile.redundant_cast.component_3",
+          "description": "当前算法定义的精度边界、必要累计和最终输出转换位置已记录；观察成立不要求先证明某次转换可删除"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:ce338c670835abb1e2834b5ec35939f9bd98473925185c6723721d7f8b880eb2",
+      "new_file_sha256": "sha256:69b94969fb912b3284569064e3c88bb1ff2f96d08c07751304553cc185f4c578"
+    },
+    {
+      "id": "symptom.profile.register_spill",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.register_spill.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.register_spill.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：编译报告或指令跟踪确认非算法必要的 spill/LoadStore"
+        },
+        {
+          "id": "symptom.profile.register_spill.component_2",
+          "description": "编译spill/stack报告或汇编明确额外保存/重载"
+        },
+        {
+          "id": "symptom.profile.register_spill.component_3",
+          "description": "对应LoadStore映射到热路径且不是算法必要数据读写"
+        },
+        {
+          "id": "symptom.profile.register_spill.component_4",
+          "description": "与绑定构建artifact hash、PC和调用窗口关联"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.register_spill.component_1",
+          "description": "当前绑定编译产物的spill/stack报告或汇编明确给出保存与重载位置"
+        },
+        {
+          "id": "symptom.profile.register_spill.component_2",
+          "description": "当前额外LoadStore可映射到热路径PC及对应变量/栈地址，并与算法必要数据访存分列"
+        },
+        {
+          "id": "symptom.profile.register_spill.component_3",
+          "description": "报告、编译器/flags、架构、artifact hash及profile窗口身份一致；未要求先缩短存活期后得到改善"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:6c560a5bcdc00fdff4cfb18670b9873df04e8cb75ea264a04fc318926661edda",
+      "new_file_sha256": "sha256:3419248d32e57181fd71a44318753a3ee3dd3037e78648a5bdda8fd53ab58291"
+    },
+    {
+      "id": "symptom.profile.scalar_hot",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.scalar_hot.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.scalar_hot.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：有效工作区间 Scalar 时间占比高"
+        },
+        {
+          "id": "symptom.profile.scalar_hot.component_2",
+          "description": "有效计算窗口Scalar时间或发射成本偏高"
+        },
+        {
+          "id": "symptom.profile.scalar_hot.component_3",
+          "description": "对应逐元素循环出现在trace/汇编热区且其他流水等待可关联"
+        },
+        {
+          "id": "symptom.profile.scalar_hot.component_4",
+          "description": "排除启动、同步等待、必要索引控制和spill主因"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.scalar_hot.component_1",
+          "description": "当前有效工作窗口的Scalar时间或指令发射占比相对注明参照偏高"
+        },
+        {
+          "id": "symptom.profile.scalar_hot.component_2",
+          "description": "当前Scalar计数/PC热度、有效工作量及统计分母可对应同一调用和阶段"
+        },
+        {
+          "id": "symptom.profile.scalar_hot.component_3",
+          "description": "启动、初始化、等待、ICache及spill若可分辨则分别记录，未分辨时标unknown；不要求逐元素循环或已排除其他Scalar机制"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:bb17f79731bb47e56e2de7db27116b0b32bc2e66ce961eb88497f0ad724f593f",
+      "new_file_sha256": "sha256:a088fc083bee2d33dfcd76d0b5f7f004004ec83b035ce799ddbb905a8001df84"
+    },
+    {
+      "id": "symptom.profile.steady_overlap",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.steady_overlap.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.steady_overlap.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：稳态多 tile 区间存在持续 MTE/Compute 重叠"
+        },
+        {
+          "id": "symptom.profile.steady_overlap.component_2",
+          "description": "同一目标、实现与workload的多个完整tile处于稳态窗口"
+        },
+        {
+          "id": "symptom.profile.steady_overlap.component_3",
+          "description": "Copy与Compute区间真实持续重叠，而非不同任务或不同核的聚合并列"
+        },
+        {
+          "id": "symptom.profile.steady_overlap.component_4",
+          "description": "区分序言/排空和局部串行阶段，标明覆盖的阶段范围"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.steady_overlap.component_1",
+          "description": "当前稳态多个完整tile的MTE/Compute区间存在持续真实重叠"
+        },
+        {
+          "id": "symptom.profile.steady_overlap.component_2",
+          "description": "Copy与Compute来自同一target及相邻tile的对应流水，未把不同任务/核的并列聚合当作重叠"
+        },
+        {
+          "id": "symptom.profile.steady_overlap.component_3",
+          "description": "序言、排空和局部子阶段的覆盖范围已注明；该观察不要求修改buffer或事件"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:34a0a60162510af619c80367eabadf9f04ee1c1fbe87a4da63a957f101b67129",
+      "new_file_sha256": "sha256:87a56d4bdfd57ea49705ba7cf1a0e5d24ae5de8b8c118066ab24fb02b1a08c89"
+    },
+    {
+      "id": "symptom.profile.tail_slow_path",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.tail_slow_path.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.tail_slow_path.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：尾 shape 相对对齐 shape 明显恶化且定位到尾路径"
+        },
+        {
+          "id": "symptom.profile.tail_slow_path.component_2",
+          "description": "相近有效工作量的对齐和带尾shape有可比时间基准"
+        },
+        {
+          "id": "symptom.profile.tail_slow_path.component_3",
+          "description": "恶化定位在尾分支或尾核窗口，且不只是增加了元素数"
+        },
+        {
+          "id": "symptom.profile.tail_slow_path.component_4",
+          "description": "尾段单位元素或API开销明显高于主体"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.tail_slow_path.component_1",
+          "description": "当前parent实现的已有带尾shape相对可比对齐shape恶化，差异定位到尾分支或尾核窗口"
+        },
+        {
+          "id": "symptom.profile.tail_slow_path.component_2",
+          "description": "对齐与带尾记录注明有效元素、实际tiling、核数、dtype及feature差异"
+        },
+        {
+          "id": "symptom.profile.tail_slow_path.component_3",
+          "description": "尾段时间/API数按有效尾元素归一并与当前主体口径一致；不要求先向量化尾部"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:7e28d38cf1fe74f5b1a11dfc6c267f23c2082144eeb52f6f85bfed046ae6d24e",
+      "new_file_sha256": "sha256:083ba486d7d7aed236d67c04b52774edd62f532a4921edcdf8cd97a1f0e1e176"
+    },
+    {
+      "id": "symptom.profile.tasks_below_available_cores",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.tasks_below_available_cores.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.tasks_below_available_cores.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：有效任务数少于可用核数"
+        },
+        {
+          "id": "symptom.profile.tasks_below_available_cores.component_2",
+          "description": "有效任务数、实际启动核数与目标可用同类核数口径一致"
+        },
+        {
+          "id": "symptom.profile.tasks_below_available_cores.component_3",
+          "description": "逐核活跃情况显示空闲核，且每核有效工作足以摊薄启动"
+        },
+        {
+          "id": "symptom.profile.tasks_below_available_cores.component_4",
+          "description": "排除混合kernel AIC/AIV配比、短任务与必要串行依赖"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.tasks_below_available_cores.component_1",
+          "description": "当前有效独立任务数少于目标可用同类核数"
+        },
+        {
+          "id": "symptom.profile.tasks_below_available_cores.component_2",
+          "description": "当前总任务、实际BlockDim、有效活跃核及目标可用核的定义和数值一致"
+        },
+        {
+          "id": "symptom.profile.tasks_below_available_cores.component_3",
+          "description": "同类核角色与任务有效域已说明，每任务工作量和启动/初始化范围已记录；不要求先证明增并行有收益"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:42504a391562ff84729eecb82bf76b04e1be1f4e35287aa3bfa2fc5d21ee2c13",
+      "new_file_sha256": "sha256:1a04158803495fccbd2e5c277e73dd5e2dddd88f64bd16bf34b71db79ad9403f"
+    },
+    {
+      "id": "symptom.profile.transfer_compute_contention",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.transfer_compute_contention.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.transfer_compute_contention.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：Vector-MTE 冲突和 wait 与重叠窗口相关"
+        },
+        {
+          "id": "symptom.profile.transfer_compute_contention.component_2",
+          "description": "目标Vector-MTE冲突/等待计数与重叠窗口关联"
+        },
+        {
+          "id": "symptom.profile.transfer_compute_contention.component_3",
+          "description": "保持工作量时错开发射或布局的对照能区分争用"
+        },
+        {
+          "id": "symptom.profile.transfer_compute_contention.component_4",
+          "description": "单流水阶段计数不足以解释并发退化"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.transfer_compute_contention.component_1",
+          "description": "当前目标Vector-MTE冲突或wait指标与搬运/Vector重叠窗口相关，相关范围和比较分母已注明"
+        },
+        {
+          "id": "symptom.profile.transfer_compute_contention.component_2",
+          "description": "当前计数器定义、实际地址/资源范围及重叠区间绑定同一target和stage"
+        },
+        {
+          "id": "symptom.profile.transfer_compute_contention.component_3",
+          "description": "当前Vector内部bank指标与Vector-MTE并发指标分别记录；没有对应指标则unknown，不要求先错开发射或改布局"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:5eeb446efd45fe8d4592d50dbf12cd77a02e72b70fd6772d055d3f40dce9ef7f",
+      "new_file_sha256": "sha256:16fd2bdc81d7fbd487cb5c9e03ea3d9e4572e08d1f2acbd0009f0d382c738c22"
+    },
+    {
+      "id": "symptom.profile.ub_conflict_high",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.ub_conflict_high.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.ub_conflict_high.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：Vector 的 UB 冲突计数偏高"
+        },
+        {
+          "id": "symptom.profile.ub_conflict_high.component_2",
+          "description": "目标支持的UB冲突计数与该Vector窗口对齐"
+        },
+        {
+          "id": "symptom.profile.ub_conflict_high.component_3",
+          "description": "同等工作量Vector周期偏高且MTE等待不能解释"
+        },
+        {
+          "id": "symptom.profile.ub_conflict_high.component_4",
+          "description": "布局单因素改变后冲突及周期变化方向相符"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.ub_conflict_high.component_1",
+          "description": "当前Vector的UB冲突指标相对已注明参照偏高"
+        },
+        {
+          "id": "symptom.profile.ub_conflict_high.component_2",
+          "description": "当前目标支持的UB冲突原始计数及真实分母可对应到同一Vector执行窗口"
+        },
+        {
+          "id": "symptom.profile.ub_conflict_high.component_3",
+          "description": "当前dtype、有效元素、repeat/指令工作量和周期单位已注明，参照来自目标定义、模型或已有同parent可比窗口；不要求先改变布局"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:ab98342da4c8c7560133926763eeec507476ce83e2da19586759090b934447ad",
+      "new_file_sha256": "sha256:2605165f74d7ebaf225ed1c9f66084b1512473c80ddbe20bf276b9932e6e2b39"
+    },
+    {
+      "id": "symptom.profile.vector_granularity_low",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.vector_granularity_low.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.vector_granularity_low.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：Vector 指令的有效处理粒度偏小"
+        },
+        {
+          "id": "symptom.profile.vector_granularity_low.component_2",
+          "description": "相同有效元素数下Vector API/指令数量多或repeat粒度偏小"
+        },
+        {
+          "id": "symptom.profile.vector_granularity_low.component_3",
+          "description": "有效lane或理论利用率计算有清楚分子分母"
+        },
+        {
+          "id": "symptom.profile.vector_granularity_low.component_4",
+          "description": "对应控制/发射时间与关键路径相关"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.vector_granularity_low.component_1",
+          "description": "当前Vector有效处理粒度相对已注明dtype/指令能力偏小，API或指令数量相对有效元素偏多"
+        },
+        {
+          "id": "symptom.profile.vector_granularity_low.component_2",
+          "description": "当前count、repeat、mask与有效lane元素可对应到同一窗口"
+        },
+        {
+          "id": "symptom.profile.vector_granularity_low.component_3",
+          "description": "有效利用率分子分母、主体/尾段及控制/发射时间的口径已注明；不要求先合并API"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:8db20e3fdeb988cd81e7033c459349f997337463d888d9f680e51f09d910889d",
+      "new_file_sha256": "sha256:3fbf8c8bd2f077cc9a9227ec2b3dd62a17b9d2fe3d3b39512edacd486c438945"
+    },
+    {
+      "id": "symptom.profile.workspace_overallocation",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.profile.workspace_overallocation.md",
+      "old_components": [
+        {
+          "id": "symptom.profile.workspace_overallocation.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：实际有效槽位远少于配置并带来初始化或访问成本"
+        },
+        {
+          "id": "symptom.profile.workspace_overallocation.component_2",
+          "description": "配置字节显著超过合法峰值槽模型"
+        },
+        {
+          "id": "symptom.profile.workspace_overallocation.component_3",
+          "description": "初始化/访问/分配成本实际随多余字节增长并进入计时范围"
+        },
+        {
+          "id": "symptom.profile.workspace_overallocation.component_4",
+          "description": "确认不是框架库要求的固定保留区或不可复用并发实例"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.profile.workspace_overallocation.component_1",
+          "description": "当前配置workspace字节高于已注明的真实并发活跃槽模型，差异与实际初始化、分配或访问窗口可对应"
+        },
+        {
+          "id": "symptom.profile.workspace_overallocation.component_2",
+          "description": "当前host配置、kernel实际索引范围、触及字节和并发实例/槽生命周期已绑定"
+        },
+        {
+          "id": "symptom.profile.workspace_overallocation.component_3",
+          "description": "现有记录区分仅预留未触及、主动清零与实际读写，注明框架/库保留区依据；不要求先缩小workspace"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:1619cc885d53c85ac68110f766c5e22d1e938be7f470f2d99b68f7cf67086f6b",
+      "new_file_sha256": "sha256:37995a7cad3c303bfc09105964ef85cf9f5764fab99ab912f49177b5507cd64e"
+    },
+    {
+      "id": "symptom.source.broadcast_strategy_mismatch",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.broadcast_strategy_mismatch.md",
+      "old_components": [
+        {
+          "id": "symptom.source.broadcast_strategy_mismatch.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：广播方案未区分连续内轴和重复输入"
+        },
+        {
+          "id": "symptom.source.broadcast_strategy_mismatch.component_2",
+          "description": "对每输入标出合轴后的broadcast flag、零stride与非广播连续轴"
+        },
+        {
+          "id": "symptom.source.broadcast_strategy_mismatch.component_3",
+          "description": "核对当前广播发生在GM→UB还是UB内部及原始shape对齐"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.broadcast_strategy_mismatch.component_1",
+          "description": "当前广播实现采用的路径没有区分已注明的连续内轴或重复输入形态"
+        },
+        {
+          "id": "symptom.source.broadcast_strategy_mismatch.component_2",
+          "description": "当前各输入合轴后的broadcast flag、零stride、非广播stride和dtype字节宽具有源码/shape引用"
+        },
+        {
+          "id": "symptom.source.broadcast_strategy_mismatch.component_3",
+          "description": "当前广播发生在GM→UB或UB内部的位置及原始shape对齐条件已明确；不要求先确定替代广播API"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:0ba141e84df82bf6111e2bee781461fe58407fc6d5176faee71b1cfc1e90fee7",
+      "new_file_sha256": "sha256:fe40e41a0c33b297b71463121b937e29052dbc1fc4deb8d25647df1072b19743"
+    },
+    {
+      "id": "symptom.source.cache_policy_mismatch",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.cache_policy_mismatch.md",
+      "old_components": [
+        {
+          "id": "symptom.source.cache_policy_mismatch.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：一次性流与重复使用数据采用同一缓存策略"
+        },
+        {
+          "id": "symptom.source.cache_policy_mismatch.component_2",
+          "description": "记录实际SetL2CacheHint/默认策略、读写方向和目标SDK支持"
+        },
+        {
+          "id": "symptom.source.cache_policy_mismatch.component_3",
+          "description": "给出同一地址的复用次数、复用距离与同时工作集"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.cache_policy_mismatch.component_1",
+          "description": "当前一次性流与重复访问输入使用相同缓存设置或默认策略"
+        },
+        {
+          "id": "symptom.source.cache_policy_mismatch.component_2",
+          "description": "当前SetL2CacheHint/默认值、读写方向与目标SDK配置有源码引用"
+        },
+        {
+          "id": "symptom.source.cache_policy_mismatch.component_3",
+          "description": "当前同地址复用次数、复用距离和工作集可由现有循环/地址式描述；不要求先改变hint"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:9d2d8f853a6a0deb6b601de4294e3361a798c2b962b519aa721059a298c5dbee",
+      "new_file_sha256": "sha256:b961f1f3e6e076ebec33864d5f361e6a74794a57cf8515dd71d2b4dfea623568"
+    },
+    {
+      "id": "symptom.source.chunk_merge_overhead",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.chunk_merge_overhead.md",
+      "old_components": [
+        {
+          "id": "symptom.source.chunk_merge_overhead.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：chunk 数量多且每段产生部分结果"
+        },
+        {
+          "id": "symptom.source.chunk_merge_overhead.component_2",
+          "description": "列出chunk/split数量、每段有效工作、partial状态字节和merge算法"
+        },
+        {
+          "id": "symptom.source.chunk_merge_overhead.component_3",
+          "description": "核对跨核同步、最终owner、精度合并公式与workspace并发范围"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.chunk_merge_overhead.component_1",
+          "description": "当前存在多个chunk/split且各段产生partial状态"
+        },
+        {
+          "id": "symptom.source.chunk_merge_overhead.component_2",
+          "description": "当前分段数、每段有效域、partial格式/字节和merge算法有host/kernel引用"
+        },
+        {
+          "id": "symptom.source.chunk_merge_overhead.component_3",
+          "description": "当前跨核同步、最终owner和workspace索引/生命周期已明确；不要求先改变分段或归并结构"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:ae067ef790ed8b182429dedb5d529d8f3da6f13524dc17163d5061e5e08c0953",
+      "new_file_sha256": "sha256:7104db604d33fa788b7d9199385f339a47be31d624aeee8a7c2c2efaead01252"
+    },
+    {
+      "id": "symptom.source.control_metadata_overhead",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.control_metadata_overhead.md",
+      "old_components": [
+        {
+          "id": "symptom.source.control_metadata_overhead.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：热循环重复算 mask、分支、索引或读取大 TilingData"
+        },
+        {
+          "id": "symptom.source.control_metadata_overhead.component_2",
+          "description": "列出热循环字段/表达式及依赖变量，证明哪些值在绑定循环内不变"
+        },
+        {
+          "id": "symptom.source.control_metadata_overhead.component_3",
+          "description": "核对TilingData ABI、paged/mask/feature分支与host写入一致"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.control_metadata_overhead.component_1",
+          "description": "当前热循环重复计算mask、分支、索引或读取TilingData字段"
+        },
+        {
+          "id": "symptom.source.control_metadata_overhead.component_2",
+          "description": "当前重复表达式、依赖变量及其循环内变化范围有源码引用"
+        },
+        {
+          "id": "symptom.source.control_metadata_overhead.component_3",
+          "description": "当前TilingData ABI和host写入到kernel读取的映射可对应；不要求先外提表达式或证明外提无spill"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:ca2d3ed11f49fd92fbbfa093cdf81fe51af81dd2589369f0bb59bc35d69834a3",
+      "new_file_sha256": "sha256:312a1eee13dd7ce22104dcac2270057137049461b38d0a6aca1d01fe69709dac"
+    },
+    {
+      "id": "symptom.source.dynamic_shape_mismatch",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.dynamic_shape_mismatch.md",
+      "old_components": [
+        {
+          "id": "symptom.source.dynamic_shape_mismatch.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：核数、tile 或 workspace 不随关键 shape 区间变化"
+        },
+        {
+          "id": "symptom.source.dynamic_shape_mismatch.component_2",
+          "description": "列出关键shape、dtype、feature与实际tiling key、BlockDim、tile、workspace"
+        },
+        {
+          "id": "symptom.source.dynamic_shape_mismatch.component_3",
+          "description": "联合审查host分支与kernel模板条件，定位缺少区间特化或错误映射"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.dynamic_shape_mismatch.component_1",
+          "description": "当前核数、tile或workspace在已注明关键shape区间保持相同选择"
+        },
+        {
+          "id": "symptom.source.dynamic_shape_mismatch.component_2",
+          "description": "当前已支持shape/dtype/feature到tiling key、BlockDim、tile和workspace的映射可列出"
+        },
+        {
+          "id": "symptom.source.dynamic_shape_mismatch.component_3",
+          "description": "当前host条件与kernel模板/分支具有可对应的源码身份；不要求先证明需要新增特化"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:de597d70846b65a2eae367301519a51fb8457ba04d6884174525293bd28c121d",
+      "new_file_sha256": "sha256:070642ef834be0f6dd4062c9f0f4a89196a9fcaf4ab63d3e276aef22ac302709"
+    },
+    {
+      "id": "symptom.source.fixed_or_undersubscribed_tasking",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.fixed_or_undersubscribed_tasking.md",
+      "old_components": [
+        {
+          "id": "symptom.source.fixed_or_undersubscribed_tasking.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：任务或 blockDim 不随有效工作量扩展"
+        },
+        {
+          "id": "symptom.source.fixed_or_undersubscribed_tasking.component_2",
+          "description": "联合核对host总任务/BlockDim与kernel索引、任务循环和空核跳过"
+        },
+        {
+          "id": "symptom.source.fixed_or_undersubscribed_tasking.component_3",
+          "description": "证明存在可合法进一步分解的工作及归并/同步协议"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.fixed_or_undersubscribed_tasking.component_1",
+          "description": "当前任务数或BlockDim在已注明有效工作量范围内不扩展，或小于当前可用同类核数"
+        },
+        {
+          "id": "symptom.source.fixed_or_undersubscribed_tasking.component_2",
+          "description": "当前host任务/BlockDim与kernel索引、任务循环和空核跳过有对应关系"
+        },
+        {
+          "id": "symptom.source.fixed_or_undersubscribed_tasking.component_3",
+          "description": "当前独立任务域、核角色及目标可用核来源已明确；不要求先证明存在有收益的进一步分解"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:70fe0fd6d97b002f012977be1e60bc77c317790520d7bef60624a38090b304d7",
+      "new_file_sha256": "sha256:20cdabb4306a8df05bfd459ca02ab389fd812686918447afb333fc9eb6c991f2"
+    },
+    {
+      "id": "symptom.source.fragmented_writeback",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.fragmented_writeback.md",
+      "old_components": [
+        {
+          "id": "symptom.source.fragmented_writeback.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：相邻输出被拆成多个小写回"
+        },
+        {
+          "id": "symptom.source.fragmented_writeback.component_2",
+          "description": "记录每个写回源buffer、GM有效区间和生产完成时刻"
+        },
+        {
+          "id": "symptom.source.fragmented_writeback.component_3",
+          "description": "证明相邻区间在语义和owner上可同批写回，并核对尾部不覆盖邻核输出"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.fragmented_writeback.component_1",
+          "description": "当前相邻输出有效区间被多个小写回发射覆盖"
+        },
+        {
+          "id": "symptom.source.fragmented_writeback.component_2",
+          "description": "当前每个写回源buffer、GM区间、有效长度和生产完成边界有源码引用"
+        },
+        {
+          "id": "symptom.source.fragmented_writeback.component_3",
+          "description": "当前owner、尾长及邻核输出区间已注明；不要求先证明这些写回可同时合并"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:d629733f7de8d74d660a9c746873aab4712432ca05783b43e8b7c14857850678",
+      "new_file_sha256": "sha256:6d0caba378eff443dcfc6d706dc67efff8d91191fd4b6e4edfb135d8a8822fe3"
+    },
+    {
+      "id": "symptom.source.gm_intermediate_roundtrip",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.gm_intermediate_roundtrip.md",
+      "old_components": [
+        {
+          "id": "symptom.source.gm_intermediate_roundtrip.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：本地生产消费的中间结果先写 GM 再读回"
+        },
+        {
+          "id": "symptom.source.gm_intermediate_roundtrip.component_2",
+          "description": "画出中间值所有生产者/消费者、GM写读地址和生命周期"
+        },
+        {
+          "id": "symptom.source.gm_intermediate_roundtrip.component_3",
+          "description": "确认外部消费者、跨核通信与持久输出要求，区分必要GM边界"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.gm_intermediate_roundtrip.component_1",
+          "description": "当前本地生产的中间结果先写GM，随后由本地消费者读回"
+        },
+        {
+          "id": "symptom.source.gm_intermediate_roundtrip.component_2",
+          "description": "当前生产者/消费者、GM写读地址与中间值生命周期有可对应源码"
+        },
+        {
+          "id": "symptom.source.gm_intermediate_roundtrip.component_3",
+          "description": "当前外部消费者、跨核用途和持久输出边界已记录；不要求先证明该GM边界可删除"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:bce05a75c014bf87955d5b5840b7f1047dc0a66acba0bcace73a2d161c633a20",
+      "new_file_sha256": "sha256:32bf19e359d2f97c4ba8fc605dabfa648fc6123914a6e779b0be5a08972fb7b2"
+    },
+    {
+      "id": "symptom.source.inner_loop_copy",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.inner_loop_copy.md",
+      "old_components": [
+        {
+          "id": "symptom.source.inner_loop_copy.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：内层循环逐次发射小块 DataCopy"
+        },
+        {
+          "id": "symptom.source.inner_loop_copy.component_2",
+          "description": "记录内层循环每次Copy的有效字节、blockCount、stride和循环次数"
+        },
+        {
+          "id": "symptom.source.inner_loop_copy.component_3",
+          "description": "证明这些小片属于同一连续或可批量表达的逻辑切片，并核对host尾块长度"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.inner_loop_copy.component_1",
+          "description": "当前内层循环逐次发射已注明大小的小块DataCopy"
+        },
+        {
+          "id": "symptom.source.inner_loop_copy.component_2",
+          "description": "当前每次Copy的有效字节、blockCount、src/dst stride及循环次数有源码/tiling引用"
+        },
+        {
+          "id": "symptom.source.inner_loop_copy.component_3",
+          "description": "当前各小片地址、host尾长及有效域已列明；不要求先证明可批量合并"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:6061c92fb42c5b693263bdb6709ee115258a2699b7e380aa73a893e6233626dc",
+      "new_file_sha256": "sha256:22b2af3e791d4201d37b54cc02175406ad4a4e4853995bcf6eda61e50da6af0c"
+    },
+    {
+      "id": "symptom.source.insufficient_input_reuse",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.insufficient_input_reuse.md",
+      "old_components": [
+        {
+          "id": "symptom.source.insufficient_input_reuse.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：循环中重复读取相同输入切片"
+        },
+        {
+          "id": "symptom.source.insufficient_input_reuse.component_2",
+          "description": "列出输入地址函数在外层/内层循环的变化，证明值在复用期不变"
+        },
+        {
+          "id": "symptom.source.insufficient_input_reuse.component_3",
+          "description": "给出重复次数、唯一输入字节、owner及当前buffer覆盖点"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.insufficient_input_reuse.component_1",
+          "description": "当前循环重复读取同一地址和值在已注明窗口内不变的输入切片"
+        },
+        {
+          "id": "symptom.source.insufficient_input_reuse.component_2",
+          "description": "当前输入地址函数随内外循环的变化和重复次数有源码引用"
+        },
+        {
+          "id": "symptom.source.insufficient_input_reuse.component_3",
+          "description": "当前唯一输入字节、owner和buffer覆盖边界已明确；不要求先证明能够常驻"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:28f20649329c5b783c61541b1405796e3843ac6fcb370aa819e98c321c3f4f0e",
+      "new_file_sha256": "sha256:c6afdadd9468a24e68d65fac1bf3b55aa8c64b9874bfd060b0ecf51713f67607"
+    },
+    {
+      "id": "symptom.source.l1_l0_reuse_deficit",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.l1_l0_reuse_deficit.md",
+      "old_components": [
+        {
+          "id": "symptom.source.l1_l0_reuse_deficit.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：可复用矩阵块在内循环反复装入"
+        },
+        {
+          "id": "symptom.source.l1_l0_reuse_deficit.component_2",
+          "description": "写出A/B在M/N/K循环中的地址不变量与至少两次复用"
+        },
+        {
+          "id": "symptom.source.l1_l0_reuse_deficit.component_3",
+          "description": "列出现L1/L0地址、buffer深度、覆盖/释放事件和目标容量"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.l1_l0_reuse_deficit.component_1",
+          "description": "当前A/B块在多个对侧tile期间地址和值不变，却在内循环反复装入L1或L0"
+        },
+        {
+          "id": "symptom.source.l1_l0_reuse_deficit.component_2",
+          "description": "当前M/N/K循环、至少两次重复装入和相应GM/L1/L0地址可对应"
+        },
+        {
+          "id": "symptom.source.l1_l0_reuse_deficit.component_3",
+          "description": "当前buffer深度、释放/覆盖事件和目标容量来源已记录；不要求先选择驻留方案"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:99242076e4507aaa6ccec54abb8e7614228d87a2a336d2272699b4db46fc690f",
+      "new_file_sha256": "sha256:9cf380b29d78497d753a5c3f75aec1f31b9f0a1c126fe35e23bc16c513850dc8"
+    },
+    {
+      "id": "symptom.source.memory_bandwidth_saturation",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.memory_bandwidth_saturation.md",
+      "old_components": [
+        {
+          "id": "symptom.source.memory_bandwidth_saturation.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：热路径以大块连续搬运为主"
+        },
+        {
+          "id": "symptom.source.memory_bandwidth_saturation.component_2",
+          "description": "核对大块连续访问、真实读写方向及总有效字节"
+        },
+        {
+          "id": "symptom.source.memory_bandwidth_saturation.component_3",
+          "description": "核对核数、tile与队列使传输窗口有足够工作量；该形态只排除部分小包解释"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.memory_bandwidth_saturation.component_1",
+          "description": "当前有效热路径以已注明大小的大块连续搬运为主"
+        },
+        {
+          "id": "symptom.source.memory_bandwidth_saturation.component_2",
+          "description": "当前实际GM地址连续性、读写方向和每次有效字节有源码/tiling引用"
+        },
+        {
+          "id": "symptom.source.memory_bandwidth_saturation.component_3",
+          "description": "当前核数、tile与队列的工作量范围已明确；该结构观察不要求先测得饱和或改变流量"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:22eeac189226ae838e96d7f43a6b659d0a8f80a4b7614c8f13fe053df57dfc9c",
+      "new_file_sha256": "sha256:f7da8ce139aa149ac34c38041d8d9c8e398f2d31f1d41cb6e8a5ec4d1ab6d1c8"
+    },
+    {
+      "id": "symptom.source.missing_kernel_fusion",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.missing_kernel_fusion.md",
+      "old_components": [
+        {
+          "id": "symptom.source.missing_kernel_fusion.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：连续可组合子操作通过 GM 中间张量连接"
+        },
+        {
+          "id": "symptom.source.missing_kernel_fusion.component_2",
+          "description": "记录完整launch顺序、中间tensor所有消费者及同步边界"
+        },
+        {
+          "id": "symptom.source.missing_kernel_fusion.component_3",
+          "description": "确认producer/consumer计算、dtype、layout和owner可在同一合法方案组合"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.missing_kernel_fusion.component_1",
+          "description": "当前连续producer/consumer子操作由独立launch及GM中间tensor连接"
+        },
+        {
+          "id": "symptom.source.missing_kernel_fusion.component_2",
+          "description": "当前完整launch顺序、tensor读写地址、所有消费者和同步边界有源码引用"
+        },
+        {
+          "id": "symptom.source.missing_kernel_fusion.component_3",
+          "description": "当前各子操作的dtype、layout、数学定义及owner已列明；不要求先证明它们可以融合"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:98facde9eaecbd9f9a536941e0a05e6e81c282c99a9953e1585ceb3ef2ff8a39",
+      "new_file_sha256": "sha256:ba3b556c616759fd9162246e799a7d2750d1283a63c8a8811441debd969844d7"
+    },
+    {
+      "id": "symptom.source.mixed_pipeline_imbalance",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.mixed_pipeline_imbalance.md",
+      "old_components": [
+        {
+          "id": "symptom.source.mixed_pipeline_imbalance.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：AIC/AIV 阶段任务粒度或后处理比例不同"
+        },
+        {
+          "id": "symptom.source.mixed_pipeline_imbalance.component_2",
+          "description": "列出AIC/AIV阶段DAG、同tile交接tensor、核角色及粒度"
+        },
+        {
+          "id": "symptom.source.mixed_pipeline_imbalance.component_3",
+          "description": "核对host BlockDim/kernel mode与实际AIC/AIV索引口径"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.mixed_pipeline_imbalance.component_1",
+          "description": "当前AIC/AIV阶段的任务粒度或后处理工作比例不同"
+        },
+        {
+          "id": "symptom.source.mixed_pipeline_imbalance.component_2",
+          "description": "当前阶段DAG、同tile交接tensor、核角色与工作量有源码引用"
+        },
+        {
+          "id": "symptom.source.mixed_pipeline_imbalance.component_3",
+          "description": "当前host BlockDim/kernel mode与AIC/AIV索引关系可对应；不要求先重分阶段"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:9a5516b6164254d7e560327e5caa70571e30550d66bf9eeff724e9492e847bf1",
+      "new_file_sha256": "sha256:2f258759553b395be714c04779c9068385673195deece6ac308b8cb9aeec2bf6"
+    },
+    {
+      "id": "symptom.source.noncontiguous_access",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.noncontiguous_access.md",
+      "old_components": [
+        {
+          "id": "symptom.source.noncontiguous_access.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：访问切分轴跨越连续内轴"
+        },
+        {
+          "id": "symptom.source.noncontiguous_access.component_2",
+          "description": "列出合轴后每一轴stride、dtype字节宽和每核tile地址式"
+        },
+        {
+          "id": "symptom.source.noncontiguous_access.component_3",
+          "description": "证明相邻有效元素被多个离散或跨stride copy表达，记录blockLen和src/dst stride单位"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.noncontiguous_access.component_1",
+          "description": "当前访问切分轴跨越物理连续内轴，造成已注明的离散地址序列"
+        },
+        {
+          "id": "symptom.source.noncontiguous_access.component_2",
+          "description": "当前合轴后各轴stride、dtype和每核tile地址式具有源码/shape引用"
+        },
+        {
+          "id": "symptom.source.noncontiguous_access.component_3",
+          "description": "当前blockLen、blockCount和src/dst stride的单位及有效域已明确；不要求先重排布局"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:e82c5963336bb499af96796b47a934330cf4a59ebb03479211f367d651fd9d98",
+      "new_file_sha256": "sha256:d169b8b9a288735044602f98259d6ba2c07eabb1be713db62c2281bbf0ec28df"
+    },
+    {
+      "id": "symptom.source.reduction_strategy_mismatch",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.reduction_strategy_mismatch.md",
+      "old_components": [
+        {
+          "id": "symptom.source.reduction_strategy_mismatch.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：AR/ARA 分支未随 A/R 和容量调整"
+        },
+        {
+          "id": "symptom.source.reduction_strategy_mismatch.component_2",
+          "description": "写出合轴规则、A1/R/A0和dtype，以及当前分支选择条件"
+        },
+        {
+          "id": "symptom.source.reduction_strategy_mismatch.component_3",
+          "description": "核对全载buffer+scratch、每核A域、R切片和partial合并语义"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.reduction_strategy_mismatch.component_1",
+          "description": "当前AR/ARA或全载/切分分支在已注明A/R和容量区间不作区分"
+        },
+        {
+          "id": "symptom.source.reduction_strategy_mismatch.component_2",
+          "description": "当前合轴规则、A1/R/A0、dtype和实际分支选择条件有源码引用"
+        },
+        {
+          "id": "symptom.source.reduction_strategy_mismatch.component_3",
+          "description": "当前buffer/scratch、每核A域、R切片及partial语义已列明；不要求先证明其他归约方案更优"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:18b604fe56841c8d1ab0181fb08e3db26cf9ac435f584e66dcc1622a1fec9d96",
+      "new_file_sha256": "sha256:89a533fda28a3328b2147bd0614cbec38e85a18d17bd935cf63070b13c374250"
+    },
+    {
+      "id": "symptom.source.redundant_cast",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.redundant_cast.md",
+      "old_components": [
+        {
+          "id": "symptom.source.redundant_cast.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：局部链多次往返 Cast"
+        },
+        {
+          "id": "symptom.source.redundant_cast.component_2",
+          "description": "画出每次Cast的src/dst dtype、round mode、消费者及中间截断位置"
+        },
+        {
+          "id": "symptom.source.redundant_cast.component_3",
+          "description": "区分为精度/溢出/ABI必须的转换与仅为实现分段产生的转换"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.redundant_cast.component_1",
+          "description": "当前局部计算链存在多次宽窄往返Cast"
+        },
+        {
+          "id": "symptom.source.redundant_cast.component_2",
+          "description": "当前每次Cast的src/dst dtype、round mode、消费者与中间截断位置有源码引用"
+        },
+        {
+          "id": "symptom.source.redundant_cast.component_3",
+          "description": "当前精度、溢出、ABI和输出边界已记录；不要求先证明任何Cast可以删除"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:c0c2195564ab4fa1aebdd8d7a0326e9fe0e9ccd39aacb8d8c7e3f1372c8181f8",
+      "new_file_sha256": "sha256:f9c81a031a219330940b425231bf03746de3ab6d5df331ca7a65273c6451b150"
+    },
+    {
+      "id": "symptom.source.register_spill",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.register_spill.md",
+      "old_components": [
+        {
+          "id": "symptom.source.register_spill.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：热路径大对象或动态索引延长标量存活期"
+        },
+        {
+          "id": "symptom.source.register_spill.component_2",
+          "description": "定位大结构/动态索引/取地址和变量生存期，仅作为spill风险"
+        },
+        {
+          "id": "symptom.source.register_spill.component_3",
+          "description": "关联精确编译器、flags、架构与生成物；源码风险不等于spill已发生"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.register_spill.component_1",
+          "description": "当前热路径含大对象、动态索引、取地址或跨较长区间存活的标量值"
+        },
+        {
+          "id": "symptom.source.register_spill.component_2",
+          "description": "当前相关定义、使用和别名/地址操作具有源码位置和生存区间描述"
+        },
+        {
+          "id": "symptom.source.register_spill.component_3",
+          "description": "当前源码与架构/编译配置身份已绑定；该风险观察不要求已有spill，更不要求先改代码后验证"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:4c1bc6c36db22961e06ff2935fa9a7c554955e0304c4f8b646d911a3e41e0b43",
+      "new_file_sha256": "sha256:a5dbf4eb72a3e5553607d903dafd15c4de979d7ecd8574b66361883c8ddd4723"
+    },
+    {
+      "id": "symptom.source.scalar_element_loop",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.scalar_element_loop.md",
+      "old_components": [
+        {
+          "id": "symptom.source.scalar_element_loop.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：逐元素循环调用标量读写或算术"
+        },
+        {
+          "id": "symptom.source.scalar_element_loop.component_2",
+          "description": "定位逐元素循环、Scalar读写API和地址更新，确认不是小规模必要控制"
+        },
+        {
+          "id": "symptom.source.scalar_element_loop.component_3",
+          "description": "确认操作在目标dtype和语义下可向量表达，核对分支/别名依赖"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.scalar_element_loop.component_1",
+          "description": "当前逐元素循环调用Scalar读写或算术"
+        },
+        {
+          "id": "symptom.source.scalar_element_loop.component_2",
+          "description": "当前循环有效域、Scalar API、地址更新及数据/控制依赖具有源码引用"
+        },
+        {
+          "id": "symptom.source.scalar_element_loop.component_3",
+          "description": "当前dtype、分支、别名和有效元素范围已明确；不要求先证明可以向量化"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:4f45b536aaaaefb4dce5225555e530ee66b402824522814a758c6ce279cad121",
+      "new_file_sha256": "sha256:01ed95db39a52d914dc71d0de8cd2e90aecc3bed6222e6453da4cb14db936545"
+    },
+    {
+      "id": "symptom.source.serial_queue_or_event_order",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.serial_queue_or_event_order.md",
+      "old_components": [
+        {
+          "id": "symptom.source.serial_queue_or_event_order.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：队列或事件顺序阻断独立阶段重叠"
+        },
+        {
+          "id": "symptom.source.serial_queue_or_event_order.component_2",
+          "description": "列出逐tile buffer、Set/Wait或EnQue/DeQue的生产者与消费者"
+        },
+        {
+          "id": "symptom.source.serial_queue_or_event_order.component_3",
+          "description": "证明至少两轮有可重叠独立工作，并核对高阶API是否已在内部管理流水"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.serial_queue_or_event_order.component_1",
+          "description": "当前逐tile的队列/事件顺序使下一阶段或下一tile在已有等待边界之后发射"
+        },
+        {
+          "id": "symptom.source.serial_queue_or_event_order.component_2",
+          "description": "当前buffer及Set/Wait或EnQue/DeQue生产消费关系具有源码引用"
+        },
+        {
+          "id": "symptom.source.serial_queue_or_event_order.component_3",
+          "description": "当前循环次数、首次事件、释放和高阶API内部流水已知范围已注明；不要求先证明可重叠或完成软件流水"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:2a49ca6d629f02d6ae2b96892291f3454a30d672fd769702563f34cbfbcf6ae3",
+      "new_file_sha256": "sha256:6742858bcb2408bc16aa28dcb9e568a7f7fe89bd995e653bf938731f655ad94a"
+    },
+    {
+      "id": "symptom.source.sync_inside_tile_loop",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.sync_inside_tile_loop.md",
+      "old_components": [
+        {
+          "id": "symptom.source.sync_inside_tile_loop.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：tile 循环内存在大范围同步"
+        },
+        {
+          "id": "symptom.source.sync_inside_tile_loop.component_2",
+          "description": "记录同步原语、参与核、被等待流水、调用频率及所在循环"
+        },
+        {
+          "id": "symptom.source.sync_inside_tile_loop.component_3",
+          "description": "为每个等待列出被保护buffer与真实生产者/消费者，证明存在无关等待"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.sync_inside_tile_loop.component_1",
+          "description": "当前tile循环内存在全核或覆盖多流水的大范围同步"
+        },
+        {
+          "id": "symptom.source.sync_inside_tile_loop.component_2",
+          "description": "当前同步原语、参与核/流水、调用次数和循环位置具有源码引用"
+        },
+        {
+          "id": "symptom.source.sync_inside_tile_loop.component_3",
+          "description": "当前被保护buffer及其生产者/消费者已列明；不要求先证明同步可收窄"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:4526bb511d92208bb9e40f318573d4ff1a55137ab3c188158b8db552dd78f67f",
+      "new_file_sha256": "sha256:261884349ac91cd6f08b82635fe00809c62cf36ba27953058a3e359019335d6e"
+    },
+    {
+      "id": "symptom.source.tail_concentrated",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.tail_concentrated.md",
+      "old_components": [
+        {
+          "id": "symptom.source.tail_concentrated.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：尾部工作集中到少量核"
+        },
+        {
+          "id": "symptom.source.tail_concentrated.component_2",
+          "description": "列出逻辑任务到核的映射、主尾长度及每任务预计成本"
+        },
+        {
+          "id": "symptom.source.tail_concentrated.component_3",
+          "description": "区分空闲核、只初始化核和承担尾块的核，核对host与kernel边界一致"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.tail_concentrated.component_1",
+          "description": "当前尾部有效工作集中分配给少量同类核"
+        },
+        {
+          "id": "symptom.source.tail_concentrated.component_2",
+          "description": "当前逻辑任务到核的映射、主体/尾长及变长任务范围有host/kernel引用"
+        },
+        {
+          "id": "symptom.source.tail_concentrated.component_3",
+          "description": "当前空闲、仅初始化和承担尾段的核角色已区分；不要求先改变任务分配"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:23b9e92adcf7637b6963cf94183a7af7ec6749d94c213e730d27ffe0e12e2f9f",
+      "new_file_sha256": "sha256:0e9c0846b02dacb82de1966694cb5dd2bd39913ae482d816edddd8c14c27baeb"
+    },
+    {
+      "id": "symptom.source.tail_slow_path",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.tail_slow_path.md",
+      "old_components": [
+        {
+          "id": "symptom.source.tail_slow_path.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：尾部由标量或多次小 API 单独处理"
+        },
+        {
+          "id": "symptom.source.tail_slow_path.component_2",
+          "description": "记录主体/尾分支代码、有效尾长与对齐长、每次API处理元素数"
+        },
+        {
+          "id": "symptom.source.tail_slow_path.component_3",
+          "description": "核对mask、padding、写回owner与host尾参数"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.tail_slow_path.component_1",
+          "description": "当前尾部由Scalar逐元素或多个小API调用单独处理"
+        },
+        {
+          "id": "symptom.source.tail_slow_path.component_2",
+          "description": "当前主体/尾分支、有效尾长、对齐长和API处理元素数有源码/tiling引用"
+        },
+        {
+          "id": "symptom.source.tail_slow_path.component_3",
+          "description": "当前mask、padding与写回owner/有效域已明确；不要求先向量化或获得收益"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:c8c5b063abc519dd1b040bf51e92316c6bb4873cbb9de872940cdc2758dd55f1",
+      "new_file_sha256": "sha256:55adafc2a74cbff469a333b2682b6ea0a9e9c361c522c0adbc1cb0072b4b9001"
+    },
+    {
+      "id": "symptom.source.transfer_compute_contention",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.transfer_compute_contention.md",
+      "old_components": [
+        {
+          "id": "symptom.source.transfer_compute_contention.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：并发搬运与向量计算访问同一资源"
+        },
+        {
+          "id": "symptom.source.transfer_compute_contention.component_2",
+          "description": "按实际地址区间和时间列出搬运、Vector源/目标与缓冲位置"
+        },
+        {
+          "id": "symptom.source.transfer_compute_contention.component_3",
+          "description": "确认目标资源拓扑支持该争用解释，并排除非法数据竞争"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.transfer_compute_contention.component_1",
+          "description": "当前安排中搬运与Vector访问映射到同一已注明片上资源，且存在时间重叠机会"
+        },
+        {
+          "id": "symptom.source.transfer_compute_contention.component_2",
+          "description": "当前实际地址区间、发射依赖及Vector源/目标buffer有源码引用"
+        },
+        {
+          "id": "symptom.source.transfer_compute_contention.component_3",
+          "description": "当前目标资源映射依据和数据依赖边界已注明；资源语义不明则unknown，不要求先错开发射验证争用"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:b26efbefea158607294c2f67a11dbb7c41a68f31af8b1439123fc0dba9e9ff0c",
+      "new_file_sha256": "sha256:daafa866a2658f412cd93ac72d8bf6191af12990fdcf3792b6f2f63f37afe037"
+    },
+    {
+      "id": "symptom.source.ub_live_bytes_near_capacity",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.ub_live_bytes_near_capacity.md",
+      "old_components": [
+        {
+          "id": "symptom.source.ub_live_bytes_near_capacity.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：对齐后同时存活的片上 buffer 接近可用容量"
+        },
+        {
+          "id": "symptom.source.ub_live_bytes_near_capacity.component_2",
+          "description": "逐buffer记录大小、对齐、queue深度、alias与生存区间"
+        },
+        {
+          "id": "symptom.source.ub_live_bytes_near_capacity.component_3",
+          "description": "把host预算和kernel实际分配逐项对齐，并引用目标可用容量来源"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.ub_live_bytes_near_capacity.component_1",
+          "description": "当前对齐后同时存活的片上buffer峰值接近已注明可用容量"
+        },
+        {
+          "id": "symptom.source.ub_live_bytes_near_capacity.component_2",
+          "description": "当前每个buffer的大小、对齐、深度、alias及生存区间有对应host/kernel引用"
+        },
+        {
+          "id": "symptom.source.ub_live_bytes_near_capacity.component_3",
+          "description": "当前峰值公式与目标可用容量来源一致；不要求先复用buffer或成功扩大tile"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:8fc44529fc4f1c266c7da2062493e68ba28867933276c4546c852389511747e8",
+      "new_file_sha256": "sha256:daf664138c2e6308b8d079205e36fd746449b04046a023498eddda8e57a3bf39"
+    },
+    {
+      "id": "symptom.source.ub_stride_conflict_risk",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.ub_stride_conflict_risk.md",
+      "old_components": [
+        {
+          "id": "symptom.source.ub_stride_conflict_risk.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：UB 起址或 stride 存在周期性冲突风险"
+        },
+        {
+          "id": "symptom.source.ub_stride_conflict_risk.component_2",
+          "description": "记录src0/src1/dst实际UB基址、blk/repeat stride与dtype"
+        },
+        {
+          "id": "symptom.source.ub_stride_conflict_risk.component_3",
+          "description": "引用目标bank规则并只分析同一Repeat真实并发访问，计算冲突映射"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.ub_stride_conflict_risk.component_1",
+          "description": "当前同Repeat候选并发src/dst的UB地址与stride映射到目标规则定义的潜在冲突集合"
+        },
+        {
+          "id": "symptom.source.ub_stride_conflict_risk.component_2",
+          "description": "当前src0/src1/dst起址、blk/repeat stride、dtype和实际并发关系有源码引用"
+        },
+        {
+          "id": "symptom.source.ub_stride_conflict_risk.component_3",
+          "description": "当前bank/group几何具有目标依据；几何未知则unknown，不要求先padding或测得周期下降"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:a0c2c52742259aee8818d756546c54233d80056ce40911fc7ce35778f12a20b0",
+      "new_file_sha256": "sha256:8a2da104035599733679b76fd807d605587183ea77768867ecd5f43c71c75aa2"
+    },
+    {
+      "id": "symptom.source.workspace_overallocation",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.workspace_overallocation.md",
+      "old_components": [
+        {
+          "id": "symptom.source.workspace_overallocation.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：按最大 shape 或过量槽位分配 workspace"
+        },
+        {
+          "id": "symptom.source.workspace_overallocation.component_2",
+          "description": "逐段记录host字节公式、runtime shape、并发槽数和对齐"
+        },
+        {
+          "id": "symptom.source.workspace_overallocation.component_3",
+          "description": "检查kernel索引上界、轮转计数、跨核owner和调用方/框架保留区"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.source.workspace_overallocation.component_1",
+          "description": "当前host按最大shape或多于已注明并发活跃槽的范围分配workspace"
+        },
+        {
+          "id": "symptom.source.workspace_overallocation.component_2",
+          "description": "当前各段字节公式、runtime shape、并发槽和对齐有host/tiling引用"
+        },
+        {
+          "id": "symptom.source.workspace_overallocation.component_3",
+          "description": "当前kernel索引上界、轮转计数、跨核owner及框架保留区依据已记录；不要求先缩减分配"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:24da277ae5c398948115f73bd1e44faeb75264574a778a0e646d0a41f39fe8ee",
+      "new_file_sha256": "sha256:96ae651561f9677405c59fb71536c4f7d6c2e64d135a504ce3f2e6e44eba33f7"
+    },
+    {
+      "id": "symptom.workload.tiny_or_overhead_limited",
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.workload.tiny_or_overhead_limited.md",
+      "old_components": [
+        {
+          "id": "symptom.workload.tiny_or_overhead_limited.component_1",
+          "description": "在绑定对象与窗口中核验观察模式：工作量不足以摊薄固定启动开销"
+        },
+        {
+          "id": "symptom.workload.tiny_or_overhead_limited.component_2",
+          "description": "有效元素、每核工作量和算法必要字节/算术量可计算"
+        },
+        {
+          "id": "symptom.workload.tiny_or_overhead_limited.component_3",
+          "description": "同目标同实现计时能够区分固定启动/初始化与有效计算"
+        },
+        {
+          "id": "symptom.workload.tiny_or_overhead_limited.component_4",
+          "description": "增加核数/任务的节省上界不足以覆盖额外启动、调度或归并成本"
+        }
+      ],
+      "new_components": [
+        {
+          "id": "symptom.workload.tiny_or_overhead_limited.component_1",
+          "description": "当前绑定workload的固定启动/初始化成本相对有效计算时间或工作量明显，比较分母已注明"
+        },
+        {
+          "id": "symptom.workload.tiny_or_overhead_limited.component_2",
+          "description": "当前有效元素、每核工作量、算法必要字节/算术量与实际计时范围可对应"
+        },
+        {
+          "id": "symptom.workload.tiny_or_overhead_limited.component_3",
+          "description": "固定成本与有效工作来自当前同parent的可分辨记录或有依据模型；未要求增核、拆任务或归并方案已被试验"
+        }
+      ],
+      "reason": "将程序性审查、机制归因、A可行性或干预结果与当前S事实分离；新all-of只要求当前实现观察/口径/必要比较",
+      "changed_fields": [
+        "observation.rule",
+        "observation.required_components",
+        "observation.unknown_when",
+        "observation.comparison_basis",
+        "observation.interpretation_boundary",
+        "claims[observation_component_*]",
+        "claims[interpretation_boundary]",
+        "review.discriminating_power",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:c613491f14d2e91e51d6916ab3753ec8e738aa01b6170085555b7db28571a198",
+      "new_file_sha256": "sha256:dadecd7f074f6cd874782ef9069499aaee7cbf35c6d85f811b86fa21b07fe76b"
+    },
+    {
+      "id": "problem.ub_bank_conflict",
+      "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.ub_bank_conflict.md",
+      "moved_from_symptom": "symptom.profile.ub_conflict_high",
+      "added_optional_check": "可选判别实验：在原硬前提满足且C2允许的单独候选中，仅调整合法UB布局/padding，保持有效工作、dtype、mask与指令路径可比，观察冲突及周期是否按预测变化。此实验不属于S成立的必要条件，也不预先要求改善。",
+      "changed_fields": [
+        "analysis.supporting_checks",
+        "claims[optional_discriminating_intervention]",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:ab4754bf23f6eb8a41654404cc0658ad9c99229174ea3e4489c39bcdc8966e66",
+      "new_file_sha256": "sha256:d52b3b8c1ab98e21bc1736598927ba9ee204141545ccbd31008b0c866d0dd7e0"
+    },
+    {
+      "id": "problem.transfer_compute_contention",
+      "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.transfer_compute_contention.md",
+      "moved_from_symptom": "symptom.profile.transfer_compute_contention",
+      "added_optional_check": "可选判别实验：在原硬前提满足且C2允许的单独候选中，保持工作量而仅错开独立MTE/Vector发射或调整合法布局，比较并发冲突、等待与总时长。该实验用于区分争用，结果可支持或反证；S不要求先执行或获得收益。",
+      "changed_fields": [
+        "analysis.supporting_checks",
+        "claims[optional_discriminating_intervention]",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:b6ec377f9c868f69cbfa4d3dda6c42242903145e7149ac41b4e082df77204392",
+      "new_file_sha256": "sha256:055ef2406cd741a26a11f55e813f356567195c4f26fab9fa0c9ada1b2727bdc7"
+    },
+    {
+      "id": "problem.tiny_transfer_setup_amplification",
+      "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.tiny_transfer_setup_amplification.md",
+      "moved_from_symptom": "symptom.profile.mte_setup_dominated",
+      "added_optional_check": "可选判别实验：在原硬前提满足且C2允许的单独候选中，仅合并合法搬运以缩减发射数，保持有效字节及地址语义，比较发射、等待与总时长。原实现timeline可先支持候选；S不要求该实验或成功收益。",
+      "changed_fields": [
+        "analysis.supporting_checks",
+        "claims[optional_discriminating_intervention]",
+        "中文正文"
+      ],
+      "old_file_sha256": "sha256:9510a3e35fa1bd15f2eca447e70adcf6fc5f70188bfafb49a2876421e07ecc1a",
+      "new_file_sha256": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05"
+    },
+    {
+      "id": "action.keep_intermediate_onchip",
+      "path": "skills/ascendc-aprof-diagnosis/graph/actions/action.keep_intermediate_onchip.md",
+      "changed_fields": [
+        "slots[producer,consumer]",
+        "instantiation.target_slots",
+        "instantiation.required_bindings",
+        "claims[producer_consumer_binding]",
+        "中文正文"
+      ],
+      "reason": "中间T保留动作必须显式绑定current.objects中的生产/消费stage，证据不得跨T；scope主target仍T，原A门禁不变",
+      "old_file_sha256": "sha256:118d57debc632c56190955e1e88b869ad335d912d8853830592d4d2c610b223f",
+      "new_file_sha256": "sha256:31ac9f6289e75822775f3ad185ff54df237e91a4e1a12f107c3c836244fefe67"
+    }
+  ],
+  "unchanged": [
+    "所有旧ID/kind/learning",
+    "所有A preconditions/invariants",
+    "所有旧84边conditions/端点/关系",
+    "所有固定来源文件及hash",
+    "graph/versions/v0003及history"
+  ],
+  "circular_requirements_removed": [
+    {
+      "symptom_id": "symptom.profile.ub_conflict_high",
+      "problem_id": "problem.ub_bank_conflict",
+      "optional_check": "可选判别实验：在原硬前提满足且C2允许的单独候选中，仅调整合法UB布局/padding，保持有效工作、dtype、mask与指令路径可比，观察冲突及周期是否按预测变化。此实验不属于S成立的必要条件，也不预先要求改善。"
+    },
+    {
+      "symptom_id": "symptom.profile.transfer_compute_contention",
+      "problem_id": "problem.transfer_compute_contention",
+      "optional_check": "可选判别实验：在原硬前提满足且C2允许的单独候选中，保持工作量而仅错开独立MTE/Vector发射或调整合法布局，比较并发冲突、等待与总时长。该实验用于区分争用，结果可支持或反证；S不要求先执行或获得收益。"
+    },
+    {
+      "symptom_id": "symptom.profile.mte_setup_dominated",
+      "problem_id": "problem.tiny_transfer_setup_amplification",
+      "optional_check": "可选判别实验：在原硬前提满足且C2允许的单独候选中，仅合并合法搬运以缩减发射数，保持有效字节及地址语义，比较发射、等待与总时长。原实现timeline可先支持候选；S不要求该实验或成功收益。"
+    }
+  ],
+  "required_stage_binding_actions": 1,
+  "independent_review": "requested",
+  "validation": {
+    "records_schema_parent_source_hash": "passed",
+    "known_circular_requirements_absent_from_all_55_symptoms": "passed",
+    "original_action_hard_gates": "unchanged",
+    "keep_intermediate_required_stage_bindings": "passed",
+    "frozen_v0003_history_file_count": 31,
+    "frozen_v0003_history_hashes": "unchanged",
+    "record_files_changed": 59,
+    "latest_claim_count": 1726
+  }
+}

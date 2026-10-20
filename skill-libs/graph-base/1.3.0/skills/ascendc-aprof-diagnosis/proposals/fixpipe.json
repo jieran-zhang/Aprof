@@ -1,0 +1,126 @@
+{
+  "schema_version": "aprof.diagnosis-proposal/v1",
+  "proposal_id": "proposal.fixpipe",
+  "kind": "action",
+  "status": "pending",
+  "title": "输出最终化融合",
+  "rationale": "一次必要的输出Cast或格式最终化可能合入Fixpipe，但不等于冗余Cast或独立kernel融合；需完整干预定义和数值审查。",
+  "scope": {
+    "platforms": [
+      "dav-2201"
+    ],
+    "workloads": [
+      "matmul"
+    ],
+    "dtypes": [
+      "source_and_sdk_dependent"
+    ]
+  },
+  "sources": [
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/cube_compute_ISASI/cube_compute_store/Fixpipe_L0CToGM.md",
+      "original_path": "docs/zh/api/SIMD-API/basic_api/cube_compute_ISASI/cube_compute_store/Fixpipe_L0CToGM.md",
+      "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+      "lines": [
+        1,
+        327
+      ],
+      "sha256": "sha256:1f55a31fe89adbed8b4eca9e8eb8c8ef8b2e6668d8a3fe35b23401e50ddacf35",
+      "excerpt_sha256": "sha256:1f55a31fe89adbed8b4eca9e8eb8c8ef8b2e6668d8a3fe35b23401e50ddacf35"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/cube_compute_ISASI/mmad_compute_key_features/UnitFlag.md",
+      "original_path": "docs/zh/api/SIMD-API/basic_api/cube_compute_ISASI/mmad_compute_key_features/UnitFlag.md",
+      "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+      "lines": [
+        1,
+        78
+      ],
+      "sha256": "sha256:aae10d46db710c9ae9b24e5a6544267d1c67ed3294ab005d934f37ced21ac185",
+      "excerpt_sha256": "sha256:aae10d46db710c9ae9b24e5a6544267d1c67ed3294ab005d934f37ced21ac185"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/cube_compute_ISASI/mmad_compute/Mmad.md",
+      "original_path": "docs/zh/api/SIMD-API/basic_api/cube_compute_ISASI/mmad_compute/Mmad.md",
+      "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+      "lines": [
+        1,
+        349
+      ],
+      "sha256": "sha256:1ebb798bb29605a5cbabb2b52964032fff2e5a3b0c02b9ba7556b05f573e062a",
+      "excerpt_sha256": "sha256:1ebb798bb29605a5cbabb2b52964032fff2e5a3b0c02b9ba7556b05f573e062a"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/01_matrix_compute/matmul_basic_api_high_performance/mmad.asc",
+      "original_path": "examples/01_simd_cpp_api/05_best_practices/01_matrix_compute/matmul_basic_api_high_performance/mmad.asc",
+      "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+      "lines": [
+        1,
+        644
+      ],
+      "sha256": "sha256:8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92",
+      "excerpt_sha256": "sha256:8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/01_matrix_compute/matmul_basic_api_high_performance/README.md",
+      "original_path": "examples/01_simd_cpp_api/05_best_practices/01_matrix_compute/matmul_basic_api_high_performance/README.md",
+      "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+      "lines": [
+        1,
+        532
+      ],
+      "sha256": "sha256:fe8df2c2792de115f12584e3444941930d39da00174759871ab98e4f48779c3d",
+      "excerpt_sha256": "sha256:fe8df2c2792de115f12584e3444941930d39da00174759871ab98e4f48779c3d"
+    }
+  ],
+  "claims": [
+    {
+      "id": "fixpipe.intent",
+      "text": "一次必要的输出Cast或格式最终化可能合入Fixpipe，但不等于冗余Cast或独立kernel融合；需完整干预定义和数值审查。",
+      "basis": "mechanism_inference",
+      "source_indexes": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_status": "gap",
+      "limitations": [
+        "缺完整动作模板、当前任务干预证据和独立复核；不注册ID或Problem边。"
+      ]
+    }
+  ],
+  "case_refs": [],
+  "semantic_dedup": {
+    "compared_ids": [
+      "action.coalesce_cast",
+      "action.fuse_kernel_chain"
+    ],
+    "distinct_from_existing": true,
+    "reason": "一次必要的输出Cast或格式最终化可能合入Fixpipe，但不等于冗余Cast或独立kernel融合；需完整干预定义和数值审查。"
+  },
+  "contract_check": {
+    "status": "pending",
+    "notes": [
+      "定义与独立适用前提须进一步审查。"
+    ]
+  },
+  "review": {
+    "reviewer": "unassigned",
+    "independent": false,
+    "decision": "pending",
+    "notes": [
+      "此前建议仅为审查输入，不自动纳入。"
+    ]
+  },
+  "promotion": {
+    "eligible": false,
+    "automatic": false,
+    "target_version": null
+  },
+  "proposed_record": null,
+  "proposed_relations": [],
+  "validation_refs": [],
+  "review_ref": null
+}

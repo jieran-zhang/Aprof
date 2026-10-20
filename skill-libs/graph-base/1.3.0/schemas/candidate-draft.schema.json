@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aprof.local/schemas/candidate-draft.schema.json",
+  "title": "AProf CandidateDraft 1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "candidate_id", "session_id", "route", "transformation_id", "transformation_version", "producer_hashes", "source_hashes", "patch_artifact_hash", "parameters", "proposed_by", "created_at"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "candidate_id": {"type": "string", "minLength": 1},
+    "session_id": {"type": "string", "minLength": 1},
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["graph_version", "policy_version", "selected_edge_id", "behavior_probability", "selection_mode", "selection_seed", "selected_mechanism_id", "mechanism_derivation", "mechanism_scores", "candidates"],
+      "properties": {
+        "graph_version": {"type": "string", "minLength": 1},
+        "policy_version": {"type": "string", "minLength": 1},
+        "selected_edge_id": {"type": "string", "minLength": 1},
+        "behavior_probability": {"type": "number", "minimum": 0, "maximum": 1},
+        "selection_mode": {"enum": ["argmax", "sample"]},
+        "selection_seed": {"type": ["integer", "null"]},
+        "selected_mechanism_id": {"type": "string", "minLength": 1},
+        "mechanism_derivation": {"const": "fixed_supports_refutes_tri_state_v1"},
+        "mechanism_scores": {"type": "object", "additionalProperties": {"type": "number"}},
+        "candidates": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/routeCandidate"}}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"selection_mode": {"const": "argmax"}}},
+          "then": {
+            "properties": {
+              "behavior_probability": {"const": 1.0},
+              "selection_seed": {"type": "null"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"selection_mode": {"const": "sample"}}},
+          "then": {"properties": {"selection_seed": {"type": "integer"}}}
+        }
+      ]
+    },
+    "transformation_id": {"type": "string", "minLength": 1},
+    "transformation_version": {"type": "string", "minLength": 1},
+    "producer_hashes": {
+      "type": "object", "additionalProperties": false,
+      "required": ["model", "prompt", "agent"],
+      "properties": {
+        "model": {"$ref": "#/$defs/identityHash"},
+        "prompt": {"$ref": "#/$defs/identityHash"},
+        "agent": {"$ref": "#/$defs/identityHash"}
+      }
+    },
+    "source_hashes": {
+      "type": "object", "additionalProperties": false,
+      "required": ["baseline", "candidate"],
+      "properties": {"baseline": {"$ref": "#/$defs/sha256"}, "candidate": {"$ref": "#/$defs/sha256"}}
+    },
+    "patch_artifact_hash": {"$ref": "#/$defs/sha256"},
+    "parameters": {"type": "object"},
+    "proposed_by": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string", "minLength": 1},
+    "parent_candidate_id": {"type": ["string", "null"], "minLength": 1}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "identityHash": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"const": "unknown"}]},
+    "routeCandidate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["edge_id", "source_id", "target_id", "logit", "probability", "allowed", "mask_reasons"],
+      "properties": {
+        "edge_id": {"type": "string", "minLength": 1}, "source_id": {"type": "string", "minLength": 1}, "target_id": {"type": "string", "minLength": 1},
+        "logit": {"type": "number"}, "probability": {"type": "number", "minimum": 0, "maximum": 1},
+        "allowed": {"type": "boolean"}, "mask_reasons": {"type": "array", "items": {"type": "string"}}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"allowed": {"const": true}}},
+          "then": {"properties": {"mask_reasons": {"maxItems": 0}}}
+        },
+        {
+          "if": {"properties": {"allowed": {"const": false}}},
+          "then": {
+            "properties": {
+              "probability": {"const": 0.0},
+              "mask_reasons": {"minItems": 1}
+            }
+          }
+        }
+      ]
+    }
+  }
+}

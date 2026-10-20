@@ -10,6 +10,7 @@ AProf 将稳定可用的 skill 库与研发、测量、trace 采集工程分开�
 | [graph-base 1.0.0 candidate](skill-libs/graph-base/1.0.0/README.md) | 未封存的 Teacher/Wiki 候选；保留原图和机器 gate，等待独立硬件验收 |
 | [graph-base 1.1.0 draft](skill-libs/graph-base/1.1.0/README.md) | 中文开发版：coordinator 串联五个角色、v0003 诊断图和两棵知识树；反馈与收尾统一 L2 清理 5/20，硬件验证待完成 |
 | [graph-base 1.2.0 draft](skill-libs/graph-base/1.2.0/README.md) | 新任务开发版：runtime 0.3.0、软时间目标、本地工作区与校验复用；未封版，见 [维护说明](MAINTENANCE-1.2.0.md) |
+| [graph-base 1.3.0 draft](skill-libs/graph-base/1.3.0/README.md) | 中文知识扩充、v0004机制诊断与两阶段P/O路由；runtime 0.5.0，未封版，见 [维护说明](MAINTENANCE-1.3.0.md)；不切换默认版本 |
 | [graph-base 0.4.2](skill-libs/graph-base/0.4.2/README.md) | 保留的历史稳定版；Vector / 910C(A3)、按架构选择 profiler、CAS 证据回放 |
 | [graph-base 0.4.1](skill-libs/graph-base/0.4.1/README.md) | 保留的历史稳定版，源于 0.4.0 / d8f6837 |
 | [新采集与学习脚手架](scaffolding/README.md) | 批量调用 APROF、独立 memory 整理、离线更新三个知识区 |

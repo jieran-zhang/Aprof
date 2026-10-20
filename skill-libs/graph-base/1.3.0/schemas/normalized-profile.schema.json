@@ -1,0 +1,231 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aprof.local/schemas/normalized-profile.schema.json",
+  "oneOf": [
+    {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://aprof.local/schemas/normalized-profile.schema.json",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.0.0"
+        },
+        "case_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "kernel": {
+          "type": "string",
+          "minLength": 1
+        },
+        "metrics": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "type": "number"
+              },
+              "unit": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_artifact_hash": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "field": {
+                "type": "string",
+                "minLength": 1
+              },
+              "aggregation": {
+                "enum": [
+                  "mean",
+                  "median",
+                  "sum",
+                  "min",
+                  "max"
+                ]
+              },
+              "samples": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "value",
+              "unit",
+              "source_artifact_hash",
+              "field",
+              "aggregation",
+              "samples"
+            ]
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "case_id",
+        "kernel",
+        "metrics"
+      ]
+    },
+    {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://aprof.local/schemas/normalized-profile-v1.1.schema.json",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.1.0"
+        },
+        "metric_definition_version": {
+          "const": "raw_metric_v1"
+        },
+        "case_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "kernel": {
+          "type": "string",
+          "minLength": 1
+        },
+        "capture_manifest_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "metrics": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "unit": {
+                "type": "string",
+                "minLength": 1
+              },
+              "aggregation": {
+                "enum": [
+                  "mean",
+                  "median",
+                  "sum",
+                  "min",
+                  "max"
+                ]
+              },
+              "samples": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                }
+              },
+              "status": {
+                "enum": [
+                  "available",
+                  "missing",
+                  "unstable"
+                ]
+              },
+              "cv": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "sources": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "capture_id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "format": {
+                      "enum": [
+                        "csv",
+                        "jsonl"
+                      ]
+                    },
+                    "field": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "where": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "row_aggregation": {
+                      "enum": [
+                        "mean",
+                        "median",
+                        "sum",
+                        "min",
+                        "max"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "capture_id",
+                    "path",
+                    "format",
+                    "field",
+                    "where",
+                    "row_aggregation"
+                  ]
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "value",
+              "unit",
+              "aggregation",
+              "samples",
+              "status",
+              "cv",
+              "sources"
+            ]
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "metric_definition_version",
+        "case_id",
+        "kernel",
+        "capture_manifest_hash",
+        "metrics"
+      ]
+    }
+  ]
+}

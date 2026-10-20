@@ -1,0 +1,627 @@
+{
+  "cases": [
+    {
+      "task_id": "01",
+      "chain": {
+        "schema_version": "aprof.handoff-chain-validation/v1",
+        "task_id": "01",
+        "instance_id": "01.action.1",
+        "status": "conditional",
+        "missing": [
+          "symptom.profile.mte_setup_dominated",
+          "symptom.source.inner_loop_copy"
+        ],
+        "handoff_hashes": [
+          "sha256:420899b1b8bc59049e5c3afd7a61741cf1b640b768f7ad43857b8d19159e92a4",
+          "sha256:a6d724953828826e9f9b9d2b4a4ccb057009e336c17e5e257670d3e879ce56d3"
+        ],
+        "causal_claim": false,
+        "legacy_episode_eligible": false
+      },
+      "C1_sha256": "sha256:1a0e64a62c70b649678f06f28ae29458c46d45eef772f79abb8e4f3ee3c903b1",
+      "C2_sha256": "sha256:218398f72e4c9140651427c190d88f97f8c0c3dea96f7f47cfd2b62e52906cdf",
+      "O_route_sha256": "sha256:22192d6b3560947c2bf13a566c691d2b290c9369408a812234aa2c779393772b",
+      "Problem_bodies": [
+        "problem.tiny_transfer_setup_amplification",
+        "problem.memory_bandwidth_saturation",
+        "problem.noncontiguous_access"
+      ],
+      "candidates": [
+        {
+          "problem_id": "problem.tiny_transfer_setup_amplification",
+          "status": "plausible",
+          "reason": "tiny正文要求有效B/issue、字节不变的发射对照；128B/logical call不是物理MTE issue，需保留差异。"
+        },
+        {
+          "problem_id": "problem.memory_bandwidth_saturation",
+          "status": "rejected",
+          "reason": "HBM 8MiB/75us=111.85GB/s，仅参照13.98%；不能以MTE占比75%称饱和。排除限于该假设窗口。"
+        },
+        {
+          "problem_id": "problem.noncontiguous_access",
+          "status": "rejected",
+          "reason": "已读正文要求地址跨轴；源和目标c均连续，下一tile从前tile末尾继续，源码几何不满足该机制。"
+        }
+      ],
+      "Action": "action.coalesce_contiguous_transfers",
+      "Action_status": "conditional",
+      "P": {
+        "mode": "KEEP",
+        "entry_id": null
+      },
+      "O_matches": [
+        {
+          "id": "implementation.memory-transfer.coalesce",
+          "status": "reference_ready",
+          "missing": []
+        },
+        {
+          "id": "implementation.memory-transfer.strided-pad",
+          "status": "needs_evidence",
+          "missing": [
+            "constraint.target_api"
+          ]
+        }
+      ],
+      "O_read": [
+        "implementation.memory-transfer.coalesce"
+      ],
+      "P_read": [
+        "planning.elementwise.continuous"
+      ],
+      "directory_size": 28,
+      "observation_status": "valid",
+      "l2_cache_enabled": "absent",
+      "no_C3": true
+    },
+    {
+      "task_id": "02",
+      "chain": {
+        "schema_version": "aprof.handoff-chain-validation/v1",
+        "task_id": "02",
+        "instance_id": "02.reuse.x",
+        "status": "ready",
+        "missing": [],
+        "handoff_hashes": [
+          "sha256:3a88e2cc4ad2fae12c0b7bb93a154c44d7405fb1aa9fce2b79c0a3e0a20cee29",
+          "sha256:ad8c1932e16b2ab45a240ff3cb500fe950116891eb3392db3633a740c81b792e"
+        ],
+        "causal_claim": false,
+        "legacy_episode_eligible": false
+      },
+      "C1_sha256": "sha256:4818a3d04be4fa55f734e74b272a251db0932ff1158403b7ec763b4f7aa8415d",
+      "C2_sha256": "sha256:e8a3938b3433479eb14ba4c8c6bc99c4540c0313249cf71e917f70fc2145f821",
+      "O_route_sha256": "sha256:718fdccf1705024c0282780b88031a2ac504829bbb290c998462906186631cc2",
+      "Problem_bodies": [
+        "problem.insufficient_input_reuse",
+        "problem.memory_bandwidth_saturation",
+        "problem.tiny_transfer_setup_amplification",
+        "problem.cache_policy_mismatch"
+      ],
+      "candidates": [
+        {
+          "problem_id": "problem.insufficient_input_reuse",
+          "status": "supported",
+          "reason": "仅在合成输入范围支持：同owner同tile两处CopyIn同有效地址并分别供Muls和Adds消费；不是同shape不同值或无用copy。容量/事件只控制Action可行性，不否认原重复读取。"
+        },
+        {
+          "problem_id": "problem.memory_bandwidth_saturation",
+          "status": "supported",
+          "reason": "合成同窗口HBM=3221225472B、MTE=4100us，785.664749GB/s为给定800的98.2081%，在本次5%校准容差内；支持资源状态，与额外重复读原因共存。非真实硬件瓶颈结论。"
+        },
+        {
+          "problem_id": "problem.tiny_transfer_setup_amplification",
+          "status": "rejected",
+          "reason": "只排除本合成稳态窗口setup主导解释：请求均64KiB，issue_wait=40/4100=0.97561%，且接近同条件带宽参考；不否认存在40us固定成本，不借910B通用阈值。"
+        },
+        {
+          "problem_id": "problem.cache_policy_mismatch",
+          "status": "needs_evidence",
+          "reason": "NORMAL仅证明设置，不保证命中；HBM/逻辑读相等不能定位缓存替换原因，缺逐tensor命中与复用距离校准。"
+        }
+      ],
+      "Action": "action.reuse_input_tiles",
+      "Action_status": "ready",
+      "P": {
+        "mode": "KEEP",
+        "entry_id": null
+      },
+      "O_matches": [
+        {
+          "id": "implementation.memory-transfer.cache-hint",
+          "status": "needs_evidence",
+          "missing": [
+            "constraint.target_api"
+          ]
+        },
+        {
+          "id": "implementation.memory-transfer.input-tile-residency",
+          "status": "reference_ready",
+          "missing": []
+        },
+        {
+          "id": "implementation.memory-transfer.l2-reuse-order",
+          "status": "reference_ready",
+          "missing": []
+        }
+      ],
+      "O_read": [
+        "implementation.memory-transfer.input-tile-residency",
+        "implementation.memory-transfer.coalesce",
+        "implementation.memory-transfer.l2-reuse-order",
+        "implementation.buffer-lifetime.reuse",
+        "implementation.memory-transfer.cache-hint"
+      ],
+      "P_read": [
+        "planning.elementwise.continuous"
+      ],
+      "directory_size": 28,
+      "observation_status": "valid",
+      "l2_cache_enabled": true,
+      "no_C3": true
+    },
+    {
+      "task_id": "03",
+      "chain": {
+        "schema_version": "aprof.handoff-chain-validation/v1",
+        "task_id": "03",
+        "instance_id": "03.reuse.x",
+        "status": "ready",
+        "missing": [],
+        "handoff_hashes": [
+          "sha256:e21746c7902e3899460fe2872a08d6c264fd70ffaec137b3e30fb8e7aabb8979",
+          "sha256:344a0d246fc98435386cc3253a0becd6b585269dc4c2b9415b3aeb47f7e228dd"
+        ],
+        "causal_claim": false,
+        "legacy_episode_eligible": false
+      },
+      "C1_sha256": "sha256:67e1b1d7192f088d6a70aed907a2324cc4989a430b8d76b246f6066eb3570706",
+      "C2_sha256": "sha256:d7e0331622f7bb32fa6a96b57595333e29d6e4578e9a99c845844eae809b77f6",
+      "O_route_sha256": "sha256:580c3501790e196d3ea2ae6b6817e6d7304962a0a9eec19853a91084a9da74d7",
+      "Problem_bodies": [
+        "problem.insufficient_input_reuse",
+        "problem.memory_bandwidth_saturation",
+        "problem.tiny_transfer_setup_amplification",
+        "problem.cache_policy_mismatch"
+      ],
+      "candidates": [
+        {
+          "problem_id": "problem.insufficient_input_reuse",
+          "status": "supported",
+          "reason": "仅在合成输入范围支持：同owner同tile两处CopyIn同有效地址并分别供Muls和Adds消费；不是同shape不同值或无用copy。容量/事件只控制Action可行性，不否认原重复读取。"
+        },
+        {
+          "problem_id": "problem.memory_bandwidth_saturation",
+          "status": "supported",
+          "reason": "合成同窗口HBM=3221225472B、MTE=4100us，785.664749GB/s为给定800的98.2081%，在本次5%校准容差内；支持资源状态，与额外重复读原因共存。非真实硬件瓶颈结论。"
+        },
+        {
+          "problem_id": "problem.tiny_transfer_setup_amplification",
+          "status": "rejected",
+          "reason": "只排除本合成稳态窗口setup主导解释：请求均64KiB，issue_wait=40/4100=0.97561%，且接近同条件带宽参考；不否认存在40us固定成本，不借910B通用阈值。"
+        },
+        {
+          "problem_id": "problem.cache_policy_mismatch",
+          "status": "plausible",
+          "reason": "DISABLE是已知源码配置，不能将其改unknown以消除L2配方反例；可能与重读放大HBM流量共存，但未证策略错误/改变hint有益。"
+        }
+      ],
+      "Action": "action.reuse_input_tiles",
+      "Action_status": "ready",
+      "P": {
+        "mode": "KEEP",
+        "entry_id": null
+      },
+      "O_matches": [
+        {
+          "id": "implementation.memory-transfer.cache-hint",
+          "status": "needs_evidence",
+          "missing": [
+            "constraint.target_api"
+          ]
+        },
+        {
+          "id": "implementation.memory-transfer.input-tile-residency",
+          "status": "reference_ready",
+          "missing": []
+        },
+        {
+          "id": "implementation.memory-transfer.l2-reuse-order",
+          "status": "needs_evidence",
+          "missing": [
+            "constraint.l2_cache_enabled"
+          ]
+        }
+      ],
+      "O_read": [
+        "implementation.memory-transfer.input-tile-residency",
+        "implementation.memory-transfer.coalesce",
+        "implementation.memory-transfer.l2-reuse-order",
+        "implementation.buffer-lifetime.reuse",
+        "implementation.memory-transfer.cache-hint"
+      ],
+      "P_read": [
+        "planning.elementwise.continuous"
+      ],
+      "directory_size": 28,
+      "observation_status": "valid",
+      "l2_cache_enabled": false,
+      "no_C3": true
+    },
+    {
+      "task_id": "04",
+      "chain": {
+        "schema_version": "aprof.handoff-chain-validation/v1",
+        "task_id": "04",
+        "instance_id": "04.action.1",
+        "status": "ready",
+        "missing": [],
+        "handoff_hashes": [
+          "sha256:1cfeaae7fa83b3f924e87b4be7583caecceebcfae5537fd7ed59317dad3efbdf",
+          "sha256:4bd2124c0093ebe60063c63ffc791f1d918b3803ad2a54df421a6f68ef9172cf"
+        ],
+        "causal_claim": false,
+        "legacy_episode_eligible": false
+      },
+      "C1_sha256": "sha256:3065575de3cfb922313e734fc58b6ac3d37f9f5abb637336cbb905728fb44c12",
+      "C2_sha256": "sha256:2f0e309e1f65d127309df6b1f84526db6508454147dc86bb874abb2abbc998d3",
+      "O_route_sha256": "sha256:75543d54104dd4566bf34d13d85a244d2c16145d96a3e678d1cfc86040a182b3",
+      "Problem_bodies": [
+        "problem.insufficient_input_reuse",
+        "problem.memory_bandwidth_saturation",
+        "problem.cache_policy_mismatch"
+      ],
+      "candidates": [
+        {
+          "problem_id": "problem.insufficient_input_reuse",
+          "status": "plausible",
+          "reason": "reuse正文明确L2已命中且无关键路径成本会降低解释力；当前全L2命中但额外局部服务成本未知，保留局部机会。"
+        },
+        {
+          "problem_id": "problem.memory_bandwidth_saturation",
+          "status": "supported",
+          "reason": "HBM 2GiB/2750us=780.903GB/s，为800的97.61%，在给定5%容差内；steady时间2710us占98.55%。仅合成假设内成立。"
+        },
+        {
+          "problem_id": "problem.cache_policy_mismatch",
+          "status": "needs_evidence",
+          "reason": "cache正文说首次冷miss不能证明策略错；第二pass全L2命中，不支持重复miss解释。未知缓存管理成本，未将整体机制排除。"
+        }
+      ],
+      "Action": "action.reuse_input_tiles",
+      "Action_status": "ready",
+      "P": {
+        "mode": "KEEP",
+        "entry_id": null
+      },
+      "O_matches": [
+        {
+          "id": "implementation.memory-transfer.cache-hint",
+          "status": "needs_evidence",
+          "missing": [
+            "constraint.target_api"
+          ]
+        },
+        {
+          "id": "implementation.memory-transfer.input-tile-residency",
+          "status": "reference_ready",
+          "missing": []
+        },
+        {
+          "id": "implementation.memory-transfer.l2-reuse-order",
+          "status": "reference_ready",
+          "missing": []
+        }
+      ],
+      "O_read": [
+        "implementation.memory-transfer.input-tile-residency",
+        "implementation.memory-transfer.l2-reuse-order"
+      ],
+      "P_read": [
+        "planning.elementwise.continuous"
+      ],
+      "directory_size": 28,
+      "observation_status": "valid",
+      "l2_cache_enabled": true,
+      "no_C3": true
+    },
+    {
+      "task_id": "05",
+      "chain": {
+        "schema_version": "aprof.handoff-chain-validation/v1",
+        "task_id": "05",
+        "instance_id": "05.reuse.x",
+        "status": "conditional",
+        "missing": [
+          "capacity.UB",
+          "constraint.capacity",
+          "constraint.local_compatibility",
+          "constraint.reuse_domain",
+          "symptom.source.insufficient_input_reuse"
+        ],
+        "handoff_hashes": [
+          "sha256:65d52ec37fdd680151a7f5f5fc53c7544c9225d0b62ef466043232cb7d62d84f",
+          "sha256:fab1b294416ec3e28fdc7098c1ba34aa804902e3ea234ea73d2bd5f22d348f7a"
+        ],
+        "causal_claim": false,
+        "legacy_episode_eligible": false
+      },
+      "C1_sha256": "sha256:d3d29e35a148053db81188c7aac523432b59b31b189e3171f01c51d2c4cc480c",
+      "C2_sha256": "sha256:b658834e5f1067e98a4cb9d2da9162caf302f938a73afd2f2d681d359201ee1a",
+      "O_route_sha256": "sha256:1005138ae2202f06144181c07fbf84c11eb89da94689cac09ff0ee757c1b2ed9",
+      "Problem_bodies": [
+        "problem.insufficient_input_reuse",
+        "problem.memory_bandwidth_saturation",
+        "problem.tiny_transfer_setup_amplification",
+        "problem.cache_policy_mismatch",
+        "problem.pipeline_serialization"
+      ],
+      "candidates": [
+        {
+          "problem_id": "problem.insufficient_input_reuse",
+          "status": "supported",
+          "reason": "仅在合成输入范围支持：同owner同tile两处CopyIn同有效地址并分别供Muls和Adds消费；不是同shape不同值或无用copy。容量/事件只控制Action可行性，不否认原重复读取。"
+        },
+        {
+          "problem_id": "problem.memory_bandwidth_saturation",
+          "status": "supported",
+          "reason": "合成同窗口HBM=3221225472B、MTE=4100us，785.664749GB/s为给定800的98.2081%，在本次5%校准容差内；支持资源状态，与额外重复读原因共存。非真实硬件瓶颈结论。"
+        },
+        {
+          "problem_id": "problem.tiny_transfer_setup_amplification",
+          "status": "rejected",
+          "reason": "只排除本合成稳态窗口setup主导解释：请求均64KiB，issue_wait=40/4100=0.97561%，且接近同条件带宽参考；不否认存在40us固定成本，不借910B通用阈值。"
+        },
+        {
+          "problem_id": "problem.cache_policy_mismatch",
+          "status": "needs_evidence",
+          "reason": "NORMAL仅证明设置，不保证命中；HBM/逻辑读相等不能定位缓存替换原因，缺逐tensor命中与复用距离校准。"
+        },
+        {
+          "problem_id": "problem.pipeline_serialization",
+          "status": "needs_evidence",
+          "reason": "未展开helper使最后读事件未知；没有逐tile重叠数据，不能把合法依赖等待、过宽同步或容量压力当成事实。"
+        }
+      ],
+      "Action": "action.reuse_input_tiles",
+      "Action_status": "conditional",
+      "P": {
+        "mode": "CHANGE",
+        "entry_id": "planning.elementwise.continuous"
+      },
+      "O_matches": [
+        {
+          "id": "implementation.memory-transfer.cache-hint",
+          "status": "needs_evidence",
+          "missing": [
+            "constraint.capacity",
+            "constraint.target_api"
+          ]
+        },
+        {
+          "id": "implementation.memory-transfer.input-tile-residency",
+          "status": "needs_evidence",
+          "missing": [
+            "constraint.capacity",
+            "constraint.dependency_lifetime",
+            "constraint.input_value_preserved",
+            "constraint.reuse_domain"
+          ]
+        },
+        {
+          "id": "implementation.memory-transfer.l2-reuse-order",
+          "status": "needs_evidence",
+          "missing": [
+            "constraint.capacity",
+            "constraint.dependency_lifetime"
+          ]
+        }
+      ],
+      "O_read": [
+        "implementation.memory-transfer.input-tile-residency",
+        "implementation.memory-transfer.coalesce",
+        "implementation.memory-transfer.l2-reuse-order",
+        "implementation.buffer-lifetime.reuse",
+        "implementation.memory-transfer.cache-hint"
+      ],
+      "P_read": [
+        "planning.elementwise.continuous"
+      ],
+      "directory_size": 28,
+      "observation_status": "valid",
+      "l2_cache_enabled": true,
+      "no_C3": true
+    },
+    {
+      "task_id": "06",
+      "chain": {
+        "schema_version": "aprof.handoff-chain-validation/v1",
+        "task_id": "06",
+        "instance_id": "06.reuse-x",
+        "status": "conditional",
+        "missing": [
+          "constraint.semantic_equivalence"
+        ],
+        "handoff_hashes": [
+          "sha256:0b3f92a6abc7315aae9aba98aefe40dedc93e033c68d9b65e0507fc7c1d481b3",
+          "sha256:f8b548c1fa17c50eabdd1972d0a11cc807c50372fc80eee0386eeeb2798b78a3"
+        ],
+        "causal_claim": false,
+        "legacy_episode_eligible": false
+      },
+      "C1_sha256": "sha256:52e44baf3ff96101556935e11ce14efdddabd85638830122ff764b50656b807d",
+      "C2_sha256": "sha256:dadb3551347edf918b23d3d7e7758ee054267caabcc1d362607b0b63e9b6df7d",
+      "O_route_sha256": "sha256:be85597f7db84f5fd6edb6ed597bab0602bf652495b958c50a9735ee6f846b8e",
+      "Problem_bodies": [
+        "problem.insufficient_input_reuse",
+        "problem.memory_bandwidth_saturation",
+        "problem.cache_policy_mismatch",
+        "problem.tiny_transfer_setup_amplification"
+      ],
+      "candidates": [
+        {
+          "problem_id": "problem.insufficient_input_reuse",
+          "status": "supported",
+          "reason": "源码证明重复地址和值；合成计数同向，未宣称真实硬件瓶颈。"
+        },
+        {
+          "problem_id": "problem.memory_bandwidth_saturation",
+          "status": "plausible",
+          "reason": "785.7/800约98.2%，参考和窗口均为假设；缺全流水关键路径所以保留plausible。"
+        },
+        {
+          "problem_id": "problem.cache_policy_mismatch",
+          "status": "needs_evidence",
+          "reason": "已读正文禁止从默认模式及首次miss自动推断错误；缺对象级miss和距离。"
+        },
+        {
+          "problem_id": "problem.tiny_transfer_setup_amplification",
+          "status": "rejected",
+          "reason": "仅排除为本窗口主导解释：约64KiB均包、setup=40/4100约0.98%；06尾块保留局部未知。"
+        }
+      ],
+      "Action": "action.reuse_input_tiles",
+      "Action_status": "conditional",
+      "P": {
+        "mode": "KEEP",
+        "entry_id": null
+      },
+      "O_matches": [
+        {
+          "id": "implementation.memory-transfer.cache-hint",
+          "status": "needs_evidence",
+          "missing": [
+            "constraint.semantic_equivalence",
+            "constraint.target_api"
+          ]
+        },
+        {
+          "id": "implementation.memory-transfer.input-tile-residency",
+          "status": "needs_evidence",
+          "missing": [
+            "constraint.dependency_lifetime",
+            "constraint.input_value_preserved",
+            "constraint.same_input_region",
+            "constraint.semantic_equivalence"
+          ]
+        },
+        {
+          "id": "implementation.memory-transfer.l2-reuse-order",
+          "status": "needs_evidence",
+          "missing": [
+            "constraint.dependency_lifetime",
+            "constraint.semantic_equivalence"
+          ]
+        }
+      ],
+      "O_read": [
+        "implementation.memory-transfer.cache-hint",
+        "implementation.memory-transfer.input-tile-residency",
+        "implementation.memory-transfer.l2-reuse-order"
+      ],
+      "P_read": [
+        "planning.elementwise.continuous"
+      ],
+      "directory_size": 28,
+      "observation_status": "valid",
+      "l2_cache_enabled": true,
+      "no_C3": true
+    },
+    {
+      "task_id": "07",
+      "chain": {
+        "schema_version": "aprof.handoff-chain-validation/v1",
+        "task_id": "07",
+        "instance_id": "07.reuse-x",
+        "status": "conditional",
+        "missing": [
+          "constraint.semantic_equivalence"
+        ],
+        "handoff_hashes": [
+          "sha256:aa28a65ba2fb097de3f7948479f5a58e14d72586668b8629a65e7409d6f4750a",
+          "sha256:0e74d6f5bdba3719157c140be674ee9df3c6ec15b309d8f50ecc00720c975db9"
+        ],
+        "causal_claim": false,
+        "legacy_episode_eligible": false
+      },
+      "C1_sha256": "sha256:b7e4d85700a473072f8bda830606f2d3360c044e368ae7c16039906f67329ee4",
+      "C2_sha256": "sha256:f3e5c7ccf30dcead44f9922695f875c1282d18867b4e5bdda65005adf647459b",
+      "O_route_sha256": "sha256:8b90bf323003fb105d9df8d0521e12372f3018f9e4738000195b171ffdb2c693",
+      "Problem_bodies": [
+        "problem.insufficient_input_reuse",
+        "problem.memory_bandwidth_saturation",
+        "problem.cache_policy_mismatch",
+        "problem.tiny_transfer_setup_amplification"
+      ],
+      "candidates": [
+        {
+          "problem_id": "problem.insufficient_input_reuse",
+          "status": "supported",
+          "reason": "源码证明重复地址和值；合成计数同向，未宣称真实硬件瓶颈。"
+        },
+        {
+          "problem_id": "problem.memory_bandwidth_saturation",
+          "status": "plausible",
+          "reason": "785.7/800约98.2%，参考和窗口均为假设；缺全流水关键路径所以保留plausible。"
+        },
+        {
+          "problem_id": "problem.cache_policy_mismatch",
+          "status": "needs_evidence",
+          "reason": "已读正文禁止从默认模式及首次miss自动推断错误；缺对象级miss和距离。"
+        },
+        {
+          "problem_id": "problem.tiny_transfer_setup_amplification",
+          "status": "rejected",
+          "reason": "仅排除为本窗口主导解释：约64KiB均包、setup=40/4100约0.98%；06尾块保留局部未知。"
+        }
+      ],
+      "Action": "action.reuse_input_tiles",
+      "Action_status": "conditional",
+      "P": {
+        "mode": "KEEP",
+        "entry_id": null
+      },
+      "O_matches": [
+        {
+          "id": "implementation.memory-transfer.cache-hint",
+          "status": "needs_evidence",
+          "missing": [
+            "constraint.semantic_equivalence",
+            "constraint.target_api"
+          ]
+        },
+        {
+          "id": "implementation.memory-transfer.input-tile-residency",
+          "status": "needs_evidence",
+          "missing": [
+            "constraint.dependency_lifetime",
+            "constraint.input_value_preserved",
+            "constraint.semantic_equivalence"
+          ]
+        },
+        {
+          "id": "implementation.memory-transfer.l2-reuse-order",
+          "status": "needs_evidence",
+          "missing": [
+            "constraint.dependency_lifetime",
+            "constraint.semantic_equivalence"
+          ]
+        }
+      ],
+      "O_read": [
+        "implementation.memory-transfer.cache-hint",
+        "implementation.memory-transfer.input-tile-residency",
+        "implementation.memory-transfer.l2-reuse-order"
+      ],
+      "P_read": [
+        "planning.elementwise.continuous"
+      ],
+      "directory_size": 28,
+      "observation_status": "valid",
+      "l2_cache_enabled": true,
+      "no_C3": true
+    }
+  ],
+  "valid": true,
+  "hardware": false
+}

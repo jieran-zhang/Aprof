@@ -1,0 +1,105 @@
+{
+  "schema_version": "aprof.diagnosis-case/v1",
+  "case_id": "paper.transfer",
+  "evidence_status": "paper",
+  "task_id": "paper.transfer",
+  "scope": {
+    "task_id": "paper.transfer",
+    "parent_implementation_hash": "sha256:d434e7a1e5fa742b3bce9bfbea80853fb0de57fe591c577dcffc0c2b3517ed1a",
+    "workload_hash": "sha256:2286ca6ef63592682cec16b04e62f6bdd543e40cb13149c68b28dc3af4dd4e76",
+    "target_ids": [
+      "T"
+    ],
+    "stage": "paper_analysis"
+  },
+  "context_ref": null,
+  "reasoning_ref": null,
+  "sources": [
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/04_memory_access/data_copy/data_copy_ub.h",
+      "original_path": "examples/01_simd_cpp_api/05_best_practices/04_memory_access/data_copy/data_copy_ub.h",
+      "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+      "lines": [
+        21,
+        145
+      ],
+      "sha256": "sha256:f5ca47ce371eb60e16d3fac8bb0a5f8921c62de8515d22de92b900e3c7733911",
+      "excerpt_sha256": "sha256:848f0dfa47facbfcddf126f931b9a62f125a0aced77b4f9229eb7eb23768b8f0"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/04_memory_access/data_copy/README.md",
+      "original_path": "examples/01_simd_cpp_api/05_best_practices/04_memory_access/data_copy/README.md",
+      "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+      "lines": [
+        82,
+        394
+      ],
+      "sha256": "sha256:7126d511236c3539b2710934c468c56500e39ac336531597a3360d6c74282cff",
+      "excerpt_sha256": "sha256:9f27996a1bd449d385a01b00b0a11a0562c3e17bf8762c3e55e33dd241596031"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/00_vector_compute/add_high_performance/add.asc",
+      "original_path": "examples/01_simd_cpp_api/05_best_practices/00_vector_compute/add_high_performance/add.asc",
+      "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+      "lines": [
+        27,
+        345
+      ],
+      "sha256": "sha256:f7d075958365a8fc1af9879e90ab6494573f8869d3a538832c537d8e0f905042",
+      "excerpt_sha256": "sha256:d2b85d269202c81ba81366f010df36bf3c512f17f84bd0b145c0dd1425e49cda"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+      "original_path": "ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+      "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+      "lines": [
+        1,
+        55
+      ],
+      "sha256": "sha256:dbb672d9f6f872d02ba5a255ac9b1949595d8fa869efb174c27895da04560a38",
+      "excerpt_sha256": "sha256:10621504e99f08b702f2b096bf353ab282bc4da997e2d7e8b96df1a9f60c4c45"
+    }
+  ],
+  "observations": [
+    "纸面输入：源码有按小行循环执行的搬运，目标输出区域和有效长度可定位；没有设备计数器、有效带宽或发射耗时。此处不是一次实测记录。"
+  ],
+  "candidate_explanations": [
+    "problem.tiny_transfer_setup_amplification",
+    "problem.memory_bandwidth_saturation"
+  ],
+  "selected_action_instances": [],
+  "outcome": {
+    "status": "not_run",
+    "timing_ref": null,
+    "correctness_ref": null,
+    "mechanism_refs": [],
+    "limitations": [
+      "纸面输入，不是设备观测；缺失前提保持unknown。"
+    ]
+  },
+  "claims": [
+    {
+      "id": "transfer.comparison",
+      "text": "前者预测：相同有效字节下减少调用次数可能减少setup成本；后者预测：即使调用更粗，若HBM字节不变且已饱和，收益仍受限。连续小搬运的源码事实不能区分这两个机制；调用数、有效字节／调用、实际持续带宽必须分别说明范围。\n\n反证不是“没有计数器”：缺profile是unknown。如果同范围真实证据显示持续带宽已饱和，可以削弱纯setup解释；仍需检查是否存在其他阶段共存。`symptom.profile.mte_setup_dominated`是复合观察，不能只凭MTE占比填写true。",
+      "basis": "mechanism_inference",
+      "source_indexes": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "review_status": "reviewed",
+      "limitations": [
+        "该来源只支持方法和限制，未验证当前任务瓶颈或收益。"
+      ]
+    }
+  ],
+  "review": {
+    "reviewer": "primary-agent-paper-curation",
+    "independent": false,
+    "decision": "reviewed",
+    "notes": [
+      "待独立行为复核；无硬件实验。"
+    ]
+  }
+}
