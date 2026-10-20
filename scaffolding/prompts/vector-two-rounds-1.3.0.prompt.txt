@@ -1,0 +1,170 @@
+APROF graph-base/1.3.0：原 Vector 15 算子，每算子 R0 + 固定两轮真实优化；无 memory、无训练
+
+这是完整执行入口。仅在用户明确把本文件交给你并要求实际执行时启动实验；编写、审阅、校验入口不启动硬件。
+请在当前已获授权资源上完成下述任务，不逐轮等待确认。除用户取消、真实硬阻塞或能力缺失外，继续至全部任务闭合。
+
+1. 身份、范围及明确覆盖
+REPO=/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019
+BASE_COMMIT=b5cd6302a624766c3ce2b0e41734431025e9066f
+SKILL_LIB=$REPO/skill-libs/graph-base/1.3.0
+INPUT_LOCK=$REPO/scaffolding/prompts/vector-two-rounds-1.3.0.inputs.json
+POLICY=$REPO/scaffolding/prompts/vector-two-rounds-1.3.0.policy.json
+ANCHOR_SOURCE=/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-feat-aprofgraph/third_party/cann-bench/tasks/metadata/910b2.json
+冻结身份必须为 graph-base/1.3.0、runtime 0.5.0、D v0004、P v0002、O v0004、Handoff v3；包未封版，使用其真实未封版校验。
+BASE_COMMIT绑定技能包基线，HEAD可包含后续prompt提交；不reset/checkout共享仓库。核对 git diff "$BASE_COMMIT" -- skill-libs/graph-base/1.3.0 无差异，并以新输入锁逐文件hash为准；快照包文件集也须与锁内1.3.0前缀集合完全一致。再检查所选包真实身份。catalog/工具默认可能指向其它历史版本，本任务不使用默认包；尤其禁止工具隐式回退1.2.0。
+本文件与新POLICY控制本批次；不得执行旧vector-five-rounds workflow、旧machine入口或旧五轮/训练停止规则。
+旧vector-acceptance-soft-targets-v4.json仅可溯源，不能原样充当本次1.3.0/两轮策略；不修改该旧文件。
+本次用户要求覆盖批处理skill中的recorder默认：不派memory recorder，不生成optimization-memory/lesson，不运行train skill。
+不训练基础模型或知识参数，不更新graph/knowledge，不学习train split；split只保留原分组身份。普通阶段/实验记录仍必须保存。
+不seal、发布、push或回写共享仓库；算子代码只在本次任务私有副本修改，不改变冻结runtime、框架、oracle、schema或门禁。
+
+执行清单严格如下，顺序可按接口能力/空间务实安排；machine名称仅为原分片标签，不要求两台机器、不自动远程：
+machine-a：exp/train，mish/train，masked_scale/train，swi_glu/test，apply_adam_w/train，gather/test，strided_slice/train，grid_sampler_3d/train。
+machine-b：gelu/validation，sigmoid/train，foreach_addcdiv_scalar/train，maximum/train，apply_rotary_pos_emb/test，transpose/test，resize_bilinear/train。
+合计15项，10 train + 1 validation + 4 test；以各split manifest.json的active_operators核对membership，不改split。
+R0源码只取scaffolding/benchmarks/cannbench/operators/<operator>/原始种子，不用历史winner/已优化候选替代。
+每项保留该项目scripts/cases.py的全部原case；apply_adam_w同时冻结cases.csv，resize_bilinear同时冻结cases.yaml。
+逐项只读解析并核对case_id恰为1..20，冻结shape/dtype/layout/属性/原oracle及输入生成身份；不能随机重抽或套用exp矩阵。
+计划覆盖为15个R0、30个有真实源码差异的候选、600个候选case正确性检查；这些是计划量，不是已完成或成功计数。
+每算子固定R1、R2两轮，R0及adapter接线不占轮；达HAP、工程rejected或软目标超时均不提前跳过R2。
+
+2. 冻结、私有存储与真实工具
+export PYTHONDONTWRITEBYTECODE=1
+所有Python命令用python3 -B；建唯一/dev/shm campaign根，所有构建、native、采集、输出、oracle缓存与运行记录都在其下。
+CAMPAIGN_ROOT与每个ROOT必须用唯一新目录，不能覆盖旧实验；snapshot的--output目标必须尚不存在。
+先保存输入锁/提交/环境与锚点hash检查的stdout、stderr、退出码，真实执行以下CPU校验：
+python3 -B "$REPO/scaffolding/tools/verify_input_lock.py" --repo "$REPO" --lock "$INPUT_LOCK"
+python3 -B "$SKILL_LIB/tools/release.py" --allow-unsealed
+python3 -B "$REPO/scaffolding/tools/snapshot_skill_lib.py" --skill-lib "$SKILL_LIB" --output "$NEW_BOOTSTRAP_ROOT"
+NEW_BOOTSTRAP_ROOT位于本campaign下；成功后以其skill-lib和skill-lib.snapshot.json作为本次冻结包及身份回执。
+将新入口/策略/锁、实际使用的scaffolding工具及其依赖、harness、15个原始项目、split/workload来源复制到本campaign本地，只读核对原字节hash。
+锁须主动覆盖所选包、入口/策略、实际工具/依赖、15项源码/矩阵/oracle与anchor；verify_input_lock通过本身不能证明闭包齐全。
+外部输入仅上述冻结910B2 anchor；只从该相邻工作树复制一次成本地只读FROZEN_ANCHOR，不将相邻目录当skill源码或工具依赖。
+核对sha256:e6d942f1900c21ee700d9727ae894b0421c92f4a9fe66310175f515782c6e678。
+bootstrap后任何aprofctl、runtime import、single_role_task、hap_report、验证/成本/快照脚本都来自本地冻结副本；不再调用共享仓库工具。
+每算子ROOT=$CAMPAIGN_ROOT/tasks/$OPERATOR；用本地snapshot工具从本地冻结1.3.0包生成该ROOT的完整skill-lib快照，再放入本算子源码/本地脚手架。
+LOCAL_SKILL_LIB=$ROOT/skill-lib；LOCAL_SCAFFOLDING为本ROOT内已校验的实际脚手架路径；export APROF_SKILL_LIB="$LOCAL_SKILL_LIB"。
+所有子进程/API驱动都须实际绑定本地包；冻结/校验工具与每任务runtime使用独立Python进程，核对aprof_runtime.__file__位于当前LOCAL_SKILL_LIB，不复用已导入其它包或前任务包的解释器。task_controller继承白名单不含APROF_SKILL_LIB，不能只export父shell。
+若用controller，逐条requests.env显式写APROF_SKILL_LIB=$LOCAL_SKILL_LIB、APROF_TASK_ROOT=$ROOT及实际所需设备/缓存环境，保存实际环境回执。
+尤其hap_report仍可能默认1.2.0，命令必须显式前缀APROF_SKILL_LIB，不能只改SKILL_LIB shell变量。
+本地冻结副本保持只读；任务源码不可与原种子或其他候选共享可变inode。不可从历史实验借用数值、结果或源码凑轮次。
+检测当前授权可用设备后显式统一物理设备ID、native/profiler/oracle的logical映射与context；原项目默认0/2混用，不依赖run.sh默认设备。
+同一物理设备native/正确性执行独占；不与其他算子、重型导出/归档扫描争用计时窗口。默认按算子串行完成并归档清理后再启动下一项。
+先让首个真实任务走通C0、R1完整正确性、有效A/B及工程反馈，再扩展依赖相同能力的任务；其他oracle/接口家族另做C0，不能由exp推定全部可运行。
+
+3. C0：先证明本算子接口和证据能力
+从本地包workflows/aprof-performance-workflow.md、协调者与公共contract开始，按C0–C5真实推进；用户本次覆盖优先于默认memory/训练要求。
+按需读取D/P/O技能与contract、diagnosis-v4、observation-checks、统一计时、original-oracle及执行策略；不把维护回放例子的答案预填成本任务诊断。
+C0记录实际源码/binary、编译器/CANN/SDK、SoC/物理设备、输入/原oracle依赖/误差规则、完整输出映射、architecture_profile与容量。
+按各operators/<operator>/scripts/cases.py、gen_data.py、verify_result.py及其实际依赖定位原矩阵/输入/原oracle；对照task_specs与split manifest逐项核实，不能猜路径或引用历史正确性充当前结果。
+R0默认assumed/trusted，不做R0完整数值复验或隐藏数值预检，不生成passed correctness.json，不把默认信任称为verified。
+必要native adapter只能接完整调用、真实清L2、输出snapshot/dispatch与命名契约，不改R0数学语义；其差异和身份单独冻结，不算候选。
+确认全部组成kernel、scratch初始化、依赖边、stream及有状态/原位输入恢复语义；不能将run.sh --all等旧运行脚本当成统一计时接口。
+原项目可用于构建/理解/原oracle，正式性能必须走下述single_role_l2_clean_task_v1及实际可审阅adapter；不虚构kernel序列、key或参数。
+遇到TensorList、多输出、BF16、特殊值、MERE/MARE或非逐元素规则，保留原oracle，必要时用original_python_v1；不改成allclose、不放宽容差。
+在本地实际源码/API中确认declaration、config、build、prepared输入、oracle与输出格式；不得照抄exp单output.bin配置给其他项目。
+declaration须schema_version=2，baseline_trust.status=assumed，basis=user_provided_baseline，并绑定真实source_sha256、binary_sha256。
+R0 config.baseline_status="assumed"；其comparison.baseline_correctness=null；basis不是任意自然语言。不同种类hash不互换。
+声明全部20个timing/correctness cases、真实创建时间、bounded_outlier_v1、max_age_seconds=2700、max_ab_gap_seconds=1200及新策略复验规则。
+先用实际config运行预检，--output是尚不存在的JSON文件；预检只检查契约/依赖，不执行native、不证明数值正确：
+python3 -B "$LOCAL_SKILL_LIB/skills/ascendc-aprof-profiling/scripts/single_role_task.py" --config "$CONFIG" --output "$NEW_PREFLIGHT_JSON" --preflight-only --timeout-seconds 600
+另按冻结API核验实际declaration/字节ref及check_baseline_trust的source/binary；完成真实build/profiler链接与adapter静态审查，保存回执。
+C0.md及Context/source/input/oracle/declaration/build/probe/preflight/capacity引用齐全才标completed；共同配置错误在C0修复并保留前后版本，不空耗R1/R2。
+物理设备/context须真实probe；频率/容量不可得记unknown，不用5次预热假称频率稳定。接口缺失明报阻塞，不回退旧计时协议。
+C0不提前采全R0拖过窗口；确需诊断case时先声明范围与成本，诊断结果不能替代20case最终比较。
+
+4. C1–C3：让知识按真实证据参与决策
+每轮先冻结当前源码、20case workload与带原始引用的Context；观察与机制解释分开，proxy、unknown及未实现extractor不能冒充真实profile。
+按冻结diagnosis retrieve接口获取邻接线索及完整Problem轻目录；邻接不是候选边界，旧权重不替Agent选择。
+Agent依源码、原始计数、适用域、替代解释和未解释观测自主选择Problem正文；用diagnosis expand记录阅读理由与取得的正文/hash/来源。
+形成机制比较、排除结论或实例化Action前必须读相关Problem正文；不预设Problem/Action，不设固定top-k，也不默认全读正文。
+遇正文提示的替代机制/反证再回完整目录按需展开；保留支持、反证、unknown、判别检查、取舍和停止理由；临时机制单列差异，不回写图。
+数值观测先做窗口/单位/计数层级自洽检查；逻辑GM请求与HBM字节分开，派生依赖保留，同一事实不重复算独立支持。
+C1保留实际Action正文、原前提/不变量、实例目标/范围和D阅读展开回执；新增证据写后继，禁止回填旧快照。图外临时Problem可复用注册Action，不能将临时新Action直接交接或放宽旧硬前提。
+P和O按当前实例分别执行真实路由并读所依赖的模板/recipe正文，记录命中/实读/选择/未选原因；C1不预锁P/O组合。
+记录P_KEEP/P_CHANGE等真实计划及完整plan/dispatch；不把缺计划写成KEEP。双KEEP为NOOP，不算真实优化轮；P_CHANGE加O_KEEP仍须C3实现新计划。O在实际计划下核对事实、state、兼容性与fallback。
+文档相关、Action ready、计划有效、严格C3校验通过、实际实施是不同状态。原Action前提须按期望值逐条满足，包括要求false的条件；不满足或unknown不能靠路由推荐补齐。
+例如L2方法的cache启用事实须绑定当前配置/实例，unknown不得实施；只作为真实适用门禁检查，不预指定本轮采用该方法。
+实际记录每轮读过的D/P/O文档路径/hash、所选动作/计划/recipe、未读范围、门禁输入/结果、C1/C2/C3交接及真实校验日志。
+C3只修改已就绪且适用的任务源码；一个意图一个候选，保存source hash、patch、build与严格contract回执；不要改框架替候选过门。
+
+5. 两轮、正确性与父本
+R1的source_parent和comparison_parent均为R0；开始时追加登记意图、实际时间及来源hash，不先造完成记录。
+R1反馈闭合后再决定R2：从截至当时已完整正确且工程accepted的当前最佳候选出发；没有可晋升者就从R0出发。
+R2的source_parent、comparison_parent单独记录，若不同必须解释；不得在R1结果出来前预制R2源码或固定其父本。
+每轮必须有真实源码patch与真实执行路径；纯改名、重测、adapter包装、复验/父本刷新均不算优化候选，不增加第三轮。
+append-only attempts.jsonl每行仅seq（从1连续）、event（registered/closed）、task_id、attempt_id、ref；父本/意图在登记ref文件，阶段/失败在闭合C5，closed.ref等于task-result的terminal_ref。未开始轮次在外层表写not_started，不伪造登记或成功。
+每个新候选实际对全部原20cases用原oracle完整检查一次；新source身份不复用上一候选correctness，构建失败不冒充数值失败。
+python3 -B "$LOCAL_SKILL_LIB/skills/ascendc-aprof-profiling/scripts/single_role_task.py" --config "$CANDIDATE_CONFIG" --output "$NEW_CORRECTNESS_DIR" --correctness-only --timeout-seconds 300
+若某case数值失败，保留实际输出/原oracle结论，停止该候选接受路径；其他已生成完整输出仍逐项跑原oracle，未执行保持未执行。
+只有源码/binary、输入、case语义、oracle依赖/规则/环境及全部输出内容映射一致，才复用本任务真实成功认证缓存；不凭passed JSON或单output.bin认定。
+R0的assumed豁免不转给改过计算的候选；已verified候选成为下一轮A仍绑定其真实correctness，不降格assumed。
+默认不启用独立oracle审计；如实际需要，明确APROF_ORACLE_AUDIT=1并另记成本。普通collect/report/finalize共享本任务私有validation-cache。
+R1失败/拒绝或已达HAP仍继续做R2；真实能力/容量等硬阻塞如实partial，保留恢复点并继续无共同阻塞的其他算子。
+
+6. C4：统一计时、复验与工程裁决
+完整A/B比较前先完成双方build、candidate 20case正确性、输入/输出/容量及声明，再连续采A/B native；不要在两侧之间插归档或模型调查。
+每implementation/case一个新native进程：5次完整调用预热，随后20轮同stream真实清L2+完整调用+同步；清理buffer大于实际L2容量。
+从原始Task表严格重建20次完整调用，目标含所有kernel/scratch依赖；逐调用先求Task Duration和，再取中位数，清L2不计目标时间。
+同一次采集stream一致，序列/数量/来源完整；不得过滤不利Task、先逐kernel取中位数再求和，或把20轮当20对独立A/B。
+新声明固定bounded_outlier_v1：按全20值中位数/MAD阈值一次判断，最多剔除2，至少18值；保留原20值、阈值、索引、原始/保留CV。
+CV须≤0.05，超2异常不剔除且inconclusive；不得反复剔除直到通过。跨进程漂移不能用轮内CV掩盖。
+优先使用冻结single_role_task.py的Python API collect_pair(baseline_config_dict, candidate_config_dict, new_output_root, timeout_seconds=600)。
+按真实冻结源码构建本地小驱动并真实import该脚本；其A/B来源为output_root/A、/B，device_probe_session按真实支持接口启用，保存驱动/日志。
+collect_pair没有--baseline/--candidate CLI；不得猜CLI/API参数。需要单实现采集时才用已核实CLI及完整correctness配置：
+python3 -B "$LOCAL_SKILL_LIB/skills/ascendc-aprof-profiling/scripts/single_role_task.py" --config "$IMPLEMENTATION_CONFIG_WITH_CORRECTNESS" --output "$NEW_CAPTURE_DIR" --timeout-seconds 600
+A/B须同case/input/物理设备/toolchain/collector/cache策略；相同声明/真实source身份完整覆盖20cases，不能拼错实现的capture。
+有效B可作R2的A；逐case检查剩余2700秒age与1200秒A/B gap能覆盖采样/导出/HAP/finalize，不够按预声明刷新必要父本并保留旧证据及成本。
+过期/间隔超限是硬有效性失败，保持inconclusive；不得改时间戳/放宽窗口。保留pending与PROF，按冻结finish_case接口原目录恢复。
+每implementation/case最多一次预声明独立复验，触发仅CV>.05、abs(HAP-.35)≤.01或距speedup门槛≤.005；采用规则以新POLICY冻结：触发后正式比较固定采用第二份完整有效采集，无论更快更慢；首份保留。复验失败不可退选更好的首份，记inconclusive，不择优。
+刷新过期A不算优化轮；也不能借刷新重复挑最快A。补齐/合并collection仅用真实capture来源及冻结回放，保留完整provenance。
+工程裁决唯一入口如下；request引用相对自身证据根，恰覆盖声明20cases，source取采集器源码清单身份，R0 baseline_correctness=null：
+"$LOCAL_SKILL_LIB/tools/aprofctl" timing finalize --request "$COMPARISON_JSON" --output "$NEW_RESULT_JSON"
+工程逐case speedup=median(A)/median(B)，regression=median(B)/median(A)-1；20case等权几何mean≥1.03且每case regression≤.03。
+只有完整correctness+有效accepted+适用contract成立才晋升；runtime输出accepted/rejected/inconclusive，缺证据not_evaluated；HAP/advisory不替工程裁决。
+
+7. HAP与最终对原R0的直接比较
+每轮保留全部20case HAP真实结论；有有效collection才运行官方报告，构建/正确性失败或缺采集写不可评估原因，不造collection或有效0分。
+APROF_SKILL_LIB="$LOCAL_SKILL_LIB" python3 -B "$LOCAL_SCAFFOLDING/tools/hap_report.py" --collection "$COLLECTION_JSON" --operator "$OPERATOR" --anchor "$FROZEN_ANCHOR" --output "$NEW_HAP_DIR" --timeout-seconds 600
+所有路径在本ROOT内，NEW_HAP_DIR尚不存在；保存summary.json、cases.tsv、工具/锚点hash、stdout/stderr/退出码。报告只回放证据，不隐式native重测。
+HAP_sow.v1：B=冻结910B2的baseline_perf_us，H=同anchor.t_hw_us，C=本次有效候选计时中位数；B不是本机R0。
+B>H>0；C≤H时HAP=1，否则HAP=(B-H)/((C-H)+(B-H))。原始十进制不先四舍五入；逐case≥7/20，等价C≤H+(13/7)*(B-H)。
+每算子须20/20有效且逐case≥.35才HAP合格；均值不能掩盖坏case。无效/缺失保留null及原因，不伪装为有效0。
+保留限制：anchor的B可能为实测封顶或t_hw导出代理，无逐case来源标签；910B2对实际设备可能为跨平台参考，不表示平台等效。
+R0 assumed的条件性HAP与verified候选合格分列；operator_hap_qualified与under_assumption不混称。HAP不产生工程runtime_verdict。
+R2闭合后从真实可晋升候选中选当前最佳，不自动选R2；无合法晋升者保留R0，selected_attempt_id=null。保存候选选择依据和所有失败尝试。
+最终必须使用所选实现对原始R0的直接有效20case A/B比较，给每case R0/selected中位数与等权几何speedup；禁止连乘逐轮speedup。
+若R1/R2已有该直接有效证据可复用；否则按事先声明补采原始R0/最终候选，不算第三轮，并保存独立final-comparison与刷新/复验成本。
+最终参考speedup_i=median(R0_i)/median(selected_i)，GM=exp(sum(log(speedup_i))/20)，worst_regression=max(median(selected_i)/median(R0_i)-1)。
+没有有效直接证据则speedup/最终工程裁决unavailable并列缺项；R0被保留时只可写source_unchanged的恒等关系，不能冒充已完成R0自比较工程accepted。
+最终HAP使用所选实现同口径有效20case证据及同一910B2 anchor，逐case并列；保留原始/复验报告，不能让最终视图掩盖历史无效记录。每任务及时闭合并冻结有效性检查时间；批次只读汇总闭合报告，不在15项结束后重新给已过期capture打当前有效标签。
+
+8. 时间、归档、清理与最终交付
+所有耗时为软目标：每算子任务3120秒、C0 600、build180、完整正确性300、case60、finalize/HAP600；本次没有recorder预算。
+一个算子的3120连续涵盖两轮/等待/恢复/汇总，不每轮重置；超时写warning/checkpoint/真实CPU-I/O-子进程状态并继续，不因静默或超目标杀正常工作。
+2700秒age、1200秒A/B gap、正确性、CV、异常数量与工程门槛仍是硬证据门禁，不能因软预算放宽。
+使用冻结task_budget_v2的真实launch/恢复接口。task_controller CLI只用于新命令序列，没有恢复CLI；已有任务沿原LocalEvidence索引、budget_ref及完整有序prior_terminal_refs调用runtime恢复，不重调controller构造器或prepare新预算，不重置原单调起点。
+operations.jsonl沿用冻结runtime.execution_policy.operation格式；每行是实际完成或失败的完整区间，包含workflow_stage、operation_type、started_monotonic、finished_monotonic及case/implementation/pid/parent/result，不用分开的start/end事件代替区间。task/round身份用外层关联；缺精确子步骤写contained/unknown。
+分开统计准备/快照、build、正确性与oracle复用、native、导出、D/P/O、HAP/finalize、复验/刷新、归档/清理；父子及并行区间用并集，不简单相加。
+若冻结cost_breakdown实际可用，在ROOT清理前调用：python3 -B "$LOCAL_SCAFFOLDING/tools/cost_breakdown.py" --root "$ROOT" --output "$ROOT/cost-breakdown.json"。
+补充工具未覆盖的真实日志；不把无法观察的模型排队/token记精确耗时，不在/tmp重跑仅支持/dev/shm的运行工具。
+C5按真实结果闭合；task-result如采用严格schema，attempts只含真实尝试、selected只指合格completed候选；外层memory_ref=null/user-disabled，不向严格schema硬塞字段。
+显式授权将本次已完成任务结果闭包归档至/tmp下本次唯一RESULTS目录，校验后清理其/dev/shm任务工作区；不删除未完成任务、旧实验或仍被引用的原件。
+开始前估算单算子两轮峰值、导出/复验/刷新及归档副本空间和RESULTS累计容量；报告逻辑/实际分配字节。容量不足明报，不偷删证据或缩case。
+必留R0/全部候选源码、patch/身份、原20case矩阵/oracle身份、C0–C5/交接/严格计划与真实门禁、build/正确性20case结论、失败及未执行原因。
+必留所有真实原始20调用时长（不足20保留已有及缺项）、剔除阈值/索引/CV、capture来源/有效期/首次与复验、工程finalize、每轮及最终HAP summary/cases.tsv。
+同时保留冻结包/工具/锁/策略及必要引用闭包、实际D/P/O阅读记录、attempts/task-result、成本日志、最终300行case对照与归档校验/清理回执。
+归档前冻结retention-plan，列原路径/归档路径/hash/大小/保留或拟删理由；不改已冻结证据字节，不用摘要替换被引用原件的hash。
+大型生成输入/输出/PROF/build缓存仅在不属于必要引用闭包、无需后续复验/恢复且已明确不可完整重放限制时可删；若正式ref仍要求原件则必须保留。
+复制到RESULTS唯一staging，保持相对布局，核对全部保留文件hash和可导航ref；禁止symlink回待删/dev/shm，可对真实不可变字节hardlink去重。
+在staging只做只读结构/来源/覆盖校验，不运行native；schema适用的batch/task-result等按冻结验证器真实接口验证，绝不生成memory来满足旧验收。
+保存校验命令/退出码/日志，核对每项20cases、两轮真实状态、最终300行与全部原20sample证据，发布前生成包hash清单（不自引用）。
+同文件系统原子rename发布且不覆盖现存结果；先把checkpoint与清理计划保存RESULTS，确认全部本任务native/oracle/build/导出/监督子进程退出且无pending/外部引用。
+仅删除解析后位于本campaign/tasks下、身份匹配且已完成并归档校验成功的当前ROOT；不宽泛glob、不删campaign父目录/其他task。校验失败保留现场。
+删除后另写cleanup-receipt含真实路径/时间/释放bytes/结果，更新campaign索引；不回写已hash原件。归档/清理计入真实任务及批次连续墙钟。
+最终交付15行算子总表：split、R1/R2状态和父本、selected、20case正确性覆盖、最终R0直接GM/最坏回归/verdict、HAP有效/达标/最低值/缺失IDs、报告路径、耗时/阻塞。
+另交付30候选总览、每轮20case真实结果/不可评估原因、最终15×20=300行case对照（R0/selected中位数、speedup、B/H/C/HAP、有效性/正确性/原因/证据路径）。
+交付RESULTS、逐任务归档/恢复路径、保留源码/证据清单、归档和清理状态、真实完整性与/tmp易失性；明确未保留大原件时不能完整离线重放。
+不套旧“至少14/15”批次验收，也不保证HAP达标；分别报告实达与条件性结果。30候选/600检查/300最终行是计划覆盖，失败/未开始不得填成功。
+完整结束须15项各两轮真实候选闭合及最终直接R0/HAP结论齐备；硬阻塞时称partial并列已完成/未完成/具体证据，共同阻塞以外任务继续。
+本入口只授权上述算子优化和必要结果归档清理；不收集训练memory、不做训练、不自动push/发布，不请求逐轮确认。
