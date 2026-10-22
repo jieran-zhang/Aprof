@@ -1,0 +1,85 @@
+{
+  "schema": "aprof.execution-cost-evaluation-errata/v1",
+  "created_at_utc": "2026-10-22T04:42:37.149680+00:00",
+  "reason": "Independent semantic review confirms all scores and identifies two annotation mistakes plus three rubric interpretation clarifications. Original locked evidence is retained unchanged.",
+  "independent_review": {
+    "markdown_path": "review/behavior-review.md",
+    "markdown_sha256": "7bee82d2d962f3950382e663729a7a1df1734646361f573c7a678b6cd568f6dd",
+    "json_path": "review/behavior-review.json",
+    "json_sha256": "a063fa600d6cdcc4349f744628b548c8f8f636cc334a6654fdb003eb7c12cf2c"
+  },
+  "unchanged_originals": {
+    "evaluation/grades.json": "ffddb6181dda2859197afdba5743c3eadeeb46dfcd3906a4d3ef2334a95616e8",
+    "evaluation/GRADES-LOCK.json": "9f8bffeee638c761a2040adc021b5bac663912d1038c48da98ef99b364f130a5",
+    "evaluation/FACTS.json": "f0442db146287f02087bd4440b3978547e3da8a7de46a2497220755f3d74b3ee",
+    "evaluation/FACTS-LOCK.json": "9caf73337f2165686d2c5c1824a74b940faeba9df64006500d5ee6b48b6471db",
+    "evaluation/GROUP-SUMMARY.json": "a5a4fb7f1621a98262a3128017c6d5e3b151d37be3f6ab5d02a12d671ba076fc"
+  },
+  "score_outcome": {
+    "revisions": [],
+    "all_24_scores_unchanged": true,
+    "A": 96,
+    "B": 96,
+    "per_version_max": 96
+  },
+  "annotation_corrections": [
+    {
+      "run_id": "s5-maximum-plan-cache-A-1-v2",
+      "field": "criteria_review[2]",
+      "original_value": "主选2+2+1输入前瞻，计81920B与序言/排空/队列depth1；与96KiB合批和cache比较全部必要流量/调用不变及新成本。",
+      "corrected_interpretation": "主选是同owner把两个4096元素tile的搬运合成至多8192元素，显式数据区98304B（96KiB）；Max保持原K次、有效payload仍12MiB，搬运由3K减至3K'、队列管理约12K减至12K'。2+2+1输入前瞻81920B（80KiB）是竞争替代，不能将它写成主选或称合批调用数不变。",
+      "score_change": false
+    },
+    {
+      "run_id": "s6-history-parent-rename-A-2-v2",
+      "field": "intent_coverage.kind",
+      "original_value": "existing control intent selected; derived-results alternative correctly marked unregistered gap",
+      "corrected_interpretation": "existing writeback intent selected; unregistered derived-results alternative correctly marked as a separate capability gap",
+      "selected_action": "action.batch_writeback",
+      "score_change": false
+    }
+  ],
+  "facts_interpretation_clarifications": [
+    {
+      "scenario": "s4-derived-reuse",
+      "criterion": 2,
+      "clarification": "8个uint32偏移+8个float合成权重=64B仅是布局假设，不是唯一或默认合法答案。原Scalar每项((X*wx)*wy)*wz不能无证明改为X*(wx*wy*wz)。接受具体48B、56B、72B记录或单点活跃状态，按真实字段、对齐、生命周期、消费和private资源计费，并保留原乘法结合与k次序。",
+      "original_facts_unchanged": true
+    },
+    {
+      "scenario": "s1-value-domain",
+      "criterion": 3,
+      "clarification": "不强制提出或采用缩窄检测。若缩窄会使b由外部要求的fused软件路径切换为分离Mul/Add，应拒绝；给出数值理由并完整比较合法外围工作变化足以满足成本推理标准。",
+      "original_facts_unchanged": true
+    },
+    {
+      "scenario": "s5-maximum-plan-cache",
+      "criterion": 3,
+      "clarification": "来源/成本正确性与新增静态buffer/event方法覆盖分开记录。A比较合批/前瞻/cache的合法计划、资源和生命周期可获得事实分；没有新方法是版本覆盖观察，不伪称A已经讨论，也不据新Action名字给B加分。",
+      "original_facts_unchanged": true
+    }
+  ],
+  "group_summary_disposition": "Original GROUP-SUMMARY already accurately distinguishes A control/writeback choices and B static-management alternatives. It is retained byte-for-byte; no successor required.",
+  "execution_scope": {
+    "new_model_requests": 0,
+    "package_modified": false,
+    "hardware_or_build_runs": 0
+  },
+  "coverage_limit_clarification": {
+    "p_families_expanded": [
+      "elementwise",
+      "indexing",
+      "layout"
+    ],
+    "not_behaviorally_covered_new_leaf": "under-fusion.vector_producer_consumer",
+    "interpretation": "该叶的来源/技术/构建验证另见总报告；本次没有自主选用证据，不将现有P覆盖泛化到全部新增P行为。",
+    "score_change": false
+  },
+  "delivery_disposition": {
+    "original_export_manifest_retained": "evaluation/export-manifest.json",
+    "base_items": 239,
+    "review_changes_exported_separately": true,
+    "package_storage_index": "workflows/references/execution-cost-1.3.0/evaluation/DELIVERY.json",
+    "storage_index_owner": "main integration; not created or copied in WORK"
+  }
+}

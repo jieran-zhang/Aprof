@@ -8,7 +8,7 @@
 
 协调者创建阶段文档的请求部分，指定接收角色、输入引用、目标、执行范围、原任务连续起点/软目标和完成条件；接收角色填写结果后返回同一路径。跨角色需求交回协调者，角色可以直接使用本职责所需的 skill 和工具。
 
-交接单位是阶段实例，不是固定数量的 Agent。一个 Agent 可承担多个角色；委派时也使用相同契约。一次已完成诊断或有效计划可供多个候选引用，不为补齐目录重复执行。
+交接单位是阶段实例，不是固定数量的 Agent。一个 Agent 可承担多个角色；委派时也使用相同契约。C0 preparation 后、C1 diagnosis 前先完成或复用 [code-understanding](code-understanding.md)；一次有效理解、已完成诊断或有效计划可供多个候选及后续轮次引用，不为补齐目录重复执行。
 
 阶段文档存于任务私有工作区，例如 `scratch/stages/c001.candidate.01.md`。源码、JSON、日志和采集放在任务产物目录；不要写回技能包。调用时显式传递同一个任务根目录，以下外层引用均相对于该根目录。被引用 JSON 内部仍遵守其原有路径基准，不改写为本契约的基准。
 
@@ -36,8 +36,8 @@ outputs: {}
 | `contract_version` | 当前为整数 1；这是阶段文档版本，不替代既有 JSON schema_version |
 | `task_id`、`stage_id` | 非空，stage_id 对每次调用/重试唯一；重试不覆盖旧实例 |
 | `candidate_id` | 候选专属阶段填实际候选 ID；原始基线或公共准备填 null |
-| `stage` | `preparation`、`diagnosis`、`planning`、`candidate`、`profiling`、`decision` |
-| `role` | 对应 `coordinator`、`diagnosis`、`parallel-planning`、`optimization`、`profiling` |
+| `stage` | `preparation`、`code-understanding`、`diagnosis`、`planning`、`candidate`、`profiling`、`decision` |
+| `role` | 对应 `coordinator`、`code-understanding`、`diagnosis`、`parallel-planning`、`optimization`、`profiling` |
 | `status` | `pending`、`completed`、`needs_input`、`failed` |
 | `context_ref` | 本次 Context JSON 的文件引用；仅初始 preparation 请求允许 null，交付准备结果前补齐 |
 | `inputs`、`outputs` | 具名引用映射；每个值只有 `path`、`sha256`，多个产物用有意义的不同名称或引用已有索引文件 |
@@ -69,7 +69,7 @@ Context 按现有 schema 表达 workload、设备、预算和 evidence。补充�
 - 建议下一阶段/停止原因、接收角色和需要传入的引用：
 ```
 
-`outputs` 引用的 JSON 是可计算数据的唯一来源；正文解释决策及限制。当前诊断及C1/C2/C3使用aprof.handoff/v3；历史v2保持原义；机制补采的用途等解释按阶段模板写在正文，不能伪装成机器通过记录。现有 `diagnosis_hypotheses.json`、`candidate_plan.json`、`profiling_plan/results.json` 若已由工具产生，可作为补充引用，不要求重复生成同义文件。
+`outputs` 引用的 JSON 是可计算数据的唯一来源；正文解释决策及限制。code-understanding 的唯一新增产物就是本阶段中文 Markdown，`outputs` 可为空，不另建 JSON 或辅助报告；已有适用报告可按其 contract 直接复用，不为补齐外壳再造一份。C0—C5 编号和外层 contract_version=1 保持不变。runtime 0.8.1 的完整方案使用 aprof.handoff/v4 与 action-decision/v3；历史 v2/v3 及原 schema 保持原义，交接链不混装版本。机制补采的用途等解释按阶段模板写在正文，不能伪装成机器通过记录。现有 `diagnosis_hypotheses.json`、`candidate_plan.json`、`profiling_plan/results.json` 若已由工具产生，可作为补充引用，不要求重复生成同义文件。
 
 ## 状态与接收规则
 
@@ -88,10 +88,10 @@ Context 按现有 schema 表达 workload、设备、预算和 evidence。补充�
 
 下游只需当前请求、Context、相关上游阶段文档和其产物即可继续，不依赖聊天历史。最终决定由协调者记录，角色给出的下一步仅是建议。
 
-复用已有计划/正确性/测量时引用原记录，写明身份、范围和时限匹配依据；声明复用不代替实际回放。完整性、预算、清理和交接见 [生命周期](../references/workflow-details.md)。交付前确认报告依赖的代码与证据仍可访问；需要继续回放的 scratch 或原始证据不能先删除。需要永久归档时按既有 collector 契约交接。
+复用已有理解/计划/正确性/测量时引用原记录，写明身份、范围和时限匹配依据；声明复用不代替实际回放。理解报告供诊断、P/O 与 R2 共同使用，源码或相关条件变化只更新受影响部分并保存后继，纯新增 profiling 不重做理解。完整性、预算、清理和交接见 [生命周期](../references/workflow-details.md)。交付前确认报告依赖的代码与证据仍可访问；需要继续回放的 scratch 或原始证据不能先删除。需要永久归档时按既有 collector 契约交接。
 
 ## 新知识记录与历史兼容
 
-外层文档保持 contract_version=1。历史v0003的C1/C2/C3继续引用[旧knowledge-handoff schema](../../schemas/knowledge-handoff.schema.json)，当前v0004采用[机制与交接规则](../references/diagnosis-v4.md)及独立v3 schema，其 parent_hash 为规范 JSON 内容 hash，和 outputs 中的文件字节摘要不同。旧 candidate_draft/episode 保持原字段与评分语义；不得将 v0003 路由包装成旧 episode。知识内容、路由、schema 或训练覆盖变化均记录精确版本/hash。
+外层文档保持 contract_version=1。历史v0003的C1/C2/C3继续引用[旧knowledge-handoff schema](../../schemas/knowledge-handoff.schema.json)，v0004 起采用[机制与交接规则](../references/diagnosis-v4.md)及独立 v3 schema，v0005 再绑定选择 sidecar。runtime 0.8.1 在后继知识快照上使用[完整方案](../references/optimization-schemes.md)的 v4 交接与 v3 决策，显式按协议分派，不用图版本替代交接版本。parent_hash 为规范 JSON 内容 hash，和 outputs 中的文件字节摘要不同。旧 candidate_draft/episode 保持原字段与评分语义；不得将 v0003 路由包装成旧 episode。知识内容、路由、schema 或训练覆盖变化均记录精确版本/hash。
 
 证据输入 aprof.evidence/v1 必须带 source_context_ref{path,sha256}，关联本次 C0/Context 文件。route.context_snapshot 保留完整 facts、attributes 和原 Context 引用，context_hash 对应该快照的规范 JSON hash；下游据此恢复路由条件，不依赖聊天记录。C1/C2 可用 candidate_id=null 表示任务级共享；C3 必须绑定真实候选 ID。

@@ -1,0 +1,303 @@
+{
+  "schema": "aprof.code-understanding-gold/v1",
+  "case": "case-02",
+  "title_private": "Multiple rows: GM byte stride, UB datablock stride, padding and untouched gaps",
+  "max_score": 30,
+  "dimensions": {
+    "algorithm_strategy": 10,
+    "execution": 10,
+    "hardware": 10
+  },
+  "facts": [
+    {
+      "id": "CU02.A01",
+      "dimension": "algorithm_strategy",
+      "points": 4,
+      "expected": "Current scenario 2 extracts the first 13 float elements from each of 5 physical input rows of 20 floats and writes those 13 values into each output row of 18 floats. Written values are 100*r+c for 0<=c<13. This is a staged row copy, not a numerical activation.",
+      "sources": [
+        {
+          "file": "case-02/source/current/data_copy_pad.asc",
+          "line_start": 220,
+          "line_end": 223,
+          "sha256": "2903a3ac4ffcab128e25c3dae6761e2229b6c47c02c035a266769e35fb4bc4ed"
+        },
+        {
+          "file": "case-02/source/current/data_copy_pad.asc",
+          "line_start": 98,
+          "line_end": 105,
+          "sha256": "2903a3ac4ffcab128e25c3dae6761e2229b6c47c02c035a266769e35fb4bc4ed"
+        },
+        {
+          "file": "case-02/source/current/data_copy_pad.asc",
+          "line_start": 68,
+          "line_end": 69,
+          "sha256": "2903a3ac4ffcab128e25c3dae6761e2229b6c47c02c035a266769e35fb4bc4ed"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU02.A02",
+      "dimension": "algorithm_strategy",
+      "points": 4,
+      "expected": "Duplicate first zeros the UB allocation; each row then contains 13 input floats, 3 zero right-pad floats, and an untouched 32-byte zero gap. Copy-out transfers only the 13 data floats. The five output gaps (5 floats per row, including the final suffix) retain byte 0xA5; they are not the UB zero padding.",
+      "sources": [
+        {
+          "file": "case-02/source/current/data_copy_pad.asc",
+          "line_start": 62,
+          "line_end": 65,
+          "sha256": "2903a3ac4ffcab128e25c3dae6761e2229b6c47c02c035a266769e35fb4bc4ed"
+        },
+        {
+          "file": "case-02/source/current/data_copy_pad.asc",
+          "line_start": 100,
+          "line_end": 103,
+          "sha256": "2903a3ac4ffcab128e25c3dae6761e2229b6c47c02c035a266769e35fb4bc4ed"
+        },
+        {
+          "file": "case-02/source/current/data_copy_pad.asc",
+          "line_start": 259,
+          "line_end": 259,
+          "sha256": "2903a3ac4ffcab128e25c3dae6761e2229b6c47c02c035a266769e35fb4bc4ed"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU02.A03",
+      "dimension": "algorithm_strategy",
+      "points": 2,
+      "expected": "The current variant and its delta are the analysis target; upstream scenario 2 values/flat write are not substituted for current constants, strides and row write. Other scenario branches are not selected.",
+      "sources": [
+        {
+          "file": "case-02/source/current/data_copy_pad.asc",
+          "line_start": 20,
+          "line_end": 20,
+          "sha256": "2903a3ac4ffcab128e25c3dae6761e2229b6c47c02c035a266769e35fb4bc4ed"
+        },
+        {
+          "file": "case-02/source/VARIANT.patch",
+          "line_start": 2,
+          "line_end": 2,
+          "sha256": "bca1a82649fcefeb4364044907fc9f3f43ec818dd3417809044afb53aba5a73b"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU02.E01",
+      "dimension": "execution",
+      "points": 3,
+      "expected": "GM input blockLen=52 bytes, src gap=28 bytes, so row starts are [0,80,160,240,320], each read interval is [start,start+52). Last read ends at 372 within the 400-byte input allocation.",
+      "sources": [
+        {
+          "file": "case-02/source/current/data_copy_pad.asc",
+          "line_start": 98,
+          "line_end": 98,
+          "sha256": "2903a3ac4ffcab128e25c3dae6761e2229b6c47c02c035a266769e35fb4bc4ed"
+        },
+        {
+          "file": "case-02/source/current/data_copy_pad.asc",
+          "line_start": 241,
+          "line_end": 241,
+          "sha256": "2903a3ac4ffcab128e25c3dae6761e2229b6c47c02c035a266769e35fb4bc4ed"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "float=4 bytes; GM stride is byte gap after the data block, not start-to-start pitch."
+    },
+    {
+      "id": "CU02.E02",
+      "dimension": "execution",
+      "points": 4,
+      "expected": "Normal GM->UB mode uses 52 data bytes plus rightPadding=3 elements=12 bytes, forming 64 bytes, then dstStride=1 adds 32 bytes. UB row starts are [0,96,192,288,384]. Per row data is [s,s+52), pad [s+52,s+64), gap [s+64,s+96); allocation is 480 bytes.",
+      "sources": [
+        {
+          "file": "case-02/source/current/data_copy_pad.asc",
+          "line_start": 98,
+          "line_end": 103,
+          "sha256": "2903a3ac4ffcab128e25c3dae6761e2229b6c47c02c035a266769e35fb4bc4ed"
+        },
+        {
+          "file": "case-02/source/current/data_copy_pad.asc",
+          "line_start": 223,
+          "line_end": 223,
+          "sha256": "2903a3ac4ffcab128e25c3dae6761e2229b6c47c02c035a266769e35fb4bc4ed"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB.md",
+          "line_start": 133,
+          "line_end": 133,
+          "sha256": "8fd9166a39e7ab163695f1d965ad633725afa1c60cff08708b439f58f2a646ee"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB.md",
+          "line_start": 170,
+          "line_end": 170,
+          "sha256": "8fd9166a39e7ab163695f1d965ad633725afa1c60cff08708b439f58f2a646ee"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "UB stride=32-byte dataBlocks; pad count=elements; allocation=120 floats."
+    },
+    {
+      "id": "CU02.E03",
+      "dimension": "execution",
+      "points": 3,
+      "expected": "UB->GM blockLen=52 bytes, srcStride=1 means 32-byte gap after a 64-byte aligned source block, so UB row pitch remains 96. GM dst gap=20 bytes gives output starts [0,72,144,216,288], write intervals [s,s+52); last end 340 within output allocation 360 bytes.",
+      "sources": [
+        {
+          "file": "case-02/source/current/data_copy_pad.asc",
+          "line_start": 68,
+          "line_end": 68,
+          "sha256": "2903a3ac4ffcab128e25c3dae6761e2229b6c47c02c035a266769e35fb4bc4ed"
+        },
+        {
+          "file": "case-02/source/current/data_copy_pad.asc",
+          "line_start": 244,
+          "line_end": 244,
+          "sha256": "2903a3ac4ffcab128e25c3dae6761e2229b6c47c02c035a266769e35fb4bc4ed"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_UBToGM.md",
+          "line_start": 120,
+          "line_end": 120,
+          "sha256": "23e9b37e62ff5c2fed4b142ad65b346f8987aa6be527e291dae63466dc88f315"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_UBToGM.md",
+          "line_start": 68,
+          "line_end": 68,
+          "sha256": "23e9b37e62ff5c2fed4b142ad65b346f8987aa6be527e291dae63466dc88f315"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU02.H01",
+      "dimension": "hardware",
+      "points": 4,
+      "expected": "DataCopyExtParams blockLen is bytes. GM srcStride/dstStride is a byte gap; UB srcStride/dstStride is a count of 32-byte blocks. left/rightPadding is an element count. Logical 5x13 data is distinct from GM row pitches, padded UB rows and total allocation.",
+      "sources": [
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB.md",
+          "line_start": 152,
+          "line_end": 152,
+          "sha256": "8fd9166a39e7ab163695f1d965ad633725afa1c60cff08708b439f58f2a646ee"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB.md",
+          "line_start": 164,
+          "line_end": 164,
+          "sha256": "8fd9166a39e7ab163695f1d965ad633725afa1c60cff08708b439f58f2a646ee"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_UBToGM.md",
+          "line_start": 140,
+          "line_end": 140,
+          "sha256": "23e9b37e62ff5c2fed4b142ad65b346f8987aa6be527e291dae63466dc88f315"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU02.H02",
+      "dimension": "hardware",
+      "points": 3,
+      "expected": "Duplicate runs on V, and V_MTE2 orders zero initialization before the GM->UB writer reuses that UB region. MTE2_MTE3 orders copy-in before copy-out. These are different dependencies and no Vector activation is performed between transfers.",
+      "sources": [
+        {
+          "file": "case-02/source/current/data_copy_pad.asc",
+          "line_start": 62,
+          "line_end": 65,
+          "sha256": "2903a3ac4ffcab128e25c3dae6761e2229b6c47c02c035a266769e35fb4bc4ed"
+        },
+        {
+          "file": "case-02/source/current/data_copy_pad.asc",
+          "line_start": 66,
+          "line_end": 67,
+          "sha256": "2903a3ac4ffcab128e25c3dae6761e2229b6c47c02c035a266769e35fb4bc4ed"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/sync_control/intra_core_sync/SetFlag_WaitFlag_ISASI.md",
+          "line_start": 64,
+          "line_end": 64,
+          "sha256": "dada622bc1f47bcdbb58acd765bd1d596bcaa14b0b8143a4d5f4f17ed6f929fe"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU02.H03",
+      "dimension": "hardware",
+      "points": 3,
+      "expected": "The target uses the normal DataCopyPad overload supported by A3. It does not select Compact or loop-mode branches restricted to 3510/950 in this source. All specified read/write intervals fit the current explicit buffers; a hardware compile/run or bit-level timing is not proven.",
+      "sources": [
+        {
+          "file": "case-02/source/current/data_copy_pad.asc",
+          "line_start": 95,
+          "line_end": 199,
+          "sha256": "2903a3ac4ffcab128e25c3dae6761e2229b6c47c02c035a266769e35fb4bc4ed"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB.md",
+          "line_start": 11,
+          "line_end": 11,
+          "sha256": "8fd9166a39e7ab163695f1d965ad633725afa1c60cff08708b439f58f2a646ee"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB.md",
+          "line_start": 92,
+          "line_end": 92,
+          "sha256": "8fd9166a39e7ab163695f1d965ad633725afa1c60cff08708b439f58f2a646ee"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    }
+  ],
+  "critical_errors": [
+    {
+      "id": "CU02.C01",
+      "dimension": "hardware",
+      "cap": 2,
+      "explicit_claim_trigger": "Treats a UB stride value of 1 as one byte or one float, or treats blockLen as elements.",
+      "omission_does_not_trigger": true
+    },
+    {
+      "id": "CU02.C02",
+      "dimension": "execution",
+      "cap": 2,
+      "explicit_claim_trigger": "Uses logical width 13 or padded width 16 as the UB row pitch, ignoring the additional UB stride.",
+      "omission_does_not_trigger": true
+    },
+    {
+      "id": "CU02.C03",
+      "dimension": "algorithm_strategy",
+      "cap": 3,
+      "explicit_claim_trigger": "Claims the output GM gaps become zero because UB was zeroed, despite the 13-element row copy-out.",
+      "omission_does_not_trigger": true
+    }
+  ],
+  "acceptable_unknowns": [
+    "No hardware transaction latency or bandwidth is available.",
+    "Output byte 0xA5 gaps need not be interpreted as meaningful float numbers.",
+    "Unused upstream modes need not be fully analyzed."
+  ],
+  "grading": "Use private/GRADING_PROTOCOL.md; do not infer unsupported measurements or penalize brevity."
+}

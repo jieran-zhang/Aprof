@@ -1,0 +1,41 @@
+{
+  "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+  "task_id": "case-08",
+  "context_hash": "sha256:e63e92468f4ef69f2b2d4aa1875068e5fd8d11135ecc0492ab287e18f3aba6d2",
+  "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+  "graph_version": "v0006",
+  "source_context_ref": {
+    "path": "context-origin.json",
+    "sha256": "sha256:085f3a0182b2b7c2b8ebf6b1371eb0aa75c0e69d142a29d2243d15217c456858"
+  },
+  "retrieval_hash": "sha256:50a4ff53b5af64b2b65a85dd2578669dccb0e8540567ce2bc8065441baa511b4",
+  "selections": [
+    {
+      "problem_id": "problem.insufficient_input_reuse",
+      "reason": "gridBase不含channel，同一原grid三元组重复读取",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "gridBase不含channel，同一原grid三元组重复读取"
+      ]
+    },
+    {
+      "problem_id": "problem.scalar_control_hot_loop",
+      "reason": "插值和padding逐输出scalar，half只把最终Cast写回批量化",
+      "trigger": "alternative_mechanism",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "插值和padding逐输出scalar，half只把最终Cast写回批量化"
+      ]
+    },
+    {
+      "problem_id": "problem.control_metadata_overhead",
+      "reason": "区分线性地址前缀与派生插值权重，避免把数值计算叫控制",
+      "trigger": "alternative_mechanism",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "区分线性地址前缀与派生插值权重，避免把数值计算叫控制"
+      ]
+    }
+  ]
+}

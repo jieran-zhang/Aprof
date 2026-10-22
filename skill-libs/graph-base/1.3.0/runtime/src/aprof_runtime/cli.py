@@ -56,6 +56,10 @@ def _parser() -> argparse.ArgumentParser:
             command.add_argument("--output", type=Path, help="新展开文件；拒绝覆盖，省略时仅输出 stdout")
         else:
             command.add_argument("--input", required=True, type=Path)
+    decision = diagnosis_commands.add_parser("verify-decision", help="校验知识采用、试验比较、补证据和前轮反馈；不需要硬件")
+    decision.add_argument("--root", required=True, type=Path)
+    decision.add_argument("--task-root", required=True, type=Path)
+    decision.add_argument("--input", required=True, type=Path)
 
     knowledge = commands.add_parser("knowledge", help="构建、校验、路由角色知识并关联结果")
     knowledge_commands = knowledge.add_subparsers(dest="action", required=True)
@@ -70,8 +74,9 @@ def _parser() -> argparse.ArgumentParser:
     handoff.add_argument("--root", required=True, type=Path)
     for name in ("c1", "c2", "c3", "timing-ref"):
         handoff.add_argument("--" + name, required=True, type=Path)
+    handoff.add_argument("--task-root", type=Path, help="任务证据根目录；默认 C1 文件所在目录")
 
-    chain = knowledge_commands.add_parser("validate-chain", help="校验v3交接，不要求timing")
+    chain = knowledge_commands.add_parser("validate-chain", help="按版本校验v3/v4交接，不要求timing")
     chain.add_argument("--root", required=True, type=Path)
     chain.add_argument("--task-root", required=True, type=Path)
     chain.add_argument("--c1", required=True, type=Path)
@@ -294,6 +299,9 @@ def _episode_training_source(path: Path) -> Any:
 
 def run(arguments: argparse.Namespace) -> Any:
     if arguments.command == "diagnosis":
+        if arguments.action == "verify-decision":
+            from .action_decision import validate_decision
+            return validate_decision(arguments.root, load_json(arguments.input), task_root=arguments.task_root)
         from .diagnosis import build, verify, retrieve
         if arguments.action == "build":
             artifact = build(arguments.root, arguments.parent_snapshot)
@@ -331,6 +339,18 @@ def run(arguments: argparse.Namespace) -> Any:
         from .knowledge import build, verify, route_diagnosis, route_tree, link_result, validate_schema
         if arguments.action == "link-result":
             chain = [load_json(getattr(arguments, name)) for name in ("c1", "c2", "c3")]
+            versions = {value.get("schema_version") for value in chain}
+            if versions & {"aprof.handoff/v3", "aprof.handoff/v4"}:
+                if len(versions) != 1:
+                    raise ContractError("结果关联不能混装交接版本")
+                if versions == {"aprof.handoff/v4"}:
+                    from .bindings_v4 import link_result_v4 as link_current_result
+                else:
+                    from .knowledge_outcome import link_result_v3
+                    return link_result_v3(arguments.root, *chain, load_json(arguments.timing_ref),
+                        task_root=arguments.task_root or arguments.c1.parent, timing_ref=arguments.timing_ref)
+                return link_current_result(*chain, load_json(arguments.timing_ref), root=arguments.root,
+                    task_root=arguments.task_root or arguments.c1.parent, timing_ref=arguments.timing_ref)
             for value in chain:
                 validate_schema(arguments.root, "knowledge-handoff", value)
             from .knowledge import digest
@@ -371,8 +391,9 @@ def run(arguments: argparse.Namespace) -> Any:
         new_kinds = {"diagnosis-record", "diagnosis-region", "diagnosis-graph", "diagnosis-retrieval",
                      "diagnosis-problem-expansion-request", "diagnosis-problem-expansion",
                      "diagnosis-reasoning", "diagnosis-case", "diagnosis-proposal",
-                     "action-routing", "knowledge-handoff-v3", "diagnosis-proposal-review",
-                     "diagnosis-proposal-validation", "diagnosis-case-review"}
+                     "action-routing", "knowledge-handoff-v3", "knowledge-handoff-v4", "diagnosis-proposal-review",
+                     "diagnosis-proposal-validation", "diagnosis-case-review", "action-decision", "action-decision-v2",
+                     "action-decision-v3", "action-condition-policy"}
         if arguments.kind in new_kinds:
             if arguments.root is None:
                 raise ContractError("新契约校验需要 --root 完整技能包路径")
@@ -380,6 +401,10 @@ def run(arguments: argparse.Namespace) -> Any:
             value = load_json(arguments.input)
             validate_schema(arguments.root, arguments.kind, value)
             level = "schema_only"
+            if arguments.kind in {"action-decision", "action-decision-v2", "action-decision-v3"}:
+                from .action_decision import validate_decision
+                validate_decision(arguments.root, value, task_root=arguments.task_root)
+                level = "declared_comparison_and_identity"
             if arguments.kind == "diagnosis-graph":
                 from .diagnosis import validate_artifact
                 validate_artifact(value, root=arguments.root)

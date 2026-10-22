@@ -1,0 +1,52 @@
+{
+  "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+  "task_id": "case-06",
+  "context_hash": "sha256:7407f9d3bbd5f9133112ad568c54751898fd72e52496418a0dfe04497d9056eb",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "graph_version": "v0005",
+  "source_context_ref": {
+    "path": "authority.json",
+    "sha256": "sha256:766d5eff21fe0b0db546dc2580a0b4dab5e364b4390648615b55da59a0e9a23e"
+  },
+  "retrieval_hash": "sha256:432ae61ec87fd5f115c4bbcdc37c904d5e52df0e655eb4bd0b73d2af5d3f9c4a",
+  "selections": [
+    {
+      "problem_id": "problem.scalar_control_hot_loop",
+      "reason": "逐元素 index/x/y 访存与rank解码是否应整体改造而非仅缓存字段",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "逐元素 index/x/y 访存与rank解码是否应整体改造而非仅缓存字段"
+      ]
+    },
+    {
+      "problem_id": "problem.noncontiguous_access",
+      "reason": "随机输入地址与连续输出并存；区分无法消除的随机输入和可批写输出",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "随机输入地址与连续输出并存；区分无法消除的随机输入和可批写输出"
+      ]
+    },
+    {
+      "problem_id": "problem.control_metadata_overhead",
+      "reason": "每元素64位除模及公共地址前缀可增量更新，核对其与向量化的区别",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "每元素64位除模及公共地址前缀可增量更新，核对其与向量化的区别"
+      ]
+    },
+    {
+      "problem_id": "problem.register_spill",
+      "reason": "正文提出的替代解释/代价：结合当前gather源码，进一步区分新增局部状态spill、地址控制或容量对流水的限制。",
+      "trigger": "alternative_mechanism",
+      "related_problem_ids": [
+        "problem.control_metadata_overhead"
+      ],
+      "unexplained_observations": [
+        "源码预测是否被该替代机制抵消尚待判别，不能凭没有profile排除"
+      ]
+    }
+  ]
+}

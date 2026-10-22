@@ -303,6 +303,29 @@ def test_action_preconditions_cannot_borrow_unrelated_true_fact(package):
     validate_reasoning(root, reasoning, artifact)
 
 
+def copy_condition_policy(future, artifact):
+    v4 = Path(diagnosis.REGION) / "versions/v0004"
+    # 后继版本须显式声明条件去向；本例仅变正文，全部前提仍保持安全分类。
+    policy = json.loads((ROOT / "workflows/references/action-condition-policy.json").read_text())
+    policy["legacy_graph_ref"].update(path=str(v4 / "graph.json"),
+        file_sha256=digest((future / v4 / "graph.json").read_bytes()), graph_sha256=content_hash(artifact))
+    actions = {r["id"]: r for r in artifact["records"] if r["kind"] == "action"}
+    for row in policy["actions"]:
+        original = actions[row["action_id"]]["preconditions"]
+        row["legacy_preconditions"] = deepcopy(original)
+        row["safety_conditions"] = [dict(c, kind="structural_applicability", reason="本测试保持原义") for c in original]
+        row["performance_hypotheses"] = [h for h in row["performance_hypotheses"] if h["legacy_condition"] is None]
+        row["added_safety_predicates"] = []
+        row["legacy_dispositions"] = [dict(c, destination="safety_conditions", reason="本测试保持原义") for c in original]
+    raw = json.dumps(policy, ensure_ascii=False)
+    policy_path = future / "workflows/references/action-condition-policy.json"
+    policy_path.write_text(raw)
+    frozen = future / "workflows/references/action-condition-policies/v0001.json"
+    frozen.parent.mkdir(parents=True, exist_ok=True)
+    frozen.write_text(raw)
+    shutil.copy(ROOT / "schemas/action-condition-policy.schema.json", future / "schemas")
+
+
 def test_future_version_uses_explicit_lower_parent_and_replays_v4(package, tmp_path):
     root, artifact = package
     future = tmp_path / "future"
@@ -314,6 +337,7 @@ def test_future_version_uses_explicit_lower_parent_and_replays_v4(package, tmp_p
     source.write_text(source.read_text() + "\n后继版本新增说明；旧快照保留原正文。\n")
     v4 = Path(diagnosis.REGION) / "versions/v0004"
     assert diagnosis.verify_snapshot(future, v4) == artifact
+    copy_condition_policy(future, artifact)
     result = diagnosis.build(future, v4)
     assert result["version"] == "v0005"
     assert result["parent"]["graph_version"] == "v0004"

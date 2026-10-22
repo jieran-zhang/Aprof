@@ -1,0 +1,971 @@
+{
+  "schema": "aprof.masked-scoring-audit/v1",
+  "reviewed_at_utc": "2026-10-21T09:09:35.977213+00:00",
+  "status": "recommend_blinded_adjudication",
+  "scope": {
+    "full_answer_ids": [
+      "answer-08feff778566",
+      "answer-0ec8b5d41104",
+      "answer-6a37798a3ac9",
+      "answer-70ddeeec9cbd",
+      "answer-8689c1dbfe9e",
+      "answer-8b4db4075018",
+      "answer-acd9c31421b0",
+      "answer-ba8c0dea29b9"
+    ],
+    "full_answer_count": 8,
+    "full_fact_count": 78,
+    "extra_fact": "CU05.E01 only",
+    "extra_completed_answer_ids": [
+      "answer-ef1fc28c9365",
+      "answer-efbd8e23de1e"
+    ],
+    "completed_fact_instances_reviewed": 80,
+    "pending_answer_ids": [
+      "answer-20003013d79a"
+    ],
+    "pending_at_consistency_snapshot": true
+  },
+  "issues": [
+    {
+      "issue_id": "AUDIT-CU05-E01-70ddeeec9cbd",
+      "answer_id": "answer-70ddeeec9cbd",
+      "case": "case-05",
+      "fact_id": "CU05.E01",
+      "dimension": "execution",
+      "recorded_status": "partial",
+      "recommended_status": "correct",
+      "points_weight": 4,
+      "recorded_fact_credit": 2,
+      "recommended_fact_credit": 4,
+      "dimension_delta": 2,
+      "total_delta": 2,
+      "classification": "Equivalent concrete expression treated as an omission",
+      "basis": "The frozen protocol awards complete facts or semantically equivalent statements. Each answer explicitly states 128 K iterations and A/B chunk coverage of 8/4 iterations (or the exact equivalent K extents 64*8 and 64*4), correct L1 ranges, and periodic selection formulas. This directly fixes counts at 128/8=16 and 128/4=32 without importing unstated source knowledge. No extra rule or critical cap is required.",
+      "candidate_file": "/dev/shm/aprof-code-understanding-6xvz3x8v/grading/answer-70ddeeec9cbd/candidate.md",
+      "candidate_lines": [
+        5,
+        7,
+        11,
+        13
+      ],
+      "evidence_quotes": [
+        "K循环8192/64=128次",
+        "A一次搬128×512，涵盖8个K迭代；B一次搬256×256，涵盖4个K迭代",
+        "A1/B1共用L1：A Ping/Pong占[0,128)、[128,256)，B占[256,384)、[384,512)。"
+      ],
+      "annotation_file": "/dev/shm/aprof-code-understanding-6xvz3x8v/grading/answer-70ddeeec9cbd/annotation.json",
+      "action": "Recommend blinded adjudication before unmasking; preserve initial files; no files changed by auditor."
+    },
+    {
+      "issue_id": "AUDIT-CU05-E01-ef1fc28c9365",
+      "answer_id": "answer-ef1fc28c9365",
+      "case": "case-05",
+      "fact_id": "CU05.E01",
+      "dimension": "execution",
+      "recorded_status": "partial",
+      "recommended_status": "correct",
+      "points_weight": 4,
+      "recorded_fact_credit": 2,
+      "recommended_fact_credit": 4,
+      "dimension_delta": 2,
+      "total_delta": 2,
+      "classification": "Equivalent concrete expression treated as an omission",
+      "basis": "The frozen protocol awards complete facts or semantically equivalent statements. Each answer explicitly states 128 K iterations and A/B chunk coverage of 8/4 iterations (or the exact equivalent K extents 64*8 and 64*4), correct L1 ranges, and periodic selection formulas. This directly fixes counts at 128/8=16 and 128/4=32 without importing unstated source knowledge. No extra rule or critical cap is required.",
+      "candidate_file": "/dev/shm/aprof-code-understanding-6xvz3x8v/grading/answer-ef1fc28c9365/candidate.md",
+      "candidate_lines": [
+        7,
+        9,
+        13,
+        30
+      ],
+      "evidence_quotes": [
+        "最内层128次K迭代",
+        "A每包包含8个K迭代，即128×512个half；B每包包含4个迭代，即256×256个half。",
+        "A1、B1映射到同一块L1：A Ping/Pong分别占[0,128)、[128,256)KiB，B Ping/Pong占[256,384)、[384,512)KiB。"
+      ],
+      "annotation_file": "/dev/shm/aprof-code-understanding-6xvz3x8v/grading/answer-ef1fc28c9365/annotation.json",
+      "action": "Recommend blinded adjudication before unmasking; preserve initial files; no files changed by auditor."
+    },
+    {
+      "issue_id": "AUDIT-CU05-E01-efbd8e23de1e",
+      "answer_id": "answer-efbd8e23de1e",
+      "case": "case-05",
+      "fact_id": "CU05.E01",
+      "dimension": "execution",
+      "recorded_status": "partial",
+      "recommended_status": "correct",
+      "points_weight": 4,
+      "recorded_fact_credit": 2,
+      "recommended_fact_credit": 4,
+      "dimension_delta": 2,
+      "total_delta": 2,
+      "classification": "Equivalent concrete expression treated as an omission",
+      "basis": "The frozen protocol awards complete facts or semantically equivalent statements. Each answer explicitly states 128 K iterations and A/B chunk coverage of 8/4 iterations (or the exact equivalent K extents 64*8 and 64*4), correct L1 ranges, and periodic selection formulas. This directly fixes counts at 128/8=16 and 128/4=32 without importing unstated source knowledge. No extra rule or critical cap is required.",
+      "candidate_file": "/dev/shm/aprof-code-understanding-6xvz3x8v/grading/answer-efbd8e23de1e/candidate.md",
+      "candidate_lines": [
+        5,
+        9,
+        11,
+        28
+      ],
+      "evidence_quotes": [
+        "K按64分成128轮",
+        "A每包128×(64×8)，Bfile每包256×(64×4)，各65536个half、128KiB。",
+        "A1/B1共同位于L1：A Ping/Pong分别占[0,128)、[128,256)KiB，B分别占[256,384)、[384,512)KiB。"
+      ],
+      "annotation_file": "/dev/shm/aprof-code-understanding-6xvz3x8v/grading/answer-efbd8e23de1e/annotation.json",
+      "action": "Recommend blinded adjudication before unmasking; preserve initial files; no files changed by auditor."
+    }
+  ],
+  "full_reviews": [
+    {
+      "answer_id": "answer-08feff778566",
+      "case": "case-02",
+      "facts": [
+        {
+          "fact_id": "CU02.A01",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "当前五行前13个float写到18元素物理行，输入公式正确，无数值激活。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU02.A02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "清零、13数据+3右pad、32B间隔与五个0xA5输出后缀全部区分。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU02.A03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "采用current的固定scenario2常量与行搬运，未替换成upstream行为。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU02.E01",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "52B块、28B间隔、80B输入pitch及最后372/400B边界正确。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU02.E02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "52+12+32=96B的UB行距、五行区间与480B分配完整。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU02.E03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "搬出UB源pitch96B、GM目的pitch72B及340/360B边界正确。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU02.H01",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "blockLen/GM stride的字节单位、UB stride的32B单位和padding元素单位正确。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU02.H02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "V_MTE2保护初始化到覆盖，MTE2_MTE3保护写后读，未误加激活。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU02.H03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "A3普通搬运路径、3510专用路径排除、显式边界及未验证运行的保留项正确。",
+          "recorded_span_verified_in_candidate": true
+        }
+      ],
+      "critical_error_review": "No listed explicit trigger found; no omission cap added.",
+      "recorded_dimension_scores": {
+        "algorithm_strategy": 10.0,
+        "execution": 10.0,
+        "hardware": 10.0
+      },
+      "recorded_total": 30.0,
+      "recommended_score_change": {},
+      "score_arithmetic_verified": true
+    },
+    {
+      "answer_id": "answer-0ec8b5d41104",
+      "case": "case-06",
+      "facts": [
+        {
+          "fact_id": "CU06.A01",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "V数学变换和BF16经FP32及CAST_RINT回转完整。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU06.A02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "C输入/累加/half落GM/half激活及AIC/AIV分工完整。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU06.A03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "更名未产生新的算法/缓冲/同步，入口和输出分别说明。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU06.E01",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "V的3block、8340/4096、所有长度尾数及49152B单槽资源完整。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU06.E02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "2AIC/4AIV及四AIV起点和16384元素范围正确。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU06.E03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "C全物理路径和V原始BF16队列/float临时量均说明，无新增分配假设。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU06.H01",
+          "recorded_status": "partial",
+          "recommended_status": "partial",
+          "agrees_with_recorded": true,
+          "review_rationale": "910C/A3=2201及3510只作静态对照已说明；未写3510对应950PR/950DT名称，partial有明确遗漏依据。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU06.H02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "2201 looped LoadData2D的Zz与3510 V2的NZ明确区分。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU06.H03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "B的transpose=true/Zn和分支外共同逻辑路径均具体说明。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU06.H04",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "A3全流水等待与3510 pipe生效的差异及未验证编译/性能边界正确。",
+          "recorded_span_verified_in_candidate": true
+        }
+      ],
+      "critical_error_review": "No listed explicit trigger found; no omission cap added.",
+      "recorded_dimension_scores": {
+        "algorithm_strategy": 10.0,
+        "execution": 10.0,
+        "hardware": 8.5
+      },
+      "recorded_total": 28.5,
+      "recommended_score_change": {},
+      "score_arithmetic_verified": true
+    },
+    {
+      "answer_id": "answer-6a37798a3ac9",
+      "case": "case-04",
+      "facts": [
+        {
+          "fact_id": "CU04.A01",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "half输入/float L0C/half Fixpipe存GM之后再half LeakyRelu的顺序正确。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU04.A02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "2AIC/4AIV、1:2配对和每AIC完整K范围正确。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU04.A03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "一次完整tile的Mmad和C初始化均具体说明，无隐藏循环。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU04.E01",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "A/C每AIC 32768 half偏移和B共享完整正确。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU04.E02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "四AIV元素起点与128行半块正确，覆盖互不重叠。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU04.E03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "各层显式字节数、每AIV UB及128块256B零间隔完整。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU04.H01",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "2201 ND/NZ/Zz/Zn及float L0C到half GM再UB的完整路径正确。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU04.H02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "各流水事件、FIX mode2/flag0到配对AIV和激活搬出依赖完整。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU04.H03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "C GM兼中间与最终输出，不将AIC L0C和AIV UB当成共享存储。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU04.H04",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "3510 V2/NZ仅作其他分支，没有当成目标或移植验证。",
+          "recorded_span_verified_in_candidate": true
+        }
+      ],
+      "critical_error_review": "No listed explicit trigger found; no omission cap added.",
+      "recorded_dimension_scores": {
+        "algorithm_strategy": 10.0,
+        "execution": 10.0,
+        "hardware": 10.0
+      },
+      "recorded_total": 30.0,
+      "recommended_score_change": {},
+      "score_arithmetic_verified": true
+    },
+    {
+      "answer_id": "answer-70ddeeec9cbd",
+      "case": "case-05",
+      "facts": [
+        {
+          "fact_id": "CU05.A01",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "half矩阵乘、float累加、B转置存储路线与无激活正确。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU05.A02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "24block映射、8192完整K、基本tile及6/2个N循环正确。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU05.A03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "明确8/4分包、首轮初始化和UnitFlag 2/最终3/Fixpipe3；方向配置的有限保留不是否认协议。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU05.E01",
+          "recorded_status": "partial",
+          "recommended_status": "correct",
+          "agrees_with_recorded": false,
+          "review_rationale": "128次迭代、每包8/4次迭代与正确周期公式无歧义表达16/32包；四槽区间和B的256KiB基址完整。依协议的等价表达规则建议correct。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU05.E02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "L0A/B独立物理空间、字节槽范围及float L0C申请量正确。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU05.E03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "前10轮选槽、包末释放、初次Pong预取和A/B独立事件ID完整。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU05.H01",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "L1包首就绪、L0装载后计算的前向依赖不能修复反向复用边，说明正确。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU05.H02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "L1和L0释放时点、初始可写与收尾消耗反向flag完整。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU05.H03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "删除M_MTE1等待失去Compute(k)->Load(k+2)保证，未声称硬件已损坏。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU05.H04",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "配对/单bit生命周期风险与实际错误值或卡死观测明确分开。",
+          "recorded_span_verified_in_candidate": true
+        }
+      ],
+      "critical_error_review": "No listed explicit trigger found; no omission cap added.",
+      "recorded_dimension_scores": {
+        "algorithm_strategy": 10.0,
+        "execution": 8.0,
+        "hardware": 10.0
+      },
+      "recorded_total": 28.0,
+      "recommended_score_change": {
+        "execution": 2,
+        "total": 2
+      },
+      "score_arithmetic_verified": true
+    },
+    {
+      "answer_id": "answer-8689c1dbfe9e",
+      "case": "case-06",
+      "facts": [
+        {
+          "fact_id": "CU06.A01",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "V数学变换和BF16经FP32及CAST_RINT回转完整。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU06.A02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "C输入/累加/half落GM/half激活及AIC/AIV分工完整。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU06.A03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "更名未产生新的算法/缓冲/同步，入口和输出分别说明。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU06.E01",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "V的3block、8340/4096、所有长度尾数及49152B单槽资源完整。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU06.E02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "2AIC/4AIV及四AIV起点和16384元素范围正确。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU06.E03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "C全物理路径和V原始BF16队列/float临时量均说明，无新增分配假设。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU06.H01",
+          "recorded_status": "partial",
+          "recommended_status": "partial",
+          "agrees_with_recorded": true,
+          "review_rationale": "910C/A3=2201及3510只作静态对照已说明；未写3510对应950PR/950DT名称，partial有明确遗漏依据。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU06.H02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "2201 looped LoadData2D的Zz与3510 V2的NZ明确区分。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU06.H03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "B的transpose=true/Zn和分支外共同逻辑路径均具体说明。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU06.H04",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "A3全流水等待与3510 pipe生效的差异及未验证编译/性能边界正确。",
+          "recorded_span_verified_in_candidate": true
+        }
+      ],
+      "critical_error_review": "No listed explicit trigger found; no omission cap added.",
+      "recorded_dimension_scores": {
+        "algorithm_strategy": 10.0,
+        "execution": 10.0,
+        "hardware": 8.5
+      },
+      "recorded_total": 28.5,
+      "recommended_score_change": {},
+      "score_arithmetic_verified": true
+    },
+    {
+      "answer_id": "answer-8b4db4075018",
+      "case": "case-02",
+      "facts": [
+        {
+          "fact_id": "CU02.A01",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "当前五行前13个float写到18元素物理行，输入公式正确，无数值激活。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU02.A02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "清零、13数据+3右pad、32B间隔与五个0xA5输出后缀全部区分。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU02.A03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "采用current的固定scenario2常量与行搬运，未替换成upstream行为。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU02.E01",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "52B块、28B间隔、80B输入pitch及最后372/400B边界正确。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU02.E02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "52+12+32=96B的UB行距、五行区间与480B分配完整。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU02.E03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "搬出UB源pitch96B、GM目的pitch72B及340/360B边界正确。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU02.H01",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "blockLen/GM stride的字节单位、UB stride的32B单位和padding元素单位正确。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU02.H02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "V_MTE2保护初始化到覆盖，MTE2_MTE3保护写后读，未误加激活。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU02.H03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "A3普通搬运路径、3510专用路径排除、显式边界及未验证运行的保留项正确。",
+          "recorded_span_verified_in_candidate": true
+        }
+      ],
+      "critical_error_review": "No listed explicit trigger found; no omission cap added.",
+      "recorded_dimension_scores": {
+        "algorithm_strategy": 10.0,
+        "execution": 10.0,
+        "hardware": 10.0
+      },
+      "recorded_total": 30.0,
+      "recommended_score_change": {},
+      "score_arithmetic_verified": true
+    },
+    {
+      "answer_id": "answer-acd9c31421b0",
+      "case": "case-03",
+      "facts": [
+        {
+          "fact_id": "CU03.A01",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "数学广播结果与实际FP16专用分支明确分开。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU03.A02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "P/R专用half、Q scalar分派及专用前提未验证完整说明。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU03.A03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "同形/广播、BF16/int8转换与int64 scalar分支完整。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU03.E01",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "三个tiling及真实输入分配均正确。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU03.E02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "P每行从x2[0]读三个half，具体[0,6)请求越出[0,4)分配。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU03.E03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "Q坐标stride映射和R合法连续三元素读取及结果正确。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU03.H01",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "P/R队列和向量路径、Q标量GM访问明确区分。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU03.H02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "SetGlobalBuffer不是分配，具体地址证据与设备是否报错分开。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU03.H03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "三槽共24576B、count3和UB补齐不能扩展GM分配均说明。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU03.H04",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "未给P完整确定输出，未将静态越界当成已观测设备故障。",
+          "recorded_span_verified_in_candidate": true
+        }
+      ],
+      "critical_error_review": "No listed explicit trigger found; no omission cap added.",
+      "recorded_dimension_scores": {
+        "algorithm_strategy": 10.0,
+        "execution": 10.0,
+        "hardware": 10.0
+      },
+      "recorded_total": 30.0,
+      "recommended_score_change": {},
+      "score_arithmetic_verified": true
+    },
+    {
+      "answer_id": "answer-ba8c0dea29b9",
+      "case": "case-01",
+      "facts": [
+        {
+          "fact_id": "CU01.A01",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "数学变换、变换后的shift及三个理想值均完整正确。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU01.A02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "明确BF16搬运、转FP32执行乘加指数及CAST_RINT回转。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU01.A03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "FP32直接算、FP16/BF16临时量及不同回转模式均说明。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU01.E01",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "host查询/复制tiling/启动及3、8340、4096均正确。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU01.E02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "三个半开覆盖区间和BF16字节地址完整且无重叠。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU01.E03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "逐块三轮count及296/296/294字节尾部完整。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU01.H01",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "BF16和FP32显式UB申请量正确，并保留运行时开销边界。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU01.H02",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "输入输出队列生命周期与生产消费依赖具体，临时区复用已说明。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU01.H03",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "明确num=1未启用双缓冲，没有将队列存在等同于重叠。",
+          "recorded_span_verified_in_candidate": true
+        },
+        {
+          "fact_id": "CU01.H04",
+          "recorded_status": "correct",
+          "recommended_status": "correct",
+          "agrees_with_recorded": true,
+          "review_rationale": "MTE2/V/MTE3、有效count与UB对齐物理长度区分及性能证据边界正确。",
+          "recorded_span_verified_in_candidate": true
+        }
+      ],
+      "critical_error_review": "No listed explicit trigger found; no omission cap added.",
+      "recorded_dimension_scores": {
+        "algorithm_strategy": 10.0,
+        "execution": 10.0,
+        "hardware": 10.0
+      },
+      "recorded_total": 30.0,
+      "recommended_score_change": {},
+      "score_arithmetic_verified": true
+    }
+  ],
+  "case05_consistency": {
+    "completed": [
+      {
+        "answer_id": "answer-70ddeeec9cbd",
+        "fact_id": "CU05.E01",
+        "recorded_status": "partial",
+        "recommended_status": "correct",
+        "other_facts_audited": true
+      },
+      {
+        "answer_id": "answer-ef1fc28c9365",
+        "fact_id": "CU05.E01",
+        "recorded_status": "partial",
+        "recommended_status": "correct",
+        "other_facts_audited": false
+      },
+      {
+        "answer_id": "answer-efbd8e23de1e",
+        "fact_id": "CU05.E01",
+        "recorded_status": "partial",
+        "recommended_status": "correct",
+        "other_facts_audited": false
+      }
+    ],
+    "pending": [
+      {
+        "answer_id": "answer-20003013d79a",
+        "status": "annotation or score absent at inspection; candidate and other facts not read",
+        "followup": "Root will check this same fact under the frozen equivalence rule when scoring completes."
+      }
+    ]
+  },
+  "checks": {
+    "original_score_arithmetic_all_pass": true,
+    "all_78_recorded_evidence_spans_are_literal_candidate_substrings": true,
+    "common_protocol_versions": 1,
+    "no_extra_critical_cap": true,
+    "no_gold_or_score_changes": true,
+    "no_condition_mapping_read": true,
+    "no_runs_or_skill_material_read": true,
+    "no_condition_inference": true,
+    "no_SDK_or_NPU_run": true
+  },
+  "reviewed_input_sha256": {
+    "answer-08feff778566": {
+      "candidate.md": "6216bb4f21a74c90b908ab65405af6fac8c9daf90ef010f99f60cc5d6ef1a614",
+      "annotation.json": "58db26f135c2d589a5796328baa217015444946ba764c31878d8ba607801a7dc",
+      "score.json": "526c582d3fc2bb8af2db1b7f42386411b17364bb6de2fe773c5907891678e130",
+      "gold.json": "f9813eed0ab1eb35fd1326e182f9dde298e627b79e08a803ace954a28b2d3c15",
+      "protocol.md": "9d6ac494431829f7bc071eac8fb40caccb6b90cc7d6c38b81c154eb2decbc88b"
+    },
+    "answer-0ec8b5d41104": {
+      "candidate.md": "2d52de29949c43cc88094d07192048ac01aa11b340c1549e2d0ca9b51841c6c9",
+      "annotation.json": "919ade3381169d09d11d377a23901ff5b819a50cdd58dd4c0d7d10e6b756f7f3",
+      "score.json": "5f110250e74ab65477c97f5003803c0466f772f068fd552367e92ba281e0cc8c",
+      "gold.json": "d88ea8b18f6c19a453eab54d0fe756aac743c14c201456ec88278aec5bb07347",
+      "protocol.md": "9d6ac494431829f7bc071eac8fb40caccb6b90cc7d6c38b81c154eb2decbc88b"
+    },
+    "answer-6a37798a3ac9": {
+      "candidate.md": "40658ddce8eeef0c2fe78d32fbb434a0030450b9ab24665594aca2a8b5a47b83",
+      "annotation.json": "48fafbdae1fd7a1fc12b15dde4b457b163bceae3e4f39f3693637ed322c34996",
+      "score.json": "e6d59d8c37fddd187387aa0cd5f8006c79e3f409690c8a942b571df8b80d22dd",
+      "gold.json": "1a4f5251b33e1b202af53a3667a85f9dcf63ff8e076ed6f2d8c7c1e6dba59f9b",
+      "protocol.md": "9d6ac494431829f7bc071eac8fb40caccb6b90cc7d6c38b81c154eb2decbc88b"
+    },
+    "answer-70ddeeec9cbd": {
+      "candidate.md": "8629c482e59603eeaae7e3b5dd1b0c79f7e5aefcec66c1cfbf44266cd931b23c",
+      "annotation.json": "31383fb518bfb58d565ad53467913b4c03a4b31c9569d603dc03f6f19d89a550",
+      "score.json": "1c5dfa17a4598c3c24ff8d4cb3c42b4976713e334950d45e53ffc230499615cc",
+      "gold.json": "0a82433bff2343de71a8d827a36322a4a71f0008eb7266e02eab5a8fe907f64c",
+      "protocol.md": "9d6ac494431829f7bc071eac8fb40caccb6b90cc7d6c38b81c154eb2decbc88b"
+    },
+    "answer-8689c1dbfe9e": {
+      "candidate.md": "e7c67a07cdca559641fd6c0eafa8dbf74e10ff538523f07d89d547f16b1183bc",
+      "annotation.json": "8cd702f0535544acfcd99bf22880e391356bd7ec967df458fb571e449b5f8f62",
+      "score.json": "9e10bd1e1b8a38c48907275cd71610d070fe190ce6881c73093dedc4522df110",
+      "gold.json": "d88ea8b18f6c19a453eab54d0fe756aac743c14c201456ec88278aec5bb07347",
+      "protocol.md": "9d6ac494431829f7bc071eac8fb40caccb6b90cc7d6c38b81c154eb2decbc88b"
+    },
+    "answer-8b4db4075018": {
+      "candidate.md": "ab3e65cefb679dd12b87b15c0aa1d655e20187ac5dcdbad6ec67d01d0a05ba14",
+      "annotation.json": "33afa47ac6c910a11949d7cc7a622bdf0d8b593723761209c45aeffa11c9d818",
+      "score.json": "85dbe566b3468cc25680e82c60fd7b39b872761267304164f91166d75245536c",
+      "gold.json": "f9813eed0ab1eb35fd1326e182f9dde298e627b79e08a803ace954a28b2d3c15",
+      "protocol.md": "9d6ac494431829f7bc071eac8fb40caccb6b90cc7d6c38b81c154eb2decbc88b"
+    },
+    "answer-acd9c31421b0": {
+      "candidate.md": "15f189ad10066351e0362dcefe5fdeedc90023d3b40722672f301dc5b5dbfd02",
+      "annotation.json": "3a3aaea626899e1298b42e15c9920fa48d3ea0a77be0475d23141c7ce3d75187",
+      "score.json": "d465331ef9c56b43937d9e43b2f17eb8e23feb439210e6cc74951a515f4865bc",
+      "gold.json": "e1b10041c631302072abba766667ae908ffad7a95d09e54d982ebb400feba59b",
+      "protocol.md": "9d6ac494431829f7bc071eac8fb40caccb6b90cc7d6c38b81c154eb2decbc88b"
+    },
+    "answer-ba8c0dea29b9": {
+      "candidate.md": "3baa07552c2772f855861634dbfe45fe1d31ba280ba089f7d72c6ea59b176adf",
+      "annotation.json": "fa93dbca30682bb559646a253b16c00959361522dfe96ff8a9a16463936f7664",
+      "score.json": "601e04969f7f0245f373e426bfccdc0e778bfcdcf7bb0c95e5e17282cf6c5b43",
+      "gold.json": "630165b1e9979e73b31a9c9802a966db5dd435e313fc587d9c72dca7e0752a0d",
+      "protocol.md": "9d6ac494431829f7bc071eac8fb40caccb6b90cc7d6c38b81c154eb2decbc88b"
+    }
+  }
+}

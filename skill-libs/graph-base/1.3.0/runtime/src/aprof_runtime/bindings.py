@@ -370,6 +370,10 @@ def route_optimization(root: Path, reasoning: dict, selection: dict, *, task_roo
 
     已有机制与P正文可复用；这里不能把计划期望写成当前观测属性。
     """
+    if selection.get("schema_version") == "aprof.scheme-selection/v1":
+        from .bindings_v4 import route_optimization as route_scheme_optimization
+        return route_scheme_optimization(root, reasoning, selection, task_root=task_root,
+                                         artifacts=artifacts, routing_config=routing_config)
     root = Path(root)
     _part(root, "selection", selection)
     artifacts, config = _routing_inputs(root, artifacts=artifacts, routing_config=routing_config)
@@ -498,6 +502,13 @@ def _domain(value, domain):
 def validate_chain(root: Path, c1: dict, c2: dict, c3: dict | None = None, *, task_root=None,
                    artifacts=None, routing_config=None) -> dict:
     """实施前/交接时同一门禁，不需要 timing；C2 不选 O 配方。"""
+    versions = {item.get("schema_version") for item in (c1, c2, c3) if item is not None}
+    if "aprof.handoff/v4" in versions:
+        if versions != {"aprof.handoff/v4"}:
+            raise GraphError("handoff/v3 与 v4 不能混装；请按显式版本回放")
+        from .bindings_v4 import validate_chain as validate_scheme_chain
+        return validate_scheme_chain(root, c1, c2, c3, task_root=task_root,
+                                     artifacts=artifacts, routing_config=routing_config)
     from .diagnosis_reasoning import action_status
     root = Path(root)
     task_root = Path(task_root) if task_root is not None else root
@@ -521,6 +532,10 @@ def validate_chain(root: Path, c1: dict, c2: dict, c3: dict | None = None, *, ta
     status = action_status(root, reasoning, instance, artifact=artifacts["diagnosis"])
     if status["status"] == "blocked":
         raise GraphError("A 原始硬前提不满足: " + ", ".join(status["failed"]))
+    from .action_decision import validate_handoff_decision
+    decision_result = validate_handoff_decision(root, c1, instance["instance_id"], task_root=task_root,
+        artifact=artifacts["diagnosis"], implementation=c3 is not None and c3["execution"]["result"] == "implemented",
+        artifacts=artifacts, routing_config=config)
     if c2["candidate_id"] is not None or c1["candidate_id"] is not None:
         raise GraphError("C1/C2 是分析/计划，candidate_id 必须为 null")
     p_mode, p_entry = selection["parallel"]["mode"], selection["parallel"]["entry_id"]
@@ -543,12 +558,19 @@ def validate_chain(root: Path, c1: dict, c2: dict, c3: dict | None = None, *, ta
     p_nodes = {r["id"]: r for r in artifacts["parallel-planning"]["records"]}
     missing = status["missing"] + plan_missing + _chosen(actual_p, [] if p_entry is None else [p_entry], p_mode, p_nodes, hard=c3 is not None)
     missing += _compatibility(reasoning, selection["compatibility"], instance["scope"], hard=c3 is not None)
+    if decision_result is not None:
+        missing += (decision_result["missing_safety"] + decision_result["failed_safety"] +
+                    decision_result["pending_required_evidence"] + decision_result.get("missing_workload_mapping", []))
+        if decision_result["selection_mode"] != "experiment":
+            missing.append("action_decision." + decision_result["selection_mode"])
     result = {"schema_version": "aprof.handoff-chain-validation/v1", "task_id": c1["task_id"],
               "instance_id": instance["instance_id"], "status": "conditional" if missing else "ready",
               "missing": sorted(set(missing)), "handoff_hashes": [content_hash(c) for c in chain],
               "causal_claim": False, "legacy_episode_eligible": False}
     if c3 is None:
         return result
+    if decision_result is not None and decision_result.get("missing_workload_mapping"):
+        raise GraphError("C3 缺少测前冻结的完整 workload case payload 映射；不能事后补填首次选择身份")
     if status["status"] != "ready":
         raise GraphError("C3 实施前 A 原始硬前提必须全部满足；请形成后继 reasoning/C1/C2")
     execution = c3["execution"]

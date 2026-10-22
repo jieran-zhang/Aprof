@@ -2,7 +2,7 @@
 schema_version: aprof.knowledge-record/v1
 id: planning.reduction.split
 kind: template
-version: 1.1.0
+version: 1.2.0
 status: active
 title: ColSplit/RowSplit 与分段合并
 scope:
@@ -85,6 +85,22 @@ sources:
   - 72
   sha256: sha256:fecb415cf8ad60515cc925323c983cde9e23e0fd79addb8cc3333a20bf567144
   excerpt_sha256: sha256:fecb415cf8ad60515cc925323c983cde9e23e0fd79addb8cc3333a20bf567144
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/reduction/alg-group-reduce.md
+  original_path: ops/ascendc-tiling-design/references/reduction/alg-group-reduce.md
+  revision: 41377d0a442cd5b1c2356874873a3dda591c6633
+  lines:
+  - 1
+  - 99
+  sha256: sha256:a093e609d217b38db7b739ff2f924e977d1b0abd6c5f18023623625cfebff5d5
+  excerpt_sha256: sha256:d12dacc3e213fbb9b735beb37af5ee22e8879501109c467bf17518c1473352de
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/reduction/multi-axis-transform.md
+  original_path: ops/ascendc-tiling-design/references/reduction/multi-axis-transform.md
+  revision: 41377d0a442cd5b1c2356874873a3dda591c6633
+  lines:
+  - 1
+  - 83
+  sha256: sha256:2a18e0f523a8101607fc3fbe388517869ce25bd6d2f51be57444f46617f7d96f
+  excerpt_sha256: sha256:2a18e0f523a8101607fc3fbe388517869ce25bd6d2f51be57444f46617f7d96f
 learning: {}
 tags:
 - numerical-state
@@ -188,3 +204,13 @@ sumState 在首块前按有效 lane 初始化 0，完成所有 chunk 后才搬�
 验证 R 不能整除 Rc/S、最后 rCount、S=1/S=R、V尾片、空输入、单输出、多个输出组、不同 dtype、workspace 槽无重叠、producer 全覆盖、merge 唯一写和最大容量。跨核数值对照需包含同组不同切分与大数/小数混合；只测 producer 正确不算整个算法正确。失败回到已验证单核流式或原框架基线，记录具体 entry/key 与互斥的 tiling 域。
 
 来源事实为 AR/ARA 分载、Group Reduce 两阶段和 Welford/索引增量；字节序列化、独立 kernel 同步路径与成本比较为工程推导。来源审读完成，未验证 NPU 性能；平台/SDK 适用范围须按实际 910C/A3 或 950 分别核实。
+
+## 复盘不能只看 producer：分核收益与合并成本分开
+
+固定 Group Reduce 文档直接陈述两阶段 partial→merge；多轴归约资料直接陈述按 A/R 结构遍历与同一扫描计算多个统计量。本节代价式是规划推导，不继承来源示意 `SyncAll` 的通用合法性，仍按前文已确认的跨 kernel 完成关系执行。
+
+令 G 为独立输出组数、R 为每组输入数、S 为分片数、b 为每个 partial 状态的字节数。单状态 sum 的 b 是累加 dtype 宽；Welford 是 count/mean/M2 完整状态及实际对齐，不能仅计一个 float。分核方案产生 GS 份 partial，GM workspace 的逻辑写读至少 `2GSb` 字节，另有每组 S−1 次状态合并、两阶段调度及槽位对齐开销。提高 S 可能增加可并行任务，但不会减少输入总读取和必须的归约工作。
+
+对比 S=1 的核内流式归约时，应同时列出：producer 每核工作、merge task 数、partial 写读、临时峰值、数值树与输出组数。G 已足够供核时，盲目增加 S 常只添加中转；G 太小且 R 长时，S>1 可以作为待测方案。不能把“R 大”推成固定分核阈值。
+
+输入值复用例如同一遍扫描求 sum 与 squareSum，派生状态复用例如保留已生成 partial，重算则可能节省活跃状态却增加输入重读。选择前冻结允许的数学表达和舍入顺序；sum/squareSum 不是任意精度条件下 Welford 的等价替代。R2 若 producer 改快而整体未改善，应重新检查 merge/中转/任务分布，而非自动认定归约机制错误；若数值失败，性能预测仍未测试。

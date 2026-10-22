@@ -1,0 +1,740 @@
+{
+  "schema_version": "aprof.knowledge-route/v1",
+  "owner": "optimization",
+  "version": "v0005",
+  "knowledge_hash": "sha256:e633c2334f5a005d92765d16d13466e840de8b6382ed5a0675565bac15ec4793",
+  "context_hash": "sha256:f47450aaa8fe956254bf363244e128ca390ff7c8f26ce23e9d3e6f6750d41ce9",
+  "task_id": "raw15-case-05",
+  "override_hash": null,
+  "selection_mode": "deterministic",
+  "evidence": {
+    "source.kernel_structure": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "apply_adam_w_kernel.asc#lines:1-344",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "lines:1-344"
+      }
+    },
+    "source.host_dispatch": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "apply_adam_w.asc#lines:1-102",
+      "ref": {
+        "path": "source/op_host/apply_adam_w.asc",
+        "sha256": "sha256:f9e628435d48f27a9521f65f0eac276f58bc8f7929adbc7d54d31e3672cc9dc2",
+        "locator": "lines:1-102"
+      }
+    },
+    "workload.matrix": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "matrix-20.json#cases:1-20",
+      "ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:0bcdecc53621402511d6631fde12caa836a1980898e844da3f8e9bdc2bfd46bf",
+        "locator": "cases:1-20"
+      }
+    },
+    "source.tiling": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "apply_adam_w_common.h#lines:1-78",
+      "ref": {
+        "path": "source/op_host/apply_adam_w_common.h",
+        "sha256": "sha256:d010363013f57030ab4c465008fd79028c7ff65471c74ca069b21a35af7773c7",
+        "locator": "lines:1-78"
+      }
+    },
+    "derived.source_cost": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": "derived.source_cost",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "lines:1-344"
+      }
+    },
+    "constraint.task_ownership": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": "constraint.task_ownership",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "lines:1-344"
+      }
+    },
+    "constraint.valid_lengths": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": "constraint.valid_lengths",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "lines:1-344"
+      }
+    },
+    "constraint.output_ownership": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": "constraint.output_ownership",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "lines:1-344"
+      }
+    },
+    "symptom.source.serial_queue_or_event_order.component_1": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "apply_adam_w_kernel.asc#explicit-source-proof: Float Process与Half Process均先4路CopyIn，再算术/SafeSqrt/SafeDiv，最后CopyOut；没有单独下一tile预取阶段。",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "explicit-source-proof: Float Process与Half Process均先4路CopyIn，再算术/SafeSqrt/SafeDiv，最后CopyOut；没有单独下一tile预取阶段。"
+      }
+    },
+    "symptom.source.serial_queue_or_event_order.component_2": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "apply_adam_w_kernel.asc#explicit-source-proof: Float五个TQue各num=1；Half五原始队列各num=1、五FP32TBuf；DeQue/Free及写回关系可在CopyOneIn/CastOne/Compute/CopyOut定位。",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "explicit-source-proof: Float五个TQue各num=1；Half五原始队列各num=1、五FP32TBuf；DeQue/Free及写回关系可在CopyOneIn/CastOne/Compute/CopyOut定位。"
+      }
+    },
+    "symptom.source.serial_queue_or_event_order.component_3": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "apply_adam_w_kernel.asc#explicit-source-proof: loops/tail来自host按ubFormer计算；首轮TPipe槽空闲、末轮count=tailCount；输入v_hat和分母仍在SafeSqrt/SafeDiv后段读。库Sqrt/Div内部排程未知，不声称测得低重叠。",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "explicit-source-proof: loops/tail来自host按ubFormer计算；首轮TPipe槽空闲、末轮count=tailCount；输入v_hat和分母仍在SafeSqrt/SafeDiv后段读。库Sqrt/Div内部排程未知，不声称测得低重叠。"
+      }
+    },
+    "symptom.source.serial_queue_or_event_order": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": "symptom.source.serial_queue_or_event_order",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "explicit-source-proof: Float Process与Half Process均先4路CopyIn，再算术/SafeSqrt/SafeDiv，最后CopyOut；没有单独下一tile预取阶段。"
+      }
+    },
+    "constraint.semantic_equivalence": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": "constraint.semantic_equivalence",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "lines:1-344"
+      }
+    },
+    "constraint.dependency_lifetime": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": "constraint.dependency_lifetime",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "lines:1-344"
+      }
+    },
+    "source.static_followup": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "R2-static-evidence.json#checks/conclusion",
+      "ref": {
+        "path": "R2-static-evidence.json",
+        "sha256": "sha256:1410cf8e9f8062b0aa85f4d5e8aafe94e61d5c88fa95ddb0aa41238f5008daf5",
+        "locator": "checks/conclusion"
+      }
+    }
+  },
+  "context_snapshot": {
+    "schema_version": "aprof.evidence/v1",
+    "task_id": "raw15-case-05",
+    "source_context_ref": {
+      "path": "origin.json",
+      "sha256": "sha256:9c5214155b44e94cb2294c93dfe94a8ea9c12d787d9736dce8e0276919617a6c"
+    },
+    "attributes": {
+      "family": [
+        "elementwise"
+      ],
+      "dtype": [
+        "float16",
+        "float32",
+        "bfloat16"
+      ],
+      "features": [
+        "tiling-tail",
+        "memory-transfer",
+        "pipeline-sync",
+        "vector-api",
+        "precision-boundaries",
+        "buffer-lifetime",
+        "scalar-control"
+      ]
+    },
+    "facts": {
+      "source.kernel_structure": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "apply_adam_w_kernel.asc#lines:1-344",
+        "ref": {
+          "path": "source/op_kernel/apply_adam_w_kernel.asc",
+          "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+          "locator": "lines:1-344"
+        }
+      },
+      "source.host_dispatch": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "apply_adam_w.asc#lines:1-102",
+        "ref": {
+          "path": "source/op_host/apply_adam_w.asc",
+          "sha256": "sha256:f9e628435d48f27a9521f65f0eac276f58bc8f7929adbc7d54d31e3672cc9dc2",
+          "locator": "lines:1-102"
+        }
+      },
+      "workload.matrix": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "matrix-20.json#cases:1-20",
+        "ref": {
+          "path": "source/matrix-20.json",
+          "sha256": "sha256:0bcdecc53621402511d6631fde12caa836a1980898e844da3f8e9bdc2bfd46bf",
+          "locator": "cases:1-20"
+        }
+      },
+      "source.tiling": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "apply_adam_w_common.h#lines:1-78",
+        "ref": {
+          "path": "source/op_host/apply_adam_w_common.h",
+          "sha256": "sha256:d010363013f57030ab4c465008fd79028c7ff65471c74ca069b21a35af7773c7",
+          "locator": "lines:1-78"
+        }
+      },
+      "derived.source_cost": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": "derived.source_cost",
+        "ref": {
+          "path": "source/op_kernel/apply_adam_w_kernel.asc",
+          "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+          "locator": "lines:1-344"
+        }
+      },
+      "constraint.task_ownership": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": "constraint.task_ownership",
+        "ref": {
+          "path": "source/op_kernel/apply_adam_w_kernel.asc",
+          "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+          "locator": "lines:1-344"
+        }
+      },
+      "constraint.valid_lengths": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": "constraint.valid_lengths",
+        "ref": {
+          "path": "source/op_kernel/apply_adam_w_kernel.asc",
+          "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+          "locator": "lines:1-344"
+        }
+      },
+      "constraint.output_ownership": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": "constraint.output_ownership",
+        "ref": {
+          "path": "source/op_kernel/apply_adam_w_kernel.asc",
+          "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+          "locator": "lines:1-344"
+        }
+      },
+      "symptom.source.serial_queue_or_event_order.component_1": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "apply_adam_w_kernel.asc#explicit-source-proof: Float Process与Half Process均先4路CopyIn，再算术/SafeSqrt/SafeDiv，最后CopyOut；没有单独下一tile预取阶段。",
+        "ref": {
+          "path": "source/op_kernel/apply_adam_w_kernel.asc",
+          "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+          "locator": "explicit-source-proof: Float Process与Half Process均先4路CopyIn，再算术/SafeSqrt/SafeDiv，最后CopyOut；没有单独下一tile预取阶段。"
+        }
+      },
+      "symptom.source.serial_queue_or_event_order.component_2": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "apply_adam_w_kernel.asc#explicit-source-proof: Float五个TQue各num=1；Half五原始队列各num=1、五FP32TBuf；DeQue/Free及写回关系可在CopyOneIn/CastOne/Compute/CopyOut定位。",
+        "ref": {
+          "path": "source/op_kernel/apply_adam_w_kernel.asc",
+          "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+          "locator": "explicit-source-proof: Float五个TQue各num=1；Half五原始队列各num=1、五FP32TBuf；DeQue/Free及写回关系可在CopyOneIn/CastOne/Compute/CopyOut定位。"
+        }
+      },
+      "symptom.source.serial_queue_or_event_order.component_3": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "apply_adam_w_kernel.asc#explicit-source-proof: loops/tail来自host按ubFormer计算；首轮TPipe槽空闲、末轮count=tailCount；输入v_hat和分母仍在SafeSqrt/SafeDiv后段读。库Sqrt/Div内部排程未知，不声称测得低重叠。",
+        "ref": {
+          "path": "source/op_kernel/apply_adam_w_kernel.asc",
+          "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+          "locator": "explicit-source-proof: loops/tail来自host按ubFormer计算；首轮TPipe槽空闲、末轮count=tailCount；输入v_hat和分母仍在SafeSqrt/SafeDiv后段读。库Sqrt/Div内部排程未知，不声称测得低重叠。"
+        }
+      },
+      "symptom.source.serial_queue_or_event_order": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": "symptom.source.serial_queue_or_event_order",
+        "ref": {
+          "path": "source/op_kernel/apply_adam_w_kernel.asc",
+          "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+          "locator": "explicit-source-proof: Float Process与Half Process均先4路CopyIn，再算术/SafeSqrt/SafeDiv，最后CopyOut；没有单独下一tile预取阶段。"
+        }
+      },
+      "constraint.semantic_equivalence": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": "constraint.semantic_equivalence",
+        "ref": {
+          "path": "source/op_kernel/apply_adam_w_kernel.asc",
+          "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+          "locator": "lines:1-344"
+        }
+      },
+      "constraint.dependency_lifetime": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": "constraint.dependency_lifetime",
+        "ref": {
+          "path": "source/op_kernel/apply_adam_w_kernel.asc",
+          "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+          "locator": "lines:1-344"
+        }
+      },
+      "source.static_followup": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "R2-static-evidence.json#checks/conclusion",
+        "ref": {
+          "path": "R2-static-evidence.json",
+          "sha256": "sha256:1410cf8e9f8062b0aa85f4d5e8aafe94e61d5c88fa95ddb0aa41238f5008daf5",
+          "locator": "checks/conclusion"
+        }
+      }
+    }
+  },
+  "matches": [
+    {
+      "id": "implementation.pipeline-sync.pipeline",
+      "version": "1.1.0",
+      "path": [
+        "implementation.root",
+        "implementation.pipeline-sync",
+        "implementation.pipeline-sync.pipeline"
+      ],
+      "score": 6,
+      "missing": [
+        "constraint.capacity",
+        "constraint.plan_freedom"
+      ],
+      "status": "needs_evidence",
+      "snapshot": {
+        "body": "# 流水阶段、队列与事件的闭合实现\n\n## 原理与 C2/C3 边界\n\n流水把不同 tile 的搬运、计算、搬出交错，隐藏一部分等待；同一 tile 的数据依赖仍然串行。`InitBuffer(..., 2, ...)` 提供两块物理存储，既不自动证明 overlap，也不等于把 `TQue<..., depth>` 的 depth 改成 2。核融合决定哪些算子在一次 kernel 中执行，数据通路决定中间值走 GM 还是 UB，流水决定不同任务如何重叠；三者各自需要证据。\n\nC2 冻结任务切分、核配比、tile 范围、布局、buffer 上限、workspace 所有者和允许的同步拓扑。C3 可在该范围内实现阶段、队列、事件和收尾；若要改变 task 粒度、跨核依赖、融合区间或内存通路，必须返回 C2 重规划。适用于 tile 数至少 2、存在可隐藏搬运/计算间隙且容量可闭合的 elementwise、Matmul 或既定 CV kernel。零/单 tile 和短尾必须有正确路径，无需为了“启用流水”制造多余阶段。\n\n## 容量、时间与所有权\n\n令第 j 类 buffer 的物理块数为 d_j，每块有效元素 n_j、元素字节 e_j、要求对齐 a_j；`align(x,a)=ceil(x/a)*a`。必须计算：\n\n```text\nUB_required = Σ_j d_j * align(n_j * e_j, a_j) + scratch + API内部预留\nL1_required = dA * align(baseM*baseK*stepKa*eA,aA)\n            + dB * align(baseK*baseN*stepKb*eB,aB) + 其他L1区\nL0A_required = d0A * padded_A_tile_bytes\nL0B_required = d0B * padded_B_tile_bytes\nL0C_required = d0C * padded_C_tile_bytes\n```\n\n每级分别小于目标平台查询得到的可用空间；不能把全部存储当作一个池，也不能把来源中的 192KB、固定 tile 或“CV 必须三缓冲”变成 910C 常量。保留 tile 不变时，块数翻倍会增加容量；是否缩 tile、减少 scratch 或维持单块由 C2 的自由度决定，不机械地要求 tile 减半。\n\n| 对象 | 写者/生产者 | 读者/消费者 | 就绪条件 | 可重写/回收条件 |\n|---|---|---|---|---|\n| 输入 UB 槽 | MTE2 | Vector | MTE2→V 或输入队列 DeQue | Vector 最后一次读取完成 |\n| 输出 UB 槽 | Vector | MTE3 | V→MTE3 或输出队列 DeQue | MTE3 已读完本槽 |\n| A/B 的 L1 包 | MTE2 | MTE1 | MTE2→MTE1 | 包中最后一个 baseK 已装入 L0 |\n| L0A/L0B 槽 | MTE1 | Cube | MTE1→M | Cube 已完成读取 |\n| L0C 槽 | Cube | Fixpipe | M→FIX | Fixpipe 已读完，且该 tile K 累加已结束 |\n\n同一事件 ID 出现两次并非自动冲突：检查事件类型、方向、参与核与重叠生命周期。自定义事件需记录“首次可写”的预置、每代 ready/free 的发出和消耗次数、退出时 drain。不能等待从未发出的反向事件，也不能用早退跳过对侧必等的通知。\n\n## 实施顺序与排程伪代码\n\n1. 先保留单 tile 正确基线，列出每个阶段真实读写地址、有效长度、产生/释放时刻。\n2. 为每种存储单独分槽并预算，选择 queue 管理或手写 event；不要两套机制无契约地同时管理同一槽。\n3. prolog 只发合法首批输入；steady 只等待本次消费所需依赖；drain 处理剩余输出，不再发新输入。\n4. 对所有 `t+lookahead` 先判 `< tileCount`，再计算指针和发 DMA；对尾块同时维护 allocatedCount 与 validCount。\n5. 先核对 0/1/2 tile 和一次回卷，再看长流水。正确后比较总时间和 timeline。\n\n以下是**调度模型伪代码**，`launch_*`、`wait_*` 表示由队列或目标 SDK 事件实现的契约，不是可调用 API。每槽状态带任务代次；等待只放在将要读写该槽的位置。\n\n```text\nfor t in [0, tileCount):\n    s = t % inputDepth\n    wait_input_released(s, generation=t/inputDepth)   # 首代由初始空闲状态满足\n    launch_copy_in(t,s)\n    wait_input_ready(t,s)\n    launch_compute(t,s,out_slot(t))\n    # 计算指令一经合法发射，可发下个槽的搬运；不能覆盖仍在读的 s\n    wait_output_ready(t)\n    launch_copy_out(t)\n# drain 每个已提交但未完成的搬出，然后释放资源\n```\n\n标量发射顺序与硬件完成顺序不同；模型不保证速度。若每轮 `PIPE_ALL` 或先等待所有前序任务再发新任务，往往把所有阶段重新串行化。\n\n## 可落地的 Ascend C 队列片段\n\n下面是 float、连续且 `n` 为 32B 对齐元素数的单 tile 函数，`xGm/yGm` 已绑定 GM，`inQ/outQ` 属于本核的 TPipe。它使用 `kernel_operator.h`，展示真实 API 的所有权路径；尾块需在 Host 分流到合法的 DataCopyPad/有效长度路径。它可以作为合法队列骨架，是否跨迭代重叠由编译结果和 timeline 判断。\n\n```cpp\n#include \"kernel_operator.h\"\nusing namespace AscendC;\n// 成员：TPipe pipe; GlobalTensor<float> xGm, yGm;\n// 成员：TQue<TPosition::VECIN,1> inQ;\n// 成员：TQue<TPosition::VECOUT,1> outQ;\n// Init中：pipe.InitBuffer(inQ,2,tileElems*sizeof(float));\n//         pipe.InitBuffer(outQ,2,tileElems*sizeof(float));\n// 物理块数2；本函数每次最多有1个未DeQue的元素，符合depth=1。\n__aicore__ inline void OneTile(uint64_t off, uint32_t n) {\n    auto x = inQ.AllocTensor<float>();\n    DataCopy(x, xGm[off], n);\n    inQ.EnQue(x);\n    x = inQ.DeQue<float>();\n    auto y = outQ.AllocTensor<float>();\n    LeakyRelu(y, x, 0.001f, n);\n    outQ.EnQue(y);\n    inQ.FreeTensor(x);\n    y = outQ.DeQue<float>();\n    DataCopy(yGm[off], y, n);\n    outQ.FreeTensor(y);\n}\n```\n\n不要把 `CopyIn(0); CopyIn(1);` 的两次连续 EnQue 硬塞进 depth=1 队列；要么在第一次 Compute/DeQue 后再预取，要么在 SDK 允许时明确扩大队列深度并重新证明容量。队列 Free 是交回队列管理，支持的队列用法由框架维护依赖；若改成手工地址复用，必须自己等待异步读者真正完成。源 S1 的示意循环不是可原样移植的完整程序。\n\n## Matmul/CV 的架构限制\n\nS2/S3 的 arch22 路线支持 L1/L0 ping-pong 与精确反向事件。A/B 的大包长度不同，L1 释放计数应按各自包末尾；只在合法的首 baseK 等 ready、末 baseK 发 free。高阶 Matmul 内部已管理的 buffer/event 不重复手排。\n\n跨核同步与本核 HardEvent 不同。S4 的官方 API 文档明确：A2/A3 支持 CrossCore mode 0/1/2；其 Wait 的 mode/pipe 参数不作为硬件输入，Wait 会阻塞全部流水后续发射。显式写相同 mode 有助审读，但不能把 arch22 中 `Set<2>` 配默认 `Wait` 一律判为挂死。950 的 mode 4 使用不同硬件指令，才必须显式选择；这不构成 910C 可用能力。`PipeBarrier<PIPE_V>` 只表达 V 内依赖，不能替代 GM 跨核发布/消费握手。\n\n## 验证、失败与回退\n\n验证零任务、单 tile、两 tile、奇数 tile、尾长 1/对齐边界、槽回卷、多次重复及多核不均匀任务。记录队列最大未 DeQue 数、各槽 live 区间、事件计数和 workspace 最大地址。性能上看 Task Duration、启动/稳态/收尾各段和实际重叠，不用“配置了两块”替代机制证据。\n\n首轮挂起常见于未预置 free；周期性错常见于复用早于最后读；末轮漏写常见于 drain 缺失；双缓冲变慢可能是 tile 缩小后发射/同步变多。回退到同算法同 dtype 的单槽、逐 tile 正确路径，保留原失败；需要新所有者、核数、数据通路或融合区间时返回 C2。\n\n## 固定来源与证据级别\n\n- S1：[ops/ascendc-performance-best-practices/references/elementwise/double_buffer_design.md](../../../sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/elementwise/double_buffer_design.md)，行 40–249；修订 `41377d0a442cd5b1c2356874873a3dda591c6633`。\n- S2：[ops/ascendc-performance-best-practices/references/matmul/arch22/pipeline_design.md](../../../sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/matmul/arch22/pipeline_design.md)，行 1–139；修订 `41377d0a442cd5b1c2356874873a3dda591c6633`。\n- S3：[ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md](../../../sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md)，行 1–155；修订 `41377d0a442cd5b1c2356874873a3dda591c6633`。\n- S4：[docs/zh/api/SIMD-API/basic_api/sync_control/inter_core_sync/CrossCoreWaitFlag_ISASI.md](../../../sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/sync_control/inter_core_sync/CrossCoreWaitFlag_ISASI.md)，行 28–151；修订 `d378849769f9ee610af9d0ac38db2b3b6bed3209`。\n\n来源事实、本文推导与待验证项在正文分别标注。冻结源码及仓库许可证随包保存；本次仅完成审读，未在目标 SDK 构建，未运行 NPU 正确性或性能测量。源码存在不代表当前 shape 已分派到该路径，任何收益都须由当前候选的完整正确性、Task Duration 与针对性 timeline 证明。",
+        "evidence_status": "source_reviewed_not_benchmarked",
+        "id": "implementation.pipeline-sync.pipeline",
+        "kind": "recipe",
+        "learning": {},
+        "parent": "implementation.pipeline-sync",
+        "references": [
+          "implementation.pipeline-sync.slots",
+          "implementation.buffer-lifetime.reuse"
+        ],
+        "schema_version": "aprof.knowledge-record/v1",
+        "scope": {
+          "dtypes": [
+            "all"
+          ],
+          "platforms": [
+            "all"
+          ],
+          "workloads": [
+            "all"
+          ]
+        },
+        "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+        "source_hash": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603",
+        "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+        "sources": [
+          {
+            "excerpt_sha256": "sha256:28c3372885746552f8fc7c07805f7f715efc2c32ef72a3a0155dcbd49a0967a3",
+            "lines": [
+              40,
+              249
+            ],
+            "original_path": "ops/ascendc-performance-best-practices/references/elementwise/double_buffer_design.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/elementwise/double_buffer_design.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:142cc0055136ff3bc203672f4c4365cf4f09b41a175a7bfa1d89f3df3b2500ae"
+          },
+          {
+            "excerpt_sha256": "sha256:411edebe99b43b0bb05bac2754c1d4ffd4abe46c726df718c0c1b4a7131eb0ed",
+            "lines": [
+              1,
+              139
+            ],
+            "original_path": "ops/ascendc-performance-best-practices/references/matmul/arch22/pipeline_design.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/matmul/arch22/pipeline_design.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:411edebe99b43b0bb05bac2754c1d4ffd4abe46c726df718c0c1b4a7131eb0ed"
+          },
+          {
+            "excerpt_sha256": "sha256:ea3be814234904a2d8a4a3b99847aec00c849f3fb3ce2647390a3dce0a734ba1",
+            "lines": [
+              1,
+              155
+            ],
+            "original_path": "ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:ea3be814234904a2d8a4a3b99847aec00c849f3fb3ce2647390a3dce0a734ba1"
+          },
+          {
+            "excerpt_sha256": "sha256:02edbe3918b020be18c5b07b81c9bc18153e3f3ab7ba41a9962391c7173aa399",
+            "lines": [
+              28,
+              151
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/sync_control/inter_core_sync/CrossCoreWaitFlag_ISASI.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/sync_control/inter_core_sync/CrossCoreWaitFlag_ISASI.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:69845e8fa794040e321959eaa57105a79cdf880c2d9460b7bf65a53f3c644827"
+          }
+        ],
+        "status": "active",
+        "tags": [],
+        "title": "流水阶段、队列与事件的闭合实现",
+        "version": "1.1.0"
+      }
+    },
+    {
+      "id": "implementation.pipeline-sync.slots",
+      "version": "1.1.0",
+      "path": [
+        "implementation.root",
+        "implementation.pipeline-sync",
+        "implementation.pipeline-sync.slots"
+      ],
+      "score": 6,
+      "missing": [
+        "constraint.capacity",
+        "constraint.plan_freedom",
+        "constraint.workspace_ownership"
+      ],
+      "status": "needs_evidence",
+      "snapshot": {
+        "body": "# Workspace 槽、任务描述符与跨阶段所有权\n\n## 核心原则与适用条件\n\nslot 不是一个通用取模数字，而是某类对象在其完整生存期内的存储租约。跨 AIC/AIV 的中间结果、跨 s2 的在线状态、三阶段的任务描述符、L1 ping-pong 即使都用 `%2/%3`，仍属于不同的索引空间。只有最后一个异步读者完成，租约才结束。\n\n适用于 C2 已确定融合 region、逻辑 task、AIC/AIV 配比、workspace 划分和阶段依赖的 FA/FIA、split-K 或复杂 CV kernel。C3 可以落实每槽的 offset、代次和 ready/free，但不能自行把 task 改成另一个维度、增加跨核消费者，或把 GM 中转换成 UB 直通；遇到这些需求返回 C2。对普通单 tile Vector，应先使用 TQue，不为简单实现新增多种全局槽。\n\n## 先建生产者—消费者表\n\n下表是**本文抽象**，列名不要求工程使用同名成员。每一行需在当前源码中定位真实对象和同步边。\n\n| 槽域 | 数据 | 写者 | 读者 | 首轮初始化 | 释放条件 |\n|---|---|---|---|---|---|\n| handshakeSlot | QK scores / P / PV 中间块 | C1 / V1 / C2 | V1 / C2 / V2 | ready计数空、free允许首写 | 对应阶段读完本块；有两个AIV时包含双方 |\n| taskStateSlot | shape、offset、tail、stage有效位 | task创建方 | C1、V1、C2、V2调度 | 全部invalid | 最后一阶段不再引用描述符 |\n| selfRefSlot | running max/sum、重标定因子、Oacc | 同query的前一s2阶段 | 后续s2/V2与最终输出 | m=-∞、l=0；Oacc初始化或首块专门分支 | 同query最终s2及输出完成 |\n| L1RotationSlot | Q/P、K/V大包 | MTE2 | MTE1 | free已预置 | 大包最后一次LoadData读完 |\n| L0RotationSlot | baseK A/B及L0C累加 | MTE1/Cube | Cube/Fixpipe | free已预置 | 最后一次Cube读或Fixpipe读完 |\n\n`-∞` 是 running max 的数学初值，不意味着全mask行可任意用 `-∞-(-∞)` 计算。mask、全无效行和空KV的输出语义必须沿用原oracle，独立判断是否跳过阶段并保留合法通知。\n\n## 用区间与代次求槽深度\n\n对象 i 的占用区间为 `[acquire_i, release_i)`，release 包含真实异步消费者完成。最小槽深度至少是任意时刻的最大存活数：\n\n```text\ndomainDepth >= max_time count(i : acquire_i <= time < release_i)\nslot(seq) = seq % domainDepth\ngeneration(seq) = seq / domainDepth\naddr(core,seq) = base + core*coreStride + slot(seq)*slotStride\nend = addr + slotBytes <= regionEnd\n```\n\n取模只分配地址，不提供同步。重用前必须证明旧 generation 已释放；event 本身通常不携带代次，代次由确定的发射/等待顺序或调试元数据保证。HardEvent 的不同事件类型可有独立的 ID 命名空间，须按目标 API 核验；CrossCore 则不能按 mode 划分独立资源：同一核每个 flagId 对应一个计数器，切换 mode 前必须完成旧 mode 的全部 Set/Wait，禁止同一 flagId 跨 mode 同时存活。不要把某类事件的复用规则推广到另一类；`PIPE_ALL` 或 `volatile` 不能替代跨核可见性与通知。\n\n令 C 为逻辑AIC组合数，S/P/O/U 四类中间张量每槽元素数分别为 E_S/E_P/E_O/E_U，字节 e_S/e_P/e_O/e_U，槽深分别 d_S/d_P/d_O/d_U。本文给出的保守布局预算为：\n\n```text\ncoreStride = dS*align(ES*eS,aS) + dP*align(EP*eP,aP)\n           + dO*align(EO*eO,aO) + dU*align(EU*eU,aU)\nworkspace = C*coreStride + flashDecodePartials + layout/featureExtra\nmetadataBytes = taskDepth * sizeof(TaskDescriptor)  # 不混进数据槽字节\n```\n\n若采用按类型先排所有core的布局，则每类区域分别占 `C*d_j*slotStride_j`；偏移公式不能与按core排布混用。shape、dtype、对齐、Split-KV、post-quant或Rope改变后都须重算。槽区间两两不重叠，且全量包含在Host声明workspace中。\n\n## arch22 源码事实：3份描述符不等于3份中间结果\n\nS1 的 FIA arch22 `PRELOAD_NUM=2`，`FIA_PRELOAD_TASK_CACHE_SIZE=3`。`InitWorkspace` 为 mm1、vec1、mm2、vec2 分别按 `GetBlockNum()*2*elements*sizeof(type)` 推移区域；task缓存则用3份 RunInfo。`ExecuteTask` 在节拍t发 C1(t)，发 V1/C2(t-1)，再发 V2(t-2) 并使该描述符 invalid。因此不能因描述符 `%3` 就把 GM 数据槽也改成 `%3`，反过来也不能把描述符压成2份而覆盖仍供V2使用的offset。\n\nS2 的 FA arch22 同样存在 `extraInfo[taskId%3]` 与 `taskIdMod2` 的分离，并按输入类型/格式为BMM1/Vec1分配不同workspace倍数。这些是具体实现事实，不能推广为所有 FA 固定用两份或三份。S3要求buffer深度、事件、地址、退出路径一起闭合；设计文档中针对其它架构的默认PRELOAD值只可作候选。\n\n## 可执行的索引片段与排程模型\n\n下面是普通 C++ 索引逻辑，可放进既定kernel的标量路径；`uint64_t` 避免多核大shape的偏移乘积在32位先溢出。深度、stride和region大小均由Host预先验证为正且无溢出，所有偏移以字节计，GlobalTensor下标另转换成元素单位。\n\n```cpp\nconst uint64_t dataSlot = stageSeq % dataDepth;\nconst uint64_t taskSlot = taskSeq % taskDepth;\nconst uint64_t stateSlot = querySeq % stateDepth;\nconst uint64_t l1Slot = packageSeq % l1Depth;\nconst uint64_t dataByteOffset = regionBaseBytes\n    + uint64_t(logicalCoreId) * coreStrideBytes\n    + dataSlot * dataSlotStrideBytes;\n// 不能以taskSlot替换dataSlot；合法地址仍须等待旧代消费者完成。\n```\n\n下面是**契约伪代码**；阶段函数和租约操作需由当前工程的公开SDK API实现，不依赖来源仓库私有服务类。\n\n```text\ncreate(task):\n    require descriptor_slot(task) no longer referenced by any stage\n    write immutable offsets, valid lengths, query id, first/last flags\n    mark descriptor valid\nproduce(stage,task):\n    wait old generation of data_slot(stage,task) released\n    write all valid elements and prescribed padding\n    publish ready after actual producer pipeline completes\nconsume(stage,task):\n    wait corresponding ready\n    read only descriptor's valid region\n    publish released after last asynchronous reader completes\nretire(task):\n    require final stage and any state writeback complete\n    invalidate descriptor; keep query state until its final s2 finishes\n```\n\n## 双AIV、空任务与进展证明\n\nC:V=1:2不是两方可以重复写同一完整tile。按C2契约确定 `logicCoreId`、`subId` 和两份互不重叠的行区间；奇数M可用 `start=floor(subId*M/2), end=floor((subId+1)*M/2)` 推导所有权，但相应Fixpipe布局和API是否接受需单独验证，不能只改数学索引。两个AIV都参与的 mode2 回传必须有两个生产者；不能让其中一个提前return而另侧永等。对无任务core、mask跳过、空KV、drain，列出双方是否仍发送/消费通知。\n\nS4的官方说明中，mode2 是AIC与所有AIV；A2/A3的Wait参数不参与硬件指令，默认Wait可正常配合源码中的Set<2>。评审应核对真实模式、参与核和通知数量，不能由模板文字不一致直接判死锁。950 mode4及单AIV独立flag映射属于另一能力范围，不能带入dav-2201路径。\n\n## 验证与回退\n\n至少跨越数据深度与描述符深度的最小公倍数，例如2和3时执行超过6个任务并再重复；覆盖同query多s2、query切换、尾M/N/K、Split-KV首末分片和空任务。静态核对每区字节上界、每槽读写序列、每代通知计数；动态结果按原oracle全case检验，性能在正确后才测。\n\n周期性错、只在多s2错、回卷后挂起，优先保留该case并检查租约和状态，不加缓冲掩盖。回退到C2允许的串行发布/消费或更浅流水；若修复需要增加workspace、改变核参与关系或state所有者，交回C2。\n\n## 固定来源与证据级别\n\n- S1：[attention/fused_infer_attention_score/op_kernel/arch22/fia_kernel_nonquant.h](../../../sources/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/attention/fused_infer_attention_score/op_kernel/arch22/fia_kernel_nonquant.h)，行 95–1120；修订 `d7e6a7c6c1450c040049486845336c77f3100406`。\n- S2：[attention/flash_attention_score/op_kernel/arch22/flash_attention_score_s1s2_bn2gs1.h](../../../sources/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/attention/flash_attention_score/op_kernel/arch22/flash_attention_score_s1s2_bn2gs1.h)，行 399–1100；修订 `d7e6a7c6c1450c040049486845336c77f3100406`。\n- S3：[ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md](../../../sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md)，行 1–155；修订 `41377d0a442cd5b1c2356874873a3dda591c6633`。\n- S4：[docs/zh/api/SIMD-API/basic_api/sync_control/inter_core_sync/CrossCoreWaitFlag_ISASI.md](../../../sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/sync_control/inter_core_sync/CrossCoreWaitFlag_ISASI.md)，行 28–151；修订 `d378849769f9ee610af9d0ac38db2b3b6bed3209`。\n- S5：[docs/zh/api/SIMD-API/basic_api/sync_control/inter_core_sync/CrossCoreSetFlag_ISASI.md](../../../sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/sync_control/inter_core_sync/CrossCoreSetFlag_ISASI.md)，行 28–151；修订 `d378849769f9ee610af9d0ac38db2b3b6bed3209`。\n\n来源事实、本文推导与待验证项在正文分别标注。冻结源码及仓库许可证随包保存；本次仅完成审读，未在目标 SDK 构建，未运行 NPU 正确性或性能测量。源码存在不代表当前 shape 已分派到该路径，任何收益都须由当前候选的完整正确性、Task Duration 与针对性 timeline 证明。",
+        "evidence_status": "source_reviewed_not_benchmarked",
+        "id": "implementation.pipeline-sync.slots",
+        "kind": "recipe",
+        "learning": {},
+        "parent": "implementation.pipeline-sync",
+        "references": [
+          "implementation.pipeline-sync.pipeline",
+          "implementation.buffer-lifetime.reuse",
+          "implementation.fusion-composition.cv_multistage_handoff"
+        ],
+        "schema_version": "aprof.knowledge-record/v1",
+        "scope": {
+          "dtypes": [
+            "all"
+          ],
+          "platforms": [
+            "all"
+          ],
+          "workloads": [
+            "all"
+          ]
+        },
+        "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+        "source_hash": "sha256:098edae503d1fa984733776df599c6f2e798393373efcd7a8ac547fcf98afcf8",
+        "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/slots.md",
+        "sources": [
+          {
+            "excerpt_sha256": "sha256:51be295b11320b07caaffe8c601255e1c445fa184612fe67e19ed521696afd4b",
+            "lines": [
+              95,
+              1120
+            ],
+            "original_path": "attention/fused_infer_attention_score/op_kernel/arch22/fia_kernel_nonquant.h",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/attention/fused_infer_attention_score/op_kernel/arch22/fia_kernel_nonquant.h",
+            "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+            "sha256": "sha256:f9329654b3966cbb62b4f23c4d6d91cd2fcc48335a58915075f9f52184f4f837"
+          },
+          {
+            "excerpt_sha256": "sha256:4a9a63533fd44f30032a770d25255ed92d8912b97484c2feea89c38fe62a081f",
+            "lines": [
+              399,
+              1100
+            ],
+            "original_path": "attention/flash_attention_score/op_kernel/arch22/flash_attention_score_s1s2_bn2gs1.h",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/attention/flash_attention_score/op_kernel/arch22/flash_attention_score_s1s2_bn2gs1.h",
+            "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+            "sha256": "sha256:e739820e172fa26ae73c802ad8ca2ceabb1080ee9dd1e3c2c8226d08f7d6e34a"
+          },
+          {
+            "excerpt_sha256": "sha256:ea3be814234904a2d8a4a3b99847aec00c849f3fb3ce2647390a3dce0a734ba1",
+            "lines": [
+              1,
+              155
+            ],
+            "original_path": "ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:ea3be814234904a2d8a4a3b99847aec00c849f3fb3ce2647390a3dce0a734ba1"
+          },
+          {
+            "excerpt_sha256": "sha256:02edbe3918b020be18c5b07b81c9bc18153e3f3ab7ba41a9962391c7173aa399",
+            "lines": [
+              28,
+              151
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/sync_control/inter_core_sync/CrossCoreWaitFlag_ISASI.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/sync_control/inter_core_sync/CrossCoreWaitFlag_ISASI.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:69845e8fa794040e321959eaa57105a79cdf880c2d9460b7bf65a53f3c644827"
+          },
+          {
+            "excerpt_sha256": "sha256:c5145c71c4361eef7d3e7a5597dfa8bc235c92153767ab8322ebee5109ed0b5d",
+            "lines": [
+              28,
+              151
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/sync_control/inter_core_sync/CrossCoreSetFlag_ISASI.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/sync_control/inter_core_sync/CrossCoreSetFlag_ISASI.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:fb6098e64301d056e53eb0f083dcc96083075fc8da78409492f905653c311f96"
+          }
+        ],
+        "status": "active",
+        "tags": [],
+        "title": "Workspace 槽、任务描述符与跨阶段所有权",
+        "version": "1.1.0"
+      }
+    }
+  ],
+  "considered": [
+    {
+      "router": "implementation.root",
+      "target": "implementation.tiling-tail",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.root",
+      "target": "implementation.memory-transfer",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.root",
+      "target": "implementation.buffer-lifetime",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.root",
+      "target": "implementation.pipeline-sync",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.root",
+      "target": "implementation.vector-api",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.root",
+      "target": "implementation.precision-boundaries",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.root",
+      "target": "implementation.cube-api",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.root",
+      "target": "implementation.fusion-composition",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.root",
+      "target": "implementation.scalar-control",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.buffer-lifetime",
+      "target": "implementation.buffer-lifetime.reuse",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.buffer-lifetime",
+      "target": "implementation.buffer-lifetime.example.ub-accumulator",
+      "matched": false,
+      "prior_score": 1
+    },
+    {
+      "router": "implementation.buffer-lifetime",
+      "target": "implementation.buffer-lifetime.arch22-bank-layout",
+      "matched": false,
+      "prior_score": 2
+    },
+    {
+      "router": "implementation.memory-transfer",
+      "target": "implementation.memory-transfer.input-tile-residency",
+      "matched": false,
+      "prior_score": 2
+    },
+    {
+      "router": "implementation.memory-transfer",
+      "target": "implementation.memory-transfer.coalesce",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.memory-transfer",
+      "target": "implementation.memory-transfer.example.tile-amortization",
+      "matched": false,
+      "prior_score": 1
+    },
+    {
+      "router": "implementation.memory-transfer",
+      "target": "implementation.memory-transfer.cache-hint",
+      "matched": false,
+      "prior_score": 2
+    },
+    {
+      "router": "implementation.memory-transfer",
+      "target": "implementation.memory-transfer.l2-reuse-order",
+      "matched": false,
+      "prior_score": 2
+    },
+    {
+      "router": "implementation.memory-transfer",
+      "target": "implementation.memory-transfer.strided-pad",
+      "matched": false,
+      "prior_score": 2
+    },
+    {
+      "router": "implementation.pipeline-sync",
+      "target": "implementation.pipeline-sync.pipeline",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.pipeline-sync",
+      "target": "implementation.pipeline-sync.slots",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.pipeline-sync",
+      "target": "implementation.pipeline-sync.example.sigmoid-pipeline",
+      "matched": false,
+      "prior_score": 1
+    },
+    {
+      "router": "implementation.pipeline-sync",
+      "target": "implementation.pipeline-sync.example.prefetch-boundaries",
+      "matched": false,
+      "prior_score": 1
+    },
+    {
+      "router": "implementation.precision-boundaries",
+      "target": "implementation.precision-boundaries.numeric",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.precision-boundaries",
+      "target": "implementation.precision-boundaries.bounds",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.scalar-control",
+      "target": "implementation.scalar-control.constant_lifetime",
+      "matched": false,
+      "prior_score": 2
+    },
+    {
+      "router": "implementation.scalar-control",
+      "target": "implementation.scalar-control.hot_loop_address",
+      "matched": false,
+      "prior_score": 2
+    },
+    {
+      "router": "implementation.scalar-control",
+      "target": "implementation.scalar-control.tilingdata_access",
+      "matched": false,
+      "prior_score": 2
+    },
+    {
+      "router": "implementation.tiling-tail",
+      "target": "implementation.tiling-tail.valid-length",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.tiling-tail",
+      "target": "implementation.tiling-tail.dispatch",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.tiling-tail",
+      "target": "implementation.tiling-tail.example.exp-tile8192",
+      "matched": false,
+      "prior_score": 1
+    },
+    {
+      "router": "implementation.vector-api",
+      "target": "implementation.vector-api.batch",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.vector-api",
+      "target": "implementation.vector-api.cast-control",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.vector-api",
+      "target": "implementation.vector-api.cast",
+      "matched": false,
+      "prior_score": 2
+    }
+  ]
+}

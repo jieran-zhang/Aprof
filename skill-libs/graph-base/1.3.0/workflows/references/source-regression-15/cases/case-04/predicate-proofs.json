@@ -1,0 +1,16 @@
+{
+  "task_id": "raw15-case-04",
+  "basis": "手工逐谓词源码与数学分析；非自动由Action条件列表生成truth",
+  "proofs": {
+    "symptom.source.inner_loop_copy": [
+      "Process按segment余量、block余量和tile4096取min，每段调用两次输入DataCopyPad和一次输出DataCopyPad；短S候选case9/12/20分别7/1/50。",
+      "每个DataCopyExtParams均blockCount=1、blockLen=count*sizeof(T)字节、stride0；matrix-costs.json保存所有20case的S、Q及无核切分调用下界，核边界还可能增加段数。",
+      "out=qS+j，x0=2qS+j，x1=2qS+S+j；host确保split轴偶数、S=(shape[dim]/2)*inner、inputLength=2*outputLength，所有原有效地址均落各自分配内。"
+    ],
+    "constraint.semantic_equivalence": "拟packed batch读取[2qS,2(q+R)S)，a[rS+j]=raw[2rS+j]和b[rS+j]=raw[2rS+S+j]与原地址公式恒等；逐元素仍先Cast后原五步激活乘法，再同模式Cast。整段owner覆盖Q=N/S且互不交叠，API不支持批重排时原segment fallback。物理写对齐与shuffle API许可仍受target_api_support条件约束。",
+    "constraint.task_ownership": "SwiGLU按Q=N/S完整段分区，各核段索引集合不交；第q段输出[qS,(q+1)S)，读[2qS,2(q+1)S)，末batch取min(R,qend-q)。原20case均满足S>0,N%S=0。物理边界A还须按C2-output-boundary-addendum.md设置分核粒度及核验API，逻辑owner证明不能代替物理重叠许可。",
+    "constraint.valid_lengths": "SwiGLU按Q=N/S完整段分区，各核段索引集合不交；第q段输出[qS,(q+1)S)，读[2qS,2(q+1)S)，末batch取min(R,qend-q)。原20case均满足S>0,N%S=0。物理边界A还须按C2-output-boundary-addendum.md设置分核粒度及核验API，逻辑owner证明不能代替物理重叠许可。",
+    "constraint.output_ownership": "SwiGLU按Q=N/S完整段分区，各核段索引集合不交；第q段输出[qS,(q+1)S)，读[2qS,2(q+1)S)，末batch取min(R,qend-q)。原20case均满足S>0,N%S=0。物理边界A还须按C2-output-boundary-addendum.md设置分核粒度及核验API，逻辑owner证明不能代替物理重叠许可。"
+  },
+  "limitations": "真实架构/SDK上的UB重排、Gather/Deinterleave或合法strided重载、支持dtype、mask/stride单位及Tmp字节未知；已能证明映射和完整段owner，不能借950/3510能力补证。"
+}

@@ -1,0 +1,36 @@
+{
+  "command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q",
+    "runtime/tests/test_scheme_cli.py",
+    "-k",
+    "old_v3_link",
+    "-p",
+    "no:cacheprovider",
+    "--basetemp",
+    "/dev/shm/aprof-scheme-v3-outcome-operator-20261021"
+  ],
+  "environment": {
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONPATH": "runtime/src"
+  },
+  "cwd": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/skill-libs/graph-base/1.3.0",
+  "status": "passed",
+  "hardware": false,
+  "reason": "独立复核新增算子身份检查后重跑受影响的旧v3正反例",
+  "exit_code": 0,
+  "pytest_seconds": 269.03,
+  "summary": "1 passed, 3 deselected in 269.03s (0:04:29)",
+  "assertions": [
+    "正常v3结果关联",
+    "相同source/candidate但request与result均属于其他operator被拒",
+    "request/result operator不一致被拒",
+    "修改result而不重算decision_hash被拒"
+  ],
+  "source_hashes": {
+    "runtime/src/aprof_runtime/knowledge_outcome.py": "sha256:0a89ac30c2d0e6747c8f2da18529c0edee60a94cf3bed71393a5e598500fe122",
+    "runtime/tests/test_scheme_cli.py": "sha256:dee995a39578b805def9066d843426bd0cf7e85c37fde386073461e37b71cf7c"
+  }
+}

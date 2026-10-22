@@ -1,0 +1,19 @@
+{
+  "task_id": "raw15-case-04",
+  "kind": "new_static_evidence",
+  "parent_R1_analysis_ref": {
+    "path": "R1-analysis.md",
+    "sha256": "sha256:882a020bd41e3bc4b48d5091dc82ed65e54d6c6bc1755753b7407723f10792ce"
+  },
+  "matrix_costs_ref": {
+    "path": "matrix-costs.json",
+    "sha256": "sha256:c4a0c5b79745d4f4c8bfc6bec1e7c334401cebc841f73017005cdeafac3857ee"
+  },
+  "checks": [
+    "全部20case：N=QS；代表首/尾批及段内首中末坐标与原out+floor(out/S)*S地址恒等。未执行浮点kernel。",
+    "case12 S1可精确断言原3000009次DMA源码调用；batch(R1024)全局下界977，真实核分段额外尾批待C确定。"
+  ],
+  "conclusion": "静态检查每个20case的S与Q；case12 S1,Q1000003意味着原约1000003小段与3000009次DMA（核边界不会增加S1段数），而R1024需要977个批次加核分区尾部，具体核数未探测。case9 S7有133221段，case20 S50有52224段。CPU枚举小R映射是一一对应且无多读；数据量不减，只减少指令组织。S=1的input相邻值交错，R批量不能直接把前R个当x0。",
+  "execution": "CPU integer/formula assertions only; no original module import, hardware or correctness run",
+  "performance": "not_measured"
+}

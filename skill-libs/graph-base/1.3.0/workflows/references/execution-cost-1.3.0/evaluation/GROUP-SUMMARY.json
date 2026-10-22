@@ -1,0 +1,96 @@
+[
+  {
+    "scenario": "s1-value-domain",
+    "title": "值域/整域触发",
+    "A_fact_score": 16,
+    "B_fact_score": 16,
+    "per_version_max": 16,
+    "fact_findings": "两版均识别未采样极值仍使整通道全部输出走软件FMA；保持16384次软件FMA及数值边界。",
+    "intent_method_coverage": "两版都选择八邻居暂存/合批等合法局部方案，无新增意图名称奖励。",
+    "key_documents": [
+      "planning.indexing.coordinate_neighborhood",
+      "implementation.vector-api.batch",
+      "implementation.precision-boundaries.numeric"
+    ],
+    "source_fact_errors_observed_in_frozen_dimensions": []
+  },
+  {
+    "scenario": "s2-correctness-work",
+    "title": "正确性修复改变工作量",
+    "A_fact_score": 16,
+    "B_fact_score": 16,
+    "per_version_max": 16,
+    "fact_findings": "两版均识别[3,1]广播被错误当尾向量、12个越界读取位置，修复后重新核算合法工作，补通用fallback。",
+    "intent_method_coverage": "均用既有restructure_broadcast；B一次选每元素对齐槽，明确30次Max与槽膨胀成本，未因API少宣称加速。",
+    "key_documents": [
+      "planning.elementwise.broadcast",
+      "implementation.memory-transfer.strided-pad",
+      "implementation.memory-transfer.input-tile-residency"
+    ],
+    "source_fact_errors_observed_in_frozen_dimensions": []
+  },
+  {
+    "scenario": "s3-pack-total-cost",
+    "title": "API/pack/复用竞争",
+    "A_fact_score": 16,
+    "B_fact_score": 16,
+    "per_version_max": 16,
+    "fact_findings": "两版均核算全输入pack约25.04MB逻辑读写；S=8优先按需读取，S=32768保留paired通路并删输出/几何中转。",
+    "intent_method_coverage": "选择细节不同但均比较完整准备、descriptor/Gather、布局、容量和同步；未重复认领既有cp通道合批。",
+    "key_documents": [
+      "planning.layout.transpose",
+      "planning.indexing.coordinate_neighborhood",
+      "implementation.memory-transfer.strided-pad",
+      "implementation.precision-boundaries.numeric"
+    ],
+    "source_fact_errors_observed_in_frozen_dimensions": []
+  },
+  {
+    "scenario": "s4-derived-reuse",
+    "title": "派生结果复用与重算",
+    "A_fact_score": 16,
+    "B_fact_score": 16,
+    "per_version_max": 16,
+    "fact_findings": "两版均识别C=1无通道复用、C=128可消除重复几何；均拒绝预乘3D权重偷换原左结合运算。",
+    "intent_method_coverage": "A两次正确指出缺注册派生复用意图，给条件提案；B两次以reuse_derived_results和derived-results形成具体生产/消费/生命周期计划。A缺口不记事实错误。",
+    "key_documents": [
+      "planning.indexing.coordinate_neighborhood",
+      "implementation.buffer-lifetime.derived-results",
+      "implementation.buffer-lifetime.reuse",
+      "implementation.precision-boundaries.numeric"
+    ],
+    "source_fact_errors_observed_in_frozen_dimensions": []
+  },
+  {
+    "scenario": "s5-maximum-plan-cache",
+    "title": "Maximum管理/cache/共同计划",
+    "A_fact_score": 16,
+    "B_fact_score": 16,
+    "per_version_max": 16,
+    "fact_findings": "两版均区分已向量化Max、必要12MiB请求和管理/发射，按输出后继消费区别cache，并重建超出p_same的计划。",
+    "intent_method_coverage": "A未独立比较新静态buffer/event方法；B两次将其作为有事件/排空成本的备选，但主选分别为cache试验和搬运合批。没有为采用新Action强行改选。",
+    "key_documents": [
+      "planning.elementwise.continuous",
+      "implementation.memory-transfer.cache-hint",
+      "implementation.pipeline-sync.pipeline",
+      "implementation.pipeline-sync.vector-static-lease"
+    ],
+    "source_fact_errors_observed_in_frozen_dimensions": []
+  },
+  {
+    "scenario": "s6-history-parent-rename",
+    "title": "无效历史/换父本/改名",
+    "A_fact_score": 16,
+    "B_fact_score": 16,
+    "per_version_max": 16,
+    "fact_findings": "两版均拒绝漏写实现和enqueue短窗口收益，选择L0/Pine；各自改名后保持相同事实、成本与选择。",
+    "intent_method_coverage": "A主选控制外提/批量输出并记录派生意图缺口；B两次主选Ct=2派生索引复用，具体比较复用倍数、任务数、保护与原值缓存/重算。",
+    "key_documents": [
+      "optimization-history.md",
+      "planning.indexing.coordinate_neighborhood",
+      "implementation.buffer-lifetime.derived-results",
+      "implementation.scalar-control.hot_loop_address"
+    ],
+    "source_fact_errors_observed_in_frozen_dimensions": []
+  }
+]

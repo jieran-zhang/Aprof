@@ -28,6 +28,21 @@ parent: implementation.root
 references: []
 evidence_status: source_reviewed_not_benchmarked
 routes:
+- target: implementation.pipeline-sync.vector-static-lease
+  match: []
+  exclude:
+  - field: excluded_recipes
+    op: contains
+    value: implementation.pipeline-sync.vector-static-lease
+  required_evidence:
+  - constraint.semantic_equivalence
+  - constraint.capacity
+  - constraint.plan_freedom
+  - constraint.dependency_lifetime
+  - constraint.target_api
+  prior_score: 2
+  fallback: false
+  seed_reason: 仅既有分支内的条件候选；正文适用域和成本仍须核验，不强制优先。
 - target: implementation.pipeline-sync.pipeline
   match: []
   exclude:
@@ -84,7 +99,6 @@ routes:
   fallback: true
   seed_reason: 未知类型保留语义正确的现有方案并补证据。
 ---
-
 # 流水与同步 路由
 
 按 C2 冻结的方案与 features 选择实现技巧；可同时进入多个分支。保持算法、所有权和数值契约；超出已声明自由度时请求重规划。

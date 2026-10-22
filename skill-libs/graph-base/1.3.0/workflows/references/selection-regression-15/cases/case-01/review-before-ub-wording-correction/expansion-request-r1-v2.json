@@ -1,0 +1,54 @@
+{
+  "task_id": "case-01",
+  "context_hash": "sha256:806a6581634b1d2d2e739a6d9da0162ef279e101dcdb87d783355904ecbfa5aa",
+  "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+  "graph_version": "v0006",
+  "source_context_ref": {
+    "path": "authority-v2.json",
+    "sha256": "sha256:601b3dbb51b050d9491ae060d8d4439411c4bce47bb882386e8bce292a2be0e6"
+  },
+  "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+  "retrieval_hash": "sha256:2ea268f01f1a1dc055a9b0add2b1ca5621e2171058400998f2f44350351f2959",
+  "selections": [
+    {
+      "problem_id": "problem.pipeline_serialization",
+      "reason": "Host预计算multiplier/shift，按ceil(N/4096)和可用核上限分连续块；每tile一次读一次写，float执行Muls/Adds/Exp，16位先Cast FP32再三步计算及Cast回原dtype。无归约、广播、跨核同步或重复输入。；据此审查problem.pipeline_serialization的适用与代价",
+      "trigger": "scope_check",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.path",
+        "source.host"
+      ]
+    },
+    {
+      "problem_id": "problem.tiny_transfer_setup_amplification",
+      "reason": "Host预计算multiplier/shift，按ceil(N/4096)和可用核上限分连续块；每tile一次读一次写，float执行Muls/Adds/Exp，16位先Cast FP32再三步计算及Cast回原dtype。无归约、广播、跨核同步或重复输入。；据此审查problem.tiny_transfer_setup_amplification的适用与代价",
+      "trigger": "scope_check",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.path",
+        "source.host"
+      ]
+    },
+    {
+      "problem_id": "problem.control_metadata_overhead",
+      "reason": "Host预计算multiplier/shift，按ceil(N/4096)和可用核上限分连续块；每tile一次读一次写，float执行Muls/Adds/Exp，16位先Cast FP32再三步计算及Cast回原dtype。无归约、广播、跨核同步或重复输入。；据此审查problem.control_metadata_overhead的适用与代价",
+      "trigger": "scope_check",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.path",
+        "source.host"
+      ]
+    },
+    {
+      "problem_id": "problem.onchip_capacity_pressure",
+      "reason": "Host预计算multiplier/shift，按ceil(N/4096)和可用核上限分连续块；每tile一次读一次写，float执行Muls/Adds/Exp，16位先Cast FP32再三步计算及Cast回原dtype。无归约、广播、跨核同步或重复输入。；据此审查problem.onchip_capacity_pressure的适用与代价",
+      "trigger": "scope_check",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.path",
+        "source.host"
+      ]
+    }
+  ]
+}

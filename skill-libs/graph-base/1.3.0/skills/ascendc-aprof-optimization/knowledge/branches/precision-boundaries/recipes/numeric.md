@@ -2,7 +2,7 @@
 schema_version: aprof.knowledge-record/v1
 id: implementation.precision-boundaries.numeric
 kind: recipe
-version: 1.1.0
+version: 1.2.0
 status: active
 title: 累加精度、特殊值与数值边界
 scope:
@@ -53,6 +53,30 @@ sources:
   - 151
   sha256: sha256:a41ac2ff57f181c342d823a1b453bfabfb20c56bf840e31f4dff7232cefdc80a
   excerpt_sha256: sha256:a41ac2ff57f181c342d823a1b453bfabfb20c56bf840e31f4dff7232cefdc80a
+- path: skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Compare.md
+  original_path: docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Compare.md
+  revision: d378849769f9ee610af9d0ac38db2b3b6bed3209
+  lines:
+  - 1
+  - 357
+  sha256: sha256:353264a38c342ca8b668d0400e48750461820fa743be89ba59d6824eb4764262
+  excerpt_sha256: sha256:353264a38c342ca8b668d0400e48750461820fa743be89ba59d6824eb4764262
+- path: skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Select.md
+  original_path: docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Select.md
+  revision: d378849769f9ee610af9d0ac38db2b3b6bed3209
+  lines:
+  - 1
+  - 345
+  sha256: sha256:615845595e9b6ca5d150548eb27e9e6fd9d0bb972ee1533f933ad6bea8d940b5
+  excerpt_sha256: sha256:615845595e9b6ca5d150548eb27e9e6fd9d0bb972ee1533f933ad6bea8d940b5
+- path: skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/basic_arithmetic/Max.md
+  original_path: docs/zh/api/SIMD-API/basic_api/memory_vector_compute/basic_arithmetic/Max.md
+  revision: d378849769f9ee610af9d0ac38db2b3b6bed3209
+  lines:
+  - 1
+  - 177
+  sha256: sha256:3ef8936b5fe5025072d33fa4b79380cd04c73ffbc33786605cadd5dee8b49329
+  excerpt_sha256: sha256:3ef8936b5fe5025072d33fa4b79380cd04c73ffbc33786605cadd5dee8b49329
 learning: {}
 tags:
 - accumulation-order
@@ -67,7 +91,6 @@ references:
 - implementation.vector-api.cast
 evidence_status: source_reviewed_not_benchmarked
 ---
-
 # 累加精度、特殊值与数值边界
 
 ## 守住原数值契约
@@ -108,3 +131,18 @@ const double m2 = m2A + m2B + delta * delta * (a * b / total);
 Cast 的 CAST_NONE 不是普遍无舍入；Fixpipe F322F16/F322BF16 使用 RINT，和原 FLOOR/CEIL 等不等价。Mmad/Fixpipe 的 CTRL 饱和模式可能把 Inf 变最大有限值、NaN 变0；Mmad 固定文档还提示避免 NaN 输入。当原输入域包含这些值而目标路径不能保持契约，应保留原正确实现，不修改 CTRL/输入域来让测试通过。3510 新类型/舍入不能从其支持表搬到 A3。
 
 失败特征包括平均误差小但极值超标、方差负值、全 mask 出 NaN、Split 后 bias 重复、只在中点舍入或量化轴错误。保留首个错误中间状态、完整 case 和日志，进入 precision debug；异常/挂起另保留 runtime/crash 证据。正确性不过不计性能，不能换近似、放宽门限或削减 case。来源事实是 Welford、Cast/Mmad/Fixpipe 固定契约；状态预算与验证矩阵为工程提炼。本条通用契约适用 all，具体 API 仍受目标 dav-2201/dav-3510 与 SDK 约束，没有目标硬件验证。
+
+## 条件选择不是按名字替换 Max/Min
+
+原实现若是 `a>b ? a : b`，相等时选择 b，NaN 参与比较的结果也影响选择；不能仅因 API 名叫 Max 就认定特殊值、符号零和 payload 行为一致。把“比较→predicate→选择”的 dtype、CMPMODE、Select 模式、有效元素和尾部单独核对，完整实施细节见 [Compare/Select 尾部](../../vector-api/recipes/compare-select-tail.md)。该组合不能解决 A2/A3 不支持的 dtype/比较模式；额外 Cast 会引入精度与资源代价，必须独立证明。
+
+从固定 API 文档可确认 Compare/Select 的操作与模式；不能据缺少特殊值描述断言某个 Max 实现一定错误。保持原 oracle 边界，分别检查 `a/b` 为 NaN、±0、相等极值与无穷。性能未测不阻止选择已合法的组合；数值语义未闭合则需补具体依据。
+
+
+## 局部加权和、finalCast与严格阈值
+
+本条也覆盖只有K个邻居的小局部加权和，无需大规模归约才讨论顺序。绑定 `acc0`、每项 `term=weight_i*value_i` 的乘法dtype/舍入、acc更新次序、是否允许FMA及最后 `finalCast(acc)` 的模式。改成pairwise、分组partial、FMA或先把权重/值Cast再乘均可能改变结果；把finalCast移到每项或每组后也不自动等价。若选择数值组织变更，沿既有action.restructure_reduction及其reduction_semantics条件，不新造“近似精度”意图，也不以K小否定该Action。保存派生权重只减少生成，不能暗改乘加次序。
+
+严格判据必须照抄oracle的定义与比较边：例如 `err < threshold` 与 `err <= threshold` 在边界不同；absolute/relative分母、NaN处理、零参考值和逐元素/聚合判据分别绑定，不能用均值误差代替严格逐元素上限。不在知识库预设通用容差。finalCast前后均保留必要观察，边界样本包括抵消、大动态范围、±0、NaN/Inf和恰在阈值附近的结果。
+
+保护分支是语义的一部分：越界先判再读；空/零分母/特殊值按原定义处理；不能假设乘0消除无效值。Compare+Select可能计算两侧而非短路，若一侧有非法读取/除法不能把短路if直接改Select。安全后再比较保护代价：每元素predicate、mask初始化、额外Select/Cast、分支分歧、处理正常/异常域的重复工作、临时buffer和事件；不能为省分支放宽输入域或阈值。来源Compare/Select/Cast契约支持参数审查，不支持未写明的异常值行为；局部加权顺序与阈值审查为本次机制推导，无目标收益证明。

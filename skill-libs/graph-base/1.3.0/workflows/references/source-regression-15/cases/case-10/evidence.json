@@ -1,0 +1,136 @@
+{
+  "schema_version": "aprof.evidence/v1",
+  "task_id": "case-10",
+  "source_context_ref": {
+    "path": "authority.json",
+    "sha256": "sha256:e6ea313deb31dc7d62cf19dea730927e9c676bf6ba4a6d299dd1eae99e4b7d6b"
+  },
+  "attributes": {
+    "family": [
+      "elementwise"
+    ],
+    "dtype": [
+      "bfloat16",
+      "float16",
+      "float32"
+    ],
+    "features": [
+      "pipeline-sync",
+      "tiling-tail",
+      "vector-api",
+      "precision-boundaries"
+    ],
+    "platform": "dav-2201"
+  },
+  "facts": {
+    "source.kernel": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.kernel",
+      "ref": {
+        "path": "source/op_kernel/sigmoid_kernel.asc",
+        "sha256": "sha256:573454c8cb2a67641706f5d94b42dc97fc0f4a7656fbf2b95c8e9859dc1f6c28",
+        "locator": "lines:1-94"
+      }
+    },
+    "source.tiling": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.tiling",
+      "ref": {
+        "path": "source/op_kernel/sigmoid_tiling.h",
+        "sha256": "sha256:29536d3cc5c507fc72c61736a69ad5ba9ab8ca39b86002e1f5ae121039c4734f",
+        "locator": "lines:1-29"
+      }
+    },
+    "source.host": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.host",
+      "ref": {
+        "path": "source/op_host/sigmoid.asc",
+        "sha256": "sha256:a46866ea3da206ea2d1aab87e4540258d448367d3dd088b48ff3baab6918580a",
+        "locator": "lines:1-87"
+      }
+    },
+    "source.matrix": {
+      "state": true,
+      "kind": "source_review",
+      "view": "workload",
+      "evidence_id": "source.matrix",
+      "ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "locator": "lines:1-270"
+      }
+    },
+    "source.oracle": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.oracle",
+      "ref": {
+        "path": "source/scripts/verify_result.py",
+        "sha256": "sha256:7eccbc8d1c725320b70efb1c63ce8488a2049151cf97d85bc4be72a87c4f64d8",
+        "locator": "lines:1-79"
+      }
+    },
+    "symptom.source.serial_queue_or_event_order.component_1": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.kernel",
+      "ref": {
+        "path": "source/op_kernel/sigmoid_kernel.asc",
+        "sha256": "sha256:573454c8cb2a67641706f5d94b42dc97fc0f4a7656fbf2b95c8e9859dc1f6c28",
+        "locator": "lines:1-94"
+      }
+    },
+    "symptom.source.serial_queue_or_event_order.component_2": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.tiling",
+      "ref": {
+        "path": "source/op_kernel/sigmoid_tiling.h",
+        "sha256": "sha256:29536d3cc5c507fc72c61736a69ad5ba9ab8ca39b86002e1f5ae121039c4734f",
+        "locator": "lines:1-29"
+      }
+    },
+    "symptom.source.serial_queue_or_event_order.component_3": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.host",
+      "ref": {
+        "path": "source/op_host/sigmoid.asc",
+        "sha256": "sha256:a46866ea3da206ea2d1aab87e4540258d448367d3dd088b48ff3baab6918580a",
+        "locator": "lines:1-87"
+      }
+    },
+    "constraint.semantic_equivalence": {
+      "state": true,
+      "kind": "source_proof",
+      "view": "constraint",
+      "evidence_id": "semantic-proof",
+      "ref": {
+        "path": "source-analysis-R1.md",
+        "sha256": "sha256:13b981f8d9d0f9145ea4a2c73e775fc3645ecb4d1932a0382b4938acfb543e09",
+        "locator": "lines:1-23"
+      }
+    },
+    "constraint.capacity": {
+      "state": "unknown",
+      "kind": "not_observed",
+      "view": "constraint"
+    },
+    "constraint.dependency_lifetime": {
+      "state": "unknown",
+      "kind": "not_observed",
+      "view": "constraint"
+    }
+  }
+}

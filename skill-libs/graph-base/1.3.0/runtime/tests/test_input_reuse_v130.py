@@ -92,7 +92,7 @@ def test_registered_action_hint_does_not_inject_platform_or_domain(bundle, tmp_p
 
 def test_current_action_range_and_old_frozen_bundle_keep_distinct_versions(bundle):
     artifacts, config = bundle
-    assert artifacts['optimization']['version'] == 'v0004'
+    assert artifacts['optimization']['version'] == 'v0007'
     row = next(row for row in config['actions'] if row['action_id'] == ACTION)
     assert MAIN in row['optimization_subtrees']
     # Locate the package-owned old routing archive by its declared versions.
@@ -107,5 +107,9 @@ def test_current_action_range_and_old_frozen_bundle_keep_distinct_versions(bundl
     assert old_artifacts['parallel-planning']['version'] == 'v0002'
     assert MAIN not in {r['id'] for r in old_artifacts['optimization']['records']}
     assert content_hash(old_config) != content_hash(config)
-    assert content_hash(old_artifacts['diagnosis']) == content_hash(artifacts['diagnosis'])
-    assert content_hash(old_artifacts['parallel-planning']) == content_hash(artifacts['parallel-planning'])
+    assert old_artifacts['diagnosis']['version'] == 'v0004'
+    assert artifacts['diagnosis']['version'] == 'v0007'
+    assert artifacts['parallel-planning']['version'] == 'v0004'
+    # 本轮D/P也新增后继；历史bundle仍指向自己的原内容，不能要求其等于当前知识。
+    assert content_hash(old_artifacts['diagnosis']) != content_hash(artifacts['diagnosis'])
+    assert content_hash(old_artifacts['parallel-planning']) != content_hash(artifacts['parallel-planning'])

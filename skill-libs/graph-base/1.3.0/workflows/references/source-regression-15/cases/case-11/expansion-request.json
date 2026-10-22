@@ -1,0 +1,35 @@
+{
+  "task_id": "raw-case-11",
+  "context_hash": "sha256:2e0ae2c4c6a1a244b4e673cbc90da58b36655c7473e092a47301c186dd21b9c9",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "graph_version": "v0005",
+  "source_context_ref": {
+    "path": "C0-source-only.json",
+    "sha256": "sha256:f3e35e6294c182c04519a000135684df86f2e310857553f6aaa9bf0a4a55b03a"
+  },
+  "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+  "retrieval_hash": "sha256:d0c5aa8c72cf844531f958b215779bf90785683aa17a5a73617f7b085b218e46",
+  "selections": [
+    {
+      "problem_id": "problem.pipeline_serialization",
+      "reason": "Process每个2048tile依序CopyIn/Compute/CopyOut，判断是否有合法跨tile窗口",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": []
+    },
+    {
+      "problem_id": "problem.redundant_cast",
+      "reason": "低精度三入一出四Cast，判断是否存在可消除中间dtype边界",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": []
+    },
+    {
+      "problem_id": "problem.onchip_capacity_pressure",
+      "reason": "四FP32暂存与四raw队列，区分容量公式与已证压力",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": []
+    }
+  ]
+}

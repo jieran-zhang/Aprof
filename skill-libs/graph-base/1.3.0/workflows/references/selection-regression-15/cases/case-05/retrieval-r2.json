@@ -1,0 +1,2852 @@
+{
+  "schema_version": "aprof.diagnosis-retrieval/v1",
+  "task_id": "case-05",
+  "context_hash": "sha256:15f5f94e4102b1d8649348def17011d66020bc69c53cbad366bd85c38b004496",
+  "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+  "graph_version": "v0006",
+  "source_context_ref": {
+    "path": "authority-v2.json",
+    "sha256": "sha256:99066a8fa8a7c3a90bfccf437c1432484a487ba2f638d38c78311e284932d89f"
+  },
+  "problem_directory": [
+    {
+      "id": "problem.broadcast_strategy_mismatch",
+      "title": "广播方案与连续性或复用不匹配",
+      "mechanism": "广播方式没有利用连续内轴或小输入复用 → 重复从GM读取或在UB中反复扩展/Scalar索引 → 额外读流量、展开临时区与控制开销进入关键路径",
+      "mechanism_summary": "广播方式没有利用连续内轴或小输入复用 → 重复从GM读取或在UB中反复扩展/Scalar索引 → 额外读流量、展开临时区与控制开销进入关键路径",
+      "alternatives": [
+        {
+          "check": "把广播轴和非广播物理stride分开",
+          "distinction": "零stride广播复用与物理跨stride不是同一条件",
+          "problem_id": "problem.noncontiguous_access"
+        },
+        {
+          "check": "分开profile广播展开与CopyIn",
+          "distinction": "本项还涉及展开和索引成本，未必都有GM重复读",
+          "problem_id": "problem.insufficient_input_reuse"
+        }
+      ],
+      "discriminating_checks": [
+        "分别计算输出元素数和每输入唯一字节，不用输出字节当输入下界",
+        "同轴合并后已为高效逐元素路径或输入无复用需求时，不支持本项"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "具有广播轴零stride、连续内轴与多个输入的输出域",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host合轴与切分；kernel GM搬入、UB展开及计算",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.broadcast_strategy_mismatch.md",
+      "source_hash": "sha256:1b2609ac77d163bda7a1992cd1e36fbc698fac4bfd4b1140afc3298472a38fb1",
+      "review": {
+        "discriminating_power": "分别计算输出元素数和每输入唯一字节，不用输出字节当输入下界；按目标rank/axis/dtype与原始维度字节对齐核对可选API；同轴合并后已为高效逐元素路径或输入无复用需求时，不支持本项",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "DAV_2201静态Broadcast与DAV_3510动态/NDDMA不可互代",
+          "原始shape的约束必须保留，不能拿padding假满足"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.cache_policy_mismatch",
+      "title": "缓存策略与复用模式不匹配",
+      "mechanism": "一次性流量和待复用数据采用不合适的缓存策略或共享工作集超过有效L2 → 缓存填充/替换增加成本，或重复访问未命中 → 额外GM访问或缓存管理影响关键路径",
+      "mechanism_summary": "一次性流量和待复用数据采用不合适的缓存策略或共享工作集超过有效L2 → 缓存填充/替换增加成本，或重复访问未命中 → 额外GM访问或缓存管理影响关键路径",
+      "alternatives": [
+        {
+          "check": "核对Copy次数、L2命中和GM实际字节",
+          "distinction": "缺少软件驻留与cache miss会共存，前者不要求hint错误",
+          "problem_id": "problem.insufficient_input_reuse"
+        },
+        {
+          "check": "同时检查重复读来源与持续带宽",
+          "distinction": "缓存策略是字节/替换原因，带宽饱和是资源状态",
+          "problem_id": "problem.memory_bandwidth_saturation"
+        }
+      ],
+      "discriminating_checks": [
+        "按访问对象而非算子整体命中率划分，比较同一访问模式下的策略",
+        "低命中只来自首次或一次性读取时，不证明策略错误"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "具有明确访问次数和复用距离的GlobalTensor及其L2策略",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "kernel GlobalTensor策略设置；多次读写与cache替换窗口",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.cache_policy_mismatch.md",
+      "source_hash": "sha256:aee27ffd949c6af1597258edfd3416e2b06e61561b670b53916dde422af40a39",
+      "review": {
+        "discriminating_power": "按访问对象而非算子整体命中率划分，比较同一访问模式下的策略；一次性输入先比较禁用/默认的成本，不假定启用必快；低命中只来自首次或一次性读取时，不证明策略错误",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "不同产品支持情况按源API表复核",
+          "禁止以枚举存在推断PERSISTENT可用"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.chunk_merge_overhead",
+      "title": "跨 chunk 合并开销过高",
+      "mechanism": "增加分段缩短主阶段关键路径却制造更多partial状态 → 每段额外写回、同步、读回及合并 → 当合并随段数增快，额外成本超过并行节省",
+      "mechanism_summary": "增加分段缩短主阶段关键路径却制造更多partial状态 → 每段额外写回、同步、读回及合并 → 当合并随段数增快，额外成本超过并行节省",
+      "alternatives": [
+        {
+          "check": "扫描合法段数并分阶段计成本",
+          "distinction": "少分段可欠并行，多分段可合并昂贵，是资源取舍",
+          "problem_id": "problem.underused_task_parallelism"
+        },
+        {
+          "check": "按实际partial索引与分配段分别计字节",
+          "distinction": "必要partial流量与未访问的多余预留不同",
+          "problem_id": "problem.workspace_overallocation"
+        }
+      ],
+      "discriminating_checks": [
+        "比较saved_critical_path与partial_write+sync+read+merge，而非只比较活跃核数",
+        "分段仍显著缩短全链关键路径时，不能因存在merge就判过度"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "被分段的归约/KV/K域及其partial、合并阶段",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host分段数量决策；各核partial生产；workspace写读与最终merge",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.chunk_merge_overhead.md",
+      "source_hash": "sha256:0b61ae1aaad92e8293616ac532b6dacd941e6eef32b1d7c116b8b392c6835b5e",
+      "review": {
+        "discriminating_power": "比较saved_critical_path与partial_write+sync+read+merge，而非只比较活跃核数；检查局部独立归并是否可在跨核同步前完成；分段仍显著缩短全链关键路径时，不能因存在merge就判过度",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "Split-K、Split-KV与排序merge的数学合并不同，不能直接替换算法",
+          "本轮只有来源推导，无段数最优值或收益承诺"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.control_metadata_overhead",
+      "title": "循环控制与元数据开销",
+      "mechanism": "循环不变字段或公共地址前缀在每轮重复加载/计算 → Scalar为同一信息反复执行解引用、乘除或分支 → 指令发射被控制工作占用而拖慢有效流水",
+      "mechanism_summary": "循环不变字段或公共地址前缀在每轮重复加载/计算 → Scalar为同一信息反复执行解引用、乘除或分支 → 指令发射被控制工作占用而拖慢有效流水",
+      "alternatives": [
+        {
+          "check": "按PC定位mask/index/metadata或元素load算术",
+          "distinction": "重复控制与逐元素数据处理不同",
+          "problem_id": "problem.scalar_control_hot_loop"
+        },
+        {
+          "check": "前后核对编译spill与热循环LoadStore",
+          "distinction": "外提变量可能延长生存期并诱发spill",
+          "problem_id": "problem.register_spill"
+        }
+      ],
+      "discriminating_checks": [
+        "区分按任务变化、按tile变化与循环常量，不能全局缓存动态字段",
+        "编译器已折叠/外提或字段随loop变化时，源码重复不等于运行重复成本"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "热循环中重复读取的TilingData字段、mask、索引和分支",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host元数据定义；kernel Init与主循环",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+      "source_hash": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4",
+      "review": {
+        "discriminating_power": "区分按任务变化、按tile变化与循环常量，不能全局缓存动态字段；将TilingData大结构拷贝与少量热点字段重复读取分别核算；编译器已折叠/外提或字段随loop变化时，源码重复不等于运行重复成本",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "不改变host/kernel ABI",
+          "跨paged/non-paged或mask分支必须重新证明不变量"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.core_tail_imbalance",
+      "title": "尾块或核间工作失衡",
+      "mechanism": "任务数量或单位任务成本在核间不均 → 少量核承担集中尾部、变长或causal工作 → 其他核提前完成/等待，调用时长由最长核决定",
+      "mechanism_summary": "任务数量或单位任务成本在核间不均 → 少量核承担集中尾部、变长或causal工作 → 其他核提前完成/等待，调用时长由最长核决定",
+      "alternatives": [
+        {
+          "check": "比较总任务、可用核与每核成本",
+          "distinction": "任务不足会有空核；本项也包含任务充足但余数或成本倾斜",
+          "problem_id": "problem.underused_task_parallelism"
+        },
+        {
+          "check": "同时记录每核尾元素数和单位尾元素时间",
+          "distinction": "尾路径慢是单任务处理效率，本项是任务在核间分配",
+          "problem_id": "problem.tail_slow_path"
+        }
+      ],
+      "discriminating_checks": [
+        "比较max/min任务数之外也计算变长与causal工作量",
+        "AIC/AIV不同角色的时长差不能当同类核负载不均"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "同次调用各核任务集合、有效长度及最长核",
+          "kind": "task",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host任务分配；kernel各核主循环和尾段",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.core_tail_imbalance.md",
+      "source_hash": "sha256:7003c29ae723360a16adf661b60c703831768e438f5e116f710a7b2e1a0214b5",
+      "review": {
+        "discriminating_power": "比较max/min任务数之外也计算变长与causal工作量；让任务成本模型与逐核时间排序对应，而非只比较平均利用率；AIC/AIV不同角色的时长差不能当同类核负载不均",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "任务数相等不代表变长任务成本相等",
+          "不能把样例固定核数当平台拓扑"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.dynamic_shape_mismatch",
+      "title": "固定策略未适配动态 shape",
+      "mechanism": "一套核数、tile、buffer或workspace覆盖不同资源主导区间 → 小shape付出不必要固定成本，大shape欠并行或流量/容量不适配 → 不同区间出现不同退化，需要条件化dispatch而非固定最优值",
+      "mechanism_summary": "一套核数、tile、buffer或workspace覆盖不同资源主导区间 → 小shape付出不必要固定成本，大shape欠并行或流量/容量不适配 → 不同区间出现不同退化，需要条件化dispatch而非固定最优值",
+      "alternatives": [
+        {
+          "check": "对比小大shape的独立任务数",
+          "distinction": "欠并行是某一区间的可能表现，不等于需要全局新dispatch",
+          "problem_id": "problem.underused_task_parallelism"
+        },
+        {
+          "check": "比较runtime shape、实际槽位与分支覆盖",
+          "distinction": "workspace最大shape预留是单项资源问题，可在现dispatch内修正",
+          "problem_id": "problem.workspace_overallocation"
+        }
+      ],
+      "discriminating_checks": [
+        "按相邻边界shape核验coverage、唯一分支和fallback",
+        "现dispatch已经区分机制所需区间且退化是单一布局错误时不支持过度特化"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "同一算子多个shape/dtype/feature区间的dispatch及参数域",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host shape归类与TilingKey；kernel模板/运行时分支",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.dynamic_shape_mismatch.md",
+      "source_hash": "sha256:24caeddf6063226e52e28c8d8fbd07a6cf7193ee2c3a2575d2a78f0cf28ea4b2",
+      "review": {
+        "discriminating_power": "按相邻边界shape核验coverage、唯一分支和fallback；比较每区间机制，再决定是否需要新参数或方案，不能按shape数量造分支；现dispatch已经区分机制所需区间且退化是单一布局错误时不支持过度特化",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "不把来源阈值硬编码为目标最优边界",
+          "SquaredRelu host与kernel只证明dtype key的连接结构，不证明该算子存在shape失配"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.excessive_sync_scope",
+      "title": "同步范围或频次超过依赖要求",
+      "mechanism": "局部生产消费只需要有限流水或参与核完成 → 实现却等待整个流水或所有核 → 无关工作被阻塞，产生可避免等待并抑制并行",
+      "mechanism_summary": "局部生产消费只需要有限流水或参与核完成 → 实现却等待整个流水或所有核 → 无关工作被阻塞，产生可避免等待并抑制并行",
+      "alternatives": [
+        {
+          "check": "区分必要buffer依赖与可收窄屏障",
+          "distinction": "过宽同步是串行的一种原因，不覆盖所有buffer重用问题",
+          "problem_id": "problem.pipeline_serialization"
+        },
+        {
+          "check": "对齐同步前每核工作量和到达时间",
+          "distinction": "全核等最慢核也可能是任务不均而非屏障范围错误",
+          "problem_id": "problem.core_tail_imbalance"
+        }
+      ],
+      "discriminating_checks": [
+        "核内独立group与跨核round边界分别审查",
+        "每轮确有跨核归并依赖时，不能删轮末同步"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "tile或归并循环中的全局/全流水同步及真实依赖",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "kernel局部计算；跨阶段/跨核数据交接",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.excessive_sync_scope.md",
+      "source_hash": "sha256:398689df25a9f16697480f068a9e9951cefe7e2e53d945a4a65613e76a8e4d19",
+      "review": {
+        "discriminating_power": "核内独立group与跨核round边界分别审查；保留所有可见性和退出闭合条件，核对不同原语的目标模式/流水支持；每轮确有跨核归并依赖时，不能删轮末同步",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "只在完整同步契约可替代时实施",
+          "归并的核内group与跨核round示例不能推广为所有SyncAll可删除"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.fragmented_writeback",
+      "title": "碎片化写回",
+      "mechanism": "已就绪的相邻输出被分成多个小写回 → 输出流水重复支付发射与对齐成本 → 短写回和等待进入尾部关键路径，即使输入搬入已高效仍可能受限",
+      "mechanism_summary": "已就绪的相邻输出被分成多个小写回 → 输出流水重复支付发射与对齐成本 → 短写回和等待进入尾部关键路径，即使输入搬入已高效仍可能受限",
+      "alternatives": [
+        {
+          "check": "分离MTE2与MTE3/Fixpipe并检查输出区间",
+          "distinction": "共同固定发射成本，但本项绑定输出就绪和写回通路",
+          "problem_id": "problem.tiny_transfer_setup_amplification"
+        },
+        {
+          "check": "核对有效输出bytes/issue与同方向带宽",
+          "distinction": "短写回低效与大包写带宽饱和有不同基准",
+          "problem_id": "problem.memory_bandwidth_saturation"
+        }
+      ],
+      "discriminating_checks": [
+        "把输入MTE2与输出MTE3/Fixpipe分别计数，避免把读瓶颈当写瓶颈",
+        "各输出只有在不同依赖阶段就绪，等待汇总反而延长关键路径时不支持合并"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "同一输出tensor的相邻有效区间及MTE3/Fixpipe写回点",
+          "kind": "tensor",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host输出分片；kernel CopyOut或Fixpipe epilogue",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.fragmented_writeback.md",
+      "source_hash": "sha256:d7510485a12bed4dde8cf7cdfcb95af203340b2f0f158a4a006f62e9c2beeabf",
+      "review": {
+        "discriminating_power": "把输入MTE2与输出MTE3/Fixpipe分别计数，避免把读瓶颈当写瓶颈；核对输出连续性、唯一写回、buffer何时可释放；各输出只有在不同依赖阶段就绪，等待汇总反而延长关键路径时不支持合并",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "Fixpipe和MTE3能力、对齐与尾写语义必须分别核验",
+          "归约标量输出本身很小，不能仅凭大小认定碎片化"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.insufficient_input_reuse",
+      "title": "重复输入未复用",
+      "mechanism": "同一地址和内容在复用窗口被重复从GM读入 → 片上或缓存复用机会未被利用 → 重复读增加GM/MTE成本；若进入关键路径则可能拖慢调用",
+      "mechanism_summary": "同一地址和内容在复用窗口被重复从GM读入 → 片上或缓存复用机会未被利用 → 重复读增加GM/MTE成本；若进入关键路径则可能拖慢调用",
+      "alternatives": [
+        {
+          "check": "结合GM读取口径与具体cache hint、复用距离",
+          "distinction": "软件重复copy与L2替换造成的miss是不同层次",
+          "problem_id": "problem.cache_policy_mismatch"
+        },
+        {
+          "check": "分层记录GM→L1/UB、L1→L0字节",
+          "distinction": "本项主看GM输入，后者主看矩阵片内L1→L0重复",
+          "problem_id": "problem.l1_l0_reuse_deficit"
+        }
+      ],
+      "discriminating_checks": [
+        "按重复地址集合计算unique bytes，区分真正复用与相同shape不同数据",
+        "循环每次读取内容不同或实际L2已命中且无关键路径成本则降低解释力"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "跨tile/迭代保持不变的输入切片",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host tile顺序与分核；kernel CopyIn及片上驻留期",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.insufficient_input_reuse.md",
+      "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+      "review": {
+        "discriminating_power": "按重复地址集合计算unique bytes，区分真正复用与相同shape不同数据；比较驻留占用与原有双缓冲，确认不会以失去重叠抵消节省；循环每次读取内容不同或实际L2已命中且无关键路径成本则降低解释力",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "常驻需要目标平台容量及同步证明",
+          "arch35常驻文档仅提供原则，不能搬用其bank几何到其他型号"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.l1_l0_reuse_deficit",
+      "title": "L1/L0 复用不足",
+      "mechanism": "A/B块在多个对侧tile期间地址和值不变 → 该块仍在内循环反复搬入L1或L0，未建立相应驻留 → MTE1/MTE2搬运及Cube等待增加",
+      "mechanism_summary": "A/B块在多个对侧tile期间地址和值不变 → 该块仍在内循环反复搬入L1或L0，未建立相应驻留 → MTE1/MTE2搬运及Cube等待增加",
+      "alternatives": [
+        {
+          "check": "分别比较各层计数与地址重复",
+          "distinction": "层级不同：L1/L0低复用可在GM流量正常时出现",
+          "problem_id": "problem.insufficient_input_reuse"
+        },
+        {
+          "check": "固定加载次数观察事件和重叠",
+          "distinction": "装载次数合理但顺序串行应改流水而非驻留",
+          "problem_id": "problem.pipeline_serialization"
+        }
+      ],
+      "discriminating_checks": [
+        "把GM→L1与L1→L0分层核算，不拿GM读减少代替MTE1证据",
+        "只复用一次或K每轮变化时不能归因于未驻留"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "MatMul中可跨多个对侧tile复用的A/B矩阵块",
+          "kind": "tensor",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host M/N/K与驻留侧选择；kernel GM→L1→L0→Cube",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.l1_l0_reuse_deficit.md",
+      "source_hash": "sha256:ce3a6a7cdc78c2228c39821cc60244cfd534a835ff59cf51cfb42bf575c9c3e0",
+      "review": {
+        "discriminating_power": "把GM→L1与L1→L0分层核算，不拿GM读减少代替MTE1证据；检查高阶Matmul内部已实现的cache或驻留能力；只复用一次或K每轮变化时不能归因于未驻留",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "arch22文档的L0 cache/NBuffer33是具体适用形态，不能作为所有Matmul API能力",
+          "API已内部管理时需查看实际配置而非复制手排方案"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.memory_bandwidth_saturation",
+      "title": "大块搬运受可达内存带宽限制",
+      "mechanism": "有效大块搬运占据关键路径 → 在足够并发与合法对齐下，实际传输速率接近目标平台可达上限 → 进一步增加发射或缓冲不能消除算法必要字节，节省时间需减少可消除流量或增加复用",
+      "mechanism_summary": "有效大块搬运占据关键路径 → 在足够并发与合法对齐下，实际传输速率接近目标平台可达上限 → 进一步增加发射或缓冲不能消除算法必要字节，节省时间需减少可消除流量或增加复用",
+      "alternatives": [
+        {
+          "check": "同窗口核对bytes/issue和校准带宽",
+          "distinction": "大包饱和与小包低效都可出现MTE高占比",
+          "problem_id": "problem.tiny_transfer_setup_amplification"
+        },
+        {
+          "check": "用唯一输入模型拆分算法必要字节与重复读",
+          "distinction": "不复用会放大字节，但不保证传输已饱和",
+          "problem_id": "problem.insufficient_input_reuse"
+        }
+      ],
+      "discriminating_checks": [
+        "分别计算read、write及必要时读写混合的字节/秒，不混用峰值和持续基准",
+        "持续有效带宽远低于可达基准且每次搬运很小则转查setup"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "同一调用中连续大块输入/输出及GM带宽窗口",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host工作量与访问模型；kernel稳态MTE传输",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.memory_bandwidth_saturation.md",
+      "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+      "review": {
+        "discriminating_power": "分别计算read、write及必要时读写混合的字节/秒，不混用峰值和持续基准；排除冷cache、启动、并发外部负载和小包setup后核对重复窗口；持续有效带宽远低于可达基准且每次搬运很小则转查setup",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "无目标持续带宽基准时不判饱和",
+          "数据搬运样例的峰值估算和具体收益不跨平台使用"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.missing_kernel_fusion",
+      "title": "跨 kernel 融合不足",
+      "mechanism": "可组合的相邻子操作用独立kernel和GM中间张量连接 → 每步重复launch与中间写读 → 短链或低算术强度时固定启动和中间流量可能主导",
+      "mechanism_summary": "可组合的相邻子操作用独立kernel和GM中间张量连接 → 每步重复launch与中间写读 → 短链或低算术强度时固定启动和中间流量可能主导",
+      "alternatives": [
+        {
+          "check": "先确认launch数量和中间GM用途",
+          "distinction": "单kernel片上直通不消除launch，本项跨kernel融合涉及执行边界",
+          "problem_id": "problem.redundant_gm_round_trip"
+        },
+        {
+          "check": "沿融合后执行顺序计算物理峰值",
+          "distinction": "融合可能放大同时存活输入/输出",
+          "problem_id": "problem.onchip_capacity_pressure"
+        }
+      ],
+      "discriminating_checks": [
+        "比较整个链的统一端到端范围，不能只比较融合后单kernel",
+        "外部可见性、跨核全局归约或API限制要求边界时不能直接融合"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "连续launch的生产者/消费者kernel及GM中间tensor",
+          "kind": "tensor",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host launch序列；生产kernel输出；后继kernel消费",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.missing_kernel_fusion.md",
+      "source_hash": "sha256:aac297182a534a63ac3563be2add3d0cd994858379608ec6c1e3f28c8feeb312",
+      "review": {
+        "discriminating_power": "比较整个链的统一端到端范围，不能只比较融合后单kernel；核算多消费者、归约边界、layout和同步拓扑；外部可见性、跨核全局归约或API限制要求边界时不能直接融合",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "Vector寄存器链融合文档只支持存活分析原则，跨kernel可行性须单独证明",
+          "本轮没有融合实测案例，不声称通用收益"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.mixed_pipeline_imbalance",
+      "title": "混合计算阶段节拍失衡",
+      "mechanism": "AIC和AIV每tile有效工作、任务粒度或吞吐不匹配 → 较快一侧在真实生产消费边界反复等待较慢一侧 → 可重叠链受较慢阶段和握手频率限制",
+      "mechanism_summary": "AIC和AIV每tile有效工作、任务粒度或吞吐不匹配 → 较快一侧在真实生产消费边界反复等待较慢一侧 → 可重叠链受较慢阶段和握手频率限制",
+      "alternatives": [
+        {
+          "check": "检查稳态重叠及阶段队列等待",
+          "distinction": "串行是没有重叠，失衡可在充分重叠下仍由慢侧限制",
+          "problem_id": "problem.pipeline_serialization"
+        },
+        {
+          "check": "对照真实依赖与等待范围",
+          "distinction": "同步过宽可能制造表面失衡",
+          "problem_id": "problem.excessive_sync_scope"
+        }
+      ],
+      "discriminating_checks": [
+        "按tile流水甘特而非单看aic_ratio/aiv_ratio比较",
+        "AIC/AIV本来执行不同工作且互不等待时，时间不等不能支持失衡"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "具有依赖交接的AIC与AIV阶段及同一tile的中间状态",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host混合kernel模式与任务粒度；AIC QK/PV；AIV softmax/rescale与交接",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.mixed_pipeline_imbalance.md",
+      "source_hash": "sha256:340b034d1112480b9455a19545cda12df74fa95232bddc4ce08f4d2dbd7202d8",
+      "review": {
+        "discriminating_power": "按tile流水甘特而非单看aic_ratio/aiv_ratio比较；联合核算中间buffer、workspace、握手频率与tile改变；AIC/AIV本来执行不同工作且互不等待时，时间不等不能支持失衡",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "混合核的角色不同，不能把逐核时间差直接当负载不均",
+          "arch22 FA阶段示例不证明其他混合算子的通路相同"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.noncontiguous_access",
+      "title": "非连续访问破坏有效搬运",
+      "mechanism": "切分或遍历轴跨过物理连续内轴 → 相同有效元素分解成离散事务、短块或额外padding → 发射与实际流量增加使有效字节带宽下降",
+      "mechanism_summary": "切分或遍历轴跨过物理连续内轴 → 相同有效元素分解成离散事务、短块或额外padding → 发射与实际流量增加使有效字节带宽下降",
+      "alternatives": [
+        {
+          "check": "固定单块字节后比较stride；固定stride后比较合并",
+          "distinction": "离散布局是几何原因，setup是每次发射固定成本，可共存",
+          "problem_id": "problem.tiny_transfer_setup_amplification"
+        },
+        {
+          "check": "标出哪些轴因广播而重复、哪些轴物理不连续",
+          "distinction": "广播的零stride重复输入应另计复用和展开成本",
+          "problem_id": "problem.broadcast_strategy_mismatch"
+        }
+      ],
+      "discriminating_checks": [
+        "沿至少两个连续tile手工核对GM地址差，区分逻辑索引与实际事务",
+        "原地址已连续且事务数符合模型，则不能归因于跨轴"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "带明确shape、layout、stride和有效索引域的输入或输出切片",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host选取切分轴；kernel GM地址生成与DataCopy",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+      "source_hash": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db",
+      "review": {
+        "discriminating_power": "沿至少两个连续tile手工核对GM地址差，区分逻辑索引与实际事务；使用相同shape、dtype、缓存状态的连续形态作参照；原地址已连续且事务数符合模型，则不能归因于跨轴",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "DataCopy stride的字节/datablock单位按具体API核对",
+          "不把arch35 NDDMA能力用于arch22"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.onchip_capacity_pressure",
+      "title": "同时存活区间限制片上容量",
+      "mechanism": "按dtype、对齐和深度求出的同时存活物理字节接近合法可用容量 → 余量不足迫使tile/流水深度收缩或中间结果外溢 → 更短tile、额外搬运或无法建立重叠会增加执行成本",
+      "mechanism_summary": "按dtype、对齐和深度求出的同时存活物理字节接近合法可用容量 → 余量不足迫使tile/流水深度收缩或中间结果外溢 → 更短tile、额外搬运或无法建立重叠会增加执行成本",
+      "alternatives": [
+        {
+          "check": "分别检查InitBuffer/地址表与编译spill报告",
+          "distinction": "片上UB/L1/L0与Scalar寄存器/栈是不同资源",
+          "problem_id": "problem.register_spill"
+        },
+        {
+          "check": "先容量闭合，再检查可重叠依赖",
+          "distinction": "容量不足可能阻止双缓冲，也可能容量足够但事件串行",
+          "problem_id": "problem.pipeline_serialization"
+        }
+      ],
+      "discriminating_checks": [
+        "用max_t(sum(aligned_bytes_i*depth_i))计算峰值，不能把所有声明简单相加",
+        "接近容量但没有造成额外成本，只是风险形态而非已证瓶颈"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "同时存活的UB/L1/L0 buffer集合及其分配阶段",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host容量预算；kernel分配、重叠与释放",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+      "source_hash": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96",
+      "review": {
+        "discriminating_power": "用max_t(sum(aligned_bytes_i*depth_i))计算峰值，不能把所有声明简单相加；复用审查覆盖异步消费者、跨stage事件和scratch，而非仅C++作用域；接近容量但没有造成额外成本，只是风险形态而非已证瓶颈",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "资源上限、保留区和对齐取目标平台查询值",
+          "不能把节省buffer直接等同于时延收益"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.pipeline_serialization",
+      "title": "搬运与计算串行",
+      "mechanism": "不同tile本可独立的搬运与计算使用同buffer或被过早等待阻断 → 生产消费依赖闭环没有留出下一tile预取窗口 → MTE、Vector或Cube顺次忙而其他流水等待",
+      "mechanism_summary": "不同tile本可独立的搬运与计算使用同buffer或被过早等待阻断 → 生产消费依赖闭环没有留出下一tile预取窗口 → MTE、Vector或Cube顺次忙而其他流水等待",
+      "alternatives": [
+        {
+          "check": "列出等待覆盖的生产消费边和本可独立的部分",
+          "distinction": "等待过宽可导致串行，但不重叠也可能来自真数据依赖",
+          "problem_id": "problem.excessive_sync_scope"
+        },
+        {
+          "check": "先重算峰值，再改事件或预取次序",
+          "distinction": "容量限制与事件安排是不同阻碍",
+          "problem_id": "problem.onchip_capacity_pressure"
+        }
+      ],
+      "discriminating_checks": [
+        "把timeline按tile而非聚合比例展开，检查首轮预置和末轮释放",
+        "稳定同对象窗口已持续重叠，反证完全串行解释"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "多个tile的CopyIn/Compute/CopyOut及其buffer事件链",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "kernel预取序言；稳态tile循环；排空尾声",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+      "source_hash": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74",
+      "review": {
+        "discriminating_power": "把timeline按tile而非聚合比例展开，检查首轮预置和末轮释放；核对双buffer是否物理独立及容量能同时容纳；稳定同对象窗口已持续重叠，反证完全串行解释",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "num=2不等于实际重叠成立",
+          "不复制来源80%等重叠率或收益为目标承诺"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.reduction_strategy_mismatch",
+      "title": "归约分解与工作量不匹配",
+      "mechanism": "全载/行列切分/跨核方案未适配R长度、独立A量和容量 → 可能产生欠并行、重复读、过多partial或不合适的广播路径 → 主归约及合并/后变换成本超出可行替代方案",
+      "mechanism_summary": "全载/行列切分/跨核方案未适配R长度、独立A量和容量 → 可能产生欠并行、重复读、过多partial或不合适的广播路径 → 主归约及合并/后变换成本超出可行替代方案",
+      "alternatives": [
+        {
+          "check": "比较A域任务和合法R拆分空间",
+          "distinction": "欠并行只是归约策略失配的一种表现",
+          "problem_id": "problem.underused_task_parallelism"
+        },
+        {
+          "check": "分阶段比较而非只看总归约时间",
+          "distinction": "跨R拆分可能主阶段更快却使合并占优",
+          "problem_id": "problem.chunk_merge_overhead"
+        }
+      ],
+      "discriminating_checks": [
+        "AR按连续行与ARA按R×A0块分别计算，不能把临时区估算通用化",
+        "当前分支已经满足容量和任务模型且成本来自bank/同步时，不把所有归约慢都归此项"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "合轴后AR或ARA归约的A1/R/A0域及partial状态",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host归约分支与切核；kernel载入、归约和后变换",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.reduction_strategy_mismatch.md",
+      "source_hash": "sha256:600ee3071331089eae02bbacb8ab59f29e141e122db835a6ecf43ac6170c251c",
+      "review": {
+        "discriminating_power": "AR按连续行与ARA按R×A0块分别计算，不能把临时区估算通用化；对Group Reduce同时核算partial写读、同步、合并和精度顺序；当前分支已经满足容量和任务模型且成本来自bank/同步时，不把所有归约慢都归此项",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "API scratch需按目标SDK查询/规则计算，不沿用文档4KB等样例常量",
+          "归约后广播是另一个成本点，不能只调R"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.redundant_cast",
+      "title": "重复类型转换",
+      "mechanism": "局部链在相邻阶段反复宽窄往返转换 → 部分转换不承担必须的数值边界或消费者dtype契约 → 额外Cast指令、临时buffer与控制增加成本",
+      "mechanism_summary": "局部链在相邻阶段反复宽窄往返转换 → 部分转换不承担必须的数值边界或消费者dtype契约 → 额外Cast指令、临时buffer与控制增加成本",
+      "alternatives": [
+        {
+          "check": "按PC拆Cast和Scalar设置",
+          "distinction": "转换指令成本与其参数/控制成本可共存",
+          "problem_id": "problem.control_metadata_overhead"
+        },
+        {
+          "check": "按实际dtype逐阶段核算",
+          "distinction": "宽dtype延长生存期可增容量，删Cast未必省峰值",
+          "problem_id": "problem.onchip_capacity_pressure"
+        }
+      ],
+      "discriminating_checks": [
+        "测试/分析正常数、极值、NaN/Inf、舍入与溢出契约，禁止只比较普通随机值",
+        "中间缩位是算法定义或外部消费者要求时不能删除"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "局部计算链中有明确dtype、舍入模式和精度边界的转换",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "kernel载入扩位；中间计算与缩位；最终输出转换",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.redundant_cast.md",
+      "source_hash": "sha256:c7f8ace396cc0a0f53f4bc0a5b9f0883cbd8b439d45dce74edc1e4f50b1b326d",
+      "review": {
+        "discriminating_power": "测试/分析正常数、极值、NaN/Inf、舍入与溢出契约，禁止只比较普通随机值；看源API支持和实际生成指令，语法Cast不必然对应相同成本；中间缩位是算法定义或外部消费者要求时不能删除",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "Cast产品及dtype支持按固定API文档核对",
+          "必须保持原A的精度与语义前提，不能以时延替代精度"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.redundant_gm_round_trip",
+      "title": "中间结果冗余 GM 往返",
+      "mechanism": "中间值在本地生产后写GM → 同一owner后续又从GM读回，且没有必须的外部可见性 → 额外写读、发射和依赖等待占据关键路径",
+      "mechanism_summary": "中间值在本地生产后写GM → 同一owner后续又从GM读回，且没有必须的外部可见性 → 额外写读、发射和依赖等待占据关键路径",
+      "alternatives": [
+        {
+          "check": "核对launch序列与中间值owner",
+          "distinction": "本项可在单kernel内发生，缺失融合涉及多个launch和跨kernel边界",
+          "problem_id": "problem.missing_kernel_fusion"
+        },
+        {
+          "check": "保留前后核算活跃峰值而非只看tensor大小",
+          "distinction": "容量压力可能是GM外溢的合理原因",
+          "problem_id": "problem.onchip_capacity_pressure"
+        }
+      ],
+      "discriminating_checks": [
+        "追踪中间tensor的def-use与实际地址，不能只凭同名变量判断",
+        "中间值供其他核或其他kernel使用且缺少替代协议时，不属于可直接消除往返"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "同一kernel内具有本地生产者和消费者的中间tensor",
+          "kind": "tensor",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "kernel生产中间值；GM暂存再搬回；本地消费",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.redundant_gm_round_trip.md",
+      "source_hash": "sha256:6edb2712451f2bd4129542bda16f8bbdaa80df11c4dbfb5bda6ff889eed1945f",
+      "review": {
+        "discriminating_power": "追踪中间tensor的def-use与实际地址，不能只凭同名变量判断；计算保留后所有活跃buffer峰值及消费者前后的同步；中间值供其他核或其他kernel使用且缺少替代协议时，不属于可直接消除往返",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "跨kernel/跨核通信不能凭片上可放下就取消",
+          "文档的向量链例子不证明任意计算图可融合"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.register_spill",
+      "title": "寄存器压力引发 spill",
+      "mechanism": "动态索引、大对象、取地址或过长生存期增加寄存器分配压力 → 编译器把部分值保存到栈/内存并在热区重载 → 非算法必要LoadStore与依赖增加关键路径",
+      "mechanism_summary": "动态索引、大对象、取地址或过长生存期增加寄存器分配压力 → 编译器把部分值保存到栈/内存并在热区重载 → 非算法必要LoadStore与依赖增加关键路径",
+      "alternatives": [
+        {
+          "check": "看栈偏移、编译报告与字段地址",
+          "distinction": "元数据重复读取可能无需寄存器溢出",
+          "problem_id": "problem.control_metadata_overhead"
+        },
+        {
+          "check": "使用不同资源账本与报告",
+          "distinction": "寄存器/栈与UB/L1容量独立",
+          "problem_id": "problem.onchip_capacity_pressure"
+        }
+      ],
+      "discriminating_checks": [
+        "先把必要GM标量读取、成员解引用与实际spill分开",
+        "生成物无spill且LoadStore均有算法来源，反证实际spill机制"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "指定编译配置下Scalar寄存器存活集合及栈/LoadStore指令",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "kernel热路径编译；Scalar寄存器分配与执行",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.register_spill.md",
+      "source_hash": "sha256:e4407acce00f2bbfa7d7270f950631e50504f2dfe7dcce10fe336dd23339ca71",
+      "review": {
+        "discriminating_power": "先把必要GM标量读取、成员解引用与实际spill分开；保持编译配置比较报告及热PC，不能把所有LoadStore统称spill；生成物无spill且LoadStore均有算法来源，反证实际spill机制",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "编译器版本和优化选项改变结论，需绑定artifact",
+          "源码审读不声称已证实spill"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.scalar_control_hot_loop",
+      "title": "标量逐元素热循环",
+      "mechanism": "本可按向量表达的元素处理使用逐元素Scalar访存或算术 → Scalar重复地址计算与读写并占据指令分发 → 其他流水不能及时获发工作并出现bubble",
+      "mechanism_summary": "本可按向量表达的元素处理使用逐元素Scalar访存或算术 → Scalar重复地址计算与读写并占据指令分发 → 其他流水不能及时获发工作并出现bubble",
+      "alternatives": [
+        {
+          "check": "查spill/stack和汇编PC归属",
+          "distinction": "寄存器溢出是额外LoadStore而非逐元素算法必需",
+          "problem_id": "problem.register_spill"
+        },
+        {
+          "check": "定位热区是数据处理还是重复元数据",
+          "distinction": "mask/index等控制可外提，不要求逐元素数据运算",
+          "problem_id": "problem.control_metadata_overhead"
+        }
+      ],
+      "discriminating_checks": [
+        "区分Scalar算术、Load/Store、指令分发、ICache及等待",
+        "循环只是少量控制或真正数据相关串行递推，不能用比例高推出可向量化"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "热路径逐元素Scalar读写/算术及下游发射队列",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "kernel Scalar逐元素循环；Vector/Cube/MTE指令分发",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+      "source_hash": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec",
+      "review": {
+        "discriminating_power": "区分Scalar算术、Load/Store、指令分发、ICache及等待；先审查依赖与有效域，再比较向量API是否产生等价精度；循环只是少量控制或真正数据相关串行递推，不能用比例高推出可向量化",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "Scalar比例阈值不跨架构使用",
+          "没有PC/指令映射时只保留来源推导"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.tail_slow_path",
+      "title": "尾块走低效独立慢路径",
+      "mechanism": "尾块走逐元素标量、多次小API或重复mask设置 → 相对主体每有效元素需更多控制和发射成本 → 尾占比较高或落在最长核时放大总时延",
+      "mechanism_summary": "尾块走逐元素标量、多次小API或重复mask设置 → 相对主体每有效元素需更多控制和发射成本 → 尾占比较高或落在最长核时放大总时延",
+      "alternatives": [
+        {
+          "check": "固定尾元素数比较每核分配和单位时间",
+          "distinction": "尾核多干活与同样尾元素处理慢不同",
+          "problem_id": "problem.core_tail_imbalance"
+        },
+        {
+          "check": "按主体和尾分开统计repeat/API",
+          "distinction": "主体也可能小粒度，尾慢需局限尾分支",
+          "problem_id": "problem.vector_api_fragmentation"
+        }
+      ],
+      "discriminating_checks": [
+        "分别比较尾元素比例、每核尾分配和同API不同长度",
+        "尾执行只占可忽略时间或差异来自核数/分支变化，不支持尾处理为主因"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "相同实现中对齐主体与非对齐尾部的有效元素域",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host传入尾长；kernel mask/CopyPad/标量尾分支",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.tail_slow_path.md",
+      "source_hash": "sha256:4ac470f136d249d428e82387184e53e30378ae54a05a4ca0acfe2c2a7e389893",
+      "review": {
+        "discriminating_power": "分别比较尾元素比例、每核尾分配和同API不同长度；校验padding不进入归约或输出语义，实际写回只覆盖有效域；尾执行只占可忽略时间或差异来自核数/分支变化，不支持尾处理为主因",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "Count接口不保证每个API/目标都支持",
+          "不能用aligned length代替有效count导致越界或归约污染"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.tiny_transfer_setup_amplification",
+      "title": "小搬运放大发射开销",
+      "mechanism": "循环把可合并的有效区间分成许多小DataCopy → 每次搬运重复支付参数构造、发射与同步固定成本 → 每指令有效字节偏低，使MTE忙而有效带宽仍低",
+      "mechanism_summary": "循环把可合并的有效区间分成许多小DataCopy → 每次搬运重复支付参数构造、发射与同步固定成本 → 每指令有效字节偏低，使MTE忙而有效带宽仍低",
+      "alternatives": [
+        {
+          "check": "同窗口比较有效字节、指令数、方向和校准带宽",
+          "distinction": "setup受限预期有效带宽低；带宽饱和要求接近同平台可达上限",
+          "problem_id": "problem.memory_bandwidth_saturation"
+        },
+        {
+          "check": "固定stride检查每次有效大小与总事务放大量",
+          "distinction": "离散布局会增加实际事务；小包setup可在连续数据上出现",
+          "problem_id": "problem.noncontiguous_access"
+        }
+      ],
+      "discriminating_checks": [
+        "用有效字节/指令数与传输大小分布定位频繁小包，区分总流量增加",
+        "大块连续传输已接近校准带宽上限时，本机制对该稳态窗口解释力下降"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "同一tensor切片的搬入块、DMA发射点及所属tile循环",
+          "kind": "tensor",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host计算tile和尾长；kernel内层CopyIn及等待",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.tiny_transfer_setup_amplification.md",
+      "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+      "review": {
+        "discriminating_power": "用有效字节/指令数与传输大小分布定位频繁小包，区分总流量增加；把搬入、计算和等待按tile展开，检查是否有可合并的边界；大块连续传输已接近校准带宽上限时，本机制对该稳态窗口解释力下降",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "来源粒度阈值属于910B经验；其他型号不沿用固定256B/4KB判据",
+          "当前任务没有采集数据，不能把文档样例收益写为本任务收益"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.transfer_compute_contention",
+      "title": "搬运和计算竞争片上资源",
+      "mechanism": "搬运和Vector在重叠窗口争用同一片上资源或端口 → 重叠使仲裁/等待增多而非隐藏延迟 → 总时长受共享资源吞吐限制",
+      "mechanism_summary": "搬运和Vector在重叠窗口争用同一片上资源或端口 → 重叠使仲裁/等待增多而非隐藏延迟 → 总时长受共享资源吞吐限制",
+      "alternatives": [
+        {
+          "check": "用无MTE计算窗口与并发窗口对照",
+          "distinction": "同Repeat操作数冲突可在没有MTE时出现",
+          "problem_id": "problem.ub_bank_conflict"
+        },
+        {
+          "check": "核对双方是否真实同时在执行",
+          "distinction": "完全缺少重叠不能直接支持重叠争用",
+          "problem_id": "problem.pipeline_serialization"
+        }
+      ],
+      "discriminating_checks": [
+        "把Vector内部bank冲突与MTE并发冲突分开",
+        "冲突计数缺失或仅见同时执行，不能确认争用"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "同一UB或片上通路上的并发MTE与Vector访问",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "kernel搬运与计算重叠窗口",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.transfer_compute_contention.md",
+      "source_hash": "sha256:055ef2406cd741a26a11f55e813f356567195c4f26fab9fa0c9ada1b2727bdc7",
+      "review": {
+        "discriminating_power": "把Vector内部bank冲突与MTE并发冲突分开；检查冲突计数分母和实际重叠区间，比较总Task Duration；冲突计数缺失或仅见同时执行，不能确认争用",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "来源对布局与流水耦合提供原理，未给本任务并发冲突实测",
+          "目标计数器或通路语义未核对时保持假设",
+          "固定新来源说明bank访问与流水重叠，但没有直接核验本机制的目标Vector-MTE计数器语义或同scope争用案例；保留条件推导，需硬件文档/任务profile补证。"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "gap"
+      }
+    },
+    {
+      "id": "problem.ub_bank_conflict",
+      "title": "UB 布局引起 bank 冲突",
+      "mechanism": "并发数据块按目标bank/group几何映射到冲突集合 → 硬件仲裁把部分访问串行化 → 同等有效向量工作需要更多周期",
+      "mechanism_summary": "并发数据块按目标bank/group几何映射到冲突集合 → 硬件仲裁把部分访问串行化 → 同等有效向量工作需要更多周期",
+      "alternatives": [
+        {
+          "check": "拆分并发流水窗口与同Repeat地址",
+          "distinction": "本项是Vector内部操作数冲突，后者含MTE与Vector同时访问",
+          "problem_id": "problem.transfer_compute_contention"
+        },
+        {
+          "check": "比较有效repeat分布与冲突计数",
+          "distinction": "指令粒度小也会周期高，但不要求bank冲突",
+          "problem_id": "problem.vector_api_fragmentation"
+        }
+      ],
+      "discriminating_checks": [
+        "分别判断读写、写写、读读，不能把同一group一概视为冲突",
+        "不同时间访问同bank不构成本机制"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "同一Vector Repeat并发访问的src/dst地址与stride",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "kernel UB布局；Vector执行同一Repeat",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.ub_bank_conflict.md",
+      "source_hash": "sha256:d52b3b8c1ab98e21bc1736598927ba9ee204141545ccbd31008b0c866d0dd7e0",
+      "review": {
+        "discriminating_power": "分别判断读写、写写、读读，不能把同一group一概视为冲突；固定有效元素、mask与指令路径比较padding或stride；不同时间访问同bank不构成本机制",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "arch22与arch35读读条件不同，禁止互用固定padding和几何",
+          "通用冲突字段必须映射到目标后端实际计数器"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.underused_task_parallelism",
+      "title": "已有独立任务并行度未暴露",
+      "mechanism": "独立可并行工作未充分分解或启动核数过少 → 有效任务数少于可用同类核且每任务有足够长工作 → 部分核空闲，关键路径仍由少数核串行承担",
+      "mechanism_summary": "独立可并行工作未充分分解或启动核数过少 → 有效任务数少于可用同类核且每任务有足够长工作 → 部分核空闲，关键路径仍由少数核串行承担",
+      "alternatives": [
+        {
+          "check": "比较总任务及每核分布",
+          "distinction": "有足够任务仍可能分配失衡，欠并行主要是总可用任务不足",
+          "problem_id": "problem.core_tail_imbalance"
+        },
+        {
+          "check": "比较saved critical path与partial写读+同步+merge",
+          "distinction": "增加拆分会减少主阶段却增加partial归并",
+          "problem_id": "problem.chunk_merge_overhead"
+        }
+      ],
+      "discriminating_checks": [
+        "先考虑已有独立外轴，再评估Split-K/Split-KV与partial成本",
+        "微小任务或算法依赖使增并行开销大于节省时，本机制不构成可执行理由"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "当前workload的独立任务域、实际BlockDim及可用同类核",
+          "kind": "task",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host任务分解与启动；kernel任务领取",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.underused_task_parallelism.md",
+      "source_hash": "sha256:9c3c8e694a3b1901e7ed01710f241e47ca66eaf05e6674cd9796276c94ed5f2c",
+      "review": {
+        "discriminating_power": "先考虑已有独立外轴，再评估Split-K/Split-KV与partial成本；读取目标核数API与kernel mode，不用来源的48/64等样例数字；微小任务或算法依赖使增并行开销大于节省时，本机制不构成可执行理由",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "小workload是该解释的条件性反证，不能跨shape推广",
+          "StreamK源阈值属于该代码，不设为通用分界"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.vector_api_fragmentation",
+      "title": "Vector 调用碎片化",
+      "mechanism": "可批处理的Vector工作被拆成大量小count/repeat调用 → 每次重复mask/repeat和指令发射控制 → 有效lane利用偏低并增加Scalar与Vector固定开销",
+      "mechanism_summary": "可批处理的Vector工作被拆成大量小count/repeat调用 → 每次重复mask/repeat和指令发射控制 → 有效lane利用偏低并增加Scalar与Vector固定开销",
+      "alternatives": [
+        {
+          "check": "分开统计主体/尾API分布",
+          "distinction": "尾慢只绑定尾分支，碎片化也可发生在主体",
+          "problem_id": "problem.tail_slow_path"
+        },
+        {
+          "check": "固定API数量比较冲突和周期",
+          "distinction": "冲突拉长周期但不要求API粒度小",
+          "problem_id": "problem.ub_bank_conflict"
+        }
+      ],
+      "discriminating_checks": [
+        "按dtype与有效mask计有效元素而非把repeat数直接当利用率",
+        "小shape仅需一次小调用或各调用存在数据依赖时，不据粒度小判可合并"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "同一有效元素域上的Vector API序列、repeat和mask分布",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "kernel Vector发射与尾处理",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.vector_api_fragmentation.md",
+      "source_hash": "sha256:e5c0882f45cb270a9fd555e570428ba6f942efbb8c888972f3aadb655c09a34a",
+      "review": {
+        "discriminating_power": "按dtype与有效mask计有效元素而非把repeat数直接当利用率；区分尾部必要小调用、分支依赖和不必要的主体碎片化；小shape仅需一次小调用或各调用存在数据依赖时，不据粒度小判可合并",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "API理论利用率必须由目标指令和dtype推导",
+          "没有自动extractor，本轮不声称已采样到repeat分布"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    },
+    {
+      "id": "problem.workspace_overallocation",
+      "title": "workspace 配置引入额外成本",
+      "mechanism": "按最大shape、总task数或过量槽数预留workspace而实际只需有限并发槽 → 多余区间可能增加分配/清零/传输或挤压其他算子内存 → 仅当实际触及这些成本时才成为性能机制，纯保留字节是资源风险",
+      "mechanism_summary": "按最大shape、总task数或过量槽数预留workspace而实际只需有限并发槽 → 多余区间可能增加分配/清零/传输或挤压其他算子内存 → 仅当实际触及这些成本时才成为性能机制，纯保留字节是资源风险",
+      "alternatives": [
+        {
+          "check": "分别列GM段与片上buffer",
+          "distinction": "GM workspace与UB/L1/L0容量分属不同资源",
+          "problem_id": "problem.onchip_capacity_pressure"
+        },
+        {
+          "check": "比较必要partial字节与额外预留字节",
+          "distinction": "partial必需workspace可能很大，但合并成本不全由过量分配造成",
+          "problem_id": "problem.chunk_merge_overhead"
+        }
+      ],
+      "discriminating_checks": [
+        "联合host、tiling字段、kernel slot/index和上层workspace ABI核验",
+        "库契约保留区、并发跨task存活或kernel索引要求该范围时不能缩小"
+      ],
+      "scope_status": "match",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "host声明的workspace段、真实并发槽和kernel索引范围",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host workspace分配；kernel初始化、读写和槽轮转",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.workspace_overallocation.md",
+      "source_hash": "sha256:8e80de212a7ed0f4d66b13029745fde3107a74b6bbd292cf8602363bd8b95f75",
+      "review": {
+        "discriminating_power": "联合host、tiling字段、kernel slot/index和上层workspace ABI核验；区分已分配未访问、主动清零、实际读写，不能仅据大小推性能；库契约保留区、并发跨task存活或kernel索引要求该范围时不能缩小",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "FA按并发槽分配规则只对其生命周期成立的段适用",
+          "SquaredRelu入口不足以证明其host保留区可删除，不能据固定16MB直接断言浪费"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      }
+    }
+  ],
+  "observations": [
+    {
+      "id": "symptom.profile.broadcast_strategy_mismatch",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.broadcast_strategy_mismatch.component_1",
+        "symptom.profile.broadcast_strategy_mismatch.component_2",
+        "symptom.profile.broadcast_strategy_mismatch.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.cache_policy_mismatch",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.cache_policy_mismatch.component_1",
+        "symptom.profile.cache_policy_mismatch.component_2",
+        "symptom.profile.cache_policy_mismatch.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.chunk_merge_overhead",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.chunk_merge_overhead.component_1",
+        "symptom.profile.chunk_merge_overhead.component_2",
+        "symptom.profile.chunk_merge_overhead.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.control_metadata_overhead",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.control_metadata_overhead.component_1",
+        "symptom.profile.control_metadata_overhead.component_2",
+        "symptom.profile.control_metadata_overhead.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.dynamic_shape_mismatch",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.dynamic_shape_mismatch.component_1",
+        "symptom.profile.dynamic_shape_mismatch.component_2",
+        "symptom.profile.dynamic_shape_mismatch.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.fragmented_writeback",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.fragmented_writeback.component_1",
+        "symptom.profile.fragmented_writeback.component_2",
+        "symptom.profile.fragmented_writeback.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.gm_traffic_amplified",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.gm_traffic_amplified.component_1",
+        "symptom.profile.gm_traffic_amplified.component_2",
+        "symptom.profile.gm_traffic_amplified.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.insufficient_input_reuse",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.insufficient_input_reuse.component_1",
+        "symptom.profile.insufficient_input_reuse.component_2",
+        "symptom.profile.insufficient_input_reuse.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.l1_l0_reuse_deficit",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.l1_l0_reuse_deficit.component_1",
+        "symptom.profile.l1_l0_reuse_deficit.component_2",
+        "symptom.profile.l1_l0_reuse_deficit.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.memory_bandwidth_saturation",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.memory_bandwidth_saturation.component_1",
+        "symptom.profile.memory_bandwidth_saturation.component_2",
+        "symptom.profile.memory_bandwidth_saturation.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.missing_kernel_fusion",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.missing_kernel_fusion.component_1",
+        "symptom.profile.missing_kernel_fusion.component_2",
+        "symptom.profile.missing_kernel_fusion.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.mixed_pipeline_imbalance",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.mixed_pipeline_imbalance.component_1",
+        "symptom.profile.mixed_pipeline_imbalance.component_2",
+        "symptom.profile.mixed_pipeline_imbalance.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.mte_setup_dominated",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.mte_setup_dominated.component_1",
+        "symptom.profile.mte_setup_dominated.component_2",
+        "symptom.profile.mte_setup_dominated.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.noncontiguous_access",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.noncontiguous_access.component_1",
+        "symptom.profile.noncontiguous_access.component_2",
+        "symptom.profile.noncontiguous_access.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.overlap_low",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.overlap_low.component_1",
+        "symptom.profile.overlap_low.component_2",
+        "symptom.profile.overlap_low.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.per_core_time_imbalanced",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.per_core_time_imbalanced.component_1",
+        "symptom.profile.per_core_time_imbalanced.component_2",
+        "symptom.profile.per_core_time_imbalanced.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.reduction_strategy_mismatch",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.reduction_strategy_mismatch.component_1",
+        "symptom.profile.reduction_strategy_mismatch.component_2",
+        "symptom.profile.reduction_strategy_mismatch.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.redundant_cast",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.redundant_cast.component_1",
+        "symptom.profile.redundant_cast.component_2",
+        "symptom.profile.redundant_cast.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.register_spill",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.register_spill.component_1",
+        "symptom.profile.register_spill.component_2",
+        "symptom.profile.register_spill.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.scalar_hot",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.scalar_hot.component_1",
+        "symptom.profile.scalar_hot.component_2",
+        "symptom.profile.scalar_hot.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.steady_overlap",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.steady_overlap.component_1",
+        "symptom.profile.steady_overlap.component_2",
+        "symptom.profile.steady_overlap.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。 只反证覆盖窗口完全串行，不否认局部等待。"
+    },
+    {
+      "id": "symptom.profile.tail_slow_path",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.tail_slow_path.component_1",
+        "symptom.profile.tail_slow_path.component_2",
+        "symptom.profile.tail_slow_path.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.tasks_below_available_cores",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.tasks_below_available_cores.component_1",
+        "symptom.profile.tasks_below_available_cores.component_2",
+        "symptom.profile.tasks_below_available_cores.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.transfer_compute_contention",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.transfer_compute_contention.component_1",
+        "symptom.profile.transfer_compute_contention.component_2",
+        "symptom.profile.transfer_compute_contention.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.ub_conflict_high",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.ub_conflict_high.component_1",
+        "symptom.profile.ub_conflict_high.component_2",
+        "symptom.profile.ub_conflict_high.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.vector_granularity_low",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.vector_granularity_low.component_1",
+        "symptom.profile.vector_granularity_low.component_2",
+        "symptom.profile.vector_granularity_low.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.profile.workspace_overallocation",
+      "state": "unknown",
+      "view": "profile",
+      "required_components": [
+        "symptom.profile.workspace_overallocation.component_1",
+        "symptom.profile.workspace_overallocation.component_2",
+        "symptom.profile.workspace_overallocation.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.broadcast_strategy_mismatch",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.broadcast_strategy_mismatch.component_1",
+        "symptom.source.broadcast_strategy_mismatch.component_2",
+        "symptom.source.broadcast_strategy_mismatch.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.cache_policy_mismatch",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.cache_policy_mismatch.component_1",
+        "symptom.source.cache_policy_mismatch.component_2",
+        "symptom.source.cache_policy_mismatch.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.chunk_merge_overhead",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.chunk_merge_overhead.component_1",
+        "symptom.source.chunk_merge_overhead.component_2",
+        "symptom.source.chunk_merge_overhead.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.control_metadata_overhead",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.control_metadata_overhead.component_1",
+        "symptom.source.control_metadata_overhead.component_2",
+        "symptom.source.control_metadata_overhead.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.dynamic_shape_mismatch",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.dynamic_shape_mismatch.component_1",
+        "symptom.source.dynamic_shape_mismatch.component_2",
+        "symptom.source.dynamic_shape_mismatch.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.fixed_or_undersubscribed_tasking",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.fixed_or_undersubscribed_tasking.component_1",
+        "symptom.source.fixed_or_undersubscribed_tasking.component_2",
+        "symptom.source.fixed_or_undersubscribed_tasking.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.fragmented_writeback",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.fragmented_writeback.component_1",
+        "symptom.source.fragmented_writeback.component_2",
+        "symptom.source.fragmented_writeback.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.gm_intermediate_roundtrip",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.gm_intermediate_roundtrip.component_1",
+        "symptom.source.gm_intermediate_roundtrip.component_2",
+        "symptom.source.gm_intermediate_roundtrip.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.inner_loop_copy",
+      "state": true,
+      "view": "source",
+      "required_components": [
+        "symptom.source.inner_loop_copy.component_1",
+        "symptom.source.inner_loop_copy.component_2",
+        "symptom.source.inner_loop_copy.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.insufficient_input_reuse",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.insufficient_input_reuse.component_1",
+        "symptom.source.insufficient_input_reuse.component_2",
+        "symptom.source.insufficient_input_reuse.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.l1_l0_reuse_deficit",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.l1_l0_reuse_deficit.component_1",
+        "symptom.source.l1_l0_reuse_deficit.component_2",
+        "symptom.source.l1_l0_reuse_deficit.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.memory_bandwidth_saturation",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.memory_bandwidth_saturation.component_1",
+        "symptom.source.memory_bandwidth_saturation.component_2",
+        "symptom.source.memory_bandwidth_saturation.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。 大块连续结构不证明饱和。"
+    },
+    {
+      "id": "symptom.source.missing_kernel_fusion",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.missing_kernel_fusion.component_1",
+        "symptom.source.missing_kernel_fusion.component_2",
+        "symptom.source.missing_kernel_fusion.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.mixed_pipeline_imbalance",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.mixed_pipeline_imbalance.component_1",
+        "symptom.source.mixed_pipeline_imbalance.component_2",
+        "symptom.source.mixed_pipeline_imbalance.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.noncontiguous_access",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.noncontiguous_access.component_1",
+        "symptom.source.noncontiguous_access.component_2",
+        "symptom.source.noncontiguous_access.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.reduction_strategy_mismatch",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.reduction_strategy_mismatch.component_1",
+        "symptom.source.reduction_strategy_mismatch.component_2",
+        "symptom.source.reduction_strategy_mismatch.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.redundant_cast",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.redundant_cast.component_1",
+        "symptom.source.redundant_cast.component_2",
+        "symptom.source.redundant_cast.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.register_spill",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.register_spill.component_1",
+        "symptom.source.register_spill.component_2",
+        "symptom.source.register_spill.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。 本项只观察源码spill风险，不确认实际spill。"
+    },
+    {
+      "id": "symptom.source.scalar_element_loop",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.scalar_element_loop.component_1",
+        "symptom.source.scalar_element_loop.component_2",
+        "symptom.source.scalar_element_loop.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.serial_queue_or_event_order",
+      "state": true,
+      "view": "source",
+      "required_components": [
+        "symptom.source.serial_queue_or_event_order.component_1",
+        "symptom.source.serial_queue_or_event_order.component_2",
+        "symptom.source.serial_queue_or_event_order.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.sync_inside_tile_loop",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.sync_inside_tile_loop.component_1",
+        "symptom.source.sync_inside_tile_loop.component_2",
+        "symptom.source.sync_inside_tile_loop.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.tail_concentrated",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.tail_concentrated.component_1",
+        "symptom.source.tail_concentrated.component_2",
+        "symptom.source.tail_concentrated.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.tail_slow_path",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.tail_slow_path.component_1",
+        "symptom.source.tail_slow_path.component_2",
+        "symptom.source.tail_slow_path.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.transfer_compute_contention",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.transfer_compute_contention.component_1",
+        "symptom.source.transfer_compute_contention.component_2",
+        "symptom.source.transfer_compute_contention.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.ub_live_bytes_near_capacity",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.ub_live_bytes_near_capacity.component_1",
+        "symptom.source.ub_live_bytes_near_capacity.component_2",
+        "symptom.source.ub_live_bytes_near_capacity.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.ub_stride_conflict_risk",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.ub_stride_conflict_risk.component_1",
+        "symptom.source.ub_stride_conflict_risk.component_2",
+        "symptom.source.ub_stride_conflict_risk.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.source.workspace_overallocation",
+      "state": "unknown",
+      "view": "source",
+      "required_components": [
+        "symptom.source.workspace_overallocation.component_1",
+        "symptom.source.workspace_overallocation.component_2",
+        "symptom.source.workspace_overallocation.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    },
+    {
+      "id": "symptom.workload.tiny_or_overhead_limited",
+      "state": "unknown",
+      "view": "workload",
+      "required_components": [
+        "symptom.workload.tiny_or_overhead_limited.component_1",
+        "symptom.workload.tiny_or_overhead_limited.component_2",
+        "symptom.workload.tiny_or_overhead_limited.component_3"
+      ],
+      "scope_status": "unbound",
+      "interpretation_boundary": "本S只定义当前实现的观察形态、范围和口径；source不自动推出profile，profile不自动确立Problem。候选Action可行性由原A硬前提核验，干预实验及其正反结果属于Problem检查/后继证据，不决定本S当前是否成立。"
+    }
+  ],
+  "symptom_adjacency": [
+    {
+      "symptom_id": "symptom.source.inner_loop_copy",
+      "problem_id": "problem.tiny_transfer_setup_amplification",
+      "relation": "supports",
+      "edge_id": "edge.support.tiny_copy.source",
+      "observation_state": true,
+      "condition_state": "not_evaluated",
+      "binding": {
+        "discriminating_checks": [
+          "用有效字节/指令数与传输大小分布定位频繁小包，区分总流量增加",
+          "把搬入、计算和等待按tile展开，检查是否有可合并的边界"
+        ],
+        "exceptions": [
+          "大块连续传输已接近校准带宽上限时，本机制对该稳态窗口解释力下降",
+          "单次全载或全局依赖不允许合并时，不能据小包数量推出可消除成本"
+        ],
+        "joint_requirements": [
+          {
+            "fact": "symptom.source.inner_loop_copy",
+            "state": true
+          },
+          {
+            "fact": "constraint.diagnosis.tiny_transfer_setup_amplification.source_scope_verified",
+            "state": true
+          }
+        ],
+        "object_bindings": [
+          {
+            "from_slot": "target",
+            "rule": "同一task与parent实现，绑定同一target身份；同一tensor切片的搬入块、DMA发射点及所属tile循环",
+            "to_slot": "target"
+          },
+          {
+            "from_slot": "stage",
+            "rule": "同一task与parent实现，绑定同一stage身份；只允许对应阶段及其已注明的直接依赖窗口",
+            "to_slot": "stage"
+          },
+          {
+            "from_slot": "workload",
+            "rule": "同一task与parent实现，绑定同一workload身份；shape/dtype/layout/feature及有效元素域一致",
+            "to_slot": "workload"
+          },
+          {
+            "from_slot": "implementation",
+            "rule": "同一task与parent实现，绑定同一implementation身份；当前host/tiling/kernel及编译artifact一致，不把C2变换后属性充当当前观测",
+            "to_slot": "implementation"
+          }
+        ],
+        "rationale": "该源码复合观察绑定同一tensor切片的搬入块、DMA发射点及所属tile循环，与机制链“循环把可合并的有效区间分成许多小DataCopy → 每次搬运重复支付参数构造、发射与同步固定成本 → 每指令有效字节偏低，使MTE忙而有效带宽仍低”相容，因此只形成待核验候选与profile预测。它不证明现象已在profile出现，也不是因果充分条件。"
+      },
+      "claim_basis": [
+        "legacy_seed",
+        "mechanism_inference",
+        "source_statement"
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/edges/edge.support.tiny_copy.source.md",
+      "source_hash": "sha256:e82cc2ee3bada3fbac66f3def8ec9044494de08ceee753420b45dcdd2094b292",
+      "legacy_prior": {
+        "weight": 1,
+        "role": "uncalibrated_auxiliary_only"
+      }
+    },
+    {
+      "symptom_id": "symptom.source.serial_queue_or_event_order",
+      "problem_id": "problem.pipeline_serialization",
+      "relation": "supports",
+      "edge_id": "edge.support.serial.source",
+      "observation_state": true,
+      "condition_state": "not_evaluated",
+      "binding": {
+        "discriminating_checks": [
+          "把timeline按tile而非聚合比例展开，检查首轮预置和末轮释放",
+          "核对双buffer是否物理独立及容量能同时容纳"
+        ],
+        "exceptions": [
+          "稳定同对象窗口已持续重叠，反证完全串行解释",
+          "单轮、容量不允许或算法真依赖禁止重叠时，不能建议强行加buffer"
+        ],
+        "joint_requirements": [
+          {
+            "fact": "symptom.source.serial_queue_or_event_order",
+            "state": true
+          },
+          {
+            "fact": "constraint.diagnosis.pipeline_serialization.source_scope_verified",
+            "state": true
+          }
+        ],
+        "object_bindings": [
+          {
+            "from_slot": "target",
+            "rule": "同一task与parent实现，绑定同一target身份；多个tile的CopyIn/Compute/CopyOut及其buffer事件链",
+            "to_slot": "target"
+          },
+          {
+            "from_slot": "stage",
+            "rule": "同一task与parent实现，绑定同一stage身份；只允许对应阶段及其已注明的直接依赖窗口",
+            "to_slot": "stage"
+          },
+          {
+            "from_slot": "workload",
+            "rule": "同一task与parent实现，绑定同一workload身份；shape/dtype/layout/feature及有效元素域一致",
+            "to_slot": "workload"
+          },
+          {
+            "from_slot": "implementation",
+            "rule": "同一task与parent实现，绑定同一implementation身份；当前host/tiling/kernel及编译artifact一致，不把C2变换后属性充当当前观测",
+            "to_slot": "implementation"
+          }
+        ],
+        "rationale": "该源码复合观察绑定多个tile的CopyIn/Compute/CopyOut及其buffer事件链，与机制链“不同tile本可独立的搬运与计算使用同buffer或被过早等待阻断 → 生产消费依赖闭环没有留出下一tile预取窗口 → MTE、Vector或Cube顺次忙而其他流水等待”相容，因此只形成待核验候选与profile预测。它不证明现象已在profile出现，也不是因果充分条件。"
+      },
+      "claim_basis": [
+        "legacy_seed",
+        "mechanism_inference",
+        "source_statement"
+      ],
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/edges/edge.support.serial.source.md",
+      "source_hash": "sha256:3b2cb0699586d08ab470c63bdfdc28c43f045d0946a9245e9edad0c0ead01859",
+      "legacy_prior": {
+        "weight": 1,
+        "role": "uncalibrated_auxiliary_only"
+      }
+    }
+  ],
+  "limitations": [
+    "目录完整；仅展开当前已知观察的邻接，未加载机制正文或全部来源。",
+    "profiling缺少明确时间范围或整份采集聚合口径时保持unknown。",
+    "观察和边条件尚未绑定当前目标/阶段；scope match只是检索范围，不授权平台能力。",
+    "历史先验只辅助阅读，不计算机制总分、概率或自动选择动作。"
+  ]
+}

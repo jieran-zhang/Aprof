@@ -1,0 +1,793 @@
+{
+  "schema_version": "aprof.action-decision/v3",
+  "task_id": "maximum-hw-graph130-20261021",
+  "context_hash": "sha256:5e9c1ca6682eea4e506ecd70c146d2dfc5580f8656b61a17fd3b485c63174e9d",
+  "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+  "reasoning_ref": {
+    "path": "rounds/R15/contracts-02/reasoning.json",
+    "sha256": "sha256:e00e1fe2a13bb6986f52731072a7e10ba27698618def321fe89fcd2db32a5660"
+  },
+  "reasoning_hash": "sha256:94d600d97db5d3cdab2dfb4cbf58cdf1b6132b40e554c9b75d1dd6cc6c93cf9c",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/ec82d8f535262a6e43869d71bce0e77d91aa71040c5f7f87a8e56f5adfd6f1e8.json",
+    "sha256": "sha256:fde21372195004f2ae06c2a295edd3ca726b0f00da220aa64ef8f1c0bc6507e2"
+  },
+  "round": 15,
+  "current_parent_ref": {
+    "path": "artifacts/R13-attempt-01-identity/source.json",
+    "sha256": "sha256:f9de6d174f7a7d76f44156b454d83543a4887cdd4f1a7c6dc32fe82fce744f75"
+  },
+  "opportunities": [
+    {
+      "id": "plain-static-leases",
+      "hypothesis_id": "H-plain-static-leases",
+      "action_id": null,
+      "action_instance_id": null,
+      "case_ids": [
+        "2",
+        "4",
+        "10",
+        "15",
+        "16"
+      ],
+      "source_fact_ids": [
+        "source.main",
+        "cost.logical_lengths"
+      ],
+      "cost_mechanism": "五long C/U/groups/尾/必要3Ns GM/Max元素与四数据API不变；每tile12个源级queue管理调用移除，改静态slot取址+8稳态Set/Wait API（含next input free），首尾计数单列；一份uint32 tile snapshot，Y策略不减逻辑字节。",
+      "predictions": [
+        {
+          "id": "plain-static-leases-perf",
+          "kind": "performance",
+          "statement": "新原20+3longplain特殊/完整位型多槽尾oracle通过、20timing有效；完整控制+独立输出策略减少三个long欠域时间并保护17过线，目标同一实现HAP20；不从queue/API数保证速度。",
+          "check_method": "完整20case同窗R0/R13探索parent/B与固定复验。",
+          "on_support": "以完整候选保留，成员因果不隔离。",
+          "on_refute": "据真实残余重比，不择样本。"
+        }
+      ],
+      "performance_hypotheses": [],
+      "unknowns": [
+        {
+          "id": "plain-static-leases-performance",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "本轮成员成本和关键路径收益未测。",
+          "affects": "性能预测。",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": null,
+      "comparison": "S1整体删除long plain每tile两input+Y的动态队列管理，保留同等A2+B2/Y1依赖，用两input FIFO/共同last Max读合并ready/free；tile snapshot仅配套，Y独立输出DISABLE扩展参考R9 same温和改善和原API。最强S2 packed input TQue2削一套input descriptor但保留input/output动态state/eventpool，API更简单而潜在工作删除较小。S3仅字段易证明但编译CSE可能已消除、不处理主queue控制；S4 C变化/大tile已有弱反馈。S1新增显式计数/branch/drain成本及cache风险全保留，性能unknown可试。",
+      "disposition": "considered",
+      "reason": "主要是完整queue/control与完成边实现重排，不把metadata hoist Action扩展覆盖全部；task-local graph-out。",
+      "analysis": {
+        "intent_gap": "主要是完整queue/control与完成边实现重排，不把metadata hoist Action扩展覆盖全部；task-local graph-out。",
+        "work_delta": [
+          {
+            "id": "plain-static-leases-work",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "same-vector"
+            ],
+            "change": "rescheduled",
+            "quantity": {
+              "mode": "qualitative",
+              "expression": "五long C/U/groups/尾/必要3Ns GM/Max元素与四数据API不变；每tile12个源级queue管理调用移除，改静态slot取址+8稳态Set/Wait API（含next input free），首尾计数单列；一份uint32 tile snapshot，Y策略不减逻辑字节。",
+              "unit": "logical work",
+              "symbols": [],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.main",
+                "cost.logical_lengths"
+              ]
+            },
+            "explanation": "五long C/U/groups/尾/必要3Ns GM/Max元素与四数据API不变；每tile12个源级queue管理调用移除，改静态slot取址+8稳态Set/Wait API（含next input free），首尾计数单列；一份uint32 tile snapshot，Y策略不减逻辑字节。"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "plain-static-leases-cover-int64-same",
+            "domain_id": "int64-same",
+            "status": "unchanged",
+            "region": "通用dtype/shape与当前case映射，不按caseID分派。",
+            "fact_ids": [
+              "source.main"
+            ]
+          },
+          {
+            "id": "plain-static-leases-cover-int64-broadcast",
+            "domain_id": "int64-broadcast",
+            "status": "unchanged",
+            "region": "通用dtype/shape与当前case映射，不按caseID分派。",
+            "fact_ids": [
+              "source.main"
+            ]
+          },
+          {
+            "id": "plain-static-leases-cover-broadcast-vector",
+            "domain_id": "broadcast-vector",
+            "status": "unchanged",
+            "region": "通用dtype/shape与当前case映射，不按caseID分派。",
+            "fact_ids": [
+              "source.main"
+            ]
+          },
+          {
+            "id": "plain-static-leases-cover-broadcast-scalar",
+            "domain_id": "broadcast-scalar",
+            "status": "unchanged",
+            "region": "通用dtype/shape与当前case映射，不按caseID分派。",
+            "fact_ids": [
+              "source.main"
+            ]
+          },
+          {
+            "id": "plain-static-leases-cover-int8",
+            "domain_id": "int8",
+            "status": "unchanged",
+            "region": "通用dtype/shape与当前case映射，不按caseID分派。",
+            "fact_ids": [
+              "source.main"
+            ]
+          },
+          {
+            "id": "plain-static-leases-cover-same-vector",
+            "domain_id": "same-vector",
+            "status": "partial",
+            "region": "通用dtype/shape与当前case映射，不按caseID分派。",
+            "fact_ids": [
+              "source.main"
+            ]
+          },
+          {
+            "id": "plain-static-leases-cover-half-broadcast",
+            "domain_id": "half-broadcast",
+            "status": "unchanged",
+            "region": "通用dtype/shape与当前case映射，不按caseID分派。",
+            "fact_ids": [
+              "source.main"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "plain-static-leases-cost",
+            "domain_ids": [
+              "same-vector"
+            ],
+            "dimension": "UB/API/dependency",
+            "change": {
+              "mode": "qualitative",
+              "expression": "新slot取模/分支、Set/Wait、reused判定、显式drain/LocalTensor视图；Scalar寄存器/spill/CSE与实际事件周期未知。input ready必须两MTE2完成，free必须Max最后读；Y MTE3 lastread仍串行单槽。输出DISABLE可能损失cache复用/服务而回退，实际动态honor/字节未知。新代码/Dispatch/全binary变化可能影响未修改路径。",
+              "unit": "logical work",
+              "symbols": [],
+              "basis": "source_logical",
+              "fact_ids": [
+                "cost.logical_lengths"
+              ]
+            },
+            "consequence": "完整代价保留，性能需实测。"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "plain-static-leases-remaining",
+            "domain_ids": [
+              "int64-same",
+              "int64-broadcast",
+              "broadcast-vector",
+              "broadcast-scalar",
+              "int8",
+              "same-vector",
+              "half-broadcast"
+            ],
+            "remaining_work": "其余成员或父本保留工作。",
+            "next_step": "完整B实测后重比。",
+            "fact_ids": [
+              "source.main"
+            ]
+          }
+        ],
+        "no_alternative_reason": "3欠域需要约2.58/6.07/12.43%时间，单字段缓存/继续核数较弱；S1覆盖真正长循环的管理/事件pool源码工作，所有数值/API/资源可独立闭合，合法性能未知优于只保守微改。；共同方案非正式admitted scheme。"
+      }
+    },
+    {
+      "id": "plain-output-Y-policy",
+      "hypothesis_id": "H-plain-output-Y-policy",
+      "action_id": null,
+      "action_instance_id": null,
+      "case_ids": [
+        "2",
+        "4",
+        "10",
+        "15",
+        "16"
+      ],
+      "source_fact_ids": [
+        "source.main",
+        "cost.logical_lengths"
+      ],
+      "cost_mechanism": "逻辑Y写Ns不变，不新增UB；独立output cache策略与new编译feature绑定，动态cache字节/收益unknown。",
+      "predictions": [
+        {
+          "id": "plain-output-Y-policy-perf",
+          "kind": "performance",
+          "statement": "新原20+3longplain特殊/完整位型多槽尾oracle通过、20timing有效；完整控制+独立输出策略减少三个long欠域时间并保护17过线，目标同一实现HAP20；不从queue/API数保证速度。",
+          "check_method": "完整20case同窗R0/R13探索parent/B与固定复验。",
+          "on_support": "以完整候选保留，成员因果不隔离。",
+          "on_refute": "据真实残余重比，不择样本。"
+        }
+      ],
+      "performance_hypotheses": [],
+      "unknowns": [
+        {
+          "id": "plain-output-Y-policy-performance",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "本轮成员成本和关键路径收益未测。",
+          "affects": "性能预测。",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": null,
+      "comparison": "S1整体删除long plain每tile两input+Y的动态队列管理，保留同等A2+B2/Y1依赖，用两input FIFO/共同last Max读合并ready/free；tile snapshot仅配套，Y独立输出DISABLE扩展参考R9 same温和改善和原API。最强S2 packed input TQue2削一套input descriptor但保留input/output动态state/eventpool，API更简单而潜在工作删除较小。S3仅字段易证明但编译CSE可能已消除、不处理主queue控制；S4 C变化/大tile已有弱反馈。S1新增显式计数/branch/drain成本及cache风险全保留，性能unknown可试。",
+      "disposition": "considered",
+      "reason": "输出Y策略是独立SDK API作用域的graph-out扩展，输入cache Action/配方不作为其准入，实际O注册采用为空而API来源明确。",
+      "analysis": {
+        "intent_gap": "输出Y策略是独立SDK API作用域的graph-out扩展，输入cache Action/配方不作为其准入，实际O注册采用为空而API来源明确。",
+        "work_delta": [
+          {
+            "id": "plain-output-Y-policy-work",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "same-vector"
+            ],
+            "change": "rescheduled",
+            "quantity": {
+              "mode": "qualitative",
+              "expression": "逻辑Y写Ns不变，不新增UB；独立output cache策略与new编译feature绑定，动态cache字节/收益unknown。",
+              "unit": "logical work",
+              "symbols": [],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.main",
+                "cost.logical_lengths"
+              ]
+            },
+            "explanation": "逻辑Y写Ns不变，不新增UB；独立output cache策略与new编译feature绑定，动态cache字节/收益unknown。"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "plain-output-Y-policy-cover-int64-same",
+            "domain_id": "int64-same",
+            "status": "unchanged",
+            "region": "通用dtype/shape与当前case映射，不按caseID分派。",
+            "fact_ids": [
+              "source.main"
+            ]
+          },
+          {
+            "id": "plain-output-Y-policy-cover-int64-broadcast",
+            "domain_id": "int64-broadcast",
+            "status": "unchanged",
+            "region": "通用dtype/shape与当前case映射，不按caseID分派。",
+            "fact_ids": [
+              "source.main"
+            ]
+          },
+          {
+            "id": "plain-output-Y-policy-cover-broadcast-vector",
+            "domain_id": "broadcast-vector",
+            "status": "unchanged",
+            "region": "通用dtype/shape与当前case映射，不按caseID分派。",
+            "fact_ids": [
+              "source.main"
+            ]
+          },
+          {
+            "id": "plain-output-Y-policy-cover-broadcast-scalar",
+            "domain_id": "broadcast-scalar",
+            "status": "unchanged",
+            "region": "通用dtype/shape与当前case映射，不按caseID分派。",
+            "fact_ids": [
+              "source.main"
+            ]
+          },
+          {
+            "id": "plain-output-Y-policy-cover-int8",
+            "domain_id": "int8",
+            "status": "unchanged",
+            "region": "通用dtype/shape与当前case映射，不按caseID分派。",
+            "fact_ids": [
+              "source.main"
+            ]
+          },
+          {
+            "id": "plain-output-Y-policy-cover-same-vector",
+            "domain_id": "same-vector",
+            "status": "partial",
+            "region": "通用dtype/shape与当前case映射，不按caseID分派。",
+            "fact_ids": [
+              "source.main"
+            ]
+          },
+          {
+            "id": "plain-output-Y-policy-cover-half-broadcast",
+            "domain_id": "half-broadcast",
+            "status": "unchanged",
+            "region": "通用dtype/shape与当前case映射，不按caseID分派。",
+            "fact_ids": [
+              "source.main"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "plain-output-Y-policy-cost",
+            "domain_ids": [
+              "same-vector"
+            ],
+            "dimension": "UB/API/dependency",
+            "change": {
+              "mode": "qualitative",
+              "expression": "新slot取模/分支、Set/Wait、reused判定、显式drain/LocalTensor视图；Scalar寄存器/spill/CSE与实际事件周期未知。input ready必须两MTE2完成，free必须Max最后读；Y MTE3 lastread仍串行单槽。输出DISABLE可能损失cache复用/服务而回退，实际动态honor/字节未知。新代码/Dispatch/全binary变化可能影响未修改路径。",
+              "unit": "logical work",
+              "symbols": [],
+              "basis": "source_logical",
+              "fact_ids": [
+                "cost.logical_lengths"
+              ]
+            },
+            "consequence": "完整代价保留，性能需实测。"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "plain-output-Y-policy-remaining",
+            "domain_ids": [
+              "int64-same",
+              "int64-broadcast",
+              "broadcast-vector",
+              "broadcast-scalar",
+              "int8",
+              "same-vector",
+              "half-broadcast"
+            ],
+            "remaining_work": "其余成员或父本保留工作。",
+            "next_step": "完整B实测后重比。",
+            "fact_ids": [
+              "source.main"
+            ]
+          }
+        ],
+        "no_alternative_reason": "3欠域需要约2.58/6.07/12.43%时间，单字段缓存/继续核数较弱；S1覆盖真正长循环的管理/事件pool源码工作，所有数值/API/资源可独立闭合，合法性能未知优于只保守微改。；共同方案非正式admitted scheme。"
+      }
+    }
+  ],
+  "evidence_requests": [],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "plain-static-leases",
+        "plain-output-Y-policy"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+      },
+      "locator": "lines:1-188",
+      "effect_kind": "plan",
+      "before": "R13 long C24、input两TQue各2槽/Y1、t_ GM字段在Count/Process源级重复；A/B DISABLE/Y NORMAL，compact19已过的A DISABLE BY NORMAL保留。",
+      "after": "保持C/g/U与唯一覆盖、完整5B容量/每tile有效字节；控制变化不冒充GM减少。",
+      "applicability": "正文真实作用；不将方法来源冒充注册Action或内部性能观测。"
+    },
+    {
+      "opportunity_ids": [
+        "plain-static-leases",
+        "plain-output-Y-policy"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+        "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+      },
+      "locator": "lines:1-207",
+      "effect_kind": "plan",
+      "before": "R13 long C24、input两TQue各2槽/Y1、t_ GM字段在Count/Process源级重复；A/B DISABLE/Y NORMAL，compact19已过的A DISABLE BY NORMAL保留。",
+      "after": "手动事件与queue二选一；两MTE2 ready/Max双输入末读free、Y单槽末读与prolog/drain。",
+      "applicability": "正文真实作用；不将方法来源冒充注册Action或内部性能观测。"
+    },
+    {
+      "opportunity_ids": [
+        "plain-static-leases",
+        "plain-output-Y-policy"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/tilingdata-access.md",
+        "sha256": "sha256:d969a6a6684145bc43ba9b2fcb669308e28907c0640e5a7ef14488e183f89f67"
+      },
+      "locator": "lines:1-99",
+      "effect_kind": "plan",
+      "before": "R13 long C24、input两TQue各2槽/Y1、t_ GM字段在Count/Process源级重复；A/B DISABLE/Y NORMAL，compact19已过的A DISABLE BY NORMAL保留。",
+      "after": "Init uint32热点tile只读快照、无tiling大结构拷贝/ABI变化；CSE/spill未知不假性能。",
+      "applicability": "正文真实作用；不将方法来源冒充注册Action或内部性能观测。"
+    },
+    {
+      "opportunity_ids": [
+        "plain-static-leases",
+        "plain-output-Y-policy"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+        "sha256": "sha256:956301b3e9b43f9f4e8fd8074811f5723f43478b3b82c3591af1aef8aafabce4"
+      },
+      "locator": "lines:1-171",
+      "effect_kind": "plan",
+      "before": "R13 long C24、input两TQue各2槽/Y1、t_ GM字段在Count/Process源级重复；A/B DISABLE/Y NORMAL，compact19已过的A DISABLE BY NORMAL保留。",
+      "after": "TBuf静态分配仍A2+B2/Y1完整相加，不把少Init语句当少物理槽，最后consumer必须闭合。",
+      "applicability": "正文真实作用；不将方法来源冒充注册Action或内部性能观测。"
+    },
+    {
+      "opportunity_ids": [
+        "plain-static-leases",
+        "plain-output-Y-policy"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/cache-hint.md",
+        "sha256": "sha256:917ba83e82ae17f958af90e99f4aee304575f7f6687d7863a7d24a2a0467b0d4"
+      },
+      "locator": "lines:1-97",
+      "effect_kind": "plan",
+      "before": "R13 long C24、input两TQue各2槽/Y1、t_ GM字段在Count/Process源级重复；A/B DISABLE/Y NORMAL，compact19已过的A DISABLE BY NORMAL保留。",
+      "after": "阅读以保留A/B一次性输入策略及19 sharedB保护，输入配方不是新Y输出方法的资格；Y另直接API/作用域graph-out。",
+      "applicability": "正文真实作用；不将方法来源冒充注册Action或内部性能观测。"
+    },
+    {
+      "opportunity_ids": [
+        "plain-static-leases",
+        "plain-output-Y-policy"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/data_structures/GlobalTensor/SetL2CacheHint.md",
+        "sha256": "sha256:62807570650c1a69ab2bf0ba2bce606a4a3141d5d9d976fdbf3bdaf1d4df1092"
+      },
+      "locator": "lines:1-113",
+      "effect_kind": "plan",
+      "before": "R13 long C24、input两TQue各2槽/Y1、t_ GM字段在Count/Process源级重复；A/B DISABLE/Y NORMAL，compact19已过的A DISABLE BY NORMAL保留。",
+      "after": "GlobalTensor NORMAL/DISABLE产品/API支持独立绑定Y SetGlobalBuffer/实际MTE3 GetPhyAddr与新ELF宏路径，非cache效果。",
+      "applicability": "正文真实作用；不将方法来源冒充注册Action或内部性能观测。"
+    },
+    {
+      "opportunity_ids": [
+        "plain-static-leases",
+        "plain-output-Y-policy"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+        "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+      },
+      "locator": "lines:1-432",
+      "effect_kind": "mechanism",
+      "before": "R13 long C24、input两TQue各2槽/Y1、t_ GM字段在Count/Process源级重复；A/B DISABLE/Y NORMAL，compact19已过的A DISABLE BY NORMAL保留。",
+      "after": "区分实际queue/字段源级工作与编译CSE/spill，缺PMU性能保unknown；主机会比较不止字段等价。",
+      "applicability": "正文真实作用；不将方法来源冒充注册Action或内部性能观测。"
+    }
+  ],
+  "selection": {
+    "mode": "collect_evidence",
+    "scheme_id": null,
+    "reason": "长plain静态租约/控制工作主机会及独立Y输出API扩展均task-local graph-out，不扩大metadata/input-cache Action；whole旧wrapper仍unadmitted，真实内部路由/安全资源继续研究授权。",
+    "concrete_plan": "# R15 最终完整方案与C1/C2\n\n已重读R14 C5/history；R14 source原20+3extra正确、20valid/HAP17，同窗R13 A17，parent rejected.991032788/worst1+24.9158%，directR0 accepted5.478682947。五padding域2/4/10/15/16实测1.001375/1.002791/1.005133/1.000368/.988636未支持预测，放弃R14。1不加padding仍回退，不声称binary未变/noise/bank因果，addendum已保留。R15实际父本是完整R13正确性探索版、工程仍R10。R14鲜窗R13余2 42.23需<=41.14、15 54.34需<=51.042857、16 31.32需<=27.425714，分别约2.58/6.07/12.43%时间缺口。其余17个过线特别19 A34.284us须保护；单完整A或B20原oracle+20valid+HAP20早停，否则最终R15后额度用尽，不开R16。\n\n候选比较覆盖全20：bank相位已实测未支持、目标映射仍unknown，不续padding。继续C32/16或更大tile/alias有R13近中性和R6/R11回退证据。只缓存tile字段容易等价，但bulk搬运/Max/queue控制仍在，CSE可能已消除字段，故不能停止主要机会比较。选择完整长循环的静态槽租约、合并两input完成边、热tile快照与独立长输出策略。最强替代S2是一个packed input TQue2加Y1：两Pad后共用EnQue/DeQue/Free，仅减一套input动态管理，保留更少改动/SDK自动租约，但两套queue状态与事件pool仍可能保留；S1移除全部长plain队列管理的潜在工作更多，代价是显式slot/reuse/首次/收尾证明和新增Scalar分支。不预言源级调用减少等于速度。独立Y DISABLE来源R9 same域温和正方向与公开API，输出不同于输入配方；保护广播12/20、19原策略。性能unknown允许实测，缺PMU不自动否定。\n\n通用分派：原samePipeline下plain half/f32/int32且blockLength>3*(half?15360:7680)，当前2/4/10/15/16。Host/tiling字节全R13，C24、relative512B q/r owner、U18432/9216、groups456/7296/2712/600/336、tail/必要GM/Max有效元素不变，无caseID或新增Key。新KernelMaximumPlainStream只此域使用；旧SamePipelined/所有其它类body全R13，Dispatch调用helper与全compiled binary变化仍可能影响未修改路径，不能承诺其binary/时间不变。\n\n算法/数值：每tile仍同一个AscendC::Max(y,a,b,n)、同A/B顺序、同PIPEV；无Cast/alias/近似/运算重排。完整int32域和float NaN/Inf/有符号零等原oracle行为不变，原阈值/20集合不改。不用生成数据范围缩合同。tileElements同uint32在Init读取一次，tiling在整个launch只读且与输出分离；不复制256B结构、不改ABI。length/owner64位，n>0才发Pad/Max；off += n不越length，next只在remaining>tile时计算，因此next<length。Count只是valid min。GM Pad每次valid n*sizeofT字节、UB32B对齐尾<=B；dummy不算数学输入、不写GM。\n\n资源所有实际Init：A TBuf VECIN2B、B TBuf VECIN2B、Y TBuf VECOUT B，B=U*sizeofT。无R14 padding，当前各B36864，共184320，含保守8192=192512<实测196352。相对地址模型A0=0/A1=B/B0=2B/B1=3B/Y=4B，TPipe当前SDK sequential allocator支持模型，非实测bank地址。旧queue类在new分支完全不实例化/Init，不占/共管manual事件；其它互斥分支最大184320，actual19 named182432原字节。特定Select TMP[188416,188544)独立，8KiB是budget reserve而不是假定追加物理区。新uint32 tile、seq/slot和视图是Scalar资源，寄存器/CSE/spill未知，不假0也不冒充UB。\n\n真实lastconsumer与事件：每input槽s=0/1包含独立A_s、B_s。CopyIn(s)先在复用时Wait V_MTE2(s)，再MTE2 FIFO两个valid Pad，最后一次Set MTE2_V(s)保证两input都ready；Compute Wait该ready后才读。唯一两input消费者是同一Max，随后PIPEV，再Set V_MTE2(s)，故共同free真覆盖两者最后读；CopyOut只读独立Y，不需要A/B。两input没有queue管理，不同时存在TQue事件。普通HardEvent每类型独立ID命名空间0/1在实测SDK QUE_MAX_EVENT8范围内，非CrossCore counter。程序首CopyIn0不等不存在的free；稳态先只发合法next，next槽复用仅seq>=1；最后每个used input槽各消费最后free，无任务return不发/等通知。\n\nY单槽：除首次外，Max写Y前Wait上一MTE3_V(0)，确保前代MTE3最后读完；Max+PIPEV后Set V_MTE3(0)/MTE3 Wait，valid Pad出，Set MTE3_V(0)。最后消耗最后Yfree再PIPEALL。每tile都恰一次out-ready set/wait和free set/wait，输入每代也一对ready/free；末两inputfree与Yfree是收齐未消费代次，不是重复等。新全路径的0/1/2/奇数/回卷/尾DAG在static-check.py核计数与无环，但不能叫实测重叠。仍单Y所以可能等输出，没假删除依赖或保证理想overlap。\n\n独立Y策略：aG/bG保留R13 DISABLE；仅新long yG在SetGlobalBuffer后设置DISABLE，B共享的所有广播/19依然原NORMAL，19 A原DISABLE保留。输出读者集合为空（kernel内），每有效元素唯一MTE3写，原fullTask计时不测后继算子。c220 GlobalTensor.address_经runtime配置alias影响DataCopyPad GM dst GetPhyAddr；Scalar oriAddress不受影响，不套950bit60。默认RW/NORMAL与DISABLE公共API支持、source span/actual新binary feature绑定，动态offset/honor/cache命中/HBM字节未知。输入cache Action/输入叶配方不是Y输出准入；Y成员O注册采用为空、直接引用官方API/实际c220通路，保持task-local graph-out。它可能丢cache复用或改变服务而回退，与手动控制不做内部单项因果归因。\n\n工作成本：两输入Pad+一Max+一输出Pad仍每tile4个数据/数学API；GM仍3Ns。原input A/B和Y三个queue每tile各Alloc/EnQue/DeQue/Free=12源级管理调用删除，改静态视图/slot分支与8稳态Set/Wait（含复用free等待），源SDK还含动态AllocEventID/Release/state/cursor工作但编译可能部分消除。第一代/末drain另外闭合，不把短predicate、复制字节或API个数当同等成本。uint32 tile源级重复读取改一次，实际重复GM/CSE/spill未知；新代码体积、Scalar分支、描述参数仍在。Yhint不减逻辑字节、不额外分配UB。\n\n实际读的P/O：P continuous.md用于唯一owner、C/g/U与5B+reserve；O pipeline.md用于queue/手写二选一、MTE2→V/V→MTE2/V→MTE3/MTE3→V四类边及prolog/drain；O scalar-control/recipes/tilingdata-access.md用于uint32只读hot snapshot/ABI及CSE边界；O buffer-lifetime/recipes/reuse.md用于全部真实Init和最后消费者。O slots.md作租约代次/强替代比较，不把普通Vector变全局槽。O cache-hint.md作保留输入/共享域策略和边界阅读；输出Y直接用sources/asc-devkit/.../GlobalTensor/SetL2CacheHint.md+installed c220 GM dst GetPhyAddr，不伪配方ready。D control_metadata_overhead正文区分源码工作/编译成本/寄存器，主变换及Y均graph-out；实际独立成员/作用域与P/O router完整保存。\n\nC3/C4：原build先独立，随后本轮新身份原20原oracle+3longplain24 >2tile、slot回卷/short tail fullbit/special extra。整数exact、float原special/error，diagnostic bitexact原样，extra不计20/GM/HAP。按新授权仅未来C3用一次原launch顺序bundle：原measurement.py check成功后才原extra脚本，原device锁/独立native+oracle收据/连续budget父operation不重置，失败即停并保留未执行清单；脚本给prep只读核。C4仍独立同窗R0/R13探索A/B完整Task，原5+20真清L2/固定一次second/原anchor，全first/raw/invalid保留。known旧wrapper full chain unadmitted，普通安全/实际source/hash/build/oracle/测量状态分别诚实记录，无fake v4 implemented。\n",
+    "stop_reason": null,
+    "comparison_basis": []
+  },
+  "previous_feedback": {
+    "previous_decision_ref": {
+      "path": "rounds/R14/contracts-03/action-decision-v3.json",
+      "sha256": "sha256:20dda2e940becf7756b692b01418671f5d218a1b517505660be15b7216484822"
+    },
+    "result_ref": {
+      "path": "/dev/shm/aprof-skill130-hw-five-rounds-20261021/maximum-R14-001-engineering-result.json",
+      "sha256": "sha256:8518c023939a3f9f3b9ebc558f27af908b3f9feb6522b974c21fcd13a1176c89"
+    },
+    "measurement": "valid",
+    "result_limits": "R14实际20timing有效、B17/A17HAP；相对parent GM/最坏回归均拒绝。旧wrapper缺口仍unadmitted，未造invalid绕过。",
+    "prediction_updates": [
+      {
+        "prediction_id": "plain-input-slot-spacing-perf",
+        "judgement": "weakened",
+        "evidence_refs": [
+          {
+            "path": "captures/R14-001/measurement-summary.json",
+            "sha256": "sha256:da68605c023033d46a27fa0105013c13a26a72a55a61dcd26467c861d12859d8"
+          }
+        ],
+        "reason": "R14原20+3extra过、20valid/B17同窗A17无增，parentR13 rejected.991032788/worst1+24.9158%，R0 accepted5.478682947；5long padding近中性、16.988636x，未支持布局预测。1不加padding但shared Init/全binary有变，不归noise或已证bank因果。"
+      }
+    ],
+    "current_parent_ref": {
+      "path": "artifacts/R13-attempt-01-identity/source.json",
+      "sha256": "sha256:f9de6d174f7a7d76f44156b454d83543a4887cdd4f1a7c6dc32fe82fce744f75"
+    },
+    "parent_reason": "从完整R13探索父本继续，R14相位未支持且有效case1大回退，弃其源码；R13在R14同窗A17/20valid且原20已过，保护19。工程保留R10，不把探索父本称accepted。",
+    "same_scheme_reason": null,
+    "new_information": "R14原20+3extra过、20valid/B17同窗A17无增，parentR13 rejected.991032788/worst1+24.9158%，R0 accepted5.478682947；5long padding近中性、16.988636x，未支持布局预测。1不加padding但shared Init/全binary有变，不归noise或已证bank因果。",
+    "reassessment": {
+      "structure": {
+        "state": "realized",
+        "evidence_refs": [
+          {
+            "path": "rounds/R14/source.patch",
+            "sha256": "sha256:902573626c4b8a286f7e81b4cc4d5e7abaadc47a5438a0a78e49f3a2e5934477"
+          }
+        ],
+        "finding": "R14实际完整实现与源码patch绑定。"
+      },
+      "correctness": {
+        "state": "passed",
+        "evidence_refs": [
+          {
+            "path": "captures/R14-attempt-01-correctness/correctness.json",
+            "sha256": "sha256:8d9bbb80d9816d6501c2fb735d804ce887bcd1c8013ee23ff3f5b0eef220ce99"
+          }
+        ],
+        "finding": "R14原20+3extra原oracle过；20timing有效/HAP17，同窗A17，parent GM.99103/worst1+24.9158%拒绝。"
+      },
+      "measured_domain_ids": [
+        "int64-same",
+        "int64-broadcast",
+        "broadcast-vector",
+        "broadcast-scalar",
+        "int8",
+        "same-vector",
+        "half-broadcast"
+      ],
+      "measured_case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "mechanisms": [
+        {
+          "hypothesis_id": "H-plain-input-slot-spacing",
+          "judgement": "undetermined",
+          "basis": "mixed",
+          "evidence_refs": [
+            {
+              "path": "captures/R14-001/measurement-summary.json",
+              "sha256": "sha256:da68605c023033d46a27fa0105013c13a26a72a55a61dcd26467c861d12859d8"
+            }
+          ],
+          "finding": "R14完整布局候选实测，分域结果在round-conclusion；内部方法未隔离，不以call数推时间。"
+        }
+      ],
+      "attribution": {
+        "kind": "single_change",
+        "limits": "布局方法同时改变shared Init表达式/compiled路径，不能隔离bank或Scalar因果。"
+      },
+      "next_step": {
+        "kind": "change_mechanism",
+        "return_to": "C1",
+        "retained": "从完整R13探索父本继续，R14相位未支持且有效case1大回退，弃其源码；R13在R14同窗A17/20valid且原20已过，保护19。工程保留R10，不把探索父本称accepted。",
+        "reopened": "最终R15面向同一R13余2/15/16缺口，保护17个过线域；完整20correct/valid/HAP20否则额度用尽收口，无R16",
+        "scheme_ids": [],
+        "discriminating_prediction_ids": [],
+        "reason": "S1整体删除long plain每tile两input+Y的动态队列管理，保留同等A2+B2/Y1依赖，用两input FIFO/共同last Max读合并ready/free；tile snapshot仅配套，Y独立输出DISABLE扩展参考R9 same温和改善和原API。最强S2 packed input TQue2削一套input descriptor但保留input/output动态state/eventpool，API更简单而潜在工作删除较小。S3仅字段易证明但编译CSE可能已消除、不处理主queue控制；S4 C变化/大tile已有弱反馈。S1新增显式计数/branch/drain成本及cache风险全保留，性能unknown可试。"
+      },
+      "attempt": {
+        "parent_ref": {
+          "path": "artifacts/R13-attempt-01-identity/source.json",
+          "sha256": "sha256:f9de6d174f7a7d76f44156b454d83543a4887cdd4f1a7c6dc32fe82fce744f75"
+        },
+        "implementation_ref": {
+          "path": "artifacts/R14-attempt-01-identity/source.json",
+          "sha256": "sha256:4f60fa00ebf87dbd03e755e59b32d4454c604faadf67611c627a65f142100c58"
+        },
+        "change_ref": {
+          "path": "rounds/R14/source.patch",
+          "sha256": "sha256:902573626c4b8a286f7e81b4cc4d5e7abaadc47a5438a0a78e49f3a2e5934477"
+        },
+        "workload_ref": {
+          "path": "R0/matrix-20.json",
+          "sha256": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77"
+        }
+      }
+    }
+  },
+  "path_overview": {
+    "workload_ref": {
+      "path": "R0/matrix-20.json",
+      "sha256": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77"
+    },
+    "case_ids": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20"
+    ],
+    "domains": [
+      {
+        "id": "int64-same",
+        "case_ids": [
+          "5"
+        ],
+        "predicate": "int64-same",
+        "supported_scope": "通用dtype/shape语义域；caseID只用于测量标识。",
+        "fact_ids": [
+          "source.main"
+        ]
+      },
+      {
+        "id": "int64-broadcast",
+        "case_ids": [
+          "19"
+        ],
+        "predicate": "int64-broadcast",
+        "supported_scope": "通用dtype/shape语义域；caseID只用于测量标识。",
+        "fact_ids": [
+          "source.main"
+        ]
+      },
+      {
+        "id": "broadcast-vector",
+        "case_ids": [
+          "11"
+        ],
+        "predicate": "broadcast-vector",
+        "supported_scope": "通用dtype/shape语义域；caseID只用于测量标识。",
+        "fact_ids": [
+          "source.main"
+        ]
+      },
+      {
+        "id": "broadcast-scalar",
+        "case_ids": [
+          "12",
+          "13",
+          "20"
+        ],
+        "predicate": "broadcast-scalar",
+        "supported_scope": "通用dtype/shape语义域；caseID只用于测量标识。",
+        "fact_ids": [
+          "source.main"
+        ]
+      },
+      {
+        "id": "int8",
+        "case_ids": [
+          "6"
+        ],
+        "predicate": "int8",
+        "supported_scope": "通用dtype/shape语义域；caseID只用于测量标识。",
+        "fact_ids": [
+          "source.main"
+        ]
+      },
+      {
+        "id": "same-vector",
+        "case_ids": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "7",
+          "8",
+          "9",
+          "10",
+          "14",
+          "15",
+          "16",
+          "17"
+        ],
+        "predicate": "same-vector",
+        "supported_scope": "通用dtype/shape语义域；caseID只用于测量标识。",
+        "fact_ids": [
+          "source.main"
+        ]
+      },
+      {
+        "id": "half-broadcast",
+        "case_ids": [
+          "18"
+        ],
+        "predicate": "half-broadcast",
+        "supported_scope": "通用dtype/shape语义域；caseID只用于测量标识。",
+        "fact_ids": [
+          "source.main"
+        ]
+      }
+    ],
+    "stages": [
+      {
+        "id": "kernel",
+        "domain_ids": [
+          "int64-same",
+          "int64-broadcast",
+          "broadcast-vector",
+          "broadcast-scalar",
+          "int8",
+          "same-vector",
+          "half-broadcast"
+        ],
+        "fact_ids": [
+          "source.main"
+        ],
+        "behavior": "一maximum_kernel完整调用，dtype/shape通用分派。"
+      }
+    ],
+    "baseline_work": [
+      {
+        "id": "baseline",
+        "stage_id": "kernel",
+        "domain_ids": [
+          "int64-same",
+          "int64-broadcast",
+          "broadcast-vector",
+          "broadcast-scalar",
+          "int8",
+          "same-vector",
+          "half-broadcast"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "qualitative",
+          "expression": "R13 long C24、input两TQue各2槽/Y1、t_ GM字段在Count/Process源级重复；A/B DISABLE/Y NORMAL，compact19已过的A DISABLE BY NORMAL保留。",
+          "unit": "logical work",
+          "symbols": [],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.main"
+          ]
+        },
+        "explanation": "当前父本源码工作，不把时间或带宽推成确定瓶颈。"
+      }
+    ]
+  },
+  "schemes": []
+}

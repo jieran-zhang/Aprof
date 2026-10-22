@@ -1,0 +1,739 @@
+{
+  "schema_version": "aprof.handoff/v3",
+  "stage": "C1",
+  "task_id": "case-03",
+  "candidate_id": null,
+  "parent_hash": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb",
+  "artifacts": [
+    {
+      "path": "decision-r1.json",
+      "sha256": "sha256:38ccb4370ead1a02878d3d447fdebdf0f5c721a458ab5b68374e626473336ee6"
+    },
+    {
+      "path": "expansion-r1-v2.json",
+      "sha256": "sha256:94c030491946283f7ebc91b1e8ee30c13b842b0c7543bacf99914c1e8ffdc137"
+    }
+  ],
+  "reasoning": {
+    "schema_version": "aprof.diagnosis-reasoning/v1",
+    "task_id": "case-03",
+    "context_hash": "sha256:ce22d0c63b6916fe6e7f5d5e20c1f0956a6085a3c17115bf6b796d0f8a490915",
+    "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+    "source_context_ref": {
+      "path": "authority-v2.json",
+      "sha256": "sha256:4b904472f99754e4f42f52667388bf16a707c07cd8545d4b51a6d200ce290bd8"
+    },
+    "context_snapshot": {
+      "schema_version": "aprof.evidence/v1",
+      "task_id": "case-03",
+      "source_context_ref": {
+        "path": "authority-v2.json",
+        "sha256": "sha256:4b904472f99754e4f42f52667388bf16a707c07cd8545d4b51a6d200ce290bd8"
+      },
+      "attributes": {
+        "family": "elementwise",
+        "dtype": [
+          "bfloat16",
+          "float16",
+          "float32"
+        ],
+        "platform": "dav-2201",
+        "features": [
+          "continuous",
+          "tiling-tail",
+          "memory-transfer",
+          "pipeline-sync",
+          "vector-api",
+          "buffer-lifetime"
+        ]
+      },
+      "facts": {
+        "source.path": {
+          "state": true,
+          "kind": "raw",
+          "evidence_id": "source.path",
+          "ref": {
+            "path": "source/op_kernel/masked_scale_kernel.asc",
+            "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3",
+            "locator": "lines:1-140"
+          },
+          "view": "source"
+        },
+        "source.host": {
+          "state": true,
+          "kind": "raw",
+          "evidence_id": "source.host",
+          "ref": {
+            "path": "source/op_host/masked_scale.asc",
+            "sha256": "sha256:e09aa9781ad5c6c851fee91441e673b860cee51c4a64d639269f424182f8f28c",
+            "locator": "lines:1-90"
+          },
+          "view": "source"
+        },
+        "source.matrix": {
+          "state": true,
+          "kind": "raw",
+          "evidence_id": "source.matrix",
+          "ref": {
+            "path": "source/matrix-20.json",
+            "sha256": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+            "locator": "lines:1-394"
+          },
+          "view": "workload"
+        },
+        "source.analysis": {
+          "state": true,
+          "kind": "raw",
+          "evidence_id": "source.analysis",
+          "ref": {
+            "path": "analysis-r1.md",
+            "sha256": "sha256:c40f143e462dc7e0c5e543bf1ccf2c40d1cf36beb4350d4e6b33e47ba0c5e935",
+            "locator": "lines:1-13"
+          },
+          "view": "source"
+        },
+        "constraint.semantic_equivalence": {
+          "state": true,
+          "kind": "raw",
+          "evidence_id": "semantic-plan",
+          "ref": {
+            "path": "analysis-r1.md",
+            "sha256": "sha256:c40f143e462dc7e0c5e543bf1ccf2c40d1cf36beb4350d4e6b33e47ba0c5e935",
+            "locator": "lines:1-13"
+          },
+          "view": "constraint"
+        },
+        "constraint.capacity": {
+          "state": "unknown",
+          "kind": "raw",
+          "evidence_id": null,
+          "ref": null,
+          "view": "constraint"
+        },
+        "constraint.dependency_lifetime": {
+          "state": "unknown",
+          "kind": "raw",
+          "evidence_id": null,
+          "ref": null,
+          "view": "constraint"
+        },
+        "symptom.source.serial_queue_or_event_order.component_1": {
+          "state": true,
+          "kind": "raw",
+          "evidence_id": "symptom.source.serial_queue_or_event_order.component_1",
+          "ref": {
+            "path": "source/op_kernel/masked_scale_kernel.asc",
+            "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3",
+            "locator": "lines:1-140"
+          },
+          "view": "source"
+        },
+        "symptom.source.serial_queue_or_event_order.component_2": {
+          "state": true,
+          "kind": "raw",
+          "evidence_id": "symptom.source.serial_queue_or_event_order.component_2",
+          "ref": {
+            "path": "source/op_kernel/masked_scale_kernel.asc",
+            "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3",
+            "locator": "lines:1-140"
+          },
+          "view": "source"
+        },
+        "symptom.source.serial_queue_or_event_order.component_3": {
+          "state": true,
+          "kind": "raw",
+          "evidence_id": "symptom.source.serial_queue_or_event_order.component_3",
+          "ref": {
+            "path": "analysis-r1.md",
+            "sha256": "sha256:c40f143e462dc7e0c5e543bf1ccf2c40d1cf36beb4350d4e6b33e47ba0c5e935",
+            "locator": "lines:1-13"
+          },
+          "view": "source"
+        },
+        "symptom.source.serial_queue_or_event_order": {
+          "state": true,
+          "kind": "derived",
+          "evidence_id": "symptom.source.serial_queue_or_event_order",
+          "ref": {
+            "path": "source/op_kernel/masked_scale_kernel.asc",
+            "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3",
+            "locator": "lines:1-140"
+          },
+          "view": "source"
+        },
+        "symptom.source.inner_loop_copy.component_1": {
+          "state": true,
+          "kind": "raw",
+          "evidence_id": "symptom.source.inner_loop_copy.component_1",
+          "ref": {
+            "path": "source/op_kernel/masked_scale_kernel.asc",
+            "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3",
+            "locator": "lines:1-140"
+          },
+          "view": "source"
+        },
+        "symptom.source.inner_loop_copy.component_2": {
+          "state": true,
+          "kind": "raw",
+          "evidence_id": "symptom.source.inner_loop_copy.component_2",
+          "ref": {
+            "path": "source/op_kernel/masked_scale_kernel.asc",
+            "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3",
+            "locator": "lines:1-140"
+          },
+          "view": "source"
+        },
+        "symptom.source.inner_loop_copy.component_3": {
+          "state": true,
+          "kind": "raw",
+          "evidence_id": "symptom.source.inner_loop_copy.component_3",
+          "ref": {
+            "path": "analysis-r1.md",
+            "sha256": "sha256:c40f143e462dc7e0c5e543bf1ccf2c40d1cf36beb4350d4e6b33e47ba0c5e935",
+            "locator": "lines:1-13"
+          },
+          "view": "source"
+        },
+        "symptom.source.inner_loop_copy": {
+          "state": true,
+          "kind": "derived",
+          "evidence_id": "symptom.source.inner_loop_copy",
+          "ref": {
+            "path": "source/op_kernel/masked_scale_kernel.asc",
+            "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3",
+            "locator": "lines:1-140"
+          },
+          "view": "source"
+        }
+      }
+    },
+    "current": {
+      "implementation_ref": {
+        "path": "parent.json",
+        "sha256": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb"
+      },
+      "workload_ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279"
+      },
+      "objects": [
+        {
+          "object_id": "output-domain",
+          "kind": "tensor",
+          "description": "原host分派的完整输出tensor及其每核处理路径"
+        },
+        {
+          "object_id": "kernel",
+          "kind": "stage",
+          "description": "CopyIn/Compute/CopyOut"
+        },
+        {
+          "object_id": "workload",
+          "kind": "workload",
+          "description": "原始20项"
+        },
+        {
+          "object_id": "parent",
+          "kind": "implementation",
+          "description": "原host/kernel/tiling"
+        }
+      ],
+      "scope": {
+        "task_id": "case-03",
+        "parent_implementation_hash": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb",
+        "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+        "target_ids": [
+          "output-domain"
+        ],
+        "stage": "kernel"
+      }
+    },
+    "facts": {
+      "source.path": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source.path",
+        "ref": {
+          "path": "source/op_kernel/masked_scale_kernel.asc",
+          "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3",
+          "locator": "lines:1-140"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-03",
+          "parent_implementation_hash": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "output-domain"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "source.host": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source.host",
+        "ref": {
+          "path": "source/op_host/masked_scale.asc",
+          "sha256": "sha256:e09aa9781ad5c6c851fee91441e673b860cee51c4a64d639269f424182f8f28c",
+          "locator": "lines:1-90"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-03",
+          "parent_implementation_hash": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "output-domain"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "source.matrix": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source.matrix",
+        "ref": {
+          "path": "source/matrix-20.json",
+          "sha256": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "locator": "lines:1-394"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-03",
+          "parent_implementation_hash": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "output-domain"
+          ],
+          "stage": "kernel"
+        },
+        "view": "workload"
+      },
+      "source.analysis": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source.analysis",
+        "ref": {
+          "path": "analysis-r1.md",
+          "sha256": "sha256:c40f143e462dc7e0c5e543bf1ccf2c40d1cf36beb4350d4e6b33e47ba0c5e935",
+          "locator": "lines:1-13"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-03",
+          "parent_implementation_hash": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "output-domain"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "constraint.semantic_equivalence": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "semantic-plan",
+        "ref": {
+          "path": "analysis-r1.md",
+          "sha256": "sha256:c40f143e462dc7e0c5e543bf1ccf2c40d1cf36beb4350d4e6b33e47ba0c5e935",
+          "locator": "lines:1-13"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-03",
+          "parent_implementation_hash": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "output-domain"
+          ],
+          "stage": "kernel"
+        },
+        "view": "constraint"
+      },
+      "constraint.capacity": {
+        "state": "unknown",
+        "kind": "raw",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-03",
+          "parent_implementation_hash": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "output-domain"
+          ],
+          "stage": "kernel"
+        },
+        "view": "constraint"
+      },
+      "constraint.dependency_lifetime": {
+        "state": "unknown",
+        "kind": "raw",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-03",
+          "parent_implementation_hash": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "output-domain"
+          ],
+          "stage": "kernel"
+        },
+        "view": "constraint"
+      },
+      "symptom.source.serial_queue_or_event_order.component_1": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "symptom.source.serial_queue_or_event_order.component_1",
+        "ref": {
+          "path": "source/op_kernel/masked_scale_kernel.asc",
+          "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3",
+          "locator": "lines:1-140"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-03",
+          "parent_implementation_hash": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "output-domain"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.serial_queue_or_event_order.component_2": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "symptom.source.serial_queue_or_event_order.component_2",
+        "ref": {
+          "path": "source/op_kernel/masked_scale_kernel.asc",
+          "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3",
+          "locator": "lines:1-140"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-03",
+          "parent_implementation_hash": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "output-domain"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.serial_queue_or_event_order.component_3": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "symptom.source.serial_queue_or_event_order.component_3",
+        "ref": {
+          "path": "analysis-r1.md",
+          "sha256": "sha256:c40f143e462dc7e0c5e543bf1ccf2c40d1cf36beb4350d4e6b33e47ba0c5e935",
+          "locator": "lines:1-13"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-03",
+          "parent_implementation_hash": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "output-domain"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.serial_queue_or_event_order": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "symptom.source.serial_queue_or_event_order.component_1",
+          "symptom.source.serial_queue_or_event_order.component_2",
+          "symptom.source.serial_queue_or_event_order.component_3"
+        ],
+        "components": [
+          "symptom.source.serial_queue_or_event_order.component_1",
+          "symptom.source.serial_queue_or_event_order.component_2",
+          "symptom.source.serial_queue_or_event_order.component_3"
+        ],
+        "scope": {
+          "task_id": "case-03",
+          "parent_implementation_hash": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "output-domain"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.inner_loop_copy.component_1": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "symptom.source.inner_loop_copy.component_1",
+        "ref": {
+          "path": "source/op_kernel/masked_scale_kernel.asc",
+          "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3",
+          "locator": "lines:1-140"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-03",
+          "parent_implementation_hash": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "output-domain"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.inner_loop_copy.component_2": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "symptom.source.inner_loop_copy.component_2",
+        "ref": {
+          "path": "source/op_kernel/masked_scale_kernel.asc",
+          "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3",
+          "locator": "lines:1-140"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-03",
+          "parent_implementation_hash": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "output-domain"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.inner_loop_copy.component_3": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "symptom.source.inner_loop_copy.component_3",
+        "ref": {
+          "path": "analysis-r1.md",
+          "sha256": "sha256:c40f143e462dc7e0c5e543bf1ccf2c40d1cf36beb4350d4e6b33e47ba0c5e935",
+          "locator": "lines:1-13"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-03",
+          "parent_implementation_hash": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "output-domain"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.inner_loop_copy": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "symptom.source.inner_loop_copy.component_1",
+          "symptom.source.inner_loop_copy.component_2",
+          "symptom.source.inner_loop_copy.component_3"
+        ],
+        "components": [
+          "symptom.source.inner_loop_copy.component_1",
+          "symptom.source.inner_loop_copy.component_2",
+          "symptom.source.inner_loop_copy.component_3"
+        ],
+        "scope": {
+          "task_id": "case-03",
+          "parent_implementation_hash": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "output-domain"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      }
+    },
+    "candidates": [
+      {
+        "hypothesis_id": "h-pipe",
+        "problem_id": "problem.pipeline_serialization",
+        "mechanism": "减少跨tile可避免的串行等待窗口；源算法字节、算术及DMA次数不减少；仅多tile核有稳态机会",
+        "targets": [
+          "output-domain"
+        ],
+        "scope": {
+          "task_id": "case-03",
+          "parent_implementation_hash": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "output-domain"
+          ],
+          "stage": "kernel"
+        },
+        "support": [
+          "source.path",
+          "source.host"
+        ],
+        "counter": [],
+        "unknown": [
+          "constraint.capacity",
+          "constraint.dependency_lifetime"
+        ],
+        "alternatives": [
+          "h-merge"
+        ],
+        "checks": [
+          "新增输入/输出物理槽、prolog/drain和回卷事件；若容量导致T缩小，tile和API次数增加",
+          "按原20项完整正确性与统一Task时间验证，当前未执行"
+        ],
+        "status": "plausible",
+        "reason": "所有输入一次读取，无广播复用，计算链较短而有三路搬运；流水比一味放大tile更直接检验隐藏MTE延迟。T=4096的转换区已较大，放大tile的容量成本须与新增原始槽比较。",
+        "excluded_by": [],
+        "independent_evidence_groups": [
+          [
+            "source.path"
+          ],
+          [
+            "source.host"
+          ]
+        ]
+      },
+      {
+        "hypothesis_id": "h-merge",
+        "problem_id": "problem.tiny_transfer_setup_amplification",
+        "mechanism": "同owner连续tile从T扩大到2T可将每核ceil(Nc/T)降为ceil(Nc/(2T))，减少接口发射；有效字节和逐元素算术保留",
+        "targets": [
+          "output-domain"
+        ],
+        "scope": {
+          "task_id": "case-03",
+          "parent_implementation_hash": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "output-domain"
+          ],
+          "stage": "kernel"
+        },
+        "support": [
+          "source.path",
+          "source.host"
+        ],
+        "counter": [],
+        "unknown": [
+          "constraint.capacity"
+        ],
+        "alternatives": [
+          "h-pipe"
+        ],
+        "checks": [
+          "tile加倍使全部buffer近似加倍；单核最后余数不同，API内部预留和最大count必须核验",
+          "按原20项完整正确性与统一Task时间验证，当前未执行"
+        ],
+        "status": "plausible",
+        "reason": "保留竞争机会：同owner连续tile从T扩大到2T可将每核ceil(Nc/T)降为ceil(Nc/(2T))，减少接口发射；有效字节和逐元素算术保留",
+        "excluded_by": [],
+        "independent_evidence_groups": [
+          [
+            "source.path"
+          ],
+          [
+            "source.host"
+          ]
+        ]
+      }
+    ],
+    "action_instances": [
+      {
+        "instance_id": "i-pipe",
+        "action_id": "action.software_pipeline_stages",
+        "template_hash": "sha256:6ba7dbcc167b4de02ba7faf6f9c86afff8b457fb2af57b5114486880788fcbe0",
+        "hypothesis_id": "h-pipe",
+        "targets": {
+          "target": "output-domain",
+          "stage": "kernel",
+          "workload": "workload",
+          "implementation": "parent"
+        },
+        "scope": {
+          "task_id": "case-03",
+          "parent_implementation_hash": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "output-domain"
+          ],
+          "stage": "kernel"
+        },
+        "parameters": {
+          "proposal": "原owner下将raw输入输出物理槽变2，计算scratch单份并明确最后消费者；容量不足返回C2",
+          "dtype_preserved": true,
+          "measured": false
+        },
+        "evidence_bindings": {
+          "symptom.source.serial_queue_or_event_order": "symptom.source.serial_queue_or_event_order",
+          "constraint.semantic_equivalence": "constraint.semantic_equivalence",
+          "constraint.capacity": "constraint.capacity",
+          "constraint.dependency_lifetime": "constraint.dependency_lifetime"
+        },
+        "unknowns": [
+          "constraint.capacity",
+          "constraint.dependency_lifetime"
+        ],
+        "status": "conditional",
+        "reason": "具体方案已选，容量/跨引擎完成边或目标SDK尚需实施前核验；没有硬件运行授权",
+        "parent_plan_hash": null
+      },
+      {
+        "instance_id": "i-merge",
+        "action_id": "action.coalesce_contiguous_transfers",
+        "template_hash": "sha256:eec8e2e49fa90290685f24038881b474a6a2e5e3747656e05f8269f19789f64a",
+        "hypothesis_id": "h-merge",
+        "targets": {
+          "target": "output-domain",
+          "stage": "kernel",
+          "workload": "workload",
+          "implementation": "parent"
+        },
+        "scope": {
+          "task_id": "case-03",
+          "parent_implementation_hash": "sha256:c304aeb8c2ae170bcebd9e72585a64b890dceaf05a0c0be3de9bdb70d31167fb",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "output-domain"
+          ],
+          "stage": "kernel"
+        },
+        "parameters": {
+          "proposal": "保持原分核，扩大合法连续tile，保留有效尾长和数值顺序",
+          "dtype_preserved": true,
+          "measured": false
+        },
+        "evidence_bindings": {
+          "symptom.source.inner_loop_copy": "symptom.source.inner_loop_copy",
+          "constraint.semantic_equivalence": "constraint.semantic_equivalence",
+          "constraint.capacity": "constraint.capacity"
+        },
+        "unknowns": [
+          "constraint.capacity"
+        ],
+        "status": "conditional",
+        "reason": "具体方案已选，容量/跨引擎完成边或目标SDK尚需实施前核验；没有硬件运行授权",
+        "parent_plan_hash": null
+      }
+    ],
+    "predecessor_ref": null
+  }
+}

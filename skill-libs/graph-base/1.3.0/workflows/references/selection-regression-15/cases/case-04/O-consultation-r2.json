@@ -1,0 +1,58 @@
+{
+  "task_id": "case-04",
+  "round": 2,
+  "stage": "knowledge_consultation_only",
+  "implemented": false,
+  "router_ref": {
+    "path": "O-router-r2.json",
+    "sha256": "sha256:3e3db678004f58716dd951e6085fda785eeaeda74154ceb3e0e40f8a054d7360"
+  },
+  "adopted_document_readings": [
+    {
+      "opportunity_ids": [
+        "o-merge"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+        "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+      },
+      "locator": "lines:69-108",
+      "effect_kind": "plan",
+      "before": "初始只知道队列/存活或连续分块结构",
+      "after": "先仅在同owner的短segment内组成h行批次，以blockCount/stride搬运x0和x1并批量计算，输出按连续有效行写回；物理行跨度A=align32(S*s)/s须与S分开。长segment维持原路径；不新增Tiling Key，参数由连续性/API和容量决定。；tile放大增加已分配UB和最后读前存活时间；SwiGLU还可能增加行padding与mask处理",
+      "applicability": "partial：正文给方法与完成边，具体SDK支持和资源未确认"
+    },
+    {
+      "opportunity_ids": [
+        "o-pipe"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+        "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+      },
+      "locator": "lines:89-207",
+      "effect_kind": "plan",
+      "before": "初始只知道队列/存活或连续分块结构",
+      "after": "原owner下将raw输入输出物理槽变2，计算scratch单份并明确最后消费者；容量不足返回C2；新增输入/输出物理槽、prolog/drain和回卷事件；若容量导致T缩小，tile和API次数增加",
+      "applicability": "partial：正文给方法与完成边，具体SDK支持和资源未确认"
+    },
+    {
+      "opportunity_ids": [
+        "o-merge"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/strided-pad.md",
+        "sha256": "sha256:dbd61eaa8bb85b89b10ae445f1cff983baaaf8aa7a707b07900c18ac60262403"
+      },
+      "locator": "lines:77-138",
+      "effect_kind": "parameters",
+      "before": "短segment批量只确定规则stride，尚未核对GM与UB参数单位及dummy读取",
+      "after": "从全部shape/dim计算S发现存在S远大于4096的连续域与短S域；批量方法只改善短S，长S不得标全覆盖。奇数S行padding需按A=ceil(S*s/32)*32/s预算：若批量Vector读取padding，应显式初始化h*(A-S)元素而不清零有效区；输出用每行S有效元素的多段DataCopyPad丢弃dummy。A3无mode重载输入srcStride=S*s字节、dstStride=0，输出srcStride=0 DataBlock、dstStride=0字节，blockCount=h<=4095；待目标SDK确认。禁止把输入两半连读为同一operand。",
+      "applicability": "partial：910C/A3任务配置与A2/A3无mode重载正文对应；实际SDK未检查，blockCount/stride/容量及输出有效长度需逐参数闭合"
+    }
+  ],
+  "limitations": "内部router用于方案咨询；尚未建立confirmed C2或implemented C3；命中不等于全部采用；P读取为提取现有计划而非P_KEEP。"
+}

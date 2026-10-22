@@ -1,0 +1,657 @@
+{
+  "schema_version": "aprof.handoff/v3",
+  "stage": "C1",
+  "task_id": "autonomy-c-12",
+  "candidate_id": null,
+  "parent_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+  "artifacts": [
+    {
+      "path": "decision-r1.json",
+      "sha256": "sha256:926ca7ab88be0c22867206704841e0a96acd7f11aac34ff46e4b8808255eef1f"
+    },
+    {
+      "path": "retrieval.json",
+      "sha256": "sha256:06e740998499d5049d042a873f083a4c2ccc27c8f659960c3df009e6763a3bfa"
+    },
+    {
+      "path": "expansion.json",
+      "sha256": "sha256:b8028b3dc5e1c67eb015c08fa68e31c180fd5e9da1f1c6cb01b2e651631d112f"
+    },
+    {
+      "path": "parallel-planning-consult-route.json",
+      "sha256": "sha256:d07cf7ac0b757bb5ee999d47fc36d492cd16ee934599ef385afa1973ca609e2f"
+    },
+    {
+      "path": "optimization-consult-route.json",
+      "sha256": "sha256:69f05c382e876872448ab44db1b08d84c1691344d115e8df46a9ee6e1427b651"
+    },
+    {
+      "path": "parallel-planning-action-consult-r1.json",
+      "sha256": "sha256:57ee61854a2399410e8f891883a44c19252cac15ceedfc355eeb60485fe6757d"
+    },
+    {
+      "path": "optimization-action-consult-r1.json",
+      "sha256": "sha256:d2b8627791d674535bd54fe2d54b8533c42ebdf166eef6f1415333e45d174fe2"
+    }
+  ],
+  "reasoning": {
+    "schema_version": "aprof.diagnosis-reasoning/v1",
+    "task_id": "autonomy-c-12",
+    "context_hash": "sha256:cbb2391dd09de327caf721161f646447cb4f2727587a3f967ea6b9de59ef4596",
+    "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+    "source_context_ref": {
+      "path": "authority.json",
+      "sha256": "sha256:5a7e89650f985b8b48bca662f110c9fb6b5b444a887922045ca6719b33a96069"
+    },
+    "context_snapshot": {
+      "schema_version": "aprof.evidence/v1",
+      "task_id": "autonomy-c-12",
+      "source_context_ref": {
+        "path": "authority.json",
+        "sha256": "sha256:5a7e89650f985b8b48bca662f110c9fb6b5b444a887922045ca6719b33a96069"
+      },
+      "attributes": {
+        "platform": "dav-2201",
+        "family": [
+          "elementwise"
+        ],
+        "dtype": [
+          "bfloat16",
+          "float16",
+          "float32",
+          "int32",
+          "int64",
+          "int8"
+        ],
+        "features": [
+          "scalar-control",
+          "vector-api",
+          "memory-transfer",
+          "broadcast"
+        ]
+      },
+      "facts": {}
+    },
+    "current": {
+      "implementation_ref": {
+        "path": "parent-source.json",
+        "sha256": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9"
+      },
+      "workload_ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77"
+      },
+      "objects": [
+        {
+          "object_id": "path",
+          "kind": "object",
+          "description": "host广播对齐rank并生成zero stride；同形非int64走4096 Vector Max；FP16非同形走last-axis段搬运；其余广播及全部int64走MaximumScalar，每输出rank次除模加双地址累加。"
+        },
+        {
+          "object_id": "stage",
+          "kind": "stage",
+          "description": "kernel complete compute/data path"
+        },
+        {
+          "object_id": "workload",
+          "kind": "workload",
+          "description": "20 cases matrix"
+        },
+        {
+          "object_id": "implementation",
+          "kind": "implementation",
+          "description": "frozen full source parent"
+        }
+      ],
+      "scope": {
+        "task_id": "autonomy-c-12",
+        "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+        "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      }
+    },
+    "facts": {
+      "source.kernel": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/maximum_kernel.asc@lines:1-183",
+        "ref": {
+          "path": "source/op_kernel/maximum_kernel.asc",
+          "sha256": "sha256:069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e",
+          "locator": "lines:1-183"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-12",
+          "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+          "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source"
+      },
+      "source.host": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_host/maximum.asc@lines:1-69",
+        "ref": {
+          "path": "source/op_host/maximum.asc",
+          "sha256": "sha256:ec9a6b580b6b9623132633a700dd63398757a46da2fd8fceb7da65e5ecdda05f",
+          "locator": "lines:1-69"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-12",
+          "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+          "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source"
+      },
+      "source.tiling": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/maximum_tiling.h@lines:1-56",
+        "ref": {
+          "path": "source/op_kernel/maximum_tiling.h",
+          "sha256": "sha256:f697d7fc66e5feeec035befd329429a896fb1538f3434f2ede13baa3118b362e",
+          "locator": "lines:1-56"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-12",
+          "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+          "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source"
+      },
+      "source.workload": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/matrix-20.json@cases",
+        "ref": {
+          "path": "source/matrix-20.json",
+          "sha256": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "locator": "cases"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-12",
+          "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+          "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "workload"
+      },
+      "source.oracle": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/scripts/verify_result.py@main",
+        "ref": {
+          "path": "source/scripts/verify_result.py",
+          "sha256": "sha256:d3057c67229ae12fa108d72db0a17129b6a2e8a447a765e6dd535a03ba5af54f",
+          "locator": "main"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-12",
+          "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+          "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source"
+      },
+      "primary.symptom.source.broadcast_strategy_mismatch": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "primary.symptom.source.broadcast_strategy_mismatch.component_1",
+          "primary.symptom.source.broadcast_strategy_mismatch.component_2",
+          "primary.symptom.source.broadcast_strategy_mismatch.component_3"
+        ],
+        "components": [
+          "primary.symptom.source.broadcast_strategy_mismatch.component_1",
+          "primary.symptom.source.broadcast_strategy_mismatch.component_2",
+          "primary.symptom.source.broadcast_strategy_mismatch.component_3"
+        ],
+        "scope": {
+          "task_id": "autonomy-c-12",
+          "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+          "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.broadcast_strategy_mismatch"
+      },
+      "primary.symptom.source.broadcast_strategy_mismatch.component_1": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/maximum_kernel.asc@lines:1-183",
+        "ref": {
+          "path": "source/op_kernel/maximum_kernel.asc",
+          "sha256": "sha256:069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e",
+          "locator": "lines:1-183"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-12",
+          "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+          "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.broadcast_strategy_mismatch.component_1"
+      },
+      "primary.symptom.source.broadcast_strategy_mismatch.component_2": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/maximum_kernel.asc@lines:1-183",
+        "ref": {
+          "path": "source/op_kernel/maximum_kernel.asc",
+          "sha256": "sha256:069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e",
+          "locator": "lines:1-183"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-12",
+          "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+          "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.broadcast_strategy_mismatch.component_2"
+      },
+      "primary.symptom.source.broadcast_strategy_mismatch.component_3": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/maximum_kernel.asc@lines:1-183",
+        "ref": {
+          "path": "source/op_kernel/maximum_kernel.asc",
+          "sha256": "sha256:069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e",
+          "locator": "lines:1-183"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-12",
+          "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+          "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.broadcast_strategy_mismatch.component_3"
+      },
+      "primary.constraint.broadcast_semantics": {
+        "state": "unknown",
+        "kind": "raw",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-12",
+          "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+          "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "constraint",
+        "predicate": "constraint.broadcast_semantics"
+      },
+      "primary.constraint.semantic_equivalence": {
+        "state": "unknown",
+        "kind": "raw",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-12",
+          "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+          "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "constraint",
+        "predicate": "constraint.semantic_equivalence"
+      },
+      "primary.constraint.capacity": {
+        "state": "unknown",
+        "kind": "raw",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-12",
+          "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+          "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "constraint",
+        "predicate": "constraint.capacity"
+      },
+      "alternative.symptom.source.scalar_element_loop": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "alternative.symptom.source.scalar_element_loop.component_1",
+          "alternative.symptom.source.scalar_element_loop.component_2",
+          "alternative.symptom.source.scalar_element_loop.component_3"
+        ],
+        "components": [
+          "alternative.symptom.source.scalar_element_loop.component_1",
+          "alternative.symptom.source.scalar_element_loop.component_2",
+          "alternative.symptom.source.scalar_element_loop.component_3"
+        ],
+        "scope": {
+          "task_id": "autonomy-c-12",
+          "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+          "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.scalar_element_loop"
+      },
+      "alternative.symptom.source.scalar_element_loop.component_1": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/maximum_kernel.asc@lines:1-183",
+        "ref": {
+          "path": "source/op_kernel/maximum_kernel.asc",
+          "sha256": "sha256:069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e",
+          "locator": "lines:1-183"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-12",
+          "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+          "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.scalar_element_loop.component_1"
+      },
+      "alternative.symptom.source.scalar_element_loop.component_2": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/maximum_kernel.asc@lines:1-183",
+        "ref": {
+          "path": "source/op_kernel/maximum_kernel.asc",
+          "sha256": "sha256:069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e",
+          "locator": "lines:1-183"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-12",
+          "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+          "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.scalar_element_loop.component_2"
+      },
+      "alternative.symptom.source.scalar_element_loop.component_3": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/maximum_kernel.asc@lines:1-183",
+        "ref": {
+          "path": "source/op_kernel/maximum_kernel.asc",
+          "sha256": "sha256:069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e",
+          "locator": "lines:1-183"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-12",
+          "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+          "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.scalar_element_loop.component_3"
+      },
+      "source.api_review": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "compare-select-review.json@numeric_boundary,budget",
+        "ref": {
+          "path": "compare-select-review.json",
+          "sha256": "sha256:aa50f1a1452e04e8ebead3e74fd600ee896be201750a482da83b987c555bbc7c",
+          "locator": "numeric_boundary,budget"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-12",
+          "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+          "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source"
+      }
+    },
+    "candidates": [
+      {
+        "hypothesis_id": "H-primary",
+        "problem_id": "problem.broadcast_strategy_mismatch",
+        "mechanism": "每个非空owner与行交集一次rank解码，减少(N-Rowner)*rank轴处理；zero-stride源按行或窗口复用。",
+        "targets": [
+          "path"
+        ],
+        "scope": {
+          "task_id": "autonomy-c-12",
+          "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+          "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "support": [
+          "source.kernel",
+          "source.tiling",
+          "source.workload",
+          "source.api_review"
+        ],
+        "counter": [],
+        "unknown": [
+          "primary.constraint.broadcast_semantics",
+          "primary.constraint.semantic_equivalence",
+          "primary.constraint.capacity"
+        ],
+        "alternatives": [
+          "H-alternative"
+        ],
+        "checks": [
+          "用源码地址/数值/API/物理容量闭合，再用编译/同协议Task测量区分逻辑工作和关键路径"
+        ],
+        "status": "plausible",
+        "reason": "保留action.restructure_broadcast：按zero-stride位图合轴，每个owner与行交集只解码一次外轴并递增内轴地址。int32广播使用A3文档支持的int32 Max(count)，不走GT Compare/Select；FP32广播保留av>bv?av:bv条件，优先GT Compare(c)+Select模式2(n)，不预设Max等价。FP32输入只补[n,c)，predicate按32B分配，预留8192B Select临时区，只回写4n有效字节；短行同时比较按行解码后scalar条件选择。其它dtype/同形/既有half广播原样保留。",
+        "excluded_by": [],
+        "independent_evidence_groups": [
+          [
+            "source.kernel",
+            "source.tiling",
+            "source.workload"
+          ]
+        ]
+      },
+      {
+        "hypothesis_id": "H-alternative",
+        "problem_id": "problem.scalar_control_hot_loop",
+        "mechanism": "在所选广播子域减少N次scalar比较（有条件批量化路线）；新增Lbatch=sum_owner,row ceil(valid_owner_row/T)个批次。FP32每批Compare和Select各1次，Compare执行sum_j(c_j/64)个repeat；Select消费N个有效元素，逻辑repeat组sum_j ceil(n_j/64)另计。int32每批1次Max；各项不能与N相减或混合成时间。",
+        "targets": [
+          "path"
+        ],
+        "scope": {
+          "task_id": "autonomy-c-12",
+          "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+          "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "support": [
+          "source.kernel",
+          "source.tiling",
+          "source.workload",
+          "source.api_review"
+        ],
+        "counter": [],
+        "unknown": [
+          "primary.constraint.semantic_equivalence",
+          "primary.constraint.capacity"
+        ],
+        "alternatives": [
+          "H-primary"
+        ],
+        "checks": [
+          "用源码地址/数值/API/物理容量闭合，再用编译/同协议Task测量区分逻辑工作和关键路径"
+        ],
+        "status": "plausible",
+        "reason": "最强已注册替代仍为action.vectorize_scalar_loop：同样分别用FP32 GT+Select与int32 Max，减少N次scalar比较，但泛化逐元素收集仍保留N*rank地址解码和可能的Boffset/gather代价。它也必须支付FP32的padding、predicate、8192B及同步，不能因称为vectorize而免计。广播重构额外减少重复解码并复用zero-stride输入，故仍优先；短行是否批量化由新增成本决定，可保持广播重构但使用每行scalar条件选择。",
+        "excluded_by": [],
+        "independent_evidence_groups": [
+          [
+            "source.kernel",
+            "source.tiling",
+            "source.workload"
+          ]
+        ]
+      }
+    ],
+    "action_instances": [
+      {
+        "instance_id": "I-primary",
+        "action_id": "action.restructure_broadcast",
+        "template_hash": "sha256:9e63ebc6ad8b9ac2d3996fc0f2acc5232afd6394d0d4e01c5309ea812e54e0cb",
+        "hypothesis_id": "H-primary",
+        "targets": {
+          "target": "path",
+          "stage": "stage",
+          "workload": "workload",
+          "implementation": "implementation"
+        },
+        "scope": {
+          "task_id": "autonomy-c-12",
+          "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+          "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "parameters": {
+          "plan": "保留action.restructure_broadcast：按zero-stride位图合轴，每个owner与行交集只解码一次外轴并递增内轴地址。int32广播使用A3文档支持的int32 Max(count)，不走GT Compare/Select；FP32广播保留av>bv?av:bv条件，优先GT Compare(c)+Select模式2(n)，不预设Max等价。FP32输入只补[n,c)，predicate按32B分配，预留8192B Select临时区，只回写4n有效字节；短行同时比较按行解码后scalar条件选择。其它dtype/同形/既有half广播原样保留。",
+          "capacity_formula": "FP32单槽保守峰值U=max_j(12*c_j+M_j+8192)+Bresident+Bother，c_j=64*ceil(n_j/64)，M_j=32*ceil(ceil(c_j/8)/32)。三个数据区独立且各c_j个float；predicate独立；8192B按非重叠生命周期复用。int32 U=3*A(4*T)+Bresident+Bother。实际UB容量与SDK未知，以U<=Uavailable为条件；多槽须重新计数，不默认alias。",
+          "numeric_boundary": "已知原FP32条件是GT，false分支选择bv：相等及±0选择第二输入；任一NaN令GT为false，故av=NaN,bv有限时取bv，bv=NaN时取bv。FP32 Max的数学名称不能证明这些选择规则等价。GT+Select仅在实际SDK同重载支持、有效predicate与数据位保持、特殊值和原oracle一致性检查闭合后实施。原oracle调用torch.maximum并检查NaN/Inf掩码；NaN输入的原条件与oracle可能冲突，不能通过改oracle或宣称整个API已正确来消除。int32最大值无此浮点分支差异，A3 Max支持int32；A3 Compare int32仅EQ且Select仅half/float，禁止int32 GT+Select。"
+        },
+        "evidence_bindings": {
+          "symptom.source.broadcast_strategy_mismatch": "primary.symptom.source.broadcast_strategy_mismatch",
+          "constraint.broadcast_semantics": "primary.constraint.broadcast_semantics",
+          "constraint.semantic_equivalence": "primary.constraint.semantic_equivalence",
+          "constraint.capacity": "primary.constraint.capacity"
+        },
+        "unknowns": [
+          "constraint.broadcast_semantics",
+          "constraint.semantic_equivalence",
+          "constraint.capacity"
+        ],
+        "status": "conditional",
+        "reason": "已知源码支持具体假设；最终API、物理容量及实例等价证明未做，不能实施。",
+        "parent_plan_hash": null
+      },
+      {
+        "instance_id": "I-alternative",
+        "action_id": "action.vectorize_scalar_loop",
+        "template_hash": "sha256:999efb87cd58b497fcf2315e3dc294419c39404d0d0256d9f51b45f723311d3a",
+        "hypothesis_id": "H-alternative",
+        "targets": {
+          "target": "path",
+          "stage": "stage",
+          "workload": "workload",
+          "implementation": "implementation"
+        },
+        "scope": {
+          "task_id": "autonomy-c-12",
+          "parent_implementation_hash": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9",
+          "workload_hash": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "parameters": {
+          "plan": "最强已注册替代仍为action.vectorize_scalar_loop：同样分别用FP32 GT+Select与int32 Max，减少N次scalar比较，但泛化逐元素收集仍保留N*rank地址解码和可能的Boffset/gather代价。它也必须支付FP32的padding、predicate、8192B及同步，不能因称为vectorize而免计。广播重构额外减少重复解码并复用zero-stride输入，故仍优先；短行是否批量化由新增成本决定，可保持广播重构但使用每行scalar条件选择。",
+          "capacity_formula": "FP32单槽保守峰值U=max_j(12*c_j+M_j+8192)+Bresident+Bother，c_j=64*ceil(n_j/64)，M_j=32*ceil(ceil(c_j/8)/32)。三个数据区独立且各c_j个float；predicate独立；8192B按非重叠生命周期复用。int32 U=3*A(4*T)+Bresident+Bother。实际UB容量与SDK未知，以U<=Uavailable为条件；多槽须重新计数，不默认alias。 泛化收集另加Boffset。",
+          "numeric_boundary": "已知原FP32条件是GT，false分支选择bv：相等及±0选择第二输入；任一NaN令GT为false，故av=NaN,bv有限时取bv，bv=NaN时取bv。FP32 Max的数学名称不能证明这些选择规则等价。GT+Select仅在实际SDK同重载支持、有效predicate与数据位保持、特殊值和原oracle一致性检查闭合后实施。原oracle调用torch.maximum并检查NaN/Inf掩码；NaN输入的原条件与oracle可能冲突，不能通过改oracle或宣称整个API已正确来消除。int32最大值无此浮点分支差异，A3 Max支持int32；A3 Compare int32仅EQ且Select仅half/float，禁止int32 GT+Select。"
+        },
+        "evidence_bindings": {
+          "symptom.source.scalar_element_loop": "alternative.symptom.source.scalar_element_loop",
+          "constraint.semantic_equivalence": "primary.constraint.semantic_equivalence",
+          "constraint.capacity": "primary.constraint.capacity"
+        },
+        "unknowns": [
+          "constraint.semantic_equivalence",
+          "constraint.capacity"
+        ],
+        "status": "conditional",
+        "reason": "已知源码支持具体假设；最终API、物理容量及实例等价证明未做，不能实施。",
+        "parent_plan_hash": null
+      }
+    ],
+    "predecessor_ref": null
+  }
+}

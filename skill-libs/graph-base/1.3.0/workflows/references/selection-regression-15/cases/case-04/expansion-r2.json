@@ -1,0 +1,1940 @@
+{
+  "schema_version": "aprof.diagnosis-problem-expansion/v1",
+  "task_id": "case-04",
+  "context_hash": "sha256:93cb4c7b9bc514e5dae25efce988d82c844d6c461c7a109f0b8fb0a2c77e75f2",
+  "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+  "graph_version": "v0006",
+  "source_context_ref": {
+    "path": "authority-v2.json",
+    "sha256": "sha256:485b97e07df5543820a5cfdae10b8c65d713db9b44a4760b37da3625044f1e5f"
+  },
+  "retrieval_hash": "sha256:5a9e6756b3d335da390dc79a5f2ce59842175dcf5fb3af1bdf2e6cb7a9680c62",
+  "request_hash": "sha256:bfc20c30f45353a45ef2e922159a768cd1cfc581eb383646fa3da297f0b596a8",
+  "request": {
+    "task_id": "case-04",
+    "context_hash": "sha256:93cb4c7b9bc514e5dae25efce988d82c844d6c461c7a109f0b8fb0a2c77e75f2",
+    "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+    "graph_version": "v0006",
+    "source_context_ref": {
+      "path": "authority-v2.json",
+      "sha256": "sha256:485b97e07df5543820a5cfdae10b8c65d713db9b44a4760b37da3625044f1e5f"
+    },
+    "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+    "retrieval_hash": "sha256:5a9e6756b3d335da390dc79a5f2ce59842175dcf5fb3af1bdf2e6cb7a9680c62",
+    "selections": [
+      {
+        "problem_id": "problem.tiny_transfer_setup_amplification",
+        "reason": "新增静态证据后复核：从全部shape/dim计算S发现存在S远大于4096的连续域与短S域；批量方法只改善短S，长S不得标全覆盖。奇数S行padding需按A=ceil(S*s/32)*32/s预算：若批量Vector读取padding，应显式初始化h*(A-S)元素而不清零有效区；输出用每行S有效元素的多段DataCopyPad丢弃dummy。A3无mode重载输入srcStride=S*s字节、dstStride=0，输出srcStride=0 DataBlock、dstStride=0字节，blockCount=h<=4095；待目标SDK确认。禁止把输入两半连读为同一operand。",
+        "trigger": "followup_check",
+        "related_problem_ids": [],
+        "unexplained_observations": [
+          "source.path",
+          "source.host"
+        ]
+      },
+      {
+        "problem_id": "problem.pipeline_serialization",
+        "reason": "新增静态证据后复核：从全部shape/dim计算S发现存在S远大于4096的连续域与短S域；批量方法只改善短S，长S不得标全覆盖。奇数S行padding需按A=ceil(S*s/32)*32/s预算：若批量Vector读取padding，应显式初始化h*(A-S)元素而不清零有效区；输出用每行S有效元素的多段DataCopyPad丢弃dummy。A3无mode重载输入srcStride=S*s字节、dstStride=0，输出srcStride=0 DataBlock、dstStride=0字节，blockCount=h<=4095；待目标SDK确认。禁止把输入两半连读为同一operand。",
+        "trigger": "followup_check",
+        "related_problem_ids": [],
+        "unexplained_observations": [
+          "source.path",
+          "source.host"
+        ]
+      },
+      {
+        "problem_id": "problem.vector_api_fragmentation",
+        "reason": "新增静态证据后复核：从全部shape/dim计算S发现存在S远大于4096的连续域与短S域；批量方法只改善短S，长S不得标全覆盖。奇数S行padding需按A=ceil(S*s/32)*32/s预算：若批量Vector读取padding，应显式初始化h*(A-S)元素而不清零有效区；输出用每行S有效元素的多段DataCopyPad丢弃dummy。A3无mode重载输入srcStride=S*s字节、dstStride=0，输出srcStride=0 DataBlock、dstStride=0字节，blockCount=h<=4095；待目标SDK确认。禁止把输入两半连读为同一operand。",
+        "trigger": "followup_check",
+        "related_problem_ids": [],
+        "unexplained_observations": [
+          "source.path",
+          "source.host"
+        ]
+      },
+      {
+        "problem_id": "problem.noncontiguous_access",
+        "reason": "新增静态证据后复核：从全部shape/dim计算S发现存在S远大于4096的连续域与短S域；批量方法只改善短S，长S不得标全覆盖。奇数S行padding需按A=ceil(S*s/32)*32/s预算：若批量Vector读取padding，应显式初始化h*(A-S)元素而不清零有效区；输出用每行S有效元素的多段DataCopyPad丢弃dummy。A3无mode重载输入srcStride=S*s字节、dstStride=0，输出srcStride=0 DataBlock、dstStride=0字节，blockCount=h<=4095；待目标SDK确认。禁止把输入两半连读为同一operand。",
+        "trigger": "followup_check",
+        "related_problem_ids": [],
+        "unexplained_observations": [
+          "source.path",
+          "source.host"
+        ]
+      }
+    ]
+  },
+  "entries": [
+    {
+      "problem_id": "problem.tiny_transfer_setup_amplification",
+      "reason": "新增静态证据后复核：从全部shape/dim计算S发现存在S远大于4096的连续域与短S域；批量方法只改善短S，长S不得标全覆盖。奇数S行padding需按A=ceil(S*s/32)*32/s预算：若批量Vector读取padding，应显式初始化h*(A-S)元素而不清零有效区；输出用每行S有效元素的多段DataCopyPad丢弃dummy。A3无mode重载输入srcStride=S*s字节、dstStride=0，输出srcStride=0 DataBlock、dstStride=0字节，blockCount=h<=4095；待目标SDK确认。禁止把输入两半连读为同一operand。",
+      "trigger": "followup_check",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.path",
+        "source.host"
+      ],
+      "title": "小搬运放大发射开销",
+      "mechanism": "循环把可合并的有效区间分成许多小DataCopy → 每次搬运重复支付参数构造、发射与同步固定成本 → 每指令有效字节偏低，使MTE忙而有效带宽仍低",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "同一tensor切片的搬入块、DMA发射点及所属tile循环",
+          "kind": "tensor",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host计算tile和尾长；kernel内层CopyIn及等待",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "analysis": {
+        "actions": [
+          {
+            "action_id": "action.coalesce_contiguous_transfers",
+            "costs": [
+              "更大UB/L1暂存与更长buffer生命周期",
+              "可能减少可并行任务或改变流水预取距离"
+            ],
+            "intervention": "合并合法相邻块或批量表达多段搬运，保持源/目标地址映射和尾部有效长度",
+            "requirements": [
+              "symptom.profile.mte_setup_dominated=true",
+              "symptom.source.inner_loop_copy=true",
+              "constraint.semantic_equivalence=true",
+              "constraint.capacity=true"
+            ]
+          }
+        ],
+        "alternatives": [
+          {
+            "check": "同窗口比较有效字节、指令数、方向和校准带宽",
+            "distinction": "setup受限预期有效带宽低；带宽饱和要求接近同平台可达上限",
+            "problem_id": "problem.memory_bandwidth_saturation"
+          },
+          {
+            "check": "固定stride检查每次有效大小与总事务放大量",
+            "distinction": "离散布局会增加实际事务；小包setup可在连续数据上出现",
+            "problem_id": "problem.noncontiguous_access"
+          }
+        ],
+        "counter_checks": [
+          "大块连续传输已接近校准带宽上限时，本机制对该稳态窗口解释力下降",
+          "单次全载或全局依赖不允许合并时，不能据小包数量推出可消除成本"
+        ],
+        "limits": [
+          "来源粒度阈值属于910B经验；其他型号不沿用固定256B/4KB判据",
+          "当前任务没有采集数据，不能把文档样例收益写为本任务收益",
+          "本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。"
+        ],
+        "mechanism_chain": [
+          "循环把可合并的有效区间分成许多小DataCopy",
+          "每次搬运重复支付参数构造、发射与同步固定成本",
+          "每指令有效字节偏低，使MTE忙而有效带宽仍低"
+        ],
+        "objects_and_stages": [
+          "同一tensor切片的搬入块、DMA发射点及所属tile循环",
+          "host计算tile和尾长",
+          "kernel内层CopyIn及等待"
+        ],
+        "predictions": [
+          "若仅合并合法相邻搬运，发射数应下降而算法有效字节不变；这是prediction",
+          "MTE比例可能仍高，不能用比例下降作为唯一成功标准"
+        ],
+        "supporting_checks": [
+          "用有效字节/指令数与传输大小分布定位频繁小包，区分总流量增加",
+          "把搬入、计算和等待按tile展开，检查是否有可合并的边界",
+          "可选判别实验：在原硬前提满足且C2允许的单独候选中，仅合并合法搬运以缩减发射数，保持有效字节及地址语义，比较发射、等待与总时长。原实现timeline可先支持候选；S不要求该实验或成功收益。"
+        ]
+      },
+      "claims": [
+        {
+          "basis": "legacy_seed",
+          "id": "legacy_seed",
+          "limitations": [
+            "旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            0
+          ],
+          "text": "原种子：小搬运放大发射开销；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_copy",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3
+          ],
+          "text": "来源将批量合并搬运与减少DMA启动次数联系起来，并明确经验粒度阈值只针对原设备。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_copy_sample",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            4
+          ],
+          "text": "公开搬运样例比较相同张量的多种分块，并把增大块后减少指令和循环开销列为解释；表中收益只属于该样例。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_init",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            5
+          ],
+          "text": "InitBuffer文档定义num为物理内存块数、len以字节计且内部按32字节向上对齐。"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_1",
+          "limitations": [
+            "来源粒度阈值属于910B经验；其他型号不沿用固定256B/4KB判据",
+            "当前任务没有采集数据，不能把文档样例收益写为本任务收益"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "循环把可合并的有效区间分成许多小DataCopy"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_2",
+          "limitations": [
+            "来源粒度阈值属于910B经验；其他型号不沿用固定256B/4KB判据",
+            "当前任务没有采集数据，不能把文档样例收益写为本任务收益"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "每次搬运重复支付参数构造、发射与同步固定成本"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_3",
+          "limitations": [
+            "来源粒度阈值属于910B经验；其他型号不沿用固定256B/4KB判据",
+            "当前任务没有采集数据，不能把文档样例收益写为本任务收益"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "每指令有效字节偏低，使MTE忙而有效带宽仍低"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "prediction_1",
+          "limitations": [
+            "尚无同scope profiling验证，不标为observed或case_support"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "若仅合并合法相邻搬运，发射数应下降而算法有效字节不变；这是prediction"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "prediction_2",
+          "limitations": [
+            "尚无同scope profiling验证，不标为observed或case_support"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "MTE比例可能仍高，不能用比例下降作为唯一成功标准"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_1",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "用有效字节/指令数与传输大小分布定位频繁小包，区分总流量增加"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_2",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "把搬入、计算和等待按tile展开，检查是否有可合并的边界"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_3",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "大块连续传输已接近校准带宽上限时，本机制对该稳态窗口解释力下降"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_4",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "单次全载或全局依赖不允许合并时，不能据小包数量推出可消除成本"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_1",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "problem.memory_bandwidth_saturation：setup受限预期有效带宽低；带宽饱和要求接近同平台可达上限；检查：同窗口比较有效字节、指令数、方向和校准带宽"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_2",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "problem.noncontiguous_access：离散布局会增加实际事务；小包setup可在连续数据上出现；检查：固定stride检查每次有效大小与总事务放大量"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "intervention",
+          "limitations": [
+            "所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "合并合法相邻块或批量表达多段搬运，保持源/目标地址映射和尾部有效长度。代价：更大UB/L1暂存与更长buffer生命周期；可能减少可并行任务或改变流水预取距离"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "optional_discriminating_intervention",
+          "limitations": [
+            "实验需独立候选及原A硬前提，未执行不影响当前S；实验无论改善、无效或退化都可形成后继证据"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "可选判别实验：在原硬前提满足且C2允许的单独候选中，仅合并合法搬运以缩减发射数，保持有效字节及地址语义，比较发射、等待与总时长。原实现timeline可先支持候选；S不要求该实验或成功收益。"
+        }
+      ],
+      "review": {
+        "discriminating_power": "用有效字节/指令数与传输大小分布定位频繁小包，区分总流量增加；把搬入、计算和等待按tile展开，检查是否有可合并的边界；大块连续传输已接近校准带宽上限时，本机制对该稳态窗口解释力下降",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "来源粒度阈值属于910B经验；其他型号不沿用固定256B/4KB判据",
+          "当前任务没有采集数据，不能把文档样例收益写为本任务收益"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      },
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:a2be289520d72c7e7723e6d6dfb7fe1cde47c924097dfb4347c8a2e2fdaa3477",
+          "lines": [
+            46,
+            51
+          ],
+          "original_path": "skills/aprof/diagnosis/references/bound-deep-routing.md",
+          "path": "skills/ascendc-aprof-diagnosis/graph/history/provenance/skills/aprof/diagnosis/references/bound-deep-routing.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:7b5f46925a304a3d6db77c905675c8ecae3d12eeedeac501743bdc07f932d44e",
+          "sha256": "sha256:7b5f46925a304a3d6db77c905675c8ecae3d12eeedeac501743bdc07f932d44e"
+        },
+        {
+          "excerpt_sha256": "sha256:5e467f037325364ca135631c4c9a41c7f69834af8d2348b1be493c82cdf5a820",
+          "lines": [
+            7,
+            10
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:dbb672d9f6f872d02ba5a255ac9b1949595d8fa869efb174c27895da04560a38"
+        },
+        {
+          "excerpt_sha256": "sha256:34fb85b54e7b505ed72fd234f9664cf45cab62643b24a4aed606925df8559689",
+          "lines": [
+            45,
+            55
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:dbb672d9f6f872d02ba5a255ac9b1949595d8fa869efb174c27895da04560a38"
+        },
+        {
+          "excerpt_sha256": "sha256:00a813bbe2ea146de5a8703ee82bfb0014b8c70b92b498646c7cd450099c5737",
+          "lines": [
+            233,
+            251
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:dbb672d9f6f872d02ba5a255ac9b1949595d8fa869efb174c27895da04560a38"
+        },
+        {
+          "excerpt_sha256": "sha256:7b6fd467d0158bb6da05a6eee05102706b180cc2a4992bee560a24662c4a7c48",
+          "lines": [
+            145,
+            177
+          ],
+          "original_path": "examples/01_simd_cpp_api/05_best_practices/04_memory_access/data_copy/README.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/04_memory_access/data_copy/README.md",
+          "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+          "sha256": "sha256:7126d511236c3539b2710934c468c56500e39ac336531597a3360d6c74282cff"
+        },
+        {
+          "excerpt_sha256": "sha256:e2ee07f2f75d3a3f11d1ba56e11c5cad9974e2e78bb6ce215cd610ef9d8c985d",
+          "lines": [
+            97,
+            108
+          ],
+          "original_path": "docs/zh/api/SIMD-API/basic_api/resource_management/TPipe/InitBuffer.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/resource_management/TPipe/InitBuffer.md",
+          "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+          "sha256": "sha256:36da88132f7d5f62484bc98896bd99577bcce25d71a84e21220731a557aea34d"
+        }
+      ],
+      "body": "# 小搬运放大发射开销\n\n## 对象、阶段与适用域\n\n- 同一tensor切片的搬入块、DMA发射点及所属tile循环\n- host计算tile和尾长\n- kernel内层CopyIn及等待\n\n旧scope=all保留作检索范围，机制成立仍须核对目标架构、dtype、shape和API支持。\n\n## 机制链\n\n- 循环把可合并的有效区间分成许多小DataCopy\n- 每次搬运重复支付参数构造、发射与同步固定成本\n- 每指令有效字节偏低，使MTE忙而有效带宽仍低\n\n## 预测、支持检查与反证\n\n- 若仅合并合法相邻搬运，发射数应下降而算法有效字节不变；这是prediction\n- MTE比例可能仍高，不能用比例下降作为唯一成功标准\n- 用有效字节/指令数与传输大小分布定位频繁小包，区分总流量增加\n- 把搬入、计算和等待按tile展开，检查是否有可合并的边界\n- 大块连续传输已接近校准带宽上限时，本机制对该稳态窗口解释力下降\n- 单次全载或全局依赖不允许合并时，不能据小包数量推出可消除成本\n\n## 具体替代解释\n\n- problem.memory_bandwidth_saturation：setup受限预期有效带宽低；带宽饱和要求接近同平台可达上限；检查：同窗口比较有效字节、指令数、方向和校准带宽\n- problem.noncontiguous_access：离散布局会增加实际事务；小包setup可在连续数据上出现；检查：固定stride检查每次有效大小与总事务放大量\n\n## 候选动作与成本\n\naction.coalesce_contiguous_transfers：合并合法相邻块或批量表达多段搬运，保持源/目标地址映射和尾部有效长度。\n\n原硬前提：symptom.profile.mte_setup_dominated=true；symptom.source.inner_loop_copy=true；constraint.semantic_equivalence=true；constraint.capacity=true。\n\n- 更大UB/L1暂存与更长buffer生命周期\n- 可能减少可并行任务或改变流水预取距离\n\n## 限制与缺口\n\n- 来源粒度阈值属于910B经验；其他型号不沿用固定256B/4KB判据\n- 当前任务没有采集数据，不能把文档样例收益写为本任务收益\n- 本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。\n\n## 可选干预判别（非S前提）\n\n可选判别实验：在原硬前提满足且C2允许的单独候选中，仅合并合法搬运以缩减发射数，保持有效字节及地址语义，比较发射、等待与总时长。原实现timeline可先支持候选；S不要求该实验或成功收益。\n\n## 逐项主张与依据\n\n### legacy_seed [legacy_seed]\n\n原种子：小搬运放大发射开销；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。\n\n来源索引：0。限制：旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定\n\n### source_copy [source_statement]\n\n来源将批量合并搬运与减少DMA启动次数联系起来，并明确经验粒度阈值只针对原设备。\n\n来源索引：1, 2, 3。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_copy_sample [source_statement]\n\n公开搬运样例比较相同张量的多种分块，并把增大块后减少指令和循环开销列为解释；表中收益只属于该样例。\n\n来源索引：4。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_init [source_statement]\n\nInitBuffer文档定义num为物理内存块数、len以字节计且内部按32字节向上对齐。\n\n来源索引：5。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### mechanism_1 [mechanism_inference]\n\n循环把可合并的有效区间分成许多小DataCopy\n\n来源索引：1, 2, 3, 4, 5。限制：来源粒度阈值属于910B经验；其他型号不沿用固定256B/4KB判据；当前任务没有采集数据，不能把文档样例收益写为本任务收益\n\n### mechanism_2 [mechanism_inference]\n\n每次搬运重复支付参数构造、发射与同步固定成本\n\n来源索引：1, 2, 3, 4, 5。限制：来源粒度阈值属于910B经验；其他型号不沿用固定256B/4KB判据；当前任务没有采集数据，不能把文档样例收益写为本任务收益\n\n### mechanism_3 [mechanism_inference]\n\n每指令有效字节偏低，使MTE忙而有效带宽仍低\n\n来源索引：1, 2, 3, 4, 5。限制：来源粒度阈值属于910B经验；其他型号不沿用固定256B/4KB判据；当前任务没有采集数据，不能把文档样例收益写为本任务收益\n\n### prediction_1 [mechanism_inference]\n\n若仅合并合法相邻搬运，发射数应下降而算法有效字节不变；这是prediction\n\n来源索引：1, 2, 3, 4, 5。限制：尚无同scope profiling验证，不标为observed或case_support\n\n### prediction_2 [mechanism_inference]\n\nMTE比例可能仍高，不能用比例下降作为唯一成功标准\n\n来源索引：1, 2, 3, 4, 5。限制：尚无同scope profiling验证，不标为observed或case_support\n\n### check_1 [mechanism_inference]\n\n用有效字节/指令数与传输大小分布定位频繁小包，区分总流量增加\n\n来源索引：1, 2, 3, 4, 5。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_2 [mechanism_inference]\n\n把搬入、计算和等待按tile展开，检查是否有可合并的边界\n\n来源索引：1, 2, 3, 4, 5。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_3 [mechanism_inference]\n\n大块连续传输已接近校准带宽上限时，本机制对该稳态窗口解释力下降\n\n来源索引：1, 2, 3, 4, 5。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_4 [mechanism_inference]\n\n单次全载或全局依赖不允许合并时，不能据小包数量推出可消除成本\n\n来源索引：1, 2, 3, 4, 5。限制：这是判别程序定义，执行结果由任务证据填充\n\n### alternative_1 [mechanism_inference]\n\nproblem.memory_bandwidth_saturation：setup受限预期有效带宽低；带宽饱和要求接近同平台可达上限；检查：同窗口比较有效字节、指令数、方向和校准带宽\n\n来源索引：1, 2, 3, 4, 5。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### alternative_2 [mechanism_inference]\n\nproblem.noncontiguous_access：离散布局会增加实际事务；小包setup可在连续数据上出现；检查：固定stride检查每次有效大小与总事务放大量\n\n来源索引：1, 2, 3, 4, 5。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### intervention [mechanism_inference]\n\n合并合法相邻块或批量表达多段搬运，保持源/目标地址映射和尾部有效长度。代价：更大UB/L1暂存与更长buffer生命周期；可能减少可并行任务或改变流水预取距离\n\n来源索引：1, 2, 3, 4, 5。限制：所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划\n\n### optional_discriminating_intervention [mechanism_inference]\n\n可选判别实验：在原硬前提满足且C2允许的单独候选中，仅合并合法搬运以缩减发射数，保持有效字节及地址语义，比较发射、等待与总时长。原实现timeline可先支持候选；S不要求该实验或成功收益。\n\n来源索引：1, 2, 3, 4, 5。限制：实验需独立候选及原A硬前提，未执行不影响当前S；实验无论改善、无效或退化都可形成后继证据",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.tiny_transfer_setup_amplification.md",
+      "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+      "template_hash": "sha256:4f69f856b495ca59d6a8dcb2f0d65bdaaa73d3ace53d5ac8284f6bfc534ba049",
+      "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a",
+      "scope_status": "match"
+    },
+    {
+      "problem_id": "problem.pipeline_serialization",
+      "reason": "新增静态证据后复核：从全部shape/dim计算S发现存在S远大于4096的连续域与短S域；批量方法只改善短S，长S不得标全覆盖。奇数S行padding需按A=ceil(S*s/32)*32/s预算：若批量Vector读取padding，应显式初始化h*(A-S)元素而不清零有效区；输出用每行S有效元素的多段DataCopyPad丢弃dummy。A3无mode重载输入srcStride=S*s字节、dstStride=0，输出srcStride=0 DataBlock、dstStride=0字节，blockCount=h<=4095；待目标SDK确认。禁止把输入两半连读为同一operand。",
+      "trigger": "followup_check",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.path",
+        "source.host"
+      ],
+      "title": "搬运与计算串行",
+      "mechanism": "不同tile本可独立的搬运与计算使用同buffer或被过早等待阻断 → 生产消费依赖闭环没有留出下一tile预取窗口 → MTE、Vector或Cube顺次忙而其他流水等待",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "多个tile的CopyIn/Compute/CopyOut及其buffer事件链",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "kernel预取序言；稳态tile循环；排空尾声",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "analysis": {
+        "actions": [
+          {
+            "action_id": "action.software_pipeline_stages",
+            "costs": [
+              "更多物理buffer和事件ID",
+              "增加序言/尾声与尾块分支复杂度，短任务可能付不起成本"
+            ],
+            "intervention": "为合法独立tile建立预取/计算/写回软件流水并配齐事件闭环",
+            "requirements": [
+              "symptom.profile.overlap_low=true",
+              "symptom.source.serial_queue_or_event_order=true",
+              "constraint.semantic_equivalence=true",
+              "constraint.capacity=true",
+              "constraint.dependency_lifetime=true"
+            ]
+          }
+        ],
+        "alternatives": [
+          {
+            "check": "列出等待覆盖的生产消费边和本可独立的部分",
+            "distinction": "等待过宽可导致串行，但不重叠也可能来自真数据依赖",
+            "problem_id": "problem.excessive_sync_scope"
+          },
+          {
+            "check": "先重算峰值，再改事件或预取次序",
+            "distinction": "容量限制与事件安排是不同阻碍",
+            "problem_id": "problem.onchip_capacity_pressure"
+          }
+        ],
+        "counter_checks": [
+          "稳定同对象窗口已持续重叠，反证完全串行解释",
+          "单轮、容量不允许或算法真依赖禁止重叠时，不能建议强行加buffer"
+        ],
+        "limits": [
+          "num=2不等于实际重叠成立",
+          "不复制来源80%等重叠率或收益为目标承诺",
+          "本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。"
+        ],
+        "mechanism_chain": [
+          "不同tile本可独立的搬运与计算使用同buffer或被过早等待阻断",
+          "生产消费依赖闭环没有留出下一tile预取窗口",
+          "MTE、Vector或Cube顺次忙而其他流水等待"
+        ],
+        "objects_and_stages": [
+          "多个tile的CopyIn/Compute/CopyOut及其buffer事件链",
+          "kernel预取序言",
+          "稳态tile循环",
+          "排空尾声"
+        ],
+        "predictions": [
+          "合法软件流水应增加稳态重叠，但总时长仍取决于最慢阶段；这是prediction"
+        ],
+        "supporting_checks": [
+          "把timeline按tile而非聚合比例展开，检查首轮预置和末轮释放",
+          "核对双buffer是否物理独立及容量能同时容纳"
+        ]
+      },
+      "claims": [
+        {
+          "basis": "legacy_seed",
+          "id": "legacy_seed",
+          "limitations": [
+            "旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            0
+          ],
+          "text": "原种子：搬运与计算串行；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_mm_pipe",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3
+          ],
+          "text": "arch22 MatMul文档把同buffer逐K搬入装载计算与流水串行联系，要求事件、容量、循环数和高阶API内部流水一并核对。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_double",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            4,
+            5
+          ],
+          "text": "双缓冲文档要求可重叠预取结构、容量和事件闭合；全载单轮或过度同步时增缓冲可能无收益。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_init",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            6
+          ],
+          "text": "InitBuffer文档定义num为物理内存块数、len以字节计且内部按32字节向上对齐。"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_1",
+          "limitations": [
+            "num=2不等于实际重叠成立",
+            "不复制来源80%等重叠率或收益为目标承诺"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "不同tile本可独立的搬运与计算使用同buffer或被过早等待阻断"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_2",
+          "limitations": [
+            "num=2不等于实际重叠成立",
+            "不复制来源80%等重叠率或收益为目标承诺"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "生产消费依赖闭环没有留出下一tile预取窗口"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_3",
+          "limitations": [
+            "num=2不等于实际重叠成立",
+            "不复制来源80%等重叠率或收益为目标承诺"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "MTE、Vector或Cube顺次忙而其他流水等待"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "prediction_1",
+          "limitations": [
+            "尚无同scope profiling验证，不标为observed或case_support"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "合法软件流水应增加稳态重叠，但总时长仍取决于最慢阶段；这是prediction"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_1",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "把timeline按tile而非聚合比例展开，检查首轮预置和末轮释放"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_2",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "核对双buffer是否物理独立及容量能同时容纳"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_3",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "稳定同对象窗口已持续重叠，反证完全串行解释"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_4",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "单轮、容量不允许或算法真依赖禁止重叠时，不能建议强行加buffer"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_1",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "problem.excessive_sync_scope：等待过宽可导致串行，但不重叠也可能来自真数据依赖；检查：列出等待覆盖的生产消费边和本可独立的部分"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_2",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "problem.onchip_capacity_pressure：容量限制与事件安排是不同阻碍；检查：先重算峰值，再改事件或预取次序"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "intervention",
+          "limitations": [
+            "所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "为合法独立tile建立预取/计算/写回软件流水并配齐事件闭环。代价：更多物理buffer和事件ID；增加序言/尾声与尾块分支复杂度，短任务可能付不起成本"
+        }
+      ],
+      "review": {
+        "discriminating_power": "把timeline按tile而非聚合比例展开，检查首轮预置和末轮释放；核对双buffer是否物理独立及容量能同时容纳；稳定同对象窗口已持续重叠，反证完全串行解释",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "num=2不等于实际重叠成立",
+          "不复制来源80%等重叠率或收益为目标承诺"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      },
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:592927cdbe10444156ea848793b8012a9def81eafd5c36dd4daf3e7a6e8bd5d5",
+          "lines": [
+            6,
+            15
+          ],
+          "original_path": "skills/aprof/optimization/references/pipeline-parallel-optimization-strategies.md",
+          "path": "skills/ascendc-aprof-diagnosis/graph/history/provenance/skills/aprof/optimization/references/pipeline-parallel-optimization-strategies.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:106abe2ae5d0fde1eebe08e995949c674b633584eb1277b828382a132863c50c",
+          "sha256": "sha256:106abe2ae5d0fde1eebe08e995949c674b633584eb1277b828382a132863c50c"
+        },
+        {
+          "excerpt_sha256": "sha256:28ffa9d76883d46d4c3115e15e7b37b63974e9d8ce9469a003250d37dd2eb8e3",
+          "lines": [
+            5,
+            7
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/matmul/arch22/pipeline_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/matmul/arch22/pipeline_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:411edebe99b43b0bb05bac2754c1d4ffd4abe46c726df718c0c1b4a7131eb0ed"
+        },
+        {
+          "excerpt_sha256": "sha256:45711f60b851ff9d3c3805e3a92d835cdee2c5465c506208beffbd197569abb9",
+          "lines": [
+            52,
+            80
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/matmul/arch22/pipeline_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/matmul/arch22/pipeline_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:411edebe99b43b0bb05bac2754c1d4ffd4abe46c726df718c0c1b4a7131eb0ed"
+        },
+        {
+          "excerpt_sha256": "sha256:e10bdb71a109baa5e1f6383282f76aaa1b3077058647107df56c2939a6389526",
+          "lines": [
+            121,
+            134
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/matmul/arch22/pipeline_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/matmul/arch22/pipeline_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:411edebe99b43b0bb05bac2754c1d4ffd4abe46c726df718c0c1b4a7131eb0ed"
+        },
+        {
+          "excerpt_sha256": "sha256:1d79f96e97f30651aaacf0bb67f2d3361b29c71e0ff8897ef5293dff65b215cc",
+          "lines": [
+            80,
+            88
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/elementwise/double_buffer_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/elementwise/double_buffer_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:142cc0055136ff3bc203672f4c4365cf4f09b41a175a7bfa1d89f3df3b2500ae"
+        },
+        {
+          "excerpt_sha256": "sha256:a9c18f7d1d57332297fa98ce0e4e675e13ee85a21a9ea765bf14882859ad7941",
+          "lines": [
+            230,
+            259
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/elementwise/double_buffer_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/elementwise/double_buffer_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:142cc0055136ff3bc203672f4c4365cf4f09b41a175a7bfa1d89f3df3b2500ae"
+        },
+        {
+          "excerpt_sha256": "sha256:e2ee07f2f75d3a3f11d1ba56e11c5cad9974e2e78bb6ce215cd610ef9d8c985d",
+          "lines": [
+            97,
+            108
+          ],
+          "original_path": "docs/zh/api/SIMD-API/basic_api/resource_management/TPipe/InitBuffer.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/resource_management/TPipe/InitBuffer.md",
+          "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+          "sha256": "sha256:36da88132f7d5f62484bc98896bd99577bcce25d71a84e21220731a557aea34d"
+        }
+      ],
+      "body": "# 搬运与计算串行\n\n## 对象、阶段与适用域\n\n- 多个tile的CopyIn/Compute/CopyOut及其buffer事件链\n- kernel预取序言\n- 稳态tile循环\n- 排空尾声\n\n旧scope=all保留作检索范围，机制成立仍须核对目标架构、dtype、shape和API支持。\n\n## 机制链\n\n- 不同tile本可独立的搬运与计算使用同buffer或被过早等待阻断\n- 生产消费依赖闭环没有留出下一tile预取窗口\n- MTE、Vector或Cube顺次忙而其他流水等待\n\n## 预测、支持检查与反证\n\n- 合法软件流水应增加稳态重叠，但总时长仍取决于最慢阶段；这是prediction\n- 把timeline按tile而非聚合比例展开，检查首轮预置和末轮释放\n- 核对双buffer是否物理独立及容量能同时容纳\n- 稳定同对象窗口已持续重叠，反证完全串行解释\n- 单轮、容量不允许或算法真依赖禁止重叠时，不能建议强行加buffer\n\n## 具体替代解释\n\n- problem.excessive_sync_scope：等待过宽可导致串行，但不重叠也可能来自真数据依赖；检查：列出等待覆盖的生产消费边和本可独立的部分\n- problem.onchip_capacity_pressure：容量限制与事件安排是不同阻碍；检查：先重算峰值，再改事件或预取次序\n\n## 候选动作与成本\n\naction.software_pipeline_stages：为合法独立tile建立预取/计算/写回软件流水并配齐事件闭环。\n\n原硬前提：symptom.profile.overlap_low=true；symptom.source.serial_queue_or_event_order=true；constraint.semantic_equivalence=true；constraint.capacity=true；constraint.dependency_lifetime=true。\n\n- 更多物理buffer和事件ID\n- 增加序言/尾声与尾块分支复杂度，短任务可能付不起成本\n\n## 限制与缺口\n\n- num=2不等于实际重叠成立\n- 不复制来源80%等重叠率或收益为目标承诺\n- 本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。\n\n## 逐项主张与依据\n\n### legacy_seed [legacy_seed]\n\n原种子：搬运与计算串行；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。\n\n来源索引：0。限制：旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定\n\n### source_mm_pipe [source_statement]\n\narch22 MatMul文档把同buffer逐K搬入装载计算与流水串行联系，要求事件、容量、循环数和高阶API内部流水一并核对。\n\n来源索引：1, 2, 3。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_double [source_statement]\n\n双缓冲文档要求可重叠预取结构、容量和事件闭合；全载单轮或过度同步时增缓冲可能无收益。\n\n来源索引：4, 5。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_init [source_statement]\n\nInitBuffer文档定义num为物理内存块数、len以字节计且内部按32字节向上对齐。\n\n来源索引：6。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### mechanism_1 [mechanism_inference]\n\n不同tile本可独立的搬运与计算使用同buffer或被过早等待阻断\n\n来源索引：1, 2, 3, 4, 5, 6。限制：num=2不等于实际重叠成立；不复制来源80%等重叠率或收益为目标承诺\n\n### mechanism_2 [mechanism_inference]\n\n生产消费依赖闭环没有留出下一tile预取窗口\n\n来源索引：1, 2, 3, 4, 5, 6。限制：num=2不等于实际重叠成立；不复制来源80%等重叠率或收益为目标承诺\n\n### mechanism_3 [mechanism_inference]\n\nMTE、Vector或Cube顺次忙而其他流水等待\n\n来源索引：1, 2, 3, 4, 5, 6。限制：num=2不等于实际重叠成立；不复制来源80%等重叠率或收益为目标承诺\n\n### prediction_1 [mechanism_inference]\n\n合法软件流水应增加稳态重叠，但总时长仍取决于最慢阶段；这是prediction\n\n来源索引：1, 2, 3, 4, 5, 6。限制：尚无同scope profiling验证，不标为observed或case_support\n\n### check_1 [mechanism_inference]\n\n把timeline按tile而非聚合比例展开，检查首轮预置和末轮释放\n\n来源索引：1, 2, 3, 4, 5, 6。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_2 [mechanism_inference]\n\n核对双buffer是否物理独立及容量能同时容纳\n\n来源索引：1, 2, 3, 4, 5, 6。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_3 [mechanism_inference]\n\n稳定同对象窗口已持续重叠，反证完全串行解释\n\n来源索引：1, 2, 3, 4, 5, 6。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_4 [mechanism_inference]\n\n单轮、容量不允许或算法真依赖禁止重叠时，不能建议强行加buffer\n\n来源索引：1, 2, 3, 4, 5, 6。限制：这是判别程序定义，执行结果由任务证据填充\n\n### alternative_1 [mechanism_inference]\n\nproblem.excessive_sync_scope：等待过宽可导致串行，但不重叠也可能来自真数据依赖；检查：列出等待覆盖的生产消费边和本可独立的部分\n\n来源索引：1, 2, 3, 4, 5, 6。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### alternative_2 [mechanism_inference]\n\nproblem.onchip_capacity_pressure：容量限制与事件安排是不同阻碍；检查：先重算峰值，再改事件或预取次序\n\n来源索引：1, 2, 3, 4, 5, 6。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### intervention [mechanism_inference]\n\n为合法独立tile建立预取/计算/写回软件流水并配齐事件闭环。代价：更多物理buffer和事件ID；增加序言/尾声与尾块分支复杂度，短任务可能付不起成本\n\n来源索引：1, 2, 3, 4, 5, 6。限制：所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+      "source_hash": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74",
+      "template_hash": "sha256:43c6fa4d772489bc988d3d6be8410d59316d4bf81c386e51762683c83c0e83c8",
+      "body_sha256": "sha256:f6563dd272a663892ce80f224863580e1af0bf53a794c5065bfba33e9aa1f450",
+      "scope_status": "match"
+    },
+    {
+      "problem_id": "problem.vector_api_fragmentation",
+      "reason": "新增静态证据后复核：从全部shape/dim计算S发现存在S远大于4096的连续域与短S域；批量方法只改善短S，长S不得标全覆盖。奇数S行padding需按A=ceil(S*s/32)*32/s预算：若批量Vector读取padding，应显式初始化h*(A-S)元素而不清零有效区；输出用每行S有效元素的多段DataCopyPad丢弃dummy。A3无mode重载输入srcStride=S*s字节、dstStride=0，输出srcStride=0 DataBlock、dstStride=0字节，blockCount=h<=4095；待目标SDK确认。禁止把输入两半连读为同一operand。",
+      "trigger": "followup_check",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.path",
+        "source.host"
+      ],
+      "title": "Vector 调用碎片化",
+      "mechanism": "可批处理的Vector工作被拆成大量小count/repeat调用 → 每次重复mask/repeat和指令发射控制 → 有效lane利用偏低并增加Scalar与Vector固定开销",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "同一有效元素域上的Vector API序列、repeat和mask分布",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "kernel Vector发射与尾处理",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "analysis": {
+        "actions": [
+          {
+            "action_id": "action.batch_vector_api_calls",
+            "costs": [
+              "更长向量临时区生存期",
+              "合并受mask、地址跨度、参数上限及精度路径限制"
+            ],
+            "intervention": "把语义和依赖允许的相邻Vector调用按count/repeat批量表达",
+            "requirements": [
+              "symptom.profile.vector_granularity_low=true",
+              "constraint.semantic_equivalence=true",
+              "constraint.capacity=true"
+            ]
+          }
+        ],
+        "alternatives": [
+          {
+            "check": "分开统计主体/尾API分布",
+            "distinction": "尾慢只绑定尾分支，碎片化也可发生在主体",
+            "problem_id": "problem.tail_slow_path"
+          },
+          {
+            "check": "固定API数量比较冲突和周期",
+            "distinction": "冲突拉长周期但不要求API粒度小",
+            "problem_id": "problem.ub_bank_conflict"
+          }
+        ],
+        "counter_checks": [
+          "小shape仅需一次小调用或各调用存在数据依赖时，不据粒度小判可合并",
+          "指令数合理但bank冲突高应查布局"
+        ],
+        "limits": [
+          "API理论利用率必须由目标指令和dtype推导",
+          "没有自动extractor，本轮不声称已采样到repeat分布",
+          "本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。"
+        ],
+        "mechanism_chain": [
+          "可批处理的Vector工作被拆成大量小count/repeat调用",
+          "每次重复mask/repeat和指令发射控制",
+          "有效lane利用偏低并增加Scalar与Vector固定开销"
+        ],
+        "objects_and_stages": [
+          "同一有效元素域上的Vector API序列、repeat和mask分布",
+          "kernel Vector发射与尾处理"
+        ],
+        "predictions": [
+          "合法批量表达应减少API和控制次数，未必改变必要算术量；这是prediction"
+        ],
+        "supporting_checks": [
+          "按dtype与有效mask计有效元素而非把repeat数直接当利用率",
+          "区分尾部必要小调用、分支依赖和不必要的主体碎片化"
+        ]
+      },
+      "claims": [
+        {
+          "basis": "legacy_seed",
+          "id": "legacy_seed",
+          "limitations": [
+            "旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            0
+          ],
+          "text": "原种子：Vector 调用碎片化；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_vector",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3
+          ],
+          "text": "Vector效率文档区分repeat/mask控制、归约指令路径和中间GM往返，count接口与尾处理必须符合API约束。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_mask",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            4
+          ],
+          "text": "SetVectorMask为向量执行配置掩码；具体产品和接口形式须以该固定修订及目标SDK核对。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_scalar_guide",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            5
+          ],
+          "text": "Scalar负责地址计算、参数构造和指令分发；文档要求以目标profiling、汇编或编译证据确认Load/Store及spill假设。"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_1",
+          "limitations": [
+            "API理论利用率必须由目标指令和dtype推导",
+            "没有自动extractor，本轮不声称已采样到repeat分布"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "可批处理的Vector工作被拆成大量小count/repeat调用"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_2",
+          "limitations": [
+            "API理论利用率必须由目标指令和dtype推导",
+            "没有自动extractor，本轮不声称已采样到repeat分布"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "每次重复mask/repeat和指令发射控制"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_3",
+          "limitations": [
+            "API理论利用率必须由目标指令和dtype推导",
+            "没有自动extractor，本轮不声称已采样到repeat分布"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "有效lane利用偏低并增加Scalar与Vector固定开销"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "prediction_1",
+          "limitations": [
+            "尚无同scope profiling验证，不标为observed或case_support"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "合法批量表达应减少API和控制次数，未必改变必要算术量；这是prediction"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_1",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "按dtype与有效mask计有效元素而非把repeat数直接当利用率"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_2",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "区分尾部必要小调用、分支依赖和不必要的主体碎片化"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_3",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "小shape仅需一次小调用或各调用存在数据依赖时，不据粒度小判可合并"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_4",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "指令数合理但bank冲突高应查布局"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_1",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "problem.tail_slow_path：尾慢只绑定尾分支，碎片化也可发生在主体；检查：分开统计主体/尾API分布"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_2",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "problem.ub_bank_conflict：冲突拉长周期但不要求API粒度小；检查：固定API数量比较冲突和周期"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "intervention",
+          "limitations": [
+            "所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "text": "把语义和依赖允许的相邻Vector调用按count/repeat批量表达。代价：更长向量临时区生存期；合并受mask、地址跨度、参数上限及精度路径限制"
+        }
+      ],
+      "review": {
+        "discriminating_power": "按dtype与有效mask计有效元素而非把repeat数直接当利用率；区分尾部必要小调用、分支依赖和不必要的主体碎片化；小shape仅需一次小调用或各调用存在数据依赖时，不据粒度小判可合并",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "API理论利用率必须由目标指令和dtype推导",
+          "没有自动extractor，本轮不声称已采样到repeat分布"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      },
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:1ea72314f54681360c31f9fed51427b85eb98c17bb83cbf524d8ef3b1a147faa",
+          "lines": [
+            59,
+            72
+          ],
+          "original_path": "skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md",
+          "path": "skills/ascendc-aprof-diagnosis/graph/history/provenance/skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:9bf71febdfee0429bc107731ac339a59941e55f0aeed27cd0030a4cd1ec5aaa2",
+          "sha256": "sha256:9bf71febdfee0429bc107731ac339a59941e55f0aeed27cd0030a4cd1ec5aaa2"
+        },
+        {
+          "excerpt_sha256": "sha256:9fdf79fde327ec40103f1244c9c79ee4afac5860645886bc8ca27129f5ded562",
+          "lines": [
+            5,
+            7
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:103bb67af7b9bc8316403167dbfd6e57da2a757dd0bfbc8af03336378051b13e"
+        },
+        {
+          "excerpt_sha256": "sha256:8348896087faf9bd588de56b5e1df00baa68d475f1afab6f8e8276e1f9cc60be",
+          "lines": [
+            64,
+            112
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:103bb67af7b9bc8316403167dbfd6e57da2a757dd0bfbc8af03336378051b13e"
+        },
+        {
+          "excerpt_sha256": "sha256:e5e66d6dfee5187142cfec46bffa5d0f200431651a54f2df298a34412ae93434",
+          "lines": [
+            150,
+            172
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:103bb67af7b9bc8316403167dbfd6e57da2a757dd0bfbc8af03336378051b13e"
+        },
+        {
+          "excerpt_sha256": "sha256:d7c691d2216b08e98f944e42db95c3e223e5d1515796094c4fcbaddc8d5e7a8c",
+          "lines": [
+            1,
+            40
+          ],
+          "original_path": "docs/zh/api/SIMD-API/basic_api/memory_vector_compute/mask_operations/SetVectorMask.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/mask_operations/SetVectorMask.md",
+          "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+          "sha256": "sha256:0de631e061a2e005d01aaf2efe0076a9e2adb3287edf1d1e96dd515ab919a256"
+        },
+        {
+          "excerpt_sha256": "sha256:47193296d3dadc4f6cb6cf1c115a43b5e8378f6bccc04e275dac8a22b2a2093a",
+          "lines": [
+            4,
+            8
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/scalar/guide.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/guide.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:1f9161d4bdd0ed256130213ce0e61598369c869b00ce28d54db38f5860536fdc"
+        }
+      ],
+      "body": "# Vector 调用碎片化\n\n## 对象、阶段与适用域\n\n- 同一有效元素域上的Vector API序列、repeat和mask分布\n- kernel Vector发射与尾处理\n\n旧scope=all保留作检索范围，机制成立仍须核对目标架构、dtype、shape和API支持。\n\n## 机制链\n\n- 可批处理的Vector工作被拆成大量小count/repeat调用\n- 每次重复mask/repeat和指令发射控制\n- 有效lane利用偏低并增加Scalar与Vector固定开销\n\n## 预测、支持检查与反证\n\n- 合法批量表达应减少API和控制次数，未必改变必要算术量；这是prediction\n- 按dtype与有效mask计有效元素而非把repeat数直接当利用率\n- 区分尾部必要小调用、分支依赖和不必要的主体碎片化\n- 小shape仅需一次小调用或各调用存在数据依赖时，不据粒度小判可合并\n- 指令数合理但bank冲突高应查布局\n\n## 具体替代解释\n\n- problem.tail_slow_path：尾慢只绑定尾分支，碎片化也可发生在主体；检查：分开统计主体/尾API分布\n- problem.ub_bank_conflict：冲突拉长周期但不要求API粒度小；检查：固定API数量比较冲突和周期\n\n## 候选动作与成本\n\naction.batch_vector_api_calls：把语义和依赖允许的相邻Vector调用按count/repeat批量表达。\n\n原硬前提：symptom.profile.vector_granularity_low=true；constraint.semantic_equivalence=true；constraint.capacity=true。\n\n- 更长向量临时区生存期\n- 合并受mask、地址跨度、参数上限及精度路径限制\n\n## 限制与缺口\n\n- API理论利用率必须由目标指令和dtype推导\n- 没有自动extractor，本轮不声称已采样到repeat分布\n- 本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。\n\n## 逐项主张与依据\n\n### legacy_seed [legacy_seed]\n\n原种子：Vector 调用碎片化；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。\n\n来源索引：0。限制：旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定\n\n### source_vector [source_statement]\n\nVector效率文档区分repeat/mask控制、归约指令路径和中间GM往返，count接口与尾处理必须符合API约束。\n\n来源索引：1, 2, 3。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_mask [source_statement]\n\nSetVectorMask为向量执行配置掩码；具体产品和接口形式须以该固定修订及目标SDK核对。\n\n来源索引：4。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_scalar_guide [source_statement]\n\nScalar负责地址计算、参数构造和指令分发；文档要求以目标profiling、汇编或编译证据确认Load/Store及spill假设。\n\n来源索引：5。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### mechanism_1 [mechanism_inference]\n\n可批处理的Vector工作被拆成大量小count/repeat调用\n\n来源索引：1, 2, 3, 4, 5。限制：API理论利用率必须由目标指令和dtype推导；没有自动extractor，本轮不声称已采样到repeat分布\n\n### mechanism_2 [mechanism_inference]\n\n每次重复mask/repeat和指令发射控制\n\n来源索引：1, 2, 3, 4, 5。限制：API理论利用率必须由目标指令和dtype推导；没有自动extractor，本轮不声称已采样到repeat分布\n\n### mechanism_3 [mechanism_inference]\n\n有效lane利用偏低并增加Scalar与Vector固定开销\n\n来源索引：1, 2, 3, 4, 5。限制：API理论利用率必须由目标指令和dtype推导；没有自动extractor，本轮不声称已采样到repeat分布\n\n### prediction_1 [mechanism_inference]\n\n合法批量表达应减少API和控制次数，未必改变必要算术量；这是prediction\n\n来源索引：1, 2, 3, 4, 5。限制：尚无同scope profiling验证，不标为observed或case_support\n\n### check_1 [mechanism_inference]\n\n按dtype与有效mask计有效元素而非把repeat数直接当利用率\n\n来源索引：1, 2, 3, 4, 5。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_2 [mechanism_inference]\n\n区分尾部必要小调用、分支依赖和不必要的主体碎片化\n\n来源索引：1, 2, 3, 4, 5。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_3 [mechanism_inference]\n\n小shape仅需一次小调用或各调用存在数据依赖时，不据粒度小判可合并\n\n来源索引：1, 2, 3, 4, 5。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_4 [mechanism_inference]\n\n指令数合理但bank冲突高应查布局\n\n来源索引：1, 2, 3, 4, 5。限制：这是判别程序定义，执行结果由任务证据填充\n\n### alternative_1 [mechanism_inference]\n\nproblem.tail_slow_path：尾慢只绑定尾分支，碎片化也可发生在主体；检查：分开统计主体/尾API分布\n\n来源索引：1, 2, 3, 4, 5。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### alternative_2 [mechanism_inference]\n\nproblem.ub_bank_conflict：冲突拉长周期但不要求API粒度小；检查：固定API数量比较冲突和周期\n\n来源索引：1, 2, 3, 4, 5。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### intervention [mechanism_inference]\n\n把语义和依赖允许的相邻Vector调用按count/repeat批量表达。代价：更长向量临时区生存期；合并受mask、地址跨度、参数上限及精度路径限制\n\n来源索引：1, 2, 3, 4, 5。限制：所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.vector_api_fragmentation.md",
+      "source_hash": "sha256:e5c0882f45cb270a9fd555e570428ba6f942efbb8c888972f3aadb655c09a34a",
+      "template_hash": "sha256:476044421c54fac13820d8cb6e86531714f4c8790aef05ba36e45520a09aa704",
+      "body_sha256": "sha256:846dc96e2bde9ea1b8b1747ddb5ddbad938e92ed73aa7e1547162f444623b5ed",
+      "scope_status": "match"
+    },
+    {
+      "problem_id": "problem.noncontiguous_access",
+      "reason": "新增静态证据后复核：从全部shape/dim计算S发现存在S远大于4096的连续域与短S域；批量方法只改善短S，长S不得标全覆盖。奇数S行padding需按A=ceil(S*s/32)*32/s预算：若批量Vector读取padding，应显式初始化h*(A-S)元素而不清零有效区；输出用每行S有效元素的多段DataCopyPad丢弃dummy。A3无mode重载输入srcStride=S*s字节、dstStride=0，输出srcStride=0 DataBlock、dstStride=0字节，blockCount=h<=4095；待目标SDK确认。禁止把输入两半连读为同一operand。",
+      "trigger": "followup_check",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.path",
+        "source.host"
+      ],
+      "title": "非连续访问破坏有效搬运",
+      "mechanism": "切分或遍历轴跨过物理连续内轴 → 相同有效元素分解成离散事务、短块或额外padding → 发射与实际流量增加使有效字节带宽下降",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "带明确shape、layout、stride和有效索引域的输入或输出切片",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host选取切分轴；kernel GM地址生成与DataCopy",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "analysis": {
+        "actions": [
+          {
+            "action_id": "action.reorder_contiguous_access",
+            "costs": [
+              "额外转置/索引表及UB暂存",
+              "重排可能损失输入复用或改变每核负载"
+            ],
+            "intervention": "沿连续内轴重新组织合法tile或使用目标支持的批量strided搬运",
+            "requirements": [
+              "symptom.source.noncontiguous_access=true",
+              "constraint.layout_semantics=true",
+              "constraint.semantic_equivalence=true",
+              "constraint.capacity=true"
+            ]
+          }
+        ],
+        "alternatives": [
+          {
+            "check": "固定单块字节后比较stride；固定stride后比较合并",
+            "distinction": "离散布局是几何原因，setup是每次发射固定成本，可共存",
+            "problem_id": "problem.tiny_transfer_setup_amplification"
+          },
+          {
+            "check": "标出哪些轴因广播而重复、哪些轴物理不连续",
+            "distinction": "广播的零stride重复输入应另计复用和展开成本",
+            "problem_id": "problem.broadcast_strategy_mismatch"
+          }
+        ],
+        "counter_checks": [
+          "原地址已连续且事务数符合模型，则不能归因于跨轴",
+          "稀疏索引语义本身要求离散访问时，重排空间受owner和输出顺序约束"
+        ],
+        "limits": [
+          "DataCopy stride的字节/datablock单位按具体API核对",
+          "不把arch35 NDDMA能力用于arch22",
+          "本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。"
+        ],
+        "mechanism_chain": [
+          "切分或遍历轴跨过物理连续内轴",
+          "相同有效元素分解成离散事务、短块或额外padding",
+          "发射与实际流量增加使有效字节带宽下降"
+        ],
+        "objects_and_stages": [
+          "带明确shape、layout、stride和有效索引域的输入或输出切片",
+          "host选取切分轴",
+          "kernel GM地址生成与DataCopy"
+        ],
+        "predictions": [
+          "合法交换遍历/切分轴后短块数应减少；这是prediction",
+          "若要额外转置，节省搬运未必覆盖格式转换成本"
+        ],
+        "supporting_checks": [
+          "沿至少两个连续tile手工核对GM地址差，区分逻辑索引与实际事务",
+          "使用相同shape、dtype、缓存状态的连续形态作参照"
+        ]
+      },
+      "claims": [
+        {
+          "basis": "legacy_seed",
+          "id": "legacy_seed",
+          "limitations": [
+            "旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            0,
+            1
+          ],
+          "text": "原种子：非连续访问破坏有效搬运；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_copy",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4
+          ],
+          "text": "来源将批量合并搬运与减少DMA启动次数联系起来，并明确经验粒度阈值只针对原设备。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_fa_pipe",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            5,
+            6,
+            7
+          ],
+          "text": "arch22 FA文档联合评估tile、AIC/AIV核数、buffer深度、workspace与局部/跨核同步，并比较Split-KV节省路径和归并成本。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_broadcast",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            8,
+            9,
+            10
+          ],
+          "text": "广播路由先合并同类轴并计算零stride，按目标架构、尾轴连续性和重复读成本选择广播阶段。"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_1",
+          "limitations": [
+            "DataCopy stride的字节/datablock单位按具体API核对",
+            "不把arch35 NDDMA能力用于arch22"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "切分或遍历轴跨过物理连续内轴"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_2",
+          "limitations": [
+            "DataCopy stride的字节/datablock单位按具体API核对",
+            "不把arch35 NDDMA能力用于arch22"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "相同有效元素分解成离散事务、短块或额外padding"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_3",
+          "limitations": [
+            "DataCopy stride的字节/datablock单位按具体API核对",
+            "不把arch35 NDDMA能力用于arch22"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "发射与实际流量增加使有效字节带宽下降"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "prediction_1",
+          "limitations": [
+            "尚无同scope profiling验证，不标为observed或case_support"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "合法交换遍历/切分轴后短块数应减少；这是prediction"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "prediction_2",
+          "limitations": [
+            "尚无同scope profiling验证，不标为observed或case_support"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "若要额外转置，节省搬运未必覆盖格式转换成本"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_1",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "沿至少两个连续tile手工核对GM地址差，区分逻辑索引与实际事务"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_2",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "使用相同shape、dtype、缓存状态的连续形态作参照"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_3",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "原地址已连续且事务数符合模型，则不能归因于跨轴"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_4",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "稀疏索引语义本身要求离散访问时，重排空间受owner和输出顺序约束"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_1",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "problem.tiny_transfer_setup_amplification：离散布局是几何原因，setup是每次发射固定成本，可共存；检查：固定单块字节后比较stride；固定stride后比较合并"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_2",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "problem.broadcast_strategy_mismatch：广播的零stride重复输入应另计复用和展开成本；检查：标出哪些轴因广播而重复、哪些轴物理不连续"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "intervention",
+          "limitations": [
+            "所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "沿连续内轴重新组织合法tile或使用目标支持的批量strided搬运。代价：额外转置/索引表及UB暂存；重排可能损失输入复用或改变每核负载"
+        }
+      ],
+      "review": {
+        "discriminating_power": "沿至少两个连续tile手工核对GM地址差，区分逻辑索引与实际事务；使用相同shape、dtype、缓存状态的连续形态作参照；原地址已连续且事务数符合模型，则不能归因于跨轴",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "DataCopy stride的字节/datablock单位按具体API核对",
+          "不把arch35 NDDMA能力用于arch22"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      },
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:00eb8d64b092277b1c935e9c8be46c2c2e00e282524b2039599e07becad94fc6",
+          "lines": [
+            73,
+            73
+          ],
+          "original_path": "skills/ascendc-aprof-diagnosis/references/data-movement-diagnosis-metrics.md",
+          "path": "workflows/migration/archive/skills/ascendc-aprof-diagnosis/references/data-movement-diagnosis-metrics.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:58e28c093db98279fc16b45d1140c4673e3f9b312392618908c515bdc58b04e3",
+          "sha256": "sha256:58e28c093db98279fc16b45d1140c4673e3f9b312392618908c515bdc58b04e3"
+        },
+        {
+          "excerpt_sha256": "sha256:53dd341a3953c0ebcd6d554405b122473a6143213ae0d4df6a59985fa8026b7b",
+          "lines": [
+            72,
+            72
+          ],
+          "original_path": "skills/ascendc-aprof-diagnosis/references/tiling-diagnosis-metrics.md",
+          "path": "workflows/migration/archive/skills/ascendc-aprof-diagnosis/references/tiling-diagnosis-metrics.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:886061117d25c4db2c617f5b8a899911a3e57502fb8a4136eda024dcf6e20bb5",
+          "sha256": "sha256:886061117d25c4db2c617f5b8a899911a3e57502fb8a4136eda024dcf6e20bb5"
+        },
+        {
+          "excerpt_sha256": "sha256:5e467f037325364ca135631c4c9a41c7f69834af8d2348b1be493c82cdf5a820",
+          "lines": [
+            7,
+            10
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:dbb672d9f6f872d02ba5a255ac9b1949595d8fa869efb174c27895da04560a38"
+        },
+        {
+          "excerpt_sha256": "sha256:34fb85b54e7b505ed72fd234f9664cf45cab62643b24a4aed606925df8559689",
+          "lines": [
+            45,
+            55
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:dbb672d9f6f872d02ba5a255ac9b1949595d8fa869efb174c27895da04560a38"
+        },
+        {
+          "excerpt_sha256": "sha256:00a813bbe2ea146de5a8703ee82bfb0014b8c70b92b498646c7cd450099c5737",
+          "lines": [
+            233,
+            251
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:dbb672d9f6f872d02ba5a255ac9b1949595d8fa869efb174c27895da04560a38"
+        },
+        {
+          "excerpt_sha256": "sha256:f4d5ee6d43583e164553d6e72c11d144adc5e7dbb966c702ca18e8ec2a8a7b78",
+          "lines": [
+            18,
+            33
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:ea3be814234904a2d8a4a3b99847aec00c849f3fb3ce2647390a3dce0a734ba1"
+        },
+        {
+          "excerpt_sha256": "sha256:dc896cfcbfffa7de6bc4d9b2f1eb4c536716f35f29689acb633887f4b086cdbc",
+          "lines": [
+            35,
+            71
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:ea3be814234904a2d8a4a3b99847aec00c849f3fb3ce2647390a3dce0a734ba1"
+        },
+        {
+          "excerpt_sha256": "sha256:f5378d0c338c8fa65447c183c9d1bc14ac0c887e5159d9e5eab387d8836ae12f",
+          "lines": [
+            73,
+            101
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:ea3be814234904a2d8a4a3b99847aec00c849f3fb3ce2647390a3dce0a734ba1"
+        },
+        {
+          "excerpt_sha256": "sha256:5b96164d546a32ef2093bce71caf3c779d4f18b2266326ffceeda2b3de88ed58",
+          "lines": [
+            9,
+            18
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/broadcast/patterns.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/broadcast/patterns.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:8b118ddbc4e70ada3debaf013838c8690abc85bb5f9d847d113ed2db40208830"
+        },
+        {
+          "excerpt_sha256": "sha256:4d475886f86ed85a22e839908359ce5326af94cd59de4fba6dd119f991c18945",
+          "lines": [
+            52,
+            82
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/broadcast/patterns.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/broadcast/patterns.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:8b118ddbc4e70ada3debaf013838c8690abc85bb5f9d847d113ed2db40208830"
+        },
+        {
+          "excerpt_sha256": "sha256:0180281f8bb1668472247bd7c89726831dc136d53c064275653b31301a7b7df8",
+          "lines": [
+            133,
+            141
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/broadcast/patterns.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/broadcast/patterns.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:8b118ddbc4e70ada3debaf013838c8690abc85bb5f9d847d113ed2db40208830"
+        }
+      ],
+      "body": "# 非连续访问破坏有效搬运\n\n## 对象、阶段与适用域\n\n- 带明确shape、layout、stride和有效索引域的输入或输出切片\n- host选取切分轴\n- kernel GM地址生成与DataCopy\n\n旧scope=all保留作检索范围，机制成立仍须核对目标架构、dtype、shape和API支持。\n\n## 机制链\n\n- 切分或遍历轴跨过物理连续内轴\n- 相同有效元素分解成离散事务、短块或额外padding\n- 发射与实际流量增加使有效字节带宽下降\n\n## 预测、支持检查与反证\n\n- 合法交换遍历/切分轴后短块数应减少；这是prediction\n- 若要额外转置，节省搬运未必覆盖格式转换成本\n- 沿至少两个连续tile手工核对GM地址差，区分逻辑索引与实际事务\n- 使用相同shape、dtype、缓存状态的连续形态作参照\n- 原地址已连续且事务数符合模型，则不能归因于跨轴\n- 稀疏索引语义本身要求离散访问时，重排空间受owner和输出顺序约束\n\n## 具体替代解释\n\n- problem.tiny_transfer_setup_amplification：离散布局是几何原因，setup是每次发射固定成本，可共存；检查：固定单块字节后比较stride；固定stride后比较合并\n- problem.broadcast_strategy_mismatch：广播的零stride重复输入应另计复用和展开成本；检查：标出哪些轴因广播而重复、哪些轴物理不连续\n\n## 候选动作与成本\n\naction.reorder_contiguous_access：沿连续内轴重新组织合法tile或使用目标支持的批量strided搬运。\n\n原硬前提：symptom.source.noncontiguous_access=true；constraint.layout_semantics=true；constraint.semantic_equivalence=true；constraint.capacity=true。\n\n- 额外转置/索引表及UB暂存\n- 重排可能损失输入复用或改变每核负载\n\n## 限制与缺口\n\n- DataCopy stride的字节/datablock单位按具体API核对\n- 不把arch35 NDDMA能力用于arch22\n- 本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。\n\n## 逐项主张与依据\n\n### legacy_seed [legacy_seed]\n\n原种子：非连续访问破坏有效搬运；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。\n\n来源索引：0, 1。限制：旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定\n\n### source_copy [source_statement]\n\n来源将批量合并搬运与减少DMA启动次数联系起来，并明确经验粒度阈值只针对原设备。\n\n来源索引：2, 3, 4。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_fa_pipe [source_statement]\n\narch22 FA文档联合评估tile、AIC/AIV核数、buffer深度、workspace与局部/跨核同步，并比较Split-KV节省路径和归并成本。\n\n来源索引：5, 6, 7。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_broadcast [source_statement]\n\n广播路由先合并同类轴并计算零stride，按目标架构、尾轴连续性和重复读成本选择广播阶段。\n\n来源索引：8, 9, 10。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### mechanism_1 [mechanism_inference]\n\n切分或遍历轴跨过物理连续内轴\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：DataCopy stride的字节/datablock单位按具体API核对；不把arch35 NDDMA能力用于arch22\n\n### mechanism_2 [mechanism_inference]\n\n相同有效元素分解成离散事务、短块或额外padding\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：DataCopy stride的字节/datablock单位按具体API核对；不把arch35 NDDMA能力用于arch22\n\n### mechanism_3 [mechanism_inference]\n\n发射与实际流量增加使有效字节带宽下降\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：DataCopy stride的字节/datablock单位按具体API核对；不把arch35 NDDMA能力用于arch22\n\n### prediction_1 [mechanism_inference]\n\n合法交换遍历/切分轴后短块数应减少；这是prediction\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：尚无同scope profiling验证，不标为observed或case_support\n\n### prediction_2 [mechanism_inference]\n\n若要额外转置，节省搬运未必覆盖格式转换成本\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：尚无同scope profiling验证，不标为observed或case_support\n\n### check_1 [mechanism_inference]\n\n沿至少两个连续tile手工核对GM地址差，区分逻辑索引与实际事务\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_2 [mechanism_inference]\n\n使用相同shape、dtype、缓存状态的连续形态作参照\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_3 [mechanism_inference]\n\n原地址已连续且事务数符合模型，则不能归因于跨轴\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_4 [mechanism_inference]\n\n稀疏索引语义本身要求离散访问时，重排空间受owner和输出顺序约束\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：这是判别程序定义，执行结果由任务证据填充\n\n### alternative_1 [mechanism_inference]\n\nproblem.tiny_transfer_setup_amplification：离散布局是几何原因，setup是每次发射固定成本，可共存；检查：固定单块字节后比较stride；固定stride后比较合并\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### alternative_2 [mechanism_inference]\n\nproblem.broadcast_strategy_mismatch：广播的零stride重复输入应另计复用和展开成本；检查：标出哪些轴因广播而重复、哪些轴物理不连续\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### intervention [mechanism_inference]\n\n沿连续内轴重新组织合法tile或使用目标支持的批量strided搬运。代价：额外转置/索引表及UB暂存；重排可能损失输入复用或改变每核负载\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+      "source_hash": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db",
+      "template_hash": "sha256:b8b97c96d423b4dd0714e9612326c6c39be649431d705168f95732f5a4c91e79",
+      "body_sha256": "sha256:29c29950c63fe546e68ba3f376adc1d3692c5d177c40a065cb3053f58441d491",
+      "scope_status": "match"
+    }
+  ],
+  "limitations": [
+    "正文由调用者按阅读理由选择；展开不表示机制成立、被排除或 Action 已就绪。",
+    "scope match 仅用于检索，不授权平台能力；原始证据及未知项仍由任务推理核验。",
+    "正文 hash 证明交付内容可回放；不能据此证明 Agent 已理解或采用该内容。"
+  ]
+}

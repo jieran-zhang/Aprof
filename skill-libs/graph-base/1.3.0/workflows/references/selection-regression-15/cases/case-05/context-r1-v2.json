@@ -1,0 +1,184 @@
+{
+  "schema_version": "aprof.evidence/v1",
+  "task_id": "case-05",
+  "source_context_ref": {
+    "path": "authority-v2.json",
+    "sha256": "sha256:99066a8fa8a7c3a90bfccf437c1432484a487ba2f638d38c78311e284932d89f"
+  },
+  "attributes": {
+    "family": "elementwise",
+    "dtype": [
+      "bfloat16",
+      "float16",
+      "float32"
+    ],
+    "platform": "dav-2201",
+    "features": [
+      "continuous",
+      "tiling-tail",
+      "memory-transfer",
+      "pipeline-sync",
+      "vector-api",
+      "buffer-lifetime"
+    ]
+  },
+  "facts": {
+    "source.path": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.path",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "lines:1-344"
+      },
+      "view": "source"
+    },
+    "source.host": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.host",
+      "ref": {
+        "path": "source/op_host/apply_adam_w.asc",
+        "sha256": "sha256:f9e628435d48f27a9521f65f0eac276f58bc8f7929adbc7d54d31e3672cc9dc2",
+        "locator": "lines:1-102"
+      },
+      "view": "source"
+    },
+    "source.matrix": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.matrix",
+      "ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:0bcdecc53621402511d6631fde12caa836a1980898e844da3f8e9bdc2bfd46bf",
+        "locator": "lines:1-742"
+      },
+      "view": "workload"
+    },
+    "source.analysis": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.analysis",
+      "ref": {
+        "path": "analysis-r1.md",
+        "sha256": "sha256:cfb8c86be1619f15a0b089a79afa32be3c776f7b38c9ee78ebc0d80470f46425",
+        "locator": "lines:1-13"
+      },
+      "view": "source"
+    },
+    "constraint.semantic_equivalence": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "semantic-plan",
+      "ref": {
+        "path": "analysis-r1.md",
+        "sha256": "sha256:cfb8c86be1619f15a0b089a79afa32be3c776f7b38c9ee78ebc0d80470f46425",
+        "locator": "lines:1-13"
+      },
+      "view": "constraint"
+    },
+    "constraint.capacity": {
+      "state": "unknown",
+      "kind": "raw",
+      "evidence_id": null,
+      "ref": null,
+      "view": "constraint"
+    },
+    "constraint.dependency_lifetime": {
+      "state": "unknown",
+      "kind": "raw",
+      "evidence_id": null,
+      "ref": null,
+      "view": "constraint"
+    },
+    "symptom.source.serial_queue_or_event_order.component_1": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.serial_queue_or_event_order.component_1",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "lines:1-344"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order.component_2": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.serial_queue_or_event_order.component_2",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "lines:1-344"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order.component_3": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.serial_queue_or_event_order.component_3",
+      "ref": {
+        "path": "analysis-r1.md",
+        "sha256": "sha256:cfb8c86be1619f15a0b089a79afa32be3c776f7b38c9ee78ebc0d80470f46425",
+        "locator": "lines:1-13"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": "symptom.source.serial_queue_or_event_order",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "lines:1-344"
+      },
+      "view": "source"
+    },
+    "symptom.source.inner_loop_copy.component_1": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.inner_loop_copy.component_1",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "lines:1-344"
+      },
+      "view": "source"
+    },
+    "symptom.source.inner_loop_copy.component_2": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.inner_loop_copy.component_2",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "lines:1-344"
+      },
+      "view": "source"
+    },
+    "symptom.source.inner_loop_copy.component_3": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.inner_loop_copy.component_3",
+      "ref": {
+        "path": "analysis-r1.md",
+        "sha256": "sha256:cfb8c86be1619f15a0b089a79afa32be3c776f7b38c9ee78ebc0d80470f46425",
+        "locator": "lines:1-13"
+      },
+      "view": "source"
+    },
+    "symptom.source.inner_loop_copy": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": "symptom.source.inner_loop_copy",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "lines:1-344"
+      },
+      "view": "source"
+    }
+  }
+}

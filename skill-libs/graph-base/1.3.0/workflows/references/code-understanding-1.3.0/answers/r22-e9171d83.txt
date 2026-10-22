@@ -1,0 +1,44 @@
+两个版本实现相同的矩阵乘：A为行主序half矩阵[8192,8192]，B文件为行主序[N,K]，存放逻辑[K,N]矩阵的转置，因此C[m,n]=ΣₖA[m,k]·B文件[n,k]。Cube以float在L0C累加，最后转换成half，按行主序写回[8192,8192]。三个GM矩阵各占8192²×2=134217728字节，即128MiB。
+
+host与核函数都在source/baseline/mmad.asc中；variant除209行删除一次等待外完全相同，差异见source/VARIANT.patch。main（575—644行）分配host/device内存，读取x1_gm.bin、x2_gm.bin并复制到GM，启动24个逻辑核块，等待stream完成，再取回output.bin。data_utils.h只负责二进制读写，不生成参考结果；main没有检查读写返回值。这里没有运行时tiling结构或tiling函数，切分参数全部通过模板常量传入。
+
+固定SCENARIO_NUM=1、两侧架构宏2201，故执行Process，而非ProcessL2Cache或3510分支。base tile为128×256，baseK=64；每核负责singleCoreM=2048、singleCoreN最多1536以及完整K=8192。InitComputeParams（273—308行）令核号b对应(i,j)=(b%4,b/4)，其A/B/C起点分别为i·2048·8192、j·1536·8192、i·2048·8192+j·1536，单位均为half元素，换成字节需乘2。
+
+前20核各计算2048×1536，末4核从N=7680开始，各计算2048×512。ProcessLoop先遍历N tile，再遍历M tile，最内层128次K迭代；因此前20核各有6×16=96个输出tile，末4核各有2×16=32个。总计2048个tile、262144次Mmad、2048次Fixpipe，无跨核归约。M/N均整除base尺寸，末核虽不足singleCoreN，仍包含两个完整256列tile，不走base尾块分支。
+
+数据路径见DataCopyInA/B、DataLoadA/B、Compute和CopyOut（340—541行）：MTE2将GM的ND数据随路转换成L1的NZ布局；MTE1把L1切片搬进L0A/L0B；Cube执行Mmad；FIX把L0C的NZ结果转换成GM的ND结果。A每包包含8个K迭代，即128×512个half；B每包包含4个迭代，即256×256个half。两者每包都是128KiB，但包覆盖的K长度不同。GM行距srcDValue=8192个元素；dstNzC0Stride分别为128、256，单位是32字节，不能解释成字节数或元素数。每个输出tile均重新搬入自己的全部K包，没有跨输出tile保留大包的机制。
+
+2201下A使用LoadData3DParamsV2，l1H=1、l1W=128、channelSize=kExtension=64、mExtension=128。其L1切片偏移是包内序号×64×128个half。B已按转置形式存储，使用不转置的LoadData2D；每个K迭代调用4次，每次搬16个16×16的half分形，共16384个half。第i次源偏移为包内序号×64×256+i×4096个half，目的偏移为i×4096个half；repeatTimes=16、srcStride=1、dstGap=0，LoadData2D的搬运分形单位为512字节。这些操作把输入排列成Cube所需的L0格式，不是在GM中再次转置B。
+
+Process（50—72行）的LocalTensor构造地址以字节计，长度以元素计。A1、B1映射到同一块L1：A Ping/Pong分别占[0,128)、[128,256)KiB，B Ping/Pong占[256,384)、[384,512)KiB。L0A与L0B是不同物理存储，即使数值地址相同也不别名。A2两槽各16KiB，起点0、32KiB；B2两槽各32KiB，起点同为0、32KiB。CO1始终指向L0C起点0，占128×256×4=128KiB，所有K迭代及后续输出tile复用该处。
+
+选核0的首个输出tile，即C[0:128,0:256]。下表列出前10轮实际读取的L1切片起点和写入的L0槽起点，单位均为KiB；A2、B2列中的相同数字分别属于L0A、L0B。两版本的地址选择相同。
+
+| K迭代t | A1切片起点 | B1切片起点 | A2/B2起点 |
+|---|---:|---:|---:|
+|0|0|256|0|
+|1|16|288|32|
+|2|32|320|0|
+|3|48|352|32|
+|4|64|384|0|
+|5|80|416|32|
+|6|96|448|0|
+|7|112|480|32|
+|8|128|256|0|
+|9|144|288|32|
+
+推导为：A选槽⌊t/8⌋%2，槽内偏移(t%8)×8192个half，即每轮16KiB；B选槽⌊t/4⌋%2，槽内偏移(t%4)×16384个half，即每轮32KiB；L0选槽t%2。每轮实际消耗K区间[64t,64t+64)。包内元素(r,s)在A的字节偏移为2·(⌊s/16⌋·128·16+r·16+s%16)，B则把128换成256，体现NZ排布，表中不是ND行主序切片地址。
+
+循环前先装A Ping的K[0,512)、B Ping的K[0,256)。t=0的Compute之后发起B Pong的K[256,512)、A Pong的K[512,1024)搬运。t=3释放B Ping并发起其K[512,768)重填；t=7释放B Pong和A Ping，分别发起K[768,1024)、K[1024,1536)重填。因此t=8读取的是A Pong原有包和B Ping新包。上述是发起次序；完成关系由事件约束，不能直接当作实际时间线。
+
+事件关系见ProcessLoop（153—270行）。MTE1_MTE2的ID0/1管理A Ping/Pong可覆盖状态，ID2/3管理B；开始各Set一次，使首次搬入能够通过Wait。MTE2完成大包后Set同ID的MTE2_MTE1，MTE1仅在包首等待：t=0等A0/B2，t=4等B3，t=8等A1/B2。MTE1完成包末切片读取后Set反向MTE1_MTE2：B在t=3、7释放，A在t=7释放；重填对应槽必须先Wait。这保证覆盖发生在旧L1数据读取完成后，而不必等Cube完成计算。
+
+每轮DataLoad之后，Compute用MTE1_M的Set/Wait保证两路L0输入就绪，再执行Mmad，随后Set M_MTE1释放该L0槽。baseline每轮加载前Wait同一M_MTE1槽：t=0、1消费初始置位，t≥2等待Mmad(t−2)完成，从而建立“旧Cube读取完成→同槽重新加载”的依赖。每个tile有128轮，为偶数，所以后续tile仍从槽0开始；末尾Wait收回两个L0事件和四个L1事件。
+
+Mmad每次计算128×256×64，t=0用cmatrixInitVal清零，此后保留L0C累加。前127轮unitFlag=2，末轮为3；Fixpipe也为3。固定rawdocs的UnitFlag.md说明，这使连续Mmad占用同一L0C，最后一次发布可读状态，Fixpipe读取后释放，供后续tile复用；它不是L0A/L0B覆盖保护。Fixpipe设置srcStride=128，单位为16个float，即相邻Z起点相隔8192字节；dstStride=8192个half，即GM行距16384字节。F322F16按CAST_RINT转换，tile起点为mBlockIdx·128·8192+nBlockIdx·256个half。
+
+910C/Atlas A3在本题契约下走DAV_2201。核内MTE2、MTE1、Cube与FIX异步执行，源码调用先后并不自动建立跨流水完成关系；上述双缓冲允许流水重叠，但静态代码不能证明实际重叠程度或性能。
+
+variant删除209行的M_MTE1等待后，保留了输入就绪的正向依赖，却失去Mmad(t−2)→Load(t)的反向依赖，t=2起可覆盖仍被Cube读取的槽。还存在更早的事件契约违例：初始化已Set ID0/1，t=0、1又分别Set同ID，中间没有Wait消费。固定SetFlag_WaitFlag_ISASI.md明确要求匹配配对，并将同一事件ID未消费就再次Set列为未定义行为。单个首tile每个ID已有1次初始化加64次Compute置位，而对应等待只剩ProcessLoop末尾各一次；事件是置位/清零标志，并非计数信号量。末尾等待及核函数末尾PipeBarrier<PIPE_ALL>不能补回已经缺失的覆盖依赖。因此baseline有可证明的槽复用顺序，variant不再具备相同的正确性与完成保证；不能据此断言每次必然出现某种错误或必然更快。
+
+这些结论限于给定整齐尺寸、完整输入文件和固定API契约。代码未处理K尾部不足64或包长度不足的问题，不能直接推广到任意形状。材料没有编译产物、设备观测或数值校验，也不能证明具体SKU可见资源、实际驻留核数、执行耗时、最终误差或变体的具体超时表现。

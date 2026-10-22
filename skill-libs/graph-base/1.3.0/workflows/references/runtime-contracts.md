@@ -68,7 +68,7 @@ tools/aprofctl contract validate --kind <kind> --input <artifact.json>
 tools/aprofctl knowledge build --root . --owner parallel-planning
 tools/aprofctl knowledge validate --root . --owner parallel-planning
 tools/aprofctl knowledge route --root . --owner optimization --context evidence.json
-tools/aprofctl contract validate --root . --kind knowledge-handoff-v3 --input C3.json
+tools/aprofctl contract validate --root . --kind knowledge-handoff-v4 --input C3.json
 ```
 
 P/O 的 owner 分别为 parallel-planning、optimization，继续使用 knowledge 命令；当前 diagnosis 使用下节独立命令。树 route 支持 --override，严格绑定知识版本/hash，旧 policy 不跨版本套用。新 JSON 格式与边界见 [图规范](../../skills/ascendc-aprof-diagnosis/graph/FORMAT.md) 和两棵树本地 FORMAT。构建使用安全 YAML，依赖由 runtime/pyproject.toml 显式声明。
@@ -99,3 +99,30 @@ tools/aprofctl knowledge validate-chain --root . --task-root /task --c1 /task/C1
 `aprof_runtime.bindings.default_hint/route_parallel/route_optimization`分别生成请求范围并调用真实树router。先冻结C2 P选择，再由C3记录O选择。提示不填造facts或attributes；每个Action实例核对模板hash、scope、参数和父计划。validate-chain无需timing，通过只表示结构、身份和声明边界符合，不授予编译、正确性、性能、因果或训练资格。
 
 历史v0003仍用`graph route --graph <v0003目录> --context <旧evidence>`，不依赖当前迁移MD。P/O继续`knowledge build/validate/route`。旧knowledge diagnosis源码入口遇新格式明确拒绝，不能偷偷改成新检索或旧快照-only校验。
+
+## runtime 0.6.0：Action 决策
+
+诊断 v0005、新条件策略及 action-decision/v1 共同区分实施合法性与性能假设。`diagnosis verify-decision --root <包> --task-root <任务根> --input <decision.json>` 校验身份、引用、比较、补证据状态和前轮反馈；`knowledge validate-chain` 对新图要求 C1 引用唯一 decision，实施 C3 还要求它选择当前实例且实施前必要条件满足。旧 D4 路由 bundle 和交接不增加该要求。自然语言的分析质量由独立审阅核对，不从形式通过推导收益或因果。
+
+## runtime 0.7.0：可核查比较与分层复盘
+
+本节描述 runtime 0.7.0 的冻结行为；0.8.0 新方案按下一节的显式 schema 分派。0.7.0 的诊断 v0006 要求独立的 `aprof.action-decision/v2`，具体字段见 [v2 contract](action-decision-v2.md)。新增完整 workload 分域、阶段工作、减少/增加/保留工作、代价与残余；所选理由引用实际比较项。R2 绑定前轮父本、候选、workload 与实际测量 case，区分结构、正确性、机制和归因；未测可以继续条件分析，不制造收益或强制换 Action。`verify-decision` 和 handoff/v3 入口不变，显式按图版本分派。v0005 仍要求 v1，v0004 仍按原规则回放；旧正文通过冻结 hash 对应的原字节档案读取，不将当前文档回填历史记录。
+
+
+## runtime 0.8.0：完整方案与共同交接
+
+新增 `aprof.action-decision/v3`、`aprof.handoff/v4`；知识仍为 D v0006、P v0003、O v0006、routing v0005，不重编冻结快照。新旧入口按显式 schema 分派，不能仅按相同 graph 版本将 v3 决策降为单机会 v2，或混装 v3 决策与 v3 handoff。历史 schema、交接、前轮链和来源身份保留原义，`knowledge.py` 不变。
+
+v3 在机会比较之上组织方案：共同目标、成员机会/Action实例、步骤依赖、联合工作/覆盖/代价及整体预测，选择绑定 scheme_id。后继反馈评价前轮所选方案的整体预测，允许补充成员归因限制，不要求单因素或默认消融。
+
+v4 C1 绑定 reasoning、decision 与所选方案身份；C2 对成员分别调用原 P router，记录共同计划及联合兼容/生命周期；C3 在同一确认计划下逐成员调用 O router，记录实际方法、参数、保证条件如何在最终源码兑现、变更与统一候选身份。成员目标/参数/模板身份、条件证据不能串用；组合不是独立命中的简单并集。P_KEEP 要求共同计划完整有效，P_KEEP 且全部成员 O_KEEP 才为 NOOP。
+
+继续使用 `diagnosis verify-decision`、`knowledge validate-chain`、`knowledge link-result`，不增加日常必跑工具。结果关联保留实际成员、共同方案、交接 hash 和候选身份；有效性能结果评价整个候选，不自动证明某个成员的收益或机制。严格字段以本包新 schema 为准，流程与纸面例见[完整方案](optimization-schemes.md)。
+
+协调者在任务根维护[optimization-history.md](optimization-history.md)三部分 Markdown，所有后继先读再按需展开历史；它不是机器证据或授权，不新增 schema 或 memory 流程。轮数、达标停止和重试范围引用 C0 的外部约定；既有正确性、计时与工程判定不变，accepted 不自动等于停止。
+
+## runtime 0.8.1：测前映射与完整方案身份修复
+
+当前知识为 D v0007、P v0004、O v0007、routing v0006、条件策略 v0002；新输入继续使用 action-decision/v3 和 handoff/v4，旧 schema/快照不变。新图首次正式实施前与有效反馈共用完整 workload 映射解析；缺映射可以继续分析，但不能把仅有 case 身份的任务报成实施 ready。格式和历史边界见[方案决策格式](action-decision-v3.md#完整-workload-的测前映射)。
+
+完整链与独立交接决策校验都核对实际非空方案身份；局部成员就绪不能代替完整链。机器校验只能检查声明、引用和状态，不能证明自然语言成本理由成立。数据相关覆盖、准备工作收支与修复后的重比由[选择规则](action-selection.md)指导，并在开发自主行为验收中检验，不增加日常必跑工具。

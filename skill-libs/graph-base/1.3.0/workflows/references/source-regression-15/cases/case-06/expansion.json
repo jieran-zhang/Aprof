@@ -1,0 +1,1961 @@
+{
+  "schema_version": "aprof.diagnosis-problem-expansion/v1",
+  "task_id": "case-06",
+  "context_hash": "sha256:7407f9d3bbd5f9133112ad568c54751898fd72e52496418a0dfe04497d9056eb",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "graph_version": "v0005",
+  "source_context_ref": {
+    "path": "authority.json",
+    "sha256": "sha256:766d5eff21fe0b0db546dc2580a0b4dab5e364b4390648615b55da59a0e9a23e"
+  },
+  "retrieval_hash": "sha256:432ae61ec87fd5f115c4bbcdc37c904d5e52df0e655eb4bd0b73d2af5d3f9c4a",
+  "request_hash": "sha256:35e6d6f182e8720f0e260ddccec4b05bc2b3a36c1f6ea121a907486002866592",
+  "request": {
+    "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+    "task_id": "case-06",
+    "context_hash": "sha256:7407f9d3bbd5f9133112ad568c54751898fd72e52496418a0dfe04497d9056eb",
+    "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+    "graph_version": "v0005",
+    "source_context_ref": {
+      "path": "authority.json",
+      "sha256": "sha256:766d5eff21fe0b0db546dc2580a0b4dab5e364b4390648615b55da59a0e9a23e"
+    },
+    "retrieval_hash": "sha256:432ae61ec87fd5f115c4bbcdc37c904d5e52df0e655eb4bd0b73d2af5d3f9c4a",
+    "selections": [
+      {
+        "problem_id": "problem.scalar_control_hot_loop",
+        "reason": "逐元素 index/x/y 访存与rank解码是否应整体改造而非仅缓存字段",
+        "trigger": "observation_match",
+        "related_problem_ids": [],
+        "unexplained_observations": [
+          "逐元素 index/x/y 访存与rank解码是否应整体改造而非仅缓存字段"
+        ]
+      },
+      {
+        "problem_id": "problem.noncontiguous_access",
+        "reason": "随机输入地址与连续输出并存；区分无法消除的随机输入和可批写输出",
+        "trigger": "observation_match",
+        "related_problem_ids": [],
+        "unexplained_observations": [
+          "随机输入地址与连续输出并存；区分无法消除的随机输入和可批写输出"
+        ]
+      },
+      {
+        "problem_id": "problem.control_metadata_overhead",
+        "reason": "每元素64位除模及公共地址前缀可增量更新，核对其与向量化的区别",
+        "trigger": "observation_match",
+        "related_problem_ids": [],
+        "unexplained_observations": [
+          "每元素64位除模及公共地址前缀可增量更新，核对其与向量化的区别"
+        ]
+      },
+      {
+        "problem_id": "problem.register_spill",
+        "reason": "正文提出的替代解释/代价：结合当前gather源码，进一步区分新增局部状态spill、地址控制或容量对流水的限制。",
+        "trigger": "alternative_mechanism",
+        "related_problem_ids": [
+          "problem.control_metadata_overhead"
+        ],
+        "unexplained_observations": [
+          "源码预测是否被该替代机制抵消尚待判别，不能凭没有profile排除"
+        ]
+      }
+    ]
+  },
+  "entries": [
+    {
+      "problem_id": "problem.scalar_control_hot_loop",
+      "reason": "逐元素 index/x/y 访存与rank解码是否应整体改造而非仅缓存字段",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "逐元素 index/x/y 访存与rank解码是否应整体改造而非仅缓存字段"
+      ],
+      "title": "标量逐元素热循环",
+      "mechanism": "本可按向量表达的元素处理使用逐元素Scalar访存或算术 → Scalar重复地址计算与读写并占据指令分发 → 其他流水不能及时获发工作并出现bubble",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "热路径逐元素Scalar读写/算术及下游发射队列",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "kernel Scalar逐元素循环；Vector/Cube/MTE指令分发",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "analysis": {
+        "actions": [
+          {
+            "action_id": "action.vectorize_scalar_loop",
+            "costs": [
+              "UB暂存、mask、尾处理及alias限制",
+              "向量API可能采用不同舍入或异常值行为"
+            ],
+            "intervention": "把满足等价语义的逐元素Scalar数据处理改为批量Vector操作",
+            "requirements": [
+              "symptom.profile.scalar_hot=true",
+              "symptom.source.scalar_element_loop=true",
+              "constraint.semantic_equivalence=true",
+              "constraint.capacity=true"
+            ]
+          }
+        ],
+        "alternatives": [
+          {
+            "check": "查spill/stack和汇编PC归属",
+            "distinction": "寄存器溢出是额外LoadStore而非逐元素算法必需",
+            "problem_id": "problem.register_spill"
+          },
+          {
+            "check": "定位热区是数据处理还是重复元数据",
+            "distinction": "mask/index等控制可外提，不要求逐元素数据运算",
+            "problem_id": "problem.control_metadata_overhead"
+          }
+        ],
+        "counter_checks": [
+          "循环只是少量控制或真正数据相关串行递推，不能用比例高推出可向量化",
+          "Scalar高但主要spill或TilingData访存时应采用相应干预"
+        ],
+        "limits": [
+          "Scalar比例阈值不跨架构使用",
+          "没有PC/指令映射时只保留来源推导",
+          "本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。"
+        ],
+        "mechanism_chain": [
+          "本可按向量表达的元素处理使用逐元素Scalar访存或算术",
+          "Scalar重复地址计算与读写并占据指令分发",
+          "其他流水不能及时获发工作并出现bubble"
+        ],
+        "objects_and_stages": [
+          "热路径逐元素Scalar读写/算术及下游发射队列",
+          "kernel Scalar逐元素循环",
+          "Vector/Cube/MTE指令分发"
+        ],
+        "predictions": [
+          "合法向量化应减少Scalar迭代次数与发射控制；这是prediction"
+        ],
+        "supporting_checks": [
+          "区分Scalar算术、Load/Store、指令分发、ICache及等待",
+          "先审查依赖与有效域，再比较向量API是否产生等价精度"
+        ]
+      },
+      "claims": [
+        {
+          "basis": "legacy_seed",
+          "id": "legacy_seed",
+          "limitations": [
+            "旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            0
+          ],
+          "text": "原种子：标量逐元素热循环；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_scalar_guide",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1
+          ],
+          "text": "Scalar负责地址计算、参数构造和指令分发；文档要求以目标profiling、汇编或编译证据确认Load/Store及spill假设。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_scalar",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4
+          ],
+          "text": "标量编码原则讨论动态数组寻址、别名、变量存活期和热循环内对象构造对Load/Store与寄存器分配的影响。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_vector",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            5,
+            6,
+            7
+          ],
+          "text": "Vector效率文档区分repeat/mask控制、归约指令路径和中间GM往返，count接口与尾处理必须符合API约束。"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_1",
+          "limitations": [
+            "Scalar比例阈值不跨架构使用",
+            "没有PC/指令映射时只保留来源推导"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "text": "本可按向量表达的元素处理使用逐元素Scalar访存或算术"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_2",
+          "limitations": [
+            "Scalar比例阈值不跨架构使用",
+            "没有PC/指令映射时只保留来源推导"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "text": "Scalar重复地址计算与读写并占据指令分发"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_3",
+          "limitations": [
+            "Scalar比例阈值不跨架构使用",
+            "没有PC/指令映射时只保留来源推导"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "text": "其他流水不能及时获发工作并出现bubble"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "prediction_1",
+          "limitations": [
+            "尚无同scope profiling验证，不标为observed或case_support"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "text": "合法向量化应减少Scalar迭代次数与发射控制；这是prediction"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_1",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "text": "区分Scalar算术、Load/Store、指令分发、ICache及等待"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_2",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "text": "先审查依赖与有效域，再比较向量API是否产生等价精度"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_3",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "text": "循环只是少量控制或真正数据相关串行递推，不能用比例高推出可向量化"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_4",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "text": "Scalar高但主要spill或TilingData访存时应采用相应干预"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_1",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "text": "problem.register_spill：寄存器溢出是额外LoadStore而非逐元素算法必需；检查：查spill/stack和汇编PC归属"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_2",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "text": "problem.control_metadata_overhead：mask/index等控制可外提，不要求逐元素数据运算；检查：定位热区是数据处理还是重复元数据"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "intervention",
+          "limitations": [
+            "所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "text": "把满足等价语义的逐元素Scalar数据处理改为批量Vector操作。代价：UB暂存、mask、尾处理及alias限制；向量API可能采用不同舍入或异常值行为"
+        }
+      ],
+      "review": {
+        "discriminating_power": "区分Scalar算术、Load/Store、指令分发、ICache及等待；先审查依赖与有效域，再比较向量API是否产生等价精度；循环只是少量控制或真正数据相关串行递推，不能用比例高推出可向量化",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "Scalar比例阈值不跨架构使用",
+          "没有PC/指令映射时只保留来源推导"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      },
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:262bd2001b98559e30850d1c573d848793147f15e3a4a5ebd0bd733ff2f1510c",
+          "lines": [
+            109,
+            123
+          ],
+          "original_path": "skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md",
+          "path": "skills/ascendc-aprof-diagnosis/graph/history/provenance/skills/aprof/diagnosis/references/api-algorithm-diagnosis-metrics.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:9bf71febdfee0429bc107731ac339a59941e55f0aeed27cd0030a4cd1ec5aaa2",
+          "sha256": "sha256:9bf71febdfee0429bc107731ac339a59941e55f0aeed27cd0030a4cd1ec5aaa2"
+        },
+        {
+          "excerpt_sha256": "sha256:47193296d3dadc4f6cb6cf1c115a43b5e8378f6bccc04e275dac8a22b2a2093a",
+          "lines": [
+            4,
+            8
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/scalar/guide.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/guide.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:1f9161d4bdd0ed256130213ce0e61598369c869b00ce28d54db38f5860536fdc"
+        },
+        {
+          "excerpt_sha256": "sha256:743f93f580f11ed0c9e3153a6818733250ab0799b98476bb2dafceb8fdb27f36",
+          "lines": [
+            15,
+            25
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c"
+        },
+        {
+          "excerpt_sha256": "sha256:efde3ab67b4c0f8b83eb375e8e34414e578d86a54b791806098a317c17ab1979",
+          "lines": [
+            180,
+            240
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c"
+        },
+        {
+          "excerpt_sha256": "sha256:9d6e99db77f3f2de78230014fb6e81a352dafc2a34ebce8451d140c16ed9682f",
+          "lines": [
+            434,
+            442
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c"
+        },
+        {
+          "excerpt_sha256": "sha256:9fdf79fde327ec40103f1244c9c79ee4afac5860645886bc8ca27129f5ded562",
+          "lines": [
+            5,
+            7
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:103bb67af7b9bc8316403167dbfd6e57da2a757dd0bfbc8af03336378051b13e"
+        },
+        {
+          "excerpt_sha256": "sha256:8348896087faf9bd588de56b5e1df00baa68d475f1afab6f8e8276e1f9cc60be",
+          "lines": [
+            64,
+            112
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:103bb67af7b9bc8316403167dbfd6e57da2a757dd0bfbc8af03336378051b13e"
+        },
+        {
+          "excerpt_sha256": "sha256:e5e66d6dfee5187142cfec46bffa5d0f200431651a54f2df298a34412ae93434",
+          "lines": [
+            150,
+            172
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:103bb67af7b9bc8316403167dbfd6e57da2a757dd0bfbc8af03336378051b13e"
+        }
+      ],
+      "body": "# 标量逐元素热循环\n\n## 对象、阶段与适用域\n\n- 热路径逐元素Scalar读写/算术及下游发射队列\n- kernel Scalar逐元素循环\n- Vector/Cube/MTE指令分发\n\n旧scope=all保留作检索范围，机制成立仍须核对目标架构、dtype、shape和API支持。\n\n## 机制链\n\n- 本可按向量表达的元素处理使用逐元素Scalar访存或算术\n- Scalar重复地址计算与读写并占据指令分发\n- 其他流水不能及时获发工作并出现bubble\n\n## 预测、支持检查与反证\n\n- 合法向量化应减少Scalar迭代次数与发射控制；这是prediction\n- 区分Scalar算术、Load/Store、指令分发、ICache及等待\n- 先审查依赖与有效域，再比较向量API是否产生等价精度\n- 循环只是少量控制或真正数据相关串行递推，不能用比例高推出可向量化\n- Scalar高但主要spill或TilingData访存时应采用相应干预\n\n## 具体替代解释\n\n- problem.register_spill：寄存器溢出是额外LoadStore而非逐元素算法必需；检查：查spill/stack和汇编PC归属\n- problem.control_metadata_overhead：mask/index等控制可外提，不要求逐元素数据运算；检查：定位热区是数据处理还是重复元数据\n\n## 候选动作与成本\n\naction.vectorize_scalar_loop：把满足等价语义的逐元素Scalar数据处理改为批量Vector操作。\n\n原硬前提：symptom.profile.scalar_hot=true；symptom.source.scalar_element_loop=true；constraint.semantic_equivalence=true；constraint.capacity=true。\n\n- UB暂存、mask、尾处理及alias限制\n- 向量API可能采用不同舍入或异常值行为\n\n## 限制与缺口\n\n- Scalar比例阈值不跨架构使用\n- 没有PC/指令映射时只保留来源推导\n- 本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。\n\n## 逐项主张与依据\n\n### legacy_seed [legacy_seed]\n\n原种子：标量逐元素热循环；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。\n\n来源索引：0。限制：旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定\n\n### source_scalar_guide [source_statement]\n\nScalar负责地址计算、参数构造和指令分发；文档要求以目标profiling、汇编或编译证据确认Load/Store及spill假设。\n\n来源索引：1。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_scalar [source_statement]\n\n标量编码原则讨论动态数组寻址、别名、变量存活期和热循环内对象构造对Load/Store与寄存器分配的影响。\n\n来源索引：2, 3, 4。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_vector [source_statement]\n\nVector效率文档区分repeat/mask控制、归约指令路径和中间GM往返，count接口与尾处理必须符合API约束。\n\n来源索引：5, 6, 7。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### mechanism_1 [mechanism_inference]\n\n本可按向量表达的元素处理使用逐元素Scalar访存或算术\n\n来源索引：1, 2, 3, 4, 5, 6, 7。限制：Scalar比例阈值不跨架构使用；没有PC/指令映射时只保留来源推导\n\n### mechanism_2 [mechanism_inference]\n\nScalar重复地址计算与读写并占据指令分发\n\n来源索引：1, 2, 3, 4, 5, 6, 7。限制：Scalar比例阈值不跨架构使用；没有PC/指令映射时只保留来源推导\n\n### mechanism_3 [mechanism_inference]\n\n其他流水不能及时获发工作并出现bubble\n\n来源索引：1, 2, 3, 4, 5, 6, 7。限制：Scalar比例阈值不跨架构使用；没有PC/指令映射时只保留来源推导\n\n### prediction_1 [mechanism_inference]\n\n合法向量化应减少Scalar迭代次数与发射控制；这是prediction\n\n来源索引：1, 2, 3, 4, 5, 6, 7。限制：尚无同scope profiling验证，不标为observed或case_support\n\n### check_1 [mechanism_inference]\n\n区分Scalar算术、Load/Store、指令分发、ICache及等待\n\n来源索引：1, 2, 3, 4, 5, 6, 7。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_2 [mechanism_inference]\n\n先审查依赖与有效域，再比较向量API是否产生等价精度\n\n来源索引：1, 2, 3, 4, 5, 6, 7。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_3 [mechanism_inference]\n\n循环只是少量控制或真正数据相关串行递推，不能用比例高推出可向量化\n\n来源索引：1, 2, 3, 4, 5, 6, 7。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_4 [mechanism_inference]\n\nScalar高但主要spill或TilingData访存时应采用相应干预\n\n来源索引：1, 2, 3, 4, 5, 6, 7。限制：这是判别程序定义，执行结果由任务证据填充\n\n### alternative_1 [mechanism_inference]\n\nproblem.register_spill：寄存器溢出是额外LoadStore而非逐元素算法必需；检查：查spill/stack和汇编PC归属\n\n来源索引：1, 2, 3, 4, 5, 6, 7。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### alternative_2 [mechanism_inference]\n\nproblem.control_metadata_overhead：mask/index等控制可外提，不要求逐元素数据运算；检查：定位热区是数据处理还是重复元数据\n\n来源索引：1, 2, 3, 4, 5, 6, 7。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### intervention [mechanism_inference]\n\n把满足等价语义的逐元素Scalar数据处理改为批量Vector操作。代价：UB暂存、mask、尾处理及alias限制；向量API可能采用不同舍入或异常值行为\n\n来源索引：1, 2, 3, 4, 5, 6, 7。限制：所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+      "source_hash": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec",
+      "template_hash": "sha256:37149daaaa6592d644188aa2382827c136e094d4d888a564e9f397274b3fbbb1",
+      "body_sha256": "sha256:bb9738e83ec58c2576f4313fe0b3ba4224dc420a4e4a8356b1ec35919ad844cc",
+      "scope_status": "match"
+    },
+    {
+      "problem_id": "problem.noncontiguous_access",
+      "reason": "随机输入地址与连续输出并存；区分无法消除的随机输入和可批写输出",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "随机输入地址与连续输出并存；区分无法消除的随机输入和可批写输出"
+      ],
+      "title": "非连续访问破坏有效搬运",
+      "mechanism": "切分或遍历轴跨过物理连续内轴 → 相同有效元素分解成离散事务、短块或额外padding → 发射与实际流量增加使有效字节带宽下降",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "带明确shape、layout、stride和有效索引域的输入或输出切片",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host选取切分轴；kernel GM地址生成与DataCopy",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "analysis": {
+        "actions": [
+          {
+            "action_id": "action.reorder_contiguous_access",
+            "costs": [
+              "额外转置/索引表及UB暂存",
+              "重排可能损失输入复用或改变每核负载"
+            ],
+            "intervention": "沿连续内轴重新组织合法tile或使用目标支持的批量strided搬运",
+            "requirements": [
+              "symptom.source.noncontiguous_access=true",
+              "constraint.layout_semantics=true",
+              "constraint.semantic_equivalence=true",
+              "constraint.capacity=true"
+            ]
+          }
+        ],
+        "alternatives": [
+          {
+            "check": "固定单块字节后比较stride；固定stride后比较合并",
+            "distinction": "离散布局是几何原因，setup是每次发射固定成本，可共存",
+            "problem_id": "problem.tiny_transfer_setup_amplification"
+          },
+          {
+            "check": "标出哪些轴因广播而重复、哪些轴物理不连续",
+            "distinction": "广播的零stride重复输入应另计复用和展开成本",
+            "problem_id": "problem.broadcast_strategy_mismatch"
+          }
+        ],
+        "counter_checks": [
+          "原地址已连续且事务数符合模型，则不能归因于跨轴",
+          "稀疏索引语义本身要求离散访问时，重排空间受owner和输出顺序约束"
+        ],
+        "limits": [
+          "DataCopy stride的字节/datablock单位按具体API核对",
+          "不把arch35 NDDMA能力用于arch22",
+          "本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。"
+        ],
+        "mechanism_chain": [
+          "切分或遍历轴跨过物理连续内轴",
+          "相同有效元素分解成离散事务、短块或额外padding",
+          "发射与实际流量增加使有效字节带宽下降"
+        ],
+        "objects_and_stages": [
+          "带明确shape、layout、stride和有效索引域的输入或输出切片",
+          "host选取切分轴",
+          "kernel GM地址生成与DataCopy"
+        ],
+        "predictions": [
+          "合法交换遍历/切分轴后短块数应减少；这是prediction",
+          "若要额外转置，节省搬运未必覆盖格式转换成本"
+        ],
+        "supporting_checks": [
+          "沿至少两个连续tile手工核对GM地址差，区分逻辑索引与实际事务",
+          "使用相同shape、dtype、缓存状态的连续形态作参照"
+        ]
+      },
+      "claims": [
+        {
+          "basis": "legacy_seed",
+          "id": "legacy_seed",
+          "limitations": [
+            "旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            0,
+            1
+          ],
+          "text": "原种子：非连续访问破坏有效搬运；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_copy",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4
+          ],
+          "text": "来源将批量合并搬运与减少DMA启动次数联系起来，并明确经验粒度阈值只针对原设备。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_fa_pipe",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            5,
+            6,
+            7
+          ],
+          "text": "arch22 FA文档联合评估tile、AIC/AIV核数、buffer深度、workspace与局部/跨核同步，并比较Split-KV节省路径和归并成本。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_broadcast",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            8,
+            9,
+            10
+          ],
+          "text": "广播路由先合并同类轴并计算零stride，按目标架构、尾轴连续性和重复读成本选择广播阶段。"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_1",
+          "limitations": [
+            "DataCopy stride的字节/datablock单位按具体API核对",
+            "不把arch35 NDDMA能力用于arch22"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "切分或遍历轴跨过物理连续内轴"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_2",
+          "limitations": [
+            "DataCopy stride的字节/datablock单位按具体API核对",
+            "不把arch35 NDDMA能力用于arch22"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "相同有效元素分解成离散事务、短块或额外padding"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_3",
+          "limitations": [
+            "DataCopy stride的字节/datablock单位按具体API核对",
+            "不把arch35 NDDMA能力用于arch22"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "发射与实际流量增加使有效字节带宽下降"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "prediction_1",
+          "limitations": [
+            "尚无同scope profiling验证，不标为observed或case_support"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "合法交换遍历/切分轴后短块数应减少；这是prediction"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "prediction_2",
+          "limitations": [
+            "尚无同scope profiling验证，不标为observed或case_support"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "若要额外转置，节省搬运未必覆盖格式转换成本"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_1",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "沿至少两个连续tile手工核对GM地址差，区分逻辑索引与实际事务"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_2",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "使用相同shape、dtype、缓存状态的连续形态作参照"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_3",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "原地址已连续且事务数符合模型，则不能归因于跨轴"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_4",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "稀疏索引语义本身要求离散访问时，重排空间受owner和输出顺序约束"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_1",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "problem.tiny_transfer_setup_amplification：离散布局是几何原因，setup是每次发射固定成本，可共存；检查：固定单块字节后比较stride；固定stride后比较合并"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_2",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "problem.broadcast_strategy_mismatch：广播的零stride重复输入应另计复用和展开成本；检查：标出哪些轴因广播而重复、哪些轴物理不连续"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "intervention",
+          "limitations": [
+            "所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "text": "沿连续内轴重新组织合法tile或使用目标支持的批量strided搬运。代价：额外转置/索引表及UB暂存；重排可能损失输入复用或改变每核负载"
+        }
+      ],
+      "review": {
+        "discriminating_power": "沿至少两个连续tile手工核对GM地址差，区分逻辑索引与实际事务；使用相同shape、dtype、缓存状态的连续形态作参照；原地址已连续且事务数符合模型，则不能归因于跨轴",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "DataCopy stride的字节/datablock单位按具体API核对",
+          "不把arch35 NDDMA能力用于arch22"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      },
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:00eb8d64b092277b1c935e9c8be46c2c2e00e282524b2039599e07becad94fc6",
+          "lines": [
+            73,
+            73
+          ],
+          "original_path": "skills/ascendc-aprof-diagnosis/references/data-movement-diagnosis-metrics.md",
+          "path": "workflows/migration/archive/skills/ascendc-aprof-diagnosis/references/data-movement-diagnosis-metrics.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:58e28c093db98279fc16b45d1140c4673e3f9b312392618908c515bdc58b04e3",
+          "sha256": "sha256:58e28c093db98279fc16b45d1140c4673e3f9b312392618908c515bdc58b04e3"
+        },
+        {
+          "excerpt_sha256": "sha256:53dd341a3953c0ebcd6d554405b122473a6143213ae0d4df6a59985fa8026b7b",
+          "lines": [
+            72,
+            72
+          ],
+          "original_path": "skills/ascendc-aprof-diagnosis/references/tiling-diagnosis-metrics.md",
+          "path": "workflows/migration/archive/skills/ascendc-aprof-diagnosis/references/tiling-diagnosis-metrics.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:886061117d25c4db2c617f5b8a899911a3e57502fb8a4136eda024dcf6e20bb5",
+          "sha256": "sha256:886061117d25c4db2c617f5b8a899911a3e57502fb8a4136eda024dcf6e20bb5"
+        },
+        {
+          "excerpt_sha256": "sha256:5e467f037325364ca135631c4c9a41c7f69834af8d2348b1be493c82cdf5a820",
+          "lines": [
+            7,
+            10
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:dbb672d9f6f872d02ba5a255ac9b1949595d8fa869efb174c27895da04560a38"
+        },
+        {
+          "excerpt_sha256": "sha256:34fb85b54e7b505ed72fd234f9664cf45cab62643b24a4aed606925df8559689",
+          "lines": [
+            45,
+            55
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:dbb672d9f6f872d02ba5a255ac9b1949595d8fa869efb174c27895da04560a38"
+        },
+        {
+          "excerpt_sha256": "sha256:00a813bbe2ea146de5a8703ee82bfb0014b8c70b92b498646c7cd450099c5737",
+          "lines": [
+            233,
+            251
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:dbb672d9f6f872d02ba5a255ac9b1949595d8fa869efb174c27895da04560a38"
+        },
+        {
+          "excerpt_sha256": "sha256:f4d5ee6d43583e164553d6e72c11d144adc5e7dbb966c702ca18e8ec2a8a7b78",
+          "lines": [
+            18,
+            33
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:ea3be814234904a2d8a4a3b99847aec00c849f3fb3ce2647390a3dce0a734ba1"
+        },
+        {
+          "excerpt_sha256": "sha256:dc896cfcbfffa7de6bc4d9b2f1eb4c536716f35f29689acb633887f4b086cdbc",
+          "lines": [
+            35,
+            71
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:ea3be814234904a2d8a4a3b99847aec00c849f3fb3ce2647390a3dce0a734ba1"
+        },
+        {
+          "excerpt_sha256": "sha256:f5378d0c338c8fa65447c183c9d1bc14ac0c887e5159d9e5eab387d8836ae12f",
+          "lines": [
+            73,
+            101
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:ea3be814234904a2d8a4a3b99847aec00c849f3fb3ce2647390a3dce0a734ba1"
+        },
+        {
+          "excerpt_sha256": "sha256:5b96164d546a32ef2093bce71caf3c779d4f18b2266326ffceeda2b3de88ed58",
+          "lines": [
+            9,
+            18
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/broadcast/patterns.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/broadcast/patterns.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:8b118ddbc4e70ada3debaf013838c8690abc85bb5f9d847d113ed2db40208830"
+        },
+        {
+          "excerpt_sha256": "sha256:4d475886f86ed85a22e839908359ce5326af94cd59de4fba6dd119f991c18945",
+          "lines": [
+            52,
+            82
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/broadcast/patterns.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/broadcast/patterns.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:8b118ddbc4e70ada3debaf013838c8690abc85bb5f9d847d113ed2db40208830"
+        },
+        {
+          "excerpt_sha256": "sha256:0180281f8bb1668472247bd7c89726831dc136d53c064275653b31301a7b7df8",
+          "lines": [
+            133,
+            141
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/broadcast/patterns.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/broadcast/patterns.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:8b118ddbc4e70ada3debaf013838c8690abc85bb5f9d847d113ed2db40208830"
+        }
+      ],
+      "body": "# 非连续访问破坏有效搬运\n\n## 对象、阶段与适用域\n\n- 带明确shape、layout、stride和有效索引域的输入或输出切片\n- host选取切分轴\n- kernel GM地址生成与DataCopy\n\n旧scope=all保留作检索范围，机制成立仍须核对目标架构、dtype、shape和API支持。\n\n## 机制链\n\n- 切分或遍历轴跨过物理连续内轴\n- 相同有效元素分解成离散事务、短块或额外padding\n- 发射与实际流量增加使有效字节带宽下降\n\n## 预测、支持检查与反证\n\n- 合法交换遍历/切分轴后短块数应减少；这是prediction\n- 若要额外转置，节省搬运未必覆盖格式转换成本\n- 沿至少两个连续tile手工核对GM地址差，区分逻辑索引与实际事务\n- 使用相同shape、dtype、缓存状态的连续形态作参照\n- 原地址已连续且事务数符合模型，则不能归因于跨轴\n- 稀疏索引语义本身要求离散访问时，重排空间受owner和输出顺序约束\n\n## 具体替代解释\n\n- problem.tiny_transfer_setup_amplification：离散布局是几何原因，setup是每次发射固定成本，可共存；检查：固定单块字节后比较stride；固定stride后比较合并\n- problem.broadcast_strategy_mismatch：广播的零stride重复输入应另计复用和展开成本；检查：标出哪些轴因广播而重复、哪些轴物理不连续\n\n## 候选动作与成本\n\naction.reorder_contiguous_access：沿连续内轴重新组织合法tile或使用目标支持的批量strided搬运。\n\n原硬前提：symptom.source.noncontiguous_access=true；constraint.layout_semantics=true；constraint.semantic_equivalence=true；constraint.capacity=true。\n\n- 额外转置/索引表及UB暂存\n- 重排可能损失输入复用或改变每核负载\n\n## 限制与缺口\n\n- DataCopy stride的字节/datablock单位按具体API核对\n- 不把arch35 NDDMA能力用于arch22\n- 本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。\n\n## 逐项主张与依据\n\n### legacy_seed [legacy_seed]\n\n原种子：非连续访问破坏有效搬运；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。\n\n来源索引：0, 1。限制：旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定\n\n### source_copy [source_statement]\n\n来源将批量合并搬运与减少DMA启动次数联系起来，并明确经验粒度阈值只针对原设备。\n\n来源索引：2, 3, 4。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_fa_pipe [source_statement]\n\narch22 FA文档联合评估tile、AIC/AIV核数、buffer深度、workspace与局部/跨核同步，并比较Split-KV节省路径和归并成本。\n\n来源索引：5, 6, 7。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_broadcast [source_statement]\n\n广播路由先合并同类轴并计算零stride，按目标架构、尾轴连续性和重复读成本选择广播阶段。\n\n来源索引：8, 9, 10。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### mechanism_1 [mechanism_inference]\n\n切分或遍历轴跨过物理连续内轴\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：DataCopy stride的字节/datablock单位按具体API核对；不把arch35 NDDMA能力用于arch22\n\n### mechanism_2 [mechanism_inference]\n\n相同有效元素分解成离散事务、短块或额外padding\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：DataCopy stride的字节/datablock单位按具体API核对；不把arch35 NDDMA能力用于arch22\n\n### mechanism_3 [mechanism_inference]\n\n发射与实际流量增加使有效字节带宽下降\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：DataCopy stride的字节/datablock单位按具体API核对；不把arch35 NDDMA能力用于arch22\n\n### prediction_1 [mechanism_inference]\n\n合法交换遍历/切分轴后短块数应减少；这是prediction\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：尚无同scope profiling验证，不标为observed或case_support\n\n### prediction_2 [mechanism_inference]\n\n若要额外转置，节省搬运未必覆盖格式转换成本\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：尚无同scope profiling验证，不标为observed或case_support\n\n### check_1 [mechanism_inference]\n\n沿至少两个连续tile手工核对GM地址差，区分逻辑索引与实际事务\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_2 [mechanism_inference]\n\n使用相同shape、dtype、缓存状态的连续形态作参照\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_3 [mechanism_inference]\n\n原地址已连续且事务数符合模型，则不能归因于跨轴\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_4 [mechanism_inference]\n\n稀疏索引语义本身要求离散访问时，重排空间受owner和输出顺序约束\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：这是判别程序定义，执行结果由任务证据填充\n\n### alternative_1 [mechanism_inference]\n\nproblem.tiny_transfer_setup_amplification：离散布局是几何原因，setup是每次发射固定成本，可共存；检查：固定单块字节后比较stride；固定stride后比较合并\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### alternative_2 [mechanism_inference]\n\nproblem.broadcast_strategy_mismatch：广播的零stride重复输入应另计复用和展开成本；检查：标出哪些轴因广播而重复、哪些轴物理不连续\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### intervention [mechanism_inference]\n\n沿连续内轴重新组织合法tile或使用目标支持的批量strided搬运。代价：额外转置/索引表及UB暂存；重排可能损失输入复用或改变每核负载\n\n来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+      "source_hash": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db",
+      "template_hash": "sha256:b8b97c96d423b4dd0714e9612326c6c39be649431d705168f95732f5a4c91e79",
+      "body_sha256": "sha256:29c29950c63fe546e68ba3f376adc1d3692c5d177c40a065cb3053f58441d491",
+      "scope_status": "match"
+    },
+    {
+      "problem_id": "problem.control_metadata_overhead",
+      "reason": "每元素64位除模及公共地址前缀可增量更新，核对其与向量化的区别",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "每元素64位除模及公共地址前缀可增量更新，核对其与向量化的区别"
+      ],
+      "title": "循环控制与元数据开销",
+      "mechanism": "循环不变字段或公共地址前缀在每轮重复加载/计算 → Scalar为同一信息反复执行解引用、乘除或分支 → 指令发射被控制工作占用而拖慢有效流水",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "热循环中重复读取的TilingData字段、mask、索引和分支",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host元数据定义；kernel Init与主循环",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "analysis": {
+        "actions": [
+          {
+            "action_id": "action.hoist_invariant_control",
+            "costs": [
+              "延长变量生存期和寄存器占用",
+              "代码特化或主尾分离可能增大指令体积"
+            ],
+            "intervention": "把已证明不变的控制、地址前缀或热点字段移到合适外层并缓存",
+            "requirements": [
+              "symptom.source.control_metadata_overhead=true",
+              "constraint.control_equivalence=true",
+              "constraint.semantic_equivalence=true",
+              "constraint.capacity=true"
+            ]
+          }
+        ],
+        "alternatives": [
+          {
+            "check": "按PC定位mask/index/metadata或元素load算术",
+            "distinction": "重复控制与逐元素数据处理不同",
+            "problem_id": "problem.scalar_control_hot_loop"
+          },
+          {
+            "check": "前后核对编译spill与热循环LoadStore",
+            "distinction": "外提变量可能延长生存期并诱发spill",
+            "problem_id": "problem.register_spill"
+          }
+        ],
+        "counter_checks": [
+          "编译器已折叠/外提或字段随loop变化时，源码重复不等于运行重复成本",
+          "增局部缓存导致寄存器压力上升时需比较spill"
+        ],
+        "limits": [
+          "不改变host/kernel ABI",
+          "跨paged/non-paged或mask分支必须重新证明不变量",
+          "本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。"
+        ],
+        "mechanism_chain": [
+          "循环不变字段或公共地址前缀在每轮重复加载/计算",
+          "Scalar为同一信息反复执行解引用、乘除或分支",
+          "指令发射被控制工作占用而拖慢有效流水"
+        ],
+        "objects_and_stages": [
+          "热循环中重复读取的TilingData字段、mask、索引和分支",
+          "host元数据定义",
+          "kernel Init与主循环"
+        ],
+        "predictions": [
+          "合法外提或局部缓存不变量可减少每轮Scalar指令；这是prediction"
+        ],
+        "supporting_checks": [
+          "区分按任务变化、按tile变化与循环常量，不能全局缓存动态字段",
+          "将TilingData大结构拷贝与少量热点字段重复读取分别核算"
+        ]
+      },
+      "claims": [
+        {
+          "basis": "legacy_seed",
+          "id": "legacy_seed",
+          "limitations": [
+            "旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            0,
+            1,
+            2
+          ],
+          "text": "原种子：循环控制与元数据开销；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_fa_scalar",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            3,
+            4,
+            5
+          ],
+          "text": "arch22 FA文档区分取指停顿、同步等待、Scalar GM load和热循环不变量，只有对应证据成立时才选择干预。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_scalar",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            6,
+            7,
+            8
+          ],
+          "text": "标量编码原则讨论动态数组寻址、别名、变量存活期和热循环内对象构造对Load/Store与寄存器分配的影响。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_scalar_guide",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            9
+          ],
+          "text": "Scalar负责地址计算、参数构造和指令分发；文档要求以目标profiling、汇编或编译证据确认Load/Store及spill假设。"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_1",
+          "limitations": [
+            "不改变host/kernel ABI",
+            "跨paged/non-paged或mask分支必须重新证明不变量"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "循环不变字段或公共地址前缀在每轮重复加载/计算"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_2",
+          "limitations": [
+            "不改变host/kernel ABI",
+            "跨paged/non-paged或mask分支必须重新证明不变量"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "Scalar为同一信息反复执行解引用、乘除或分支"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_3",
+          "limitations": [
+            "不改变host/kernel ABI",
+            "跨paged/non-paged或mask分支必须重新证明不变量"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "指令发射被控制工作占用而拖慢有效流水"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "prediction_1",
+          "limitations": [
+            "尚无同scope profiling验证，不标为observed或case_support"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "合法外提或局部缓存不变量可减少每轮Scalar指令；这是prediction"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_1",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "区分按任务变化、按tile变化与循环常量，不能全局缓存动态字段"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_2",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "将TilingData大结构拷贝与少量热点字段重复读取分别核算"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_3",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "编译器已折叠/外提或字段随loop变化时，源码重复不等于运行重复成本"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_4",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "增局部缓存导致寄存器压力上升时需比较spill"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_1",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "problem.scalar_control_hot_loop：重复控制与逐元素数据处理不同；检查：按PC定位mask/index/metadata或元素load算术"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_2",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "problem.register_spill：外提变量可能延长生存期并诱发spill；检查：前后核对编译spill与热循环LoadStore"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "intervention",
+          "limitations": [
+            "所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "把已证明不变的控制、地址前缀或热点字段移到合适外层并缓存。代价：延长变量生存期和寄存器占用；代码特化或主尾分离可能增大指令体积"
+        }
+      ],
+      "review": {
+        "discriminating_power": "区分按任务变化、按tile变化与循环常量，不能全局缓存动态字段；将TilingData大结构拷贝与少量热点字段重复读取分别核算；编译器已折叠/外提或字段随loop变化时，源码重复不等于运行重复成本",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "不改变host/kernel ABI",
+          "跨paged/non-paged或mask分支必须重新证明不变量"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      },
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:e3fee122fde5b0c1cc133b6c2423df3118f018c3a989704461d8541a91f8c403",
+          "lines": [
+            33,
+            33
+          ],
+          "original_path": "skills/ascendc-aprof-diagnosis/references/bound-deep-routing.md",
+          "path": "workflows/migration/archive/skills/ascendc-aprof-diagnosis/references/bound-deep-routing.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:620c25b91946e0523ffc99aaddae20b8b6989d8b6a1474d7c15c49cb43bfbbbe",
+          "sha256": "sha256:620c25b91946e0523ffc99aaddae20b8b6989d8b6a1474d7c15c49cb43bfbbbe"
+        },
+        {
+          "excerpt_sha256": "sha256:aba4d9e8aad40479336071b1a316b5e76ee068235a8d00468b9163bb00035121",
+          "lines": [
+            34,
+            34
+          ],
+          "original_path": "skills/ascendc-aprof-diagnosis/references/bound-deep-routing.md",
+          "path": "workflows/migration/archive/skills/ascendc-aprof-diagnosis/references/bound-deep-routing.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:620c25b91946e0523ffc99aaddae20b8b6989d8b6a1474d7c15c49cb43bfbbbe",
+          "sha256": "sha256:620c25b91946e0523ffc99aaddae20b8b6989d8b6a1474d7c15c49cb43bfbbbe"
+        },
+        {
+          "excerpt_sha256": "sha256:01a42765a9b26cce6d4684b214832a6fc39feab8ef30b3bfdf08887ff86a6ee1",
+          "lines": [
+            123,
+            123
+          ],
+          "original_path": "skills/ascendc-aprof-diagnosis/references/api-algorithm-diagnosis-metrics.md",
+          "path": "workflows/migration/archive/skills/ascendc-aprof-diagnosis/references/api-algorithm-diagnosis-metrics.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:9c1fc5b3c90ba93734ca1e2ff7e074b3091bd506ffdd457165e46f80fdb9a214",
+          "sha256": "sha256:9c1fc5b3c90ba93734ca1e2ff7e074b3091bd506ffdd457165e46f80fdb9a214"
+        },
+        {
+          "excerpt_sha256": "sha256:daa5c71afdd9203a851bc63e4d5b8f2470192d42e3b784376a2125f49da6614f",
+          "lines": [
+            5,
+            16
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/flash_attention/arch22/scalar_overhead_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/flash_attention/arch22/scalar_overhead_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:5980d08caaca929c00df820df4ef855e52d8574db112d97f57078e9131ed09a1"
+        },
+        {
+          "excerpt_sha256": "sha256:2d371617b27836b065f65bcc8eac62ab8a05a821f789bc4ed7b6ff122fa08056",
+          "lines": [
+            29,
+            31
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/flash_attention/arch22/scalar_overhead_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/flash_attention/arch22/scalar_overhead_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:5980d08caaca929c00df820df4ef855e52d8574db112d97f57078e9131ed09a1"
+        },
+        {
+          "excerpt_sha256": "sha256:4183fa20b6ce2527ac67cfe3660a36690efbf2c7a55054ddbf710c5d98708489",
+          "lines": [
+            52,
+            78
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/flash_attention/arch22/scalar_overhead_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/flash_attention/arch22/scalar_overhead_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:5980d08caaca929c00df820df4ef855e52d8574db112d97f57078e9131ed09a1"
+        },
+        {
+          "excerpt_sha256": "sha256:743f93f580f11ed0c9e3153a6818733250ab0799b98476bb2dafceb8fdb27f36",
+          "lines": [
+            15,
+            25
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c"
+        },
+        {
+          "excerpt_sha256": "sha256:efde3ab67b4c0f8b83eb375e8e34414e578d86a54b791806098a317c17ab1979",
+          "lines": [
+            180,
+            240
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c"
+        },
+        {
+          "excerpt_sha256": "sha256:9d6e99db77f3f2de78230014fb6e81a352dafc2a34ebce8451d140c16ed9682f",
+          "lines": [
+            434,
+            442
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c"
+        },
+        {
+          "excerpt_sha256": "sha256:47193296d3dadc4f6cb6cf1c115a43b5e8378f6bccc04e275dac8a22b2a2093a",
+          "lines": [
+            4,
+            8
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/scalar/guide.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/guide.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:1f9161d4bdd0ed256130213ce0e61598369c869b00ce28d54db38f5860536fdc"
+        }
+      ],
+      "body": "# 循环控制与元数据开销\n\n## 对象、阶段与适用域\n\n- 热循环中重复读取的TilingData字段、mask、索引和分支\n- host元数据定义\n- kernel Init与主循环\n\n旧scope=all保留作检索范围，机制成立仍须核对目标架构、dtype、shape和API支持。\n\n## 机制链\n\n- 循环不变字段或公共地址前缀在每轮重复加载/计算\n- Scalar为同一信息反复执行解引用、乘除或分支\n- 指令发射被控制工作占用而拖慢有效流水\n\n## 预测、支持检查与反证\n\n- 合法外提或局部缓存不变量可减少每轮Scalar指令；这是prediction\n- 区分按任务变化、按tile变化与循环常量，不能全局缓存动态字段\n- 将TilingData大结构拷贝与少量热点字段重复读取分别核算\n- 编译器已折叠/外提或字段随loop变化时，源码重复不等于运行重复成本\n- 增局部缓存导致寄存器压力上升时需比较spill\n\n## 具体替代解释\n\n- problem.scalar_control_hot_loop：重复控制与逐元素数据处理不同；检查：按PC定位mask/index/metadata或元素load算术\n- problem.register_spill：外提变量可能延长生存期并诱发spill；检查：前后核对编译spill与热循环LoadStore\n\n## 候选动作与成本\n\naction.hoist_invariant_control：把已证明不变的控制、地址前缀或热点字段移到合适外层并缓存。\n\n原硬前提：symptom.source.control_metadata_overhead=true；constraint.control_equivalence=true；constraint.semantic_equivalence=true；constraint.capacity=true。\n\n- 延长变量生存期和寄存器占用\n- 代码特化或主尾分离可能增大指令体积\n\n## 限制与缺口\n\n- 不改变host/kernel ABI\n- 跨paged/non-paged或mask分支必须重新证明不变量\n- 本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。\n\n## 逐项主张与依据\n\n### legacy_seed [legacy_seed]\n\n原种子：循环控制与元数据开销；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。\n\n来源索引：0, 1, 2。限制：旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定\n\n### source_fa_scalar [source_statement]\n\narch22 FA文档区分取指停顿、同步等待、Scalar GM load和热循环不变量，只有对应证据成立时才选择干预。\n\n来源索引：3, 4, 5。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_scalar [source_statement]\n\n标量编码原则讨论动态数组寻址、别名、变量存活期和热循环内对象构造对Load/Store与寄存器分配的影响。\n\n来源索引：6, 7, 8。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_scalar_guide [source_statement]\n\nScalar负责地址计算、参数构造和指令分发；文档要求以目标profiling、汇编或编译证据确认Load/Store及spill假设。\n\n来源索引：9。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### mechanism_1 [mechanism_inference]\n\n循环不变字段或公共地址前缀在每轮重复加载/计算\n\n来源索引：3, 4, 5, 6, 7, 8, 9。限制：不改变host/kernel ABI；跨paged/non-paged或mask分支必须重新证明不变量\n\n### mechanism_2 [mechanism_inference]\n\nScalar为同一信息反复执行解引用、乘除或分支\n\n来源索引：3, 4, 5, 6, 7, 8, 9。限制：不改变host/kernel ABI；跨paged/non-paged或mask分支必须重新证明不变量\n\n### mechanism_3 [mechanism_inference]\n\n指令发射被控制工作占用而拖慢有效流水\n\n来源索引：3, 4, 5, 6, 7, 8, 9。限制：不改变host/kernel ABI；跨paged/non-paged或mask分支必须重新证明不变量\n\n### prediction_1 [mechanism_inference]\n\n合法外提或局部缓存不变量可减少每轮Scalar指令；这是prediction\n\n来源索引：3, 4, 5, 6, 7, 8, 9。限制：尚无同scope profiling验证，不标为observed或case_support\n\n### check_1 [mechanism_inference]\n\n区分按任务变化、按tile变化与循环常量，不能全局缓存动态字段\n\n来源索引：3, 4, 5, 6, 7, 8, 9。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_2 [mechanism_inference]\n\n将TilingData大结构拷贝与少量热点字段重复读取分别核算\n\n来源索引：3, 4, 5, 6, 7, 8, 9。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_3 [mechanism_inference]\n\n编译器已折叠/外提或字段随loop变化时，源码重复不等于运行重复成本\n\n来源索引：3, 4, 5, 6, 7, 8, 9。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_4 [mechanism_inference]\n\n增局部缓存导致寄存器压力上升时需比较spill\n\n来源索引：3, 4, 5, 6, 7, 8, 9。限制：这是判别程序定义，执行结果由任务证据填充\n\n### alternative_1 [mechanism_inference]\n\nproblem.scalar_control_hot_loop：重复控制与逐元素数据处理不同；检查：按PC定位mask/index/metadata或元素load算术\n\n来源索引：3, 4, 5, 6, 7, 8, 9。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### alternative_2 [mechanism_inference]\n\nproblem.register_spill：外提变量可能延长生存期并诱发spill；检查：前后核对编译spill与热循环LoadStore\n\n来源索引：3, 4, 5, 6, 7, 8, 9。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### intervention [mechanism_inference]\n\n把已证明不变的控制、地址前缀或热点字段移到合适外层并缓存。代价：延长变量生存期和寄存器占用；代码特化或主尾分离可能增大指令体积\n\n来源索引：3, 4, 5, 6, 7, 8, 9。限制：所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+      "source_hash": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4",
+      "template_hash": "sha256:072a26af5fa0a7b4898518a5c51427018a87e316e3b24ad42e4b332d7f3ef155",
+      "body_sha256": "sha256:e8764280ba8fa54d21e0c7763f4b99a0f9076557e773ef1ea8810414afaf1c0c",
+      "scope_status": "match"
+    },
+    {
+      "problem_id": "problem.register_spill",
+      "reason": "正文提出的替代解释/代价：结合当前gather源码，进一步区分新增局部状态spill、地址控制或容量对流水的限制。",
+      "trigger": "alternative_mechanism",
+      "related_problem_ids": [
+        "problem.control_metadata_overhead"
+      ],
+      "unexplained_observations": [
+        "源码预测是否被该替代机制抵消尚待判别，不能凭没有profile排除"
+      ],
+      "title": "寄存器压力引发 spill",
+      "mechanism": "动态索引、大对象、取地址或过长生存期增加寄存器分配压力 → 编译器把部分值保存到栈/内存并在热区重载 → 非算法必要LoadStore与依赖增加关键路径",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "指定编译配置下Scalar寄存器存活集合及栈/LoadStore指令",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "kernel热路径编译；Scalar寄存器分配与执行",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "analysis": {
+        "actions": [
+          {
+            "action_id": "action.shorten_scalar_lifetimes",
+            "costs": [
+              "重计算可能增加算术量",
+              "拆分与展开改变代码体积/ICache压力"
+            ],
+            "intervention": "缩短标量变量生存期、减少不必要取地址或拆分热区对象",
+            "requirements": [
+              "symptom.source.register_spill=true",
+              "constraint.compiler_report=true",
+              "constraint.semantic_equivalence=true",
+              "constraint.capacity=true"
+            ]
+          }
+        ],
+        "alternatives": [
+          {
+            "check": "看栈偏移、编译报告与字段地址",
+            "distinction": "元数据重复读取可能无需寄存器溢出",
+            "problem_id": "problem.control_metadata_overhead"
+          },
+          {
+            "check": "使用不同资源账本与报告",
+            "distinction": "寄存器/栈与UB/L1容量独立",
+            "problem_id": "problem.onchip_capacity_pressure"
+          }
+        ],
+        "counter_checks": [
+          "生成物无spill且LoadStore均有算法来源，反证实际spill机制",
+          "仅有局部变量多或结构体大不足以认定spill"
+        ],
+        "limits": [
+          "编译器版本和优化选项改变结论，需绑定artifact",
+          "源码审读不声称已证实spill",
+          "本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。"
+        ],
+        "mechanism_chain": [
+          "动态索引、大对象、取地址或过长生存期增加寄存器分配压力",
+          "编译器把部分值保存到栈/内存并在热区重载",
+          "非算法必要LoadStore与依赖增加关键路径"
+        ],
+        "objects_and_stages": [
+          "指定编译配置下Scalar寄存器存活集合及栈/LoadStore指令",
+          "kernel热路径编译",
+          "Scalar寄存器分配与执行"
+        ],
+        "predictions": [
+          "缩短生存期或减少取地址可能减少spill；编译结果决定是否成立，属prediction"
+        ],
+        "supporting_checks": [
+          "先把必要GM标量读取、成员解引用与实际spill分开",
+          "保持编译配置比较报告及热PC，不能把所有LoadStore统称spill"
+        ]
+      },
+      "claims": [
+        {
+          "basis": "legacy_seed",
+          "id": "legacy_seed",
+          "limitations": [
+            "旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            0
+          ],
+          "text": "原种子：寄存器压力引发 spill；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_scalar",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3
+          ],
+          "text": "标量编码原则讨论动态数组寻址、别名、变量存活期和热循环内对象构造对Load/Store与寄存器分配的影响。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_scalar_guide",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            4
+          ],
+          "text": "Scalar负责地址计算、参数构造和指令分发；文档要求以目标profiling、汇编或编译证据确认Load/Store及spill假设。"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_1",
+          "limitations": [
+            "编译器版本和优化选项改变结论，需绑定artifact",
+            "源码审读不声称已证实spill"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "text": "动态索引、大对象、取地址或过长生存期增加寄存器分配压力"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_2",
+          "limitations": [
+            "编译器版本和优化选项改变结论，需绑定artifact",
+            "源码审读不声称已证实spill"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "text": "编译器把部分值保存到栈/内存并在热区重载"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_3",
+          "limitations": [
+            "编译器版本和优化选项改变结论，需绑定artifact",
+            "源码审读不声称已证实spill"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "text": "非算法必要LoadStore与依赖增加关键路径"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "prediction_1",
+          "limitations": [
+            "尚无同scope profiling验证，不标为observed或case_support"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "text": "缩短生存期或减少取地址可能减少spill；编译结果决定是否成立，属prediction"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_1",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "text": "先把必要GM标量读取、成员解引用与实际spill分开"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_2",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "text": "保持编译配置比较报告及热PC，不能把所有LoadStore统称spill"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_3",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "text": "生成物无spill且LoadStore均有算法来源，反证实际spill机制"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_4",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "text": "仅有局部变量多或结构体大不足以认定spill"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_1",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "text": "problem.control_metadata_overhead：元数据重复读取可能无需寄存器溢出；检查：看栈偏移、编译报告与字段地址"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_2",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "text": "problem.onchip_capacity_pressure：寄存器/栈与UB/L1容量独立；检查：使用不同资源账本与报告"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "intervention",
+          "limitations": [
+            "所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "text": "缩短标量变量生存期、减少不必要取地址或拆分热区对象。代价：重计算可能增加算术量；拆分与展开改变代码体积/ICache压力"
+        }
+      ],
+      "review": {
+        "discriminating_power": "先把必要GM标量读取、成员解引用与实际spill分开；保持编译配置比较报告及热PC，不能把所有LoadStore统称spill；生成物无spill且LoadStore均有算法来源，反证实际spill机制",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "编译器版本和优化选项改变结论，需绑定artifact",
+          "源码审读不声称已证实spill"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      },
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:7d686e034229907a1aa618783bf9a57377656b6b26806363f1a39ae44b8422d2",
+          "lines": [
+            36,
+            36
+          ],
+          "original_path": "skills/ascendc-aprof-diagnosis/references/bound-deep-routing.md",
+          "path": "workflows/migration/archive/skills/ascendc-aprof-diagnosis/references/bound-deep-routing.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:620c25b91946e0523ffc99aaddae20b8b6989d8b6a1474d7c15c49cb43bfbbbe",
+          "sha256": "sha256:620c25b91946e0523ffc99aaddae20b8b6989d8b6a1474d7c15c49cb43bfbbbe"
+        },
+        {
+          "excerpt_sha256": "sha256:743f93f580f11ed0c9e3153a6818733250ab0799b98476bb2dafceb8fdb27f36",
+          "lines": [
+            15,
+            25
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c"
+        },
+        {
+          "excerpt_sha256": "sha256:efde3ab67b4c0f8b83eb375e8e34414e578d86a54b791806098a317c17ab1979",
+          "lines": [
+            180,
+            240
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c"
+        },
+        {
+          "excerpt_sha256": "sha256:9d6e99db77f3f2de78230014fb6e81a352dafc2a34ebce8451d140c16ed9682f",
+          "lines": [
+            434,
+            442
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c"
+        },
+        {
+          "excerpt_sha256": "sha256:47193296d3dadc4f6cb6cf1c115a43b5e8378f6bccc04e275dac8a22b2a2093a",
+          "lines": [
+            4,
+            8
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/scalar/guide.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/guide.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:1f9161d4bdd0ed256130213ce0e61598369c869b00ce28d54db38f5860536fdc"
+        }
+      ],
+      "body": "# 寄存器压力引发 spill\n\n## 对象、阶段与适用域\n\n- 指定编译配置下Scalar寄存器存活集合及栈/LoadStore指令\n- kernel热路径编译\n- Scalar寄存器分配与执行\n\n旧scope=all保留作检索范围，机制成立仍须核对目标架构、dtype、shape和API支持。\n\n## 机制链\n\n- 动态索引、大对象、取地址或过长生存期增加寄存器分配压力\n- 编译器把部分值保存到栈/内存并在热区重载\n- 非算法必要LoadStore与依赖增加关键路径\n\n## 预测、支持检查与反证\n\n- 缩短生存期或减少取地址可能减少spill；编译结果决定是否成立，属prediction\n- 先把必要GM标量读取、成员解引用与实际spill分开\n- 保持编译配置比较报告及热PC，不能把所有LoadStore统称spill\n- 生成物无spill且LoadStore均有算法来源，反证实际spill机制\n- 仅有局部变量多或结构体大不足以认定spill\n\n## 具体替代解释\n\n- problem.control_metadata_overhead：元数据重复读取可能无需寄存器溢出；检查：看栈偏移、编译报告与字段地址\n- problem.onchip_capacity_pressure：寄存器/栈与UB/L1容量独立；检查：使用不同资源账本与报告\n\n## 候选动作与成本\n\naction.shorten_scalar_lifetimes：缩短标量变量生存期、减少不必要取地址或拆分热区对象。\n\n原硬前提：symptom.source.register_spill=true；constraint.compiler_report=true；constraint.semantic_equivalence=true；constraint.capacity=true。\n\n- 重计算可能增加算术量\n- 拆分与展开改变代码体积/ICache压力\n\n## 限制与缺口\n\n- 编译器版本和优化选项改变结论，需绑定artifact\n- 源码审读不声称已证实spill\n- 本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。\n\n## 逐项主张与依据\n\n### legacy_seed [legacy_seed]\n\n原种子：寄存器压力引发 spill；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。\n\n来源索引：0。限制：旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定\n\n### source_scalar [source_statement]\n\n标量编码原则讨论动态数组寻址、别名、变量存活期和热循环内对象构造对Load/Store与寄存器分配的影响。\n\n来源索引：1, 2, 3。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_scalar_guide [source_statement]\n\nScalar负责地址计算、参数构造和指令分发；文档要求以目标profiling、汇编或编译证据确认Load/Store及spill假设。\n\n来源索引：4。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### mechanism_1 [mechanism_inference]\n\n动态索引、大对象、取地址或过长生存期增加寄存器分配压力\n\n来源索引：1, 2, 3, 4。限制：编译器版本和优化选项改变结论，需绑定artifact；源码审读不声称已证实spill\n\n### mechanism_2 [mechanism_inference]\n\n编译器把部分值保存到栈/内存并在热区重载\n\n来源索引：1, 2, 3, 4。限制：编译器版本和优化选项改变结论，需绑定artifact；源码审读不声称已证实spill\n\n### mechanism_3 [mechanism_inference]\n\n非算法必要LoadStore与依赖增加关键路径\n\n来源索引：1, 2, 3, 4。限制：编译器版本和优化选项改变结论，需绑定artifact；源码审读不声称已证实spill\n\n### prediction_1 [mechanism_inference]\n\n缩短生存期或减少取地址可能减少spill；编译结果决定是否成立，属prediction\n\n来源索引：1, 2, 3, 4。限制：尚无同scope profiling验证，不标为observed或case_support\n\n### check_1 [mechanism_inference]\n\n先把必要GM标量读取、成员解引用与实际spill分开\n\n来源索引：1, 2, 3, 4。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_2 [mechanism_inference]\n\n保持编译配置比较报告及热PC，不能把所有LoadStore统称spill\n\n来源索引：1, 2, 3, 4。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_3 [mechanism_inference]\n\n生成物无spill且LoadStore均有算法来源，反证实际spill机制\n\n来源索引：1, 2, 3, 4。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_4 [mechanism_inference]\n\n仅有局部变量多或结构体大不足以认定spill\n\n来源索引：1, 2, 3, 4。限制：这是判别程序定义，执行结果由任务证据填充\n\n### alternative_1 [mechanism_inference]\n\nproblem.control_metadata_overhead：元数据重复读取可能无需寄存器溢出；检查：看栈偏移、编译报告与字段地址\n\n来源索引：1, 2, 3, 4。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### alternative_2 [mechanism_inference]\n\nproblem.onchip_capacity_pressure：寄存器/栈与UB/L1容量独立；检查：使用不同资源账本与报告\n\n来源索引：1, 2, 3, 4。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### intervention [mechanism_inference]\n\n缩短标量变量生存期、减少不必要取地址或拆分热区对象。代价：重计算可能增加算术量；拆分与展开改变代码体积/ICache压力\n\n来源索引：1, 2, 3, 4。限制：所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.register_spill.md",
+      "source_hash": "sha256:e4407acce00f2bbfa7d7270f950631e50504f2dfe7dcce10fe336dd23339ca71",
+      "template_hash": "sha256:2f8655545e56d1f50604ed2edf475ded0eb53729baaf83a6df74b10b136b6382",
+      "body_sha256": "sha256:b45e9ad86e8d4907fb10ae40bddf47495e340b5120152063e5064da884e221e6",
+      "scope_status": "match"
+    }
+  ],
+  "limitations": [
+    "正文由调用者按阅读理由选择；展开不表示机制成立、被排除或 Action 已就绪。",
+    "scope match 仅用于检索，不授权平台能力；原始证据及未知项仍由任务推理核验。",
+    "正文 hash 证明交付内容可回放；不能据此证明 Agent 已理解或采用该内容。"
+  ]
+}

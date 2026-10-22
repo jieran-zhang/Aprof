@@ -1,0 +1,651 @@
+{
+  "schema_version": "aprof.diagnosis-reasoning/v1",
+  "task_id": "case-10",
+  "context_hash": "sha256:a954a5ee36bff4287fa8c7bbd6e4d07f05a2c5caf60533751468b64e92d53507",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "source_context_ref": {
+    "path": "authority.json",
+    "sha256": "sha256:e6ea313deb31dc7d62cf19dea730927e9c676bf6ba4a6d299dd1eae99e4b7d6b"
+  },
+  "context_snapshot": {
+    "schema_version": "aprof.evidence/v1",
+    "task_id": "case-10",
+    "source_context_ref": {
+      "path": "authority.json",
+      "sha256": "sha256:e6ea313deb31dc7d62cf19dea730927e9c676bf6ba4a6d299dd1eae99e4b7d6b"
+    },
+    "attributes": {
+      "family": [
+        "elementwise"
+      ],
+      "dtype": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "features": [
+        "pipeline-sync",
+        "tiling-tail",
+        "vector-api",
+        "precision-boundaries"
+      ],
+      "platform": "dav-2201"
+    },
+    "facts": {
+      "source.kernel": {
+        "state": true,
+        "kind": "source_review",
+        "view": "source",
+        "evidence_id": "source.kernel",
+        "ref": {
+          "path": "source/op_kernel/sigmoid_kernel.asc",
+          "sha256": "sha256:573454c8cb2a67641706f5d94b42dc97fc0f4a7656fbf2b95c8e9859dc1f6c28",
+          "locator": "lines:1-94"
+        }
+      },
+      "source.tiling": {
+        "state": true,
+        "kind": "source_review",
+        "view": "source",
+        "evidence_id": "source.tiling",
+        "ref": {
+          "path": "source/op_kernel/sigmoid_tiling.h",
+          "sha256": "sha256:29536d3cc5c507fc72c61736a69ad5ba9ab8ca39b86002e1f5ae121039c4734f",
+          "locator": "lines:1-29"
+        }
+      },
+      "source.host": {
+        "state": true,
+        "kind": "source_review",
+        "view": "source",
+        "evidence_id": "source.host",
+        "ref": {
+          "path": "source/op_host/sigmoid.asc",
+          "sha256": "sha256:a46866ea3da206ea2d1aab87e4540258d448367d3dd088b48ff3baab6918580a",
+          "locator": "lines:1-87"
+        }
+      },
+      "source.matrix": {
+        "state": true,
+        "kind": "source_review",
+        "view": "workload",
+        "evidence_id": "source.matrix",
+        "ref": {
+          "path": "source/matrix-20.json",
+          "sha256": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+          "locator": "lines:1-270"
+        }
+      },
+      "source.oracle": {
+        "state": true,
+        "kind": "source_review",
+        "view": "source",
+        "evidence_id": "source.oracle",
+        "ref": {
+          "path": "source/scripts/verify_result.py",
+          "sha256": "sha256:7eccbc8d1c725320b70efb1c63ce8488a2049151cf97d85bc4be72a87c4f64d8",
+          "locator": "lines:1-79"
+        }
+      },
+      "symptom.source.serial_queue_or_event_order.component_1": {
+        "state": true,
+        "kind": "source_review",
+        "view": "source",
+        "evidence_id": "source.kernel",
+        "ref": {
+          "path": "source/op_kernel/sigmoid_kernel.asc",
+          "sha256": "sha256:573454c8cb2a67641706f5d94b42dc97fc0f4a7656fbf2b95c8e9859dc1f6c28",
+          "locator": "lines:1-94"
+        }
+      },
+      "symptom.source.serial_queue_or_event_order.component_2": {
+        "state": true,
+        "kind": "source_review",
+        "view": "source",
+        "evidence_id": "source.tiling",
+        "ref": {
+          "path": "source/op_kernel/sigmoid_tiling.h",
+          "sha256": "sha256:29536d3cc5c507fc72c61736a69ad5ba9ab8ca39b86002e1f5ae121039c4734f",
+          "locator": "lines:1-29"
+        }
+      },
+      "symptom.source.serial_queue_or_event_order.component_3": {
+        "state": true,
+        "kind": "source_review",
+        "view": "source",
+        "evidence_id": "source.host",
+        "ref": {
+          "path": "source/op_host/sigmoid.asc",
+          "sha256": "sha256:a46866ea3da206ea2d1aab87e4540258d448367d3dd088b48ff3baab6918580a",
+          "locator": "lines:1-87"
+        }
+      },
+      "constraint.semantic_equivalence": {
+        "state": true,
+        "kind": "source_proof",
+        "view": "constraint",
+        "evidence_id": "semantic-proof",
+        "ref": {
+          "path": "source-analysis-R1.md",
+          "sha256": "sha256:13b981f8d9d0f9145ea4a2c73e775fc3645ecb4d1932a0382b4938acfb543e09",
+          "locator": "lines:1-23"
+        }
+      },
+      "constraint.capacity": {
+        "state": "unknown",
+        "kind": "not_observed",
+        "view": "constraint"
+      },
+      "constraint.dependency_lifetime": {
+        "state": "unknown",
+        "kind": "not_observed",
+        "view": "constraint"
+      }
+    }
+  },
+  "current": {
+    "implementation_ref": {
+      "path": "source-index.json",
+      "sha256": "sha256:0c8706f1b3fb3ec5c5f0706c03434c1ed130f23e1287cd79bfb4ab0a98a2f2fe"
+    },
+    "workload_ref": {
+      "path": "source/matrix-20.json",
+      "sha256": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380"
+    },
+    "objects": [
+      {
+        "object_id": "target",
+        "kind": "object",
+        "description": "sigmoid当前kernel数据路径"
+      },
+      {
+        "object_id": "stage",
+        "kind": "stage",
+        "description": "host tiling至kernel执行范围"
+      },
+      {
+        "object_id": "workload",
+        "kind": "workload",
+        "description": "原20case全部域"
+      },
+      {
+        "object_id": "implementation",
+        "kind": "implementation",
+        "description": "原始host/tiling/kernel快照，未实施候选"
+      }
+    ],
+    "scope": {
+      "task_id": "case-10",
+      "parent_implementation_hash": "sha256:0c8706f1b3fb3ec5c5f0706c03434c1ed130f23e1287cd79bfb4ab0a98a2f2fe",
+      "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+      "target_ids": [
+        "target"
+      ],
+      "stage": "kernel"
+    }
+  },
+  "facts": {
+    "source.kernel": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.kernel",
+      "ref": {
+        "path": "source/op_kernel/sigmoid_kernel.asc",
+        "sha256": "sha256:573454c8cb2a67641706f5d94b42dc97fc0f4a7656fbf2b95c8e9859dc1f6c28",
+        "locator": "lines:1-94"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:0c8706f1b3fb3ec5c5f0706c03434c1ed130f23e1287cd79bfb4ab0a98a2f2fe",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "source.tiling": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.tiling",
+      "ref": {
+        "path": "source/op_kernel/sigmoid_tiling.h",
+        "sha256": "sha256:29536d3cc5c507fc72c61736a69ad5ba9ab8ca39b86002e1f5ae121039c4734f",
+        "locator": "lines:1-29"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:0c8706f1b3fb3ec5c5f0706c03434c1ed130f23e1287cd79bfb4ab0a98a2f2fe",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "source.host": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.host",
+      "ref": {
+        "path": "source/op_host/sigmoid.asc",
+        "sha256": "sha256:a46866ea3da206ea2d1aab87e4540258d448367d3dd088b48ff3baab6918580a",
+        "locator": "lines:1-87"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:0c8706f1b3fb3ec5c5f0706c03434c1ed130f23e1287cd79bfb4ab0a98a2f2fe",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "source.matrix": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.matrix",
+      "ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "locator": "lines:1-270"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:0c8706f1b3fb3ec5c5f0706c03434c1ed130f23e1287cd79bfb4ab0a98a2f2fe",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "workload"
+    },
+    "source.oracle": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.oracle",
+      "ref": {
+        "path": "source/scripts/verify_result.py",
+        "sha256": "sha256:7eccbc8d1c725320b70efb1c63ce8488a2049151cf97d85bc4be72a87c4f64d8",
+        "locator": "lines:1-79"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:0c8706f1b3fb3ec5c5f0706c03434c1ed130f23e1287cd79bfb4ab0a98a2f2fe",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "source.analysis": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "semantic-proof",
+      "ref": {
+        "path": "source-analysis-R1.md",
+        "sha256": "sha256:13b981f8d9d0f9145ea4a2c73e775fc3645ecb4d1932a0382b4938acfb543e09",
+        "locator": "lines:1-23"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:0c8706f1b3fb3ec5c5f0706c03434c1ed130f23e1287cd79bfb4ab0a98a2f2fe",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order.component_1": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [
+        "source.kernel",
+        "source.tiling",
+        "source.host",
+        "source.matrix",
+        "source.analysis"
+      ],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:0c8706f1b3fb3ec5c5f0706c03434c1ed130f23e1287cd79bfb4ab0a98a2f2fe",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order.component_2": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [
+        "source.kernel",
+        "source.tiling",
+        "source.host",
+        "source.matrix",
+        "source.analysis"
+      ],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:0c8706f1b3fb3ec5c5f0706c03434c1ed130f23e1287cd79bfb4ab0a98a2f2fe",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order.component_3": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [
+        "source.kernel",
+        "source.tiling",
+        "source.host",
+        "source.matrix",
+        "source.analysis"
+      ],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:0c8706f1b3fb3ec5c5f0706c03434c1ed130f23e1287cd79bfb4ab0a98a2f2fe",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [
+        "symptom.source.serial_queue_or_event_order.component_1",
+        "symptom.source.serial_queue_or_event_order.component_2",
+        "symptom.source.serial_queue_or_event_order.component_3"
+      ],
+      "components": [
+        "symptom.source.serial_queue_or_event_order.component_1",
+        "symptom.source.serial_queue_or_event_order.component_2",
+        "symptom.source.serial_queue_or_event_order.component_3"
+      ],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:0c8706f1b3fb3ec5c5f0706c03434c1ed130f23e1287cd79bfb4ab0a98a2f2fe",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "constraint.semantic_equivalence": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [
+        "source.analysis",
+        "source.kernel",
+        "source.tiling"
+      ],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:0c8706f1b3fb3ec5c5f0706c03434c1ed130f23e1287cd79bfb4ab0a98a2f2fe",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "constraint"
+    },
+    "constraint.capacity": {
+      "state": "unknown",
+      "kind": "raw",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:0c8706f1b3fb3ec5c5f0706c03434c1ed130f23e1287cd79bfb4ab0a98a2f2fe",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "constraint"
+    },
+    "constraint.dependency_lifetime": {
+      "state": "unknown",
+      "kind": "raw",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:0c8706f1b3fb3ec5c5f0706c03434c1ed130f23e1287cd79bfb4ab0a98a2f2fe",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "constraint"
+    },
+    "source.second_review": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "static-review-R2",
+      "ref": {
+        "path": "static-evidence-R2.json",
+        "sha256": "sha256:738247e40a024173325da299e963aff5a35f477fa7024ec54b720d4a99c26e7b",
+        "locator": "rows (all 20 original case IDs)"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:0c8706f1b3fb3ec5c5f0706c03434c1ed130f23e1287cd79bfb4ab0a98a2f2fe",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    }
+  },
+  "candidates": [
+    {
+      "hypothesis_id": "hypothesis.primary",
+      "problem_id": "problem.pipeline_serialization",
+      "mechanism": "单物理输入/输出槽，CopyIn-Compute-CopyOut按tile4096顺序。FP32直接Sigmoid，半精度仅在边界各Cast一次并保留FP32中间两个区。必要逻辑GM为2*N*b，显式UB FP32=8*T，half/BF16=12*T；原192KiB注释不能认作目标资源。",
+      "targets": [
+        "target"
+      ],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:0c8706f1b3fb3ec5c5f0706c03434c1ed130f23e1287cd79bfb4ab0a98a2f2fe",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "support": [
+        "source.kernel",
+        "source.tiling",
+        "source.matrix",
+        "source.second_review"
+      ],
+      "counter": [],
+      "unknown": [
+        "constraint.capacity",
+        "constraint.dependency_lifetime"
+      ],
+      "alternatives": [
+        "hypothesis.alt1"
+      ],
+      "checks": [
+        "获取目标可用UB及SigmoidTmp后保留T4096的双槽候选；SDK生命周期/全部20case正确性通过再看timeline与Task。若增槽并未增加重叠，按同容量域比较单槽T8192；若更短T导致发射增长，保留原T4096单槽。"
+      ],
+      "status": "plausible",
+      "reason": "可保持原T而提供真实双物理槽和预取窗口，直接检验原排程可避免等待；相比只增大tile，未把更大临时区当作必需。cast删除缺等价依据且不会消除必要数学计算。 R2：20case重算显式UB公式确认双槽在T4096为65536B，不能拿它直接和注释192KiB作容量通过。对1/2/3tile排程审读：prefetch只在当前DeQue后发生，队列未消费上限1；尾t+1先检查域，drain不能遗漏。此为依赖模型复核，不是已证明目标事件实现或实际overlap。",
+      "excluded_by": [],
+      "independent_evidence_groups": []
+    },
+    {
+      "hypothesis_id": "hypothesis.alt1",
+      "problem_id": "problem.dynamic_shape_mismatch",
+      "mechanism": "按dtype预算单槽T2048/4096/8192，增加tile可减少循环但可能降低流水或增加scratch；没有证据应一律取最大。",
+      "targets": [
+        "target"
+      ],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:0c8706f1b3fb3ec5c5f0706c03434c1ed130f23e1287cd79bfb4ab0a98a2f2fe",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "support": [
+        "source.kernel",
+        "source.tiling",
+        "source.matrix"
+      ],
+      "counter": [],
+      "unknown": [],
+      "alternatives": [
+        "hypothesis.primary"
+      ],
+      "checks": [
+        "按dtype预算单槽T2048/4096/8192，增加tile可减少循环但可能降低流水或增加scratch；没有证据应一律取最大。；若重新采用，先核对其地址/API/资源和数值合同。"
+      ],
+      "status": "plausible",
+      "reason": "按dtype预算单槽T2048/4096/8192，增加tile可减少循环但可能降低流水或增加scratch；没有证据应一律取最大。",
+      "excluded_by": [],
+      "independent_evidence_groups": []
+    },
+    {
+      "hypothesis_id": "hypothesis.alt2",
+      "problem_id": "problem.redundant_cast",
+      "mechanism": "只有输入升FP32与最终缩位，没有中间反复往返；删边界Cast会改变低精度精度契约。",
+      "targets": [
+        "target"
+      ],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:0c8706f1b3fb3ec5c5f0706c03434c1ed130f23e1287cd79bfb4ab0a98a2f2fe",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "support": [
+        "source.kernel",
+        "source.tiling",
+        "source.matrix"
+      ],
+      "counter": [
+        "source.oracle"
+      ],
+      "unknown": [],
+      "alternatives": [
+        "hypothesis.primary"
+      ],
+      "checks": [
+        "只有输入升FP32与最终缩位，没有中间反复往返；删边界Cast会改变低精度精度契约。；若重新采用，先核对其地址/API/资源和数值合同。"
+      ],
+      "status": "rejected",
+      "reason": "只有输入升FP32与最终缩位，没有中间反复往返；删边界Cast会改变低精度精度契约。",
+      "excluded_by": [
+        "source.oracle"
+      ],
+      "independent_evidence_groups": []
+    }
+  ],
+  "action_instances": [
+    {
+      "instance_id": "instance.primary",
+      "action_id": "action.software_pipeline_stages",
+      "template_hash": "sha256:9e940ab629b55c9c28431eac2dde0b942c6013a0c987373ee8e615252d593d85",
+      "hypothesis_id": "hypothesis.primary",
+      "targets": {
+        "target": "target",
+        "stage": "stage",
+        "workload": "workload",
+        "implementation": "implementation"
+      },
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:0c8706f1b3fb3ec5c5f0706c03434c1ed130f23e1287cd79bfb4ab0a98a2f2fe",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "parameters": {
+        "T_candidates": [
+          2048,
+          4096,
+          8192
+        ],
+        "preferred_T": 4096,
+        "input_physical_slots": 2,
+        "output_physical_slots": 2,
+        "queue_depth": 1,
+        "workspace_bytes": 0,
+        "fallback": "0/1tile或容量不满足则原单槽"
+      },
+      "evidence_bindings": {
+        "symptom.source.serial_queue_or_event_order": "symptom.source.serial_queue_or_event_order",
+        "constraint.semantic_equivalence": "constraint.semantic_equivalence",
+        "constraint.capacity": "constraint.capacity",
+        "constraint.dependency_lifetime": "constraint.dependency_lifetime"
+      },
+      "unknowns": [
+        "constraint.capacity",
+        "constraint.dependency_lifetime"
+      ],
+      "status": "conditional",
+      "reason": "当前源码支持此意图；实施合法性与性能收益分开。可保持原T而提供真实双物理槽和预取窗口，直接检验原排程可避免等待；相比只增大tile，未把更大临时区当作必需。cast删除缺等价依据且不会消除必要数学计算。",
+      "parent_plan_hash": null
+    }
+  ],
+  "predecessor_ref": {
+    "path": "reasoning-R1.json",
+    "sha256": "sha256:73088375a879ae4d243975e7b601f672f88f0e664c2557e829b6149016f9b71c"
+  }
+}

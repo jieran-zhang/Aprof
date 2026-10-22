@@ -1,0 +1,3517 @@
+{
+  "schema": "aprof.source-regression-results/v1",
+  "rows": [
+    {
+      "case": "case-01",
+      "operator": "exp",
+      "round": 1,
+      "decision": {
+        "path": "cases/case-01/R1-decision.json",
+        "sha256": "sha256:1cef30be064ce875a3e56a6e6ba47645e7999cc62dc11f2a6fc20bfa86f3e675"
+      },
+      "C1": {
+        "path": "cases/case-01/R1-C1.json",
+        "sha256": "sha256:e9892758af27321c575d6233bd6e2db4fba719c9aae52571dba74638ad566a0c"
+      },
+      "compared_problem_ids": [
+        "problem.pipeline_serialization",
+        "problem.onchip_capacity_pressure",
+        "problem.dynamic_shape_mismatch",
+        "problem.control_metadata_overhead"
+      ],
+      "action": "action.software_pipeline_stages",
+      "mode": "conditional_plan",
+      "choice_reason": "相比仅缓存multiplier/shift，本方案作用于两路GM与完整Vector链的调度；相比扩大4096 tile，不要求先认定发射成本主导。代价是额外物理槽和序言尾声。 低精度fi/fo复用可减少4T并作为B不足时的后继，但不覆盖FP32路径，也不单独产生预取窗口。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "pipeline"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+            "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+          },
+          "locator": "lines:272-316",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：每tile固定CopyIn→Compute→CopyOut，输入输出各1物理槽；跨tile无数学依赖，新增槽可打开预取窗口。",
+          "after": "正文机制/边界确认：相比仅缓存multiplier/shift，本方案作用于两路GM与完整Vector链的调度；相比扩大4096 tile，不要求先认定发射成本主导。代价是额外物理槽和序言尾声。 低精度fi/fo复用可减少4T并作为B不足时的后继，但不覆盖FP32路径，也不单独产生预取窗口。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+            "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+          },
+          "locator": "lines:308-351",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：低精度Exp的fi只在Muls(fo,fi,multiplier)被消费，后续Adds/Exp均只读fo；使用fi作完全原地计算可删除fpOut_的4T字节，FP32路径原本已直接用out。",
+          "after": "正文机制/边界确认：是流水的最强资源替代：低精度可省16384字节并扩tile域，但不直接打开跨tile重叠，且不影响7个FP32 case。本轮先检验作用全部dtype的独立槽流水；若双槽B不足，优先把这个复用方案作为条件后继，不能直接拼成未确认的两动作实现。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "tile"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.dynamic_shape_mismatch.md",
+            "sha256": "sha256:24caeddf6063226e52e28c8d8fbd07a6cf7193ee2c3a2575d2a78f0cf28ea4b2"
+          },
+          "locator": "lines:306-349",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：三dtype使用同一个4096 tile；FP32为8T字节、低精度为12T字节，允许按资源选择不同T。",
+          "after": "正文机制/边界确认：大tile可减循环但不能直接解决单槽依赖；20case均约百万级以上，缺少独立的小任务开销区间证据，因此不先造shape阈值。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "metadata"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+            "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+          },
+          "locator": "lines:298-341",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：Process反复读取tileElements，Compute读multiplier/shift；字段在一次launch内不变。",
+          "after": "正文机制/边界确认：编译器可能已外提且每tile处理4096个Exp，当前没有证据说明字段load比流水更重要；保留竞争候选。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "pipeline"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+            "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+          },
+          "locator": "lines:72-108",
+          "effect_kind": "plan",
+          "before": "有元素总数与原始块长，但尚未明确新方案的owner/存储范围。",
+          "after": "保留每核独占输出与原逐元素数学链，T和物理槽分别计入字节公式；已有分区提取不算新并行优化。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "pipeline"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+            "sha256": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603"
+          },
+          "locator": "lines:62-144",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "保留blockNum/blockLength与精确有效长度；T∈{1024,2048,4096}，原始输入/输出各2物理槽，FP32工作区仍仅当前计算tile一套。UB=(4s+8·[s=2])T+API预留≤B可用，即三dtype数据区均16T。序言只预取tile0；每轮DeQue当前输入后，合法发射下一tile到另一空闲槽，再计算当前tile、入输出队列并发有效长度写回。输出槽仅在MTE3完成后回收；tileCount<2保留单槽。Exp乘加顺序及Cast模式不变。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "pipeline"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+            "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+          },
+          "locator": "lines:75-110",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "保留输入/输出Cast、原算术顺序、NaN/Inf及±0；没有把值域case当公共输入保证。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        }
+      ],
+      "opportunity_count": 4,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-01",
+      "operator": "exp",
+      "round": 2,
+      "decision": {
+        "path": "cases/case-01/R2-decision.json",
+        "sha256": "sha256:7dcf451f4c540e457785a437e49b67589d5f039ac332aad3f68c34850ba28be3"
+      },
+      "C1": {
+        "path": "cases/case-01/R2-C1.json",
+        "sha256": "sha256:b3ba140c2ab7663ac7cfa627bf03814bf545028731631403f3e2d8a39cc894e2"
+      },
+      "compared_problem_ids": [
+        "problem.pipeline_serialization",
+        "problem.onchip_capacity_pressure",
+        "problem.dynamic_shape_mismatch",
+        "problem.control_metadata_overhead"
+      ],
+      "action": "action.software_pipeline_stages",
+      "mode": "conditional_plan",
+      "choice_reason": "相比仅缓存multiplier/shift，本方案作用于两路GM与完整Vector链的调度；相比扩大4096 tile，不要求先认定发射成本主导。代价是额外物理槽和序言尾声。 低精度fi/fo复用可减少4T并作为B不足时的后继，但不覆盖FP32路径，也不单独产生预取窗口。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "pipeline"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+            "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+          },
+          "locator": "lines:272-316",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：每tile固定CopyIn→Compute→CopyOut，输入输出各1物理槽；跨tile无数学依赖，新增槽可打开预取窗口。",
+          "after": "正文机制/边界确认：相比仅缓存multiplier/shift，本方案作用于两路GM与完整Vector链的调度；相比扩大4096 tile，不要求先认定发射成本主导。代价是额外物理槽和序言尾声。 低精度fi/fo复用可减少4T并作为B不足时的后继，但不覆盖FP32路径，也不单独产生预取窗口。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+            "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+          },
+          "locator": "lines:308-351",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：低精度Exp的fi只在Muls(fo,fi,multiplier)被消费，后续Adds/Exp均只读fo；使用fi作完全原地计算可删除fpOut_的4T字节，FP32路径原本已直接用out。",
+          "after": "正文机制/边界确认：是流水的最强资源替代：低精度可省16384字节并扩tile域，但不直接打开跨tile重叠，且不影响7个FP32 case。本轮先检验作用全部dtype的独立槽流水；若双槽B不足，优先把这个复用方案作为条件后继，不能直接拼成未确认的两动作实现。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "tile"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.dynamic_shape_mismatch.md",
+            "sha256": "sha256:24caeddf6063226e52e28c8d8fbd07a6cf7193ee2c3a2575d2a78f0cf28ea4b2"
+          },
+          "locator": "lines:306-349",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：三dtype使用同一个4096 tile；FP32为8T字节、低精度为12T字节，允许按资源选择不同T。",
+          "after": "正文机制/边界确认：大tile可减循环但不能直接解决单槽依赖；20case均约百万级以上，缺少独立的小任务开销区间证据，因此不先造shape阈值。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "metadata"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+            "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+          },
+          "locator": "lines:298-341",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：Process反复读取tileElements，Compute读multiplier/shift；字段在一次launch内不变。",
+          "after": "正文机制/边界确认：编译器可能已外提且每tile处理4096个Exp，当前没有证据说明字段load比流水更重要；保留竞争候选。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "pipeline"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+            "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+          },
+          "locator": "lines:72-108",
+          "effect_kind": "plan",
+          "before": "有元素总数与原始块长，但尚未明确新方案的owner/存储范围。",
+          "after": "保留每核独占输出与原逐元素数学链，T和物理槽分别计入字节公式；已有分区提取不算新并行优化。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "pipeline"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+            "sha256": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603"
+          },
+          "locator": "lines:62-144",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "保留blockNum/blockLength与精确有效长度；T∈{1024,2048,4096}，原始输入/输出各2物理槽，FP32工作区仍仅当前计算tile一套。UB=(4s+8·[s=2])T+API预留≤B可用，即三dtype数据区均16T。序言只预取tile0；每轮DeQue当前输入后，合法发射下一tile到另一空闲槽，再计算当前tile、入输出队列并发有效长度写回。输出槽仅在MTE3完成后回收；tileCount<2保留单槽。Exp乘加顺序及Cast模式不变。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "pipeline"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+            "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+          },
+          "locator": "lines:75-110",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "保留输入/输出Cast、原算术顺序、NaN/Inf及±0；没有把值域case当公共输入保证。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        }
+      ],
+      "opportunity_count": 4,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-02",
+      "operator": "mish",
+      "round": 1,
+      "decision": {
+        "path": "cases/case-02/R1-decision.json",
+        "sha256": "sha256:2b78f520265fb1a3e87cc22bf4715e6916dd8a5ece36a5bc0823cdf6226c3611"
+      },
+      "C1": {
+        "path": "cases/case-02/R1-C1.json",
+        "sha256": "sha256:253ac4c0fea9fb80eba8846c382c3ac7c1443aea7cadb27b2bbbea86a25c1a85"
+      },
+      "compared_problem_ids": [
+        "problem.onchip_capacity_pressure",
+        "problem.pipeline_serialization",
+        "problem.redundant_cast"
+      ],
+      "action": "action.reuse_disjoint_onchip_buffers",
+      "mode": "conditional_plan",
+      "choice_reason": "不需要先断言UB接近上限。通过减少8T字节给更大tile留空间，优于未经证明删除Mish稳定尾分支；相对双缓冲没有新增原始输入槽。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+            "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+          },
+          "locator": "lines:308-351",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：FP32路径同时分配in/out队列和fi/work/fo三片FP32区；fi可使用已DeQue的in物理区，fo可使用已分配out区，work单独保存。",
+          "after": "正文机制/边界确认：不需要先断言UB接近上限。通过减少8T字节给更大tile留空间，优于未经证明删除Mish稳定尾分支；相对双缓冲没有新增原始输入槽。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "pipeline"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+            "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+          },
+          "locator": "lines:272-316",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：2048 tile输入输出1槽且串行调用；15个Vector调用形成长计算链。",
+          "after": "正文机制/边界确认：可能隐藏搬运，但增加原始槽容量且长计算本身可能主导；优先减少明确多余的物理区以放宽后续流水。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "casts"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.redundant_cast.md",
+            "sha256": "sha256:c7f8ace396cc0a0f53f4bc0a5b9f0883cbd8b439d45dce74edc1e4f50b1b326d"
+          },
+          "locator": "lines:290-334",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：低精度只在链入口扩位、末尾缩位，没有中途FP32→低精度→FP32往返。",
+          "after": "正文机制/边界确认：正文要求可删数值边界；此处Cast保护原FP32稳定计算，不能按语法出现两次就判冗余，作为当前不采用候选。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+            "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+          },
+          "locator": "lines:72-108",
+          "effect_kind": "plan",
+          "before": "有元素总数与原始块长，但尚未明确新方案的owner/存储范围。",
+          "after": "保留每核独占输出与原逐元素数学链，T和物理槽分别计入字节公式；已有分区提取不算新并行优化。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+            "sha256": "sha256:04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483"
+          },
+          "locator": "lines:74-119",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "仅FP32模板：fi绑定in，fo绑定out，删除fpIn_/fpOut_两项InitBuffer，fpWork_保留；保留开头Adds(fi,in,+0)和末尾Adds(out,fo,+0)的原指令次序（即原地Adds），避免擅自改变±0行为。in活到最终Mul，out活到MTE3完成。先T2048，再在原41216字节显式预算内比较T∈{2048,2560,3072,3392}，UB=12T+ceil(ceil(T/8)/256)*256+API预留≤B。低精度路径继续2048和原Cast/负尾Exp+Select。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+            "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+          },
+          "locator": "lines:75-110",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "保留输入/输出Cast、原算术顺序、NaN/Inf及±0；没有把值域case当公共输入保证。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-02",
+      "operator": "mish",
+      "round": 2,
+      "decision": {
+        "path": "cases/case-02/R2-decision.json",
+        "sha256": "sha256:c850c576a2b61f231df85bdc691636d2a5b27a0a04d98aafcae2384b804d2e18"
+      },
+      "C1": {
+        "path": "cases/case-02/R2-C1.json",
+        "sha256": "sha256:2048a369b5010fbba4ed75f61a5777c604c4a2712b015749d8a06c810cb42f4a"
+      },
+      "compared_problem_ids": [
+        "problem.onchip_capacity_pressure",
+        "problem.pipeline_serialization",
+        "problem.redundant_cast"
+      ],
+      "action": "action.reuse_disjoint_onchip_buffers",
+      "mode": "conditional_plan",
+      "choice_reason": "不需要先断言UB接近上限。通过减少8T字节给更大tile留空间，优于未经证明删除Mish稳定尾分支；相对双缓冲没有新增原始输入槽。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+            "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+          },
+          "locator": "lines:308-351",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：FP32路径同时分配in/out队列和fi/work/fo三片FP32区；fi可使用已DeQue的in物理区，fo可使用已分配out区，work单独保存。",
+          "after": "正文机制/边界确认：不需要先断言UB接近上限。通过减少8T字节给更大tile留空间，优于未经证明删除Mish稳定尾分支；相对双缓冲没有新增原始输入槽。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "pipeline"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+            "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+          },
+          "locator": "lines:272-316",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：2048 tile输入输出1槽且串行调用；15个Vector调用形成长计算链。",
+          "after": "正文机制/边界确认：可能隐藏搬运，但增加原始槽容量且长计算本身可能主导；优先减少明确多余的物理区以放宽后续流水。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "casts"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.redundant_cast.md",
+            "sha256": "sha256:c7f8ace396cc0a0f53f4bc0a5b9f0883cbd8b439d45dce74edc1e4f50b1b326d"
+          },
+          "locator": "lines:290-334",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：低精度只在链入口扩位、末尾缩位，没有中途FP32→低精度→FP32往返。",
+          "after": "正文机制/边界确认：正文要求可删数值边界；此处Cast保护原FP32稳定计算，不能按语法出现两次就判冗余，作为当前不采用候选。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+            "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+          },
+          "locator": "lines:72-108",
+          "effect_kind": "plan",
+          "before": "有元素总数与原始块长，但尚未明确新方案的owner/存储范围。",
+          "after": "保留每核独占输出与原逐元素数学链，T和物理槽分别计入字节公式；已有分区提取不算新并行优化。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+            "sha256": "sha256:04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483"
+          },
+          "locator": "lines:74-119",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "仅FP32模板：fi绑定in，fo绑定out，删除fpIn_/fpOut_两项InitBuffer，fpWork_保留；保留开头Adds(fi,in,+0)和末尾Adds(out,fo,+0)的原指令次序（即原地Adds），避免擅自改变±0行为。in活到最终Mul，out活到MTE3完成。先T2048，再在原41216字节显式预算内比较T∈{2048,2560,3072,3392}，UB=12T+ceil(ceil(T/8)/256)*256+API预留≤B。低精度路径继续2048和原Cast/负尾Exp+Select。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+            "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+          },
+          "locator": "lines:75-110",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "保留输入/输出Cast、原算术顺序、NaN/Inf及±0；没有把值域case当公共输入保证。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-03",
+      "operator": "masked_scale",
+      "round": 1,
+      "decision": {
+        "path": "cases/case-03/R1-decision.json",
+        "sha256": "sha256:a062d0fc3a43468b655cc111b498d045855ac5e5bb4877c671a36294eba52be1"
+      },
+      "C1": {
+        "path": "cases/case-03/R1-C1.json",
+        "sha256": "sha256:231bc461f0864d5b73d476ed496aa8aecaf314e6414b98e4c660e43dfa1864b6"
+      },
+      "compared_problem_ids": [
+        "problem.onchip_capacity_pressure",
+        "problem.redundant_cast",
+        "problem.pipeline_serialization"
+      ],
+      "action": "action.reuse_disjoint_onchip_buffers",
+      "mode": "conditional_plan",
+      "choice_reason": "每种X/M dtype都可减少4T静态字节并扩大tile域；相对直接删int8→half→float转换，不依赖未核验的直接Cast支持，也不改精度。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+            "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+          },
+          "locator": "lines:308-351",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：xf只用于Mul(of,xf,mf)，随后不再读旧xf；of后续仅Muls及FromFloat。因此目标完全alias xf可删outFp_一片。",
+          "after": "正文机制/边界确认：每种X/M dtype都可减少4T静态字节并扩大tile域；相对直接删int8→half→float转换，不依赖未核验的直接Cast支持，也不改精度。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "casts"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.redundant_cast.md",
+            "sha256": "sha256:c7f8ace396cc0a0f53f4bc0a5b9f0883cbd8b439d45dce74edc1e4f50b1b326d"
+          },
+          "locator": "lines:290-334",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：int8/uint8先转half再转float，整型值范围可在half精确表示；直接int8→float若目标支持可省一次Cast与half缓冲。",
+          "after": "正文机制/边界确认：数值域可静态证明，但实际目标SDK直接Cast是否支持未读到已验证平台，暂缓；不把int8→half→float当成必然冗余性能瓶颈。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "pipeline"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+            "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+          },
+          "locator": "lines:272-316",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：两路CopyIn及一路CopyOut使用单槽，Compute含转换及两个乘法。",
+          "after": "正文机制/边界确认：能打开搬运重叠但多dtype槽宽不同，增槽压缩T；先用确定生命周期减少物理分配再决定双缓冲。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+            "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+          },
+          "locator": "lines:72-108",
+          "effect_kind": "plan",
+          "before": "有元素总数与原始块长，但尚未明确新方案的owner/存储范围。",
+          "after": "保留每核独占输出与原逐元素数学链，T和物理槽分别计入字节公式；已有分区提取不算新并行优化。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+            "sha256": "sha256:04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483"
+          },
+          "locator": "lines:74-119",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "删除outFp_，令of=xf，以Mul(xf,xf,mf)后Muls(xf,xf,scale)保持原先先乘mask再乘scale；FromFloat(yLocal,xf)保留原RoundMode。T=64k，第一候选4096；后续T≤floor64((UB原预算-API预留)/(2sx+sm+8+2Ibyte))，Ibyte表示int8/uint8 mask。输入输出所有权、每个有效count和半精度输出路径保持原定义；不把scale0或mask0替换成常数以规避Inf/NaN。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+            "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+          },
+          "locator": "lines:75-110",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "保留输入/输出Cast、原算术顺序、NaN/Inf及±0；没有把值域case当公共输入保证。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/fallback.md",
+            "sha256": "sha256:5c0be5bd2438407b7fafcda246add02711250c3cbfdf946224b2fba04f40a52c"
+          },
+          "locator": "lines:62-70",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "具体目标API/重叠/stride证据不全，保留原实现fallback并写明参数补项，而非借另一ISA能力。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-03",
+      "operator": "masked_scale",
+      "round": 2,
+      "decision": {
+        "path": "cases/case-03/R2-decision.json",
+        "sha256": "sha256:19bc8f0dfe63a8a2936d774da5b5c3869e0efa08c9fd3923a0541237122c4952"
+      },
+      "C1": {
+        "path": "cases/case-03/R2-C1.json",
+        "sha256": "sha256:e20f299d385c43183d8786abb401c4bd532af904c67d825eab8fec7b1e994323"
+      },
+      "compared_problem_ids": [
+        "problem.onchip_capacity_pressure",
+        "problem.redundant_cast",
+        "problem.pipeline_serialization"
+      ],
+      "action": "action.reuse_disjoint_onchip_buffers",
+      "mode": "conditional_plan",
+      "choice_reason": "每种X/M dtype都可减少4T静态字节并扩大tile域；相对直接删int8→half→float转换，不依赖未核验的直接Cast支持，也不改精度。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+            "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+          },
+          "locator": "lines:308-351",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：xf只用于Mul(of,xf,mf)，随后不再读旧xf；of后续仅Muls及FromFloat。因此目标完全alias xf可删outFp_一片。",
+          "after": "正文机制/边界确认：每种X/M dtype都可减少4T静态字节并扩大tile域；相对直接删int8→half→float转换，不依赖未核验的直接Cast支持，也不改精度。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "casts"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.redundant_cast.md",
+            "sha256": "sha256:c7f8ace396cc0a0f53f4bc0a5b9f0883cbd8b439d45dce74edc1e4f50b1b326d"
+          },
+          "locator": "lines:290-334",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：int8/uint8先转half再转float，整型值范围可在half精确表示；直接int8→float若目标支持可省一次Cast与half缓冲。",
+          "after": "正文机制/边界确认：数值域可静态证明，但实际目标SDK直接Cast是否支持未读到已验证平台，暂缓；不把int8→half→float当成必然冗余性能瓶颈。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "pipeline"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+            "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+          },
+          "locator": "lines:272-316",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：两路CopyIn及一路CopyOut使用单槽，Compute含转换及两个乘法。",
+          "after": "正文机制/边界确认：能打开搬运重叠但多dtype槽宽不同，增槽压缩T；先用确定生命周期减少物理分配再决定双缓冲。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+            "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+          },
+          "locator": "lines:72-108",
+          "effect_kind": "plan",
+          "before": "有元素总数与原始块长，但尚未明确新方案的owner/存储范围。",
+          "after": "保留每核独占输出与原逐元素数学链，T和物理槽分别计入字节公式；已有分区提取不算新并行优化。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+            "sha256": "sha256:04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483"
+          },
+          "locator": "lines:74-119",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "删除outFp_，令of=xf，以Mul(xf,xf,mf)后Muls(xf,xf,scale)保持原先先乘mask再乘scale；FromFloat(yLocal,xf)保留原RoundMode。T=64k，第一候选4096；后续T≤floor64((UB原预算-API预留)/(2sx+sm+8+2Ibyte))，Ibyte表示int8/uint8 mask。输入输出所有权、每个有效count和半精度输出路径保持原定义；不把scale0或mask0替换成常数以规避Inf/NaN。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+            "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+          },
+          "locator": "lines:75-110",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "保留输入/输出Cast、原算术顺序、NaN/Inf及±0；没有把值域case当公共输入保证。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/fallback.md",
+            "sha256": "sha256:5c0be5bd2438407b7fafcda246add02711250c3cbfdf946224b2fba04f40a52c"
+          },
+          "locator": "lines:62-70",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "具体目标API/重叠/stride证据不全，保留原实现fallback并写明参数补项，而非借另一ISA能力。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-04",
+      "operator": "swi_glu",
+      "round": 1,
+      "decision": {
+        "path": "cases/case-04/R1-decision.json",
+        "sha256": "sha256:5bae1314f1814e33631772af295a087e86402614028f33652821b67350499851"
+      },
+      "C1": {
+        "path": "cases/case-04/R1-C1.json",
+        "sha256": "sha256:7be914e3ef2f690cae1e1a28b95966e46e6a8d87daa202ca2837bee42a776fdd"
+      },
+      "compared_problem_ids": [
+        "problem.tiny_transfer_setup_amplification",
+        "problem.noncontiguous_access",
+        "problem.vector_api_fragmentation",
+        "problem.control_metadata_overhead"
+      ],
+      "action": "action.coalesce_contiguous_transfers",
+      "mode": "conditional_plan",
+      "choice_reason": "比仅外提除模同时减少DMA与Vector小count；比仅批量strided输入还覆盖碎片输出。代价为UB重排和额外暂存，需实际API支持。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "packed_segments"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.tiny_transfer_setup_amplification.md",
+            "sha256": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05"
+          },
+          "locator": "lines:277-325",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：短segment把主体拆碎。每segment两次读一次写；把R个完整segment的物理[x0,x1]对一次连续搬入，再UB重排并整批计算/写回。",
+          "after": "正文机制/边界确认：比仅外提除模同时减少DMA与Vector小count；比仅批量strided输入还覆盖碎片输出。代价为UB重排和额外暂存，需实际API支持。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "layout"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+            "sha256": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db"
+          },
+          "locator": "lines:317-361",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：逻辑x0相邻段在GM间隔S个x1元素；可比较多块strided DataCopyPad分别取x0/x1。",
+          "after": "正文机制/边界确认：保留2路输入语义但非对齐S可能引入UB padding，且Vector仍要处理strided布局；与packed方案比较API参数/重排成本，不能简单把x0段拼为连续。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "vector"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.vector_api_fragmentation.md",
+            "sha256": "sha256:e5c0882f45cb270a9fd555e570428ba6f942efbb8c888972f3aadb655c09a34a"
+          },
+          "locator": "lines:259-301",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：case9/12/20的S分别7/1/50，主体每段执行5(FP32)或8(低精度)个Vector调用。",
+          "after": "正文机制/边界确认：只在UB已连续后可合批，不能跨依赖串联不同算术操作；作为packed方案的配套执行而非单独无需布局的捷径。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "metadata"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+            "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+          },
+          "locator": "lines:298-341",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：每段计算outIndex/S和outIndex%S并读tiling字段。",
+          "after": "正文机制/边界确认：递推段号可以减少标量除模，但S1仍有约百万轮及300万DMA，不如改变批量粒度的结构机会。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "packed_segments"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md",
+            "sha256": "sha256:678b709d7ea4092de4145febb3c7174155094d097e47f2b42b3f073d499b1c25"
+          },
+          "locator": "lines:51-86",
+          "effect_kind": "plan",
+          "before": "有元素总数与原始块长，但尚未明确新方案的owner/存储范围。",
+          "after": "将R个完整segment分配同一核并写回唯一连续区；raw布局不能当成x0连续。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "packed_segments"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+            "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+          },
+          "locator": "lines:74-108",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "C2重新规划短S组的整段owner：Q=N/S段，核c分配[q0,q1)，处理R个完整段，R≥2且RS≤T、(5s+12·[s=2])RS+shuffleTmp≤B。一次读x[2qS:2(q+R)S]到packed，再以a[rS+j]=raw[2rS+j], b[rS+j]=raw[2rS+S+j]作UB向量重排；保持原Cast及Muls/Exp/Adds/Div/Mul，最后写y[qS:(q+R)S]。优先S∈{1,7,50}，候选R使RS≈512/1024/2048；其他S及API无法合法高效重排时走原segment路径，所有20case都覆盖。不能用逐元素GetValue实现shuffle冒充高效向量化。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "packed_segments"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/fallback.md",
+            "sha256": "sha256:5c0be5bd2438407b7fafcda246add02711250c3cbfdf946224b2fba04f40a52c"
+          },
+          "locator": "lines:62-70",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "具体目标API/重叠/stride证据不全，保留原实现fallback并写明参数补项，而非借另一ISA能力。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "packed_segments"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+            "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+          },
+          "locator": "lines:75-110",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "保留输入/输出Cast、原算术顺序、NaN/Inf及±0；没有把值域case当公共输入保证。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        }
+      ],
+      "opportunity_count": 4,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-04",
+      "operator": "swi_glu",
+      "round": 2,
+      "decision": {
+        "path": "cases/case-04/R2-decision.json",
+        "sha256": "sha256:af485623c650034b8374a1a650a5ca109723f8015982295f2123731684b9efd4"
+      },
+      "C1": {
+        "path": "cases/case-04/R2-C1.json",
+        "sha256": "sha256:534a971b30e02327c05a7931d99cafa8d964b6ac9129dc3b96b669e7f906b1ed"
+      },
+      "compared_problem_ids": [
+        "problem.tiny_transfer_setup_amplification",
+        "problem.noncontiguous_access",
+        "problem.vector_api_fragmentation",
+        "problem.control_metadata_overhead"
+      ],
+      "action": "action.coalesce_contiguous_transfers",
+      "mode": "conditional_plan",
+      "choice_reason": "比仅外提除模同时减少DMA与Vector小count；比仅批量strided输入还覆盖碎片输出。代价为UB重排和额外暂存，需实际API支持。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "packed_segments"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.tiny_transfer_setup_amplification.md",
+            "sha256": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05"
+          },
+          "locator": "lines:277-325",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：短segment把主体拆碎。每segment两次读一次写；把R个完整segment的物理[x0,x1]对一次连续搬入，再UB重排并整批计算/写回。",
+          "after": "正文机制/边界确认：比仅外提除模同时减少DMA与Vector小count；比仅批量strided输入还覆盖碎片输出。代价为UB重排和额外暂存，需实际API支持。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "layout"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+            "sha256": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db"
+          },
+          "locator": "lines:317-361",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：逻辑x0相邻段在GM间隔S个x1元素；可比较多块strided DataCopyPad分别取x0/x1。",
+          "after": "正文机制/边界确认：保留2路输入语义但非对齐S可能引入UB padding，且Vector仍要处理strided布局；与packed方案比较API参数/重排成本，不能简单把x0段拼为连续。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "vector"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.vector_api_fragmentation.md",
+            "sha256": "sha256:e5c0882f45cb270a9fd555e570428ba6f942efbb8c888972f3aadb655c09a34a"
+          },
+          "locator": "lines:259-301",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：case9/12/20的S分别7/1/50，主体每段执行5(FP32)或8(低精度)个Vector调用。",
+          "after": "正文机制/边界确认：只在UB已连续后可合批，不能跨依赖串联不同算术操作；作为packed方案的配套执行而非单独无需布局的捷径。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "metadata"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+            "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+          },
+          "locator": "lines:298-341",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：每段计算outIndex/S和outIndex%S并读tiling字段。",
+          "after": "正文机制/边界确认：递推段号可以减少标量除模，但S1仍有约百万轮及300万DMA，不如改变批量粒度的结构机会。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "packed_segments"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md",
+            "sha256": "sha256:678b709d7ea4092de4145febb3c7174155094d097e47f2b42b3f073d499b1c25"
+          },
+          "locator": "lines:51-86",
+          "effect_kind": "plan",
+          "before": "有元素总数与原始块长，但尚未明确新方案的owner/存储范围。",
+          "after": "将R个完整segment分配同一核并写回唯一连续区；raw布局不能当成x0连续。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "packed_segments"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+            "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+          },
+          "locator": "lines:74-108",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "C2重新规划短S组的整段owner：Q=N/S段，核c分配[q0,q1)，处理R个完整段，R≥2且RS≤T、(5s+12·[s=2])RS+shuffleTmp≤B。一次读x[2qS:2(q+R)S]到packed，再以a[rS+j]=raw[2rS+j], b[rS+j]=raw[2rS+S+j]作UB向量重排；保持原Cast及Muls/Exp/Adds/Div/Mul，最后写y[qS:(q+R)S]。优先S∈{1,7,50}，候选R使RS≈512/1024/2048；其他S及API无法合法高效重排时走原segment路径，所有20case都覆盖。不能用逐元素GetValue实现shuffle冒充高效向量化。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "packed_segments"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/fallback.md",
+            "sha256": "sha256:5c0be5bd2438407b7fafcda246add02711250c3cbfdf946224b2fba04f40a52c"
+          },
+          "locator": "lines:62-70",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "具体目标API/重叠/stride证据不全，保留原实现fallback并写明参数补项，而非借另一ISA能力。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "packed_segments"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+            "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+          },
+          "locator": "lines:75-110",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "保留输入/输出Cast、原算术顺序、NaN/Inf及±0；没有把值域case当公共输入保证。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        }
+      ],
+      "opportunity_count": 4,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-05",
+      "operator": "apply_adam_w",
+      "round": 1,
+      "decision": {
+        "path": "cases/case-05/R1-decision.json",
+        "sha256": "sha256:812f37fbac260589360b65cd710a222a43138f27598ede7f2cfe958c2363216f"
+      },
+      "C1": {
+        "path": "cases/case-05/R1-C1.json",
+        "sha256": "sha256:1f3bd9fe3589b3987ca41d4a66d1bc971d3435cc2093a2a53ce0860c276d3515"
+      },
+      "compared_problem_ids": [
+        "problem.pipeline_serialization",
+        "problem.onchip_capacity_pressure",
+        "problem.control_metadata_overhead"
+      ],
+      "action": "action.software_pipeline_stages",
+      "mode": "conditional_plan",
+      "choice_reason": "与12个字段缓存相比，预取作用于每元素四路读流量。相比复用5个FP32算术缓冲，原代码已经就地覆盖grad/m/v并复用scratch，进一步alias易破坏safe分支。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "input_pipeline"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+            "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+          },
+          "locator": "lines:272-316",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：四输入每tile全部读入后执行safeSqrt/safeDiv长链，再单输出写回；四路输入各一槽。",
+          "after": "正文机制/边界确认：与12个字段缓存相比，预取作用于每元素四路读流量。相比复用5个FP32算术缓冲，原代码已经就地覆盖grad/m/v并复用scratch，进一步alias易破坏safe分支。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+            "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+          },
+          "locator": "lines:308-351",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：FP32用5队列，低精度用5原始队列加5FP32缓冲；同一bufB/C/D/E已多用途覆盖。",
+          "after": "正文机制/边界确认：host按20/30字节系数及mask+10240预留选最大tile，容量是显式约束；没有证据再合并a/b/c/d/e可保留var、分母与特殊值恢复，因此不先减少缓冲。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "metadata"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+            "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+          },
+          "locator": "lines:298-341",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：每tile复制beta1/beta2/oneMinus/invBias/weightDecay/epsilon/signedLr与三个常量bits。",
+          "after": "正文机制/边界确认：编译器可能消除；该链有四路GM与大量Compare/Select，先选更直接的跨tile调度。字段外提会增长标量生存期，留作编译结果后的后继。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "input_pipeline"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+            "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+          },
+          "locator": "lines:72-108",
+          "effect_kind": "plan",
+          "before": "有元素总数与原始块长，但尚未明确新方案的owner/存储范围。",
+          "after": "保留每核独占输出与原逐元素数学链，T和物理槽分别计入字节公式；已有分区提取不算新并行优化。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "input_pipeline"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+            "sha256": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603"
+          },
+          "locator": "lines:62-144",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "保留host对齐512的blockFormer与输出owner，四路输入队列各配置2物理槽，输出1槽，低精度5个FP32 compute buffer仍1套。T=64k，系数float32=36、half/bf16=38；alpha*T+ceil(ceil(T/8)/256)*256+8192+2048≤B，并保留copy字段上限2097151/s。在当前tile DeQue/读入计算前后为下一tile独立槽预取，队列最大未DeQue数受SDK深度约束，逐代完成后回收。保持SafeSqrt、SafeDiv、weightDecay条件、bias与输出RoundMode全部不变；单tile回退原槽数。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "input_pipeline"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+            "sha256": "sha256:04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483"
+          },
+          "locator": "lines:74-119",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "保留host对齐512的blockFormer与输出owner，四路输入队列各配置2物理槽，输出1槽，低精度5个FP32 compute buffer仍1套。T=64k，系数float32=36、half/bf16=38；alpha*T+ceil(ceil(T/8)/256)*256+8192+2048≤B，并保留copy字段上限2097151/s。在当前tile DeQue/读入计算前后为下一tile独立槽预取，队列最大未DeQue数受SDK深度约束，逐代完成后回收。保持SafeSqrt、SafeDiv、weightDecay条件、bias与输出RoundMode全部不变；单tile回退原槽数。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "input_pipeline"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+            "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+          },
+          "locator": "lines:75-110",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "保留输入/输出Cast、原算术顺序、NaN/Inf及±0；没有把值域case当公共输入保证。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-05",
+      "operator": "apply_adam_w",
+      "round": 2,
+      "decision": {
+        "path": "cases/case-05/R2-decision.json",
+        "sha256": "sha256:f5b89cb8f3f78f995bbef0f1eb1698f920e043e71e7b8b63a79829690255e3cb"
+      },
+      "C1": {
+        "path": "cases/case-05/R2-C1.json",
+        "sha256": "sha256:2b3b1f45d15753cbfc04bf6f372aa640c1c510aa4f1f1a2a2a0598b21c09c767"
+      },
+      "compared_problem_ids": [
+        "problem.pipeline_serialization",
+        "problem.onchip_capacity_pressure",
+        "problem.control_metadata_overhead"
+      ],
+      "action": "action.software_pipeline_stages",
+      "mode": "conditional_plan",
+      "choice_reason": "与12个字段缓存相比，预取作用于每元素四路读流量。相比复用5个FP32算术缓冲，原代码已经就地覆盖grad/m/v并复用scratch，进一步alias易破坏safe分支。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "input_pipeline"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+            "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+          },
+          "locator": "lines:272-316",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：四输入每tile全部读入后执行safeSqrt/safeDiv长链，再单输出写回；四路输入各一槽。",
+          "after": "正文机制/边界确认：与12个字段缓存相比，预取作用于每元素四路读流量。相比复用5个FP32算术缓冲，原代码已经就地覆盖grad/m/v并复用scratch，进一步alias易破坏safe分支。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "storage"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+            "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+          },
+          "locator": "lines:308-351",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：FP32用5队列，低精度用5原始队列加5FP32缓冲；同一bufB/C/D/E已多用途覆盖。",
+          "after": "正文机制/边界确认：host按20/30字节系数及mask+10240预留选最大tile，容量是显式约束；没有证据再合并a/b/c/d/e可保留var、分母与特殊值恢复，因此不先减少缓冲。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "metadata"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+            "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+          },
+          "locator": "lines:298-341",
+          "effect_kind": "mechanism",
+          "before": "当前源码结构：每tile复制beta1/beta2/oneMinus/invBias/weightDecay/epsilon/signedLr与三个常量bits。",
+          "after": "正文机制/边界确认：编译器可能消除；该链有四路GM与大量Compare/Select，先选更直接的跨tile调度。字段外提会增长标量生存期，留作编译结果后的后继。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "input_pipeline"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+            "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+          },
+          "locator": "lines:72-108",
+          "effect_kind": "plan",
+          "before": "有元素总数与原始块长，但尚未明确新方案的owner/存储范围。",
+          "after": "保留每核独占输出与原逐元素数学链，T和物理槽分别计入字节公式；已有分区提取不算新并行优化。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "input_pipeline"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+            "sha256": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603"
+          },
+          "locator": "lines:62-144",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "保留host对齐512的blockFormer与输出owner，四路输入队列各配置2物理槽，输出1槽，低精度5个FP32 compute buffer仍1套。T=64k，系数float32=36、half/bf16=38；alpha*T+ceil(ceil(T/8)/256)*256+8192+2048≤B，并保留copy字段上限2097151/s。在当前tile DeQue/读入计算前后为下一tile独立槽预取，队列最大未DeQue数受SDK深度约束，逐代完成后回收。保持SafeSqrt、SafeDiv、weightDecay条件、bias与输出RoundMode全部不变；单tile回退原槽数。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "input_pipeline"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+            "sha256": "sha256:04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483"
+          },
+          "locator": "lines:74-119",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "保留host对齐512的blockFormer与输出owner，四路输入队列各配置2物理槽，输出1槽，低精度5个FP32 compute buffer仍1套。T=64k，系数float32=36、half/bf16=38；alpha*T+ceil(ceil(T/8)/256)*256+8192+2048≤B，并保留copy字段上限2097151/s。在当前tile DeQue/读入计算前后为下一tile独立槽预取，队列最大未DeQue数受SDK深度约束，逐代完成后回收。保持SafeSqrt、SafeDiv、weightDecay条件、bias与输出RoundMode全部不变；单tile回退原槽数。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        },
+        {
+          "opportunity_ids": [
+            "input_pipeline"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+            "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+          },
+          "locator": "lines:75-110",
+          "effect_kind": "parameters",
+          "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+          "after": "保留输入/输出Cast、原算术顺序、NaN/Inf及±0；没有把值域case当公共输入保证。",
+          "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-06",
+      "operator": "gather",
+      "round": 1,
+      "decision": {
+        "path": "cases/case-06/decision-R1.json",
+        "sha256": "sha256:77a84660842e2524628ed2cf29acb379f5c487d67df128b38018cd99f8268f7c"
+      },
+      "C1": {
+        "path": "cases/case-06/C1-R1.json",
+        "sha256": "sha256:1022d97dd0f9225b585648a5146ca0ab37d0c1265fa4cdccdc99537041c40ac1"
+      },
+      "compared_problem_ids": [
+        "problem.control_metadata_overhead",
+        "problem.scalar_control_hot_loop"
+      ],
+      "action": "action.hoist_invariant_control",
+      "mode": "conditional_plan",
+      "choice_reason": "相比仅缓存TilingData字段，这会删除整个每元素rank除模；相比尾轴UB Gather，它覆盖全部20case且不为稀疏随机源做整行/窗口读放大。随机x访问可能仍主导，因此不声称当前瓶颈或收益。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+            "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+          },
+          "locator": "lines:297-344",
+          "effect_kind": "mechanism",
+          "before": "考虑仅缓存几项字段",
+          "after": "重复地址前缀是同等可选意图，选择mixed-radix增量地址以删除每输出rank除模；编译器CSE和spill留待检验。",
+          "applicability": "gather当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+            "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+          },
+          "locator": "lines:85-126",
+          "effect_kind": "plan",
+          "before": "展平P/J/Q可直接套地址",
+          "after": "非gather轴可小于X，必须保留逐维xStride；尾轴Gather与非尾轴transpose是不同代价，优先所有case地址递增。",
+          "applicability": "gather当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+            "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+          },
+          "locator": "lines:57-104",
+          "effect_kind": "parameters",
+          "before": "用固定rank特化替换整个实现",
+          "after": "按最小不变域初始化和进位，保持原每核序列，不复制无关平台指令；rank1单独删掉无用坐标。",
+          "applicability": "gather当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        }
+      ],
+      "opportunity_count": 2,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-06",
+      "operator": "gather",
+      "round": 2,
+      "decision": {
+        "path": "cases/case-06/decision-R2.json",
+        "sha256": "sha256:101c31752db8923fa4f3ec2c35a7750eebb09d985ef380f6f86dda343c312ad4"
+      },
+      "C1": {
+        "path": "cases/case-06/C1-R2.json",
+        "sha256": "sha256:6828b3697a4996e37bb39b5d02db55b0d483163404cd2d1b1f2ed85b515ece57"
+      },
+      "compared_problem_ids": [
+        "problem.control_metadata_overhead",
+        "problem.scalar_control_hot_loop"
+      ],
+      "action": "action.hoist_invariant_control",
+      "mode": "conditional_plan",
+      "choice_reason": "相比仅缓存TilingData字段，这会删除整个每元素rank除模；相比尾轴UB Gather，它覆盖全部20case且不为稀疏随机源做整行/窗口读放大。随机x访问可能仍主导，因此不声称当前瓶颈或收益。 R2：对20case在起点、末端、半程和每个混合进位边界比较独立解码与递增base，共15250次边界地址断言；所有测试通过。这只确认地址模型，不证明编译后指令或NPU正确性。case20的index第二维127小于X的255，必须用源xStride而非展平index前缀；case13 rank1去掉全部坐标状态。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+            "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+          },
+          "locator": "lines:297-344",
+          "effect_kind": "mechanism",
+          "before": "考虑仅缓存几项字段",
+          "after": "重复地址前缀是同等可选意图，选择mixed-radix增量地址以删除每输出rank除模；编译器CSE和spill留待检验。",
+          "applicability": "gather当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+            "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+          },
+          "locator": "lines:85-126",
+          "effect_kind": "plan",
+          "before": "展平P/J/Q可直接套地址",
+          "after": "非gather轴可小于X，必须保留逐维xStride；尾轴Gather与非尾轴transpose是不同代价，优先所有case地址递增。",
+          "applicability": "gather当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+            "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+          },
+          "locator": "lines:57-104",
+          "effect_kind": "parameters",
+          "before": "用固定rank特化替换整个实现",
+          "after": "按最小不变域初始化和进位，保持原每核序列，不复制无关平台指令；rank1单独删掉无用坐标。",
+          "applicability": "gather当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        }
+      ],
+      "opportunity_count": 2,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-07",
+      "operator": "strided_slice",
+      "round": 1,
+      "decision": {
+        "path": "cases/case-07/decision-R1.json",
+        "sha256": "sha256:8b802e653bb9c7448f75165bca2bdbba6521ed3d25db1f6fc11701a24652c338"
+      },
+      "C1": {
+        "path": "cases/case-07/C1-R1.json",
+        "sha256": "sha256:dd92828b90cd668313a53508c47538ca5e94e895f278c5b91df47143150355b0"
+      },
+      "compared_problem_ids": [
+        "problem.noncontiguous_access",
+        "problem.control_metadata_overhead"
+      ],
+      "action": "action.reorder_contiguous_access",
+      "mode": "conditional_plan",
+      "choice_reason": "11个case存在100至1048576等长度连续段，批量搬运同时去掉逐元素拷贝和段内rank解码；地址外提对其余9case有价值但保留每元素Scalar访存，作为最强替代。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+            "sha256": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db"
+          },
+          "locator": "lines:316-363",
+          "effect_kind": "applicability",
+          "before": "以全输出大小作为可合并长度",
+          "after": "必须逐段核对真实地址差；不连续空洞分开，run1路径不能用连续DMA。",
+          "applicability": "strided_slice当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md",
+            "sha256": "sha256:678b709d7ea4092de4145febb3c7174155094d097e47f2b42b3f073d499b1c25"
+          },
+          "locator": "lines:46-86",
+          "effect_kind": "plan",
+          "before": "布局模板似乎要求引入转置",
+          "after": "正文先列连续切片直接批量搬运；只采用一般映射、合轴和唯一owner，不引入transpose/Gather中间区。",
+          "applicability": "strided_slice当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+            "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+          },
+          "locator": "lines:69-108",
+          "effect_kind": "parameters",
+          "before": "合并跨行DataCopy即可",
+          "after": "前段末端必须等于后段起点；将run与原owner交集后按有效字节搬运，并在MTE3读取结束后复用槽。",
+          "applicability": "strided_slice当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        }
+      ],
+      "opportunity_count": 2,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-07",
+      "operator": "strided_slice",
+      "round": 2,
+      "decision": {
+        "path": "cases/case-07/decision-R2.json",
+        "sha256": "sha256:94ce7d1342cdba4d3ecf0ef8a7157ae33d3bb4a222adf7f666795bdcf2f1ee97"
+      },
+      "C1": {
+        "path": "cases/case-07/C1-R2.json",
+        "sha256": "sha256:b82e16497d085c56cc3b079fadef138348fecadc2775be55836edeb5cf97e3db"
+      },
+      "compared_problem_ids": [
+        "problem.noncontiguous_access",
+        "problem.control_metadata_overhead"
+      ],
+      "action": "action.reorder_contiguous_access",
+      "mode": "conditional_plan",
+      "choice_reason": "11个case存在100至1048576等长度连续段，批量搬运同时去掉逐元素拷贝和段内rank解码；地址外提对其余9case有价值但保留每元素Scalar访存，作为最强替代。 R2：重算所有mask、shrink/new-axis/ellipsis后得到连续组2/7/10/11/13/14/16/17/18/19/20；81处边界断言验证run内source(root+k)=source(root)+k且最大地址在输入内。case16/17的size1新轴不能阻止合轴；case20 run=127，跨行有空洞，不能把整个输出当连续。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+            "sha256": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db"
+          },
+          "locator": "lines:316-363",
+          "effect_kind": "applicability",
+          "before": "以全输出大小作为可合并长度",
+          "after": "必须逐段核对真实地址差；不连续空洞分开，run1路径不能用连续DMA。",
+          "applicability": "strided_slice当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md",
+            "sha256": "sha256:678b709d7ea4092de4145febb3c7174155094d097e47f2b42b3f073d499b1c25"
+          },
+          "locator": "lines:46-86",
+          "effect_kind": "plan",
+          "before": "布局模板似乎要求引入转置",
+          "after": "正文先列连续切片直接批量搬运；只采用一般映射、合轴和唯一owner，不引入transpose/Gather中间区。",
+          "applicability": "strided_slice当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+            "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+          },
+          "locator": "lines:69-108",
+          "effect_kind": "parameters",
+          "before": "合并跨行DataCopy即可",
+          "after": "前段末端必须等于后段起点；将run与原owner交集后按有效字节搬运，并在MTE3读取结束后复用槽。",
+          "applicability": "strided_slice当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        }
+      ],
+      "opportunity_count": 2,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-08",
+      "operator": "grid_sampler_3d",
+      "round": 1,
+      "decision": {
+        "path": "cases/case-08/decision-R1.json",
+        "sha256": "sha256:c1a81efb546af7c833aa57dc7a1010ab32e1b9712e29570fd09a5481fb6a2c36"
+      },
+      "C1": {
+        "path": "cases/case-08/C1-R1.json",
+        "sha256": "sha256:7380898c6880e079e7a7d638f8a6850400e17723c11c0898d955243939273644"
+      },
+      "compared_problem_ids": [
+        "problem.control_metadata_overhead",
+        "problem.insufficient_input_reuse",
+        "problem.scalar_control_hot_loop"
+      ],
+      "action": "action.hoist_invariant_control",
+      "mode": "conditional_plan",
+      "choice_reason": "所有case C=7..256，重复坐标工作是明确源码成本；相比仅驻留原grid，几何共享同时删去floor/reflection/权重，x随机读取和原算术保留。相比全向量化采样，它较少改变数值API及64位索引路径。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+            "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+          },
+          "locator": "lines:297-344",
+          "effect_kind": "mechanism",
+          "before": "三个坐标load是主要可删工作",
+          "after": "同一(n,s)坐标变换和权重也与channel不变，因此选共享几何而非只缓存字段或原值。",
+          "applicability": "grid_sampler_3d当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+            "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+          },
+          "locator": "lines:85-126",
+          "effect_kind": "plan",
+          "before": "索引采样似乎需要原子或跨核共享",
+          "after": "采用输出唯一owner和只读源的原则；GridSampler带插值，不直接套GatherElements地址式；明确任务内扩展并保留原数值链。",
+          "applicability": "grid_sampler_3d当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+            "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+          },
+          "locator": "lines:57-104",
+          "effect_kind": "parameters",
+          "before": "可以把所有坐标量全局缓存",
+          "after": "缓存域必须限定batch/spatial/padding/align；在channel组外计算，跨组/空间重算，不能预乘浮点权重。",
+          "applicability": "grid_sampler_3d当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+            "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+          },
+          "locator": "lines:70-110",
+          "effect_kind": "applicability",
+          "before": "数学等价即可合并权重乘积",
+          "after": "保留原每项乘法及累加舍入，half最后Cast，NaN/Inf掩码和原oracle阈值不变。",
+          "applicability": "grid_sampler_3d当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-08",
+      "operator": "grid_sampler_3d",
+      "round": 2,
+      "decision": {
+        "path": "cases/case-08/decision-R2.json",
+        "sha256": "sha256:2b63443bb4abe0d14b7ccad7855efecb37150d529782edea20c8c0d1057bcca3"
+      },
+      "C1": {
+        "path": "cases/case-08/C1-R2.json",
+        "sha256": "sha256:99b2d9a2fe9b866addc7a9895866f03c42dd9171ca0cb08c879381799693d2eb"
+      },
+      "compared_problem_ids": [
+        "problem.control_metadata_overhead",
+        "problem.insufficient_input_reuse",
+        "problem.scalar_control_hot_loop"
+      ],
+      "action": "action.hoist_invariant_control",
+      "mode": "conditional_plan",
+      "choice_reason": "所有case C=7..256，重复坐标工作是明确源码成本；相比仅驻留原grid，几何共享同时删去floor/reflection/权重，x随机读取和原算术保留。相比全向量化采样，它较少改变数值API及64位索引路径。 R2：20case逻辑H=4/8/16分组边界共240次断言仅证明逻辑索引覆盖，不能证明物理写独占。进一步审读发现奇数S使同一个T空间切点在不同channel具有不同64B余数，H=C也不能使跨空间task安全。R2保留原64B线性owner，只复用其内部完整channel平面，头尾残片fallback；因此削弱R1全覆盖ceil(C/H)坐标计数预测，改为逐owner实际计数。保留独立轴权重和原累加顺序。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+            "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+          },
+          "locator": "lines:297-344",
+          "effect_kind": "mechanism",
+          "before": "三个坐标load是主要可删工作",
+          "after": "同一(n,s)坐标变换和权重也与channel不变，因此选共享几何而非只缓存字段或原值。",
+          "applicability": "grid_sampler_3d当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+            "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+          },
+          "locator": "lines:85-126",
+          "effect_kind": "plan",
+          "before": "索引采样似乎需要原子或跨核共享",
+          "after": "采用输出唯一owner和只读源的原则；GridSampler带插值，不直接套GatherElements地址式；明确任务内扩展并保留原数值链。",
+          "applicability": "grid_sampler_3d当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+            "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+          },
+          "locator": "lines:57-104",
+          "effect_kind": "parameters",
+          "before": "可以把所有坐标量全局缓存",
+          "after": "缓存域必须限定batch/spatial/padding/align；在channel组外计算，跨组/空间重算，不能预乘浮点权重。",
+          "applicability": "grid_sampler_3d当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+            "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+          },
+          "locator": "lines:70-110",
+          "effect_kind": "applicability",
+          "before": "数学等价即可合并权重乘积",
+          "after": "保留原每项乘法及累加舍入，half最后Cast，NaN/Inf掩码和原oracle阈值不变。",
+          "applicability": "grid_sampler_3d当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-09",
+      "operator": "gelu",
+      "round": 1,
+      "decision": {
+        "path": "cases/case-09/decision-R1.json",
+        "sha256": "sha256:e57b8fa3330d8a668bb71201cf8fc809a83949ae8710bcd746943680573a40f0"
+      },
+      "C1": {
+        "path": "cases/case-09/C1-R1.json",
+        "sha256": "sha256:fd2ed6566bc64c76c15995b56211666caa1829a07bfd14402f653971840da15b"
+      },
+      "compared_problem_ids": [
+        "problem.dynamic_shape_mismatch",
+        "problem.onchip_capacity_pressure",
+        "problem.redundant_cast"
+      ],
+      "action": "action.dispatch_by_workload",
+      "mode": "conditional_plan",
+      "choice_reason": "直接删掉tanh永不使用的20*T+mask静态字节，给更大tile提供可核算空间；相比强行复用none临时区，避免Erfc输入/tmp重叠未证问题。容量节约本身不是加速，收益假设来自同算术较少tile循环/API发射。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.dynamic_shape_mismatch.md",
+            "sha256": "sha256:24caeddf6063226e52e28c8d8fbd07a6cf7193ee2c3a2575d2a78f0cf28ea4b2"
+          },
+          "locator": "lines:305-352",
+          "effect_kind": "mechanism",
+          "before": "仅因20个shape不同建立20个分支",
+          "after": "只按mode/dtype的资源差异分组，none/tanh算法和容量不同；不按case号特化。",
+          "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+            "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+          },
+          "locator": "lines:307-354",
+          "effect_kind": "alternative",
+          "before": "看见大量scratch即可判断容量瓶颈",
+          "after": "当前实际UB未知，不能证明接近容量；只确认未使用的静态分配及可行tile域扩大。",
+          "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+            "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+          },
+          "locator": "lines:67-114",
+          "effect_kind": "parameters",
+          "before": "函数未用scratch意味着不计容量",
+          "after": "独立InitBuffer即使无读者仍占空间，需实际删分配；U算全部物理字节并加APIreserve。",
+          "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+            "sha256": "sha256:04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483"
+          },
+          "locator": "lines:69-116",
+          "effect_kind": "parameters",
+          "before": "none和tanh串行分支的所有区可直接取max",
+          "after": "只有真实共享/条件分配才能扣字节；此处tanh省erfTmp/mask，none保留saved别名和完成边。",
+          "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/recipes/dispatch.md",
+            "sha256": "sha256:9fe36578c284c773038c7f64644b58c9aaa708adc2bd00578b231e34e731fefa"
+          },
+          "locator": "lines:60-100",
+          "effect_kind": "plan",
+          "before": "引入key宏做模式特化",
+          "after": "当前为kernel直调，正文明确TILING_KEY_IS不适用于该框架；保持真实mode字段和入口接线。",
+          "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+            "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+          },
+          "locator": "lines:70-110",
+          "effect_kind": "rejection",
+          "before": "两次Cast似乎可以删除",
+          "after": "RINT位置承担概率量化；保留其与负尾/NaN/Inf合同，拒绝未证数值改写。",
+          "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-09",
+      "operator": "gelu",
+      "round": 2,
+      "decision": {
+        "path": "cases/case-09/decision-R2.json",
+        "sha256": "sha256:e733b0bd0f2ea531c50a88b6ae9d871ac1c08305282b30ce77799c71afd1ec1a"
+      },
+      "C1": {
+        "path": "cases/case-09/C1-R2.json",
+        "sha256": "sha256:f6f011351b65326abb2916b7a6112423fe585d1f39c70a3e2c454be8656cd20e"
+      },
+      "compared_problem_ids": [
+        "problem.dynamic_shape_mismatch",
+        "problem.onchip_capacity_pressure",
+        "problem.redundant_cast"
+      ],
+      "action": "action.dispatch_by_workload",
+      "mode": "conditional_plan",
+      "choice_reason": "直接删掉tanh永不使用的20*T+mask静态字节，给更大tile提供可核算空间；相比强行复用none临时区，避免Erfc输入/tmp重叠未证问题。容量节约本身不是加速，收益假设来自同算术较少tile循环/API发射。 R2：逐20case重算模式域，9个tanh和11个none；T1024节约20736B的等式成立。确认erfTmp在none还被saved复用，不能从none再减一块；tanh的work ReinterpretCast<int32>只是视图，未新增物理区。R2坚持保留2^-23 RINT和none负尾修正。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.dynamic_shape_mismatch.md",
+            "sha256": "sha256:24caeddf6063226e52e28c8d8fbd07a6cf7193ee2c3a2575d2a78f0cf28ea4b2"
+          },
+          "locator": "lines:305-352",
+          "effect_kind": "mechanism",
+          "before": "仅因20个shape不同建立20个分支",
+          "after": "只按mode/dtype的资源差异分组，none/tanh算法和容量不同；不按case号特化。",
+          "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+            "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+          },
+          "locator": "lines:307-354",
+          "effect_kind": "alternative",
+          "before": "看见大量scratch即可判断容量瓶颈",
+          "after": "当前实际UB未知，不能证明接近容量；只确认未使用的静态分配及可行tile域扩大。",
+          "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+            "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+          },
+          "locator": "lines:67-114",
+          "effect_kind": "parameters",
+          "before": "函数未用scratch意味着不计容量",
+          "after": "独立InitBuffer即使无读者仍占空间，需实际删分配；U算全部物理字节并加APIreserve。",
+          "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+            "sha256": "sha256:04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483"
+          },
+          "locator": "lines:69-116",
+          "effect_kind": "parameters",
+          "before": "none和tanh串行分支的所有区可直接取max",
+          "after": "只有真实共享/条件分配才能扣字节；此处tanh省erfTmp/mask，none保留saved别名和完成边。",
+          "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/recipes/dispatch.md",
+            "sha256": "sha256:9fe36578c284c773038c7f64644b58c9aaa708adc2bd00578b231e34e731fefa"
+          },
+          "locator": "lines:60-100",
+          "effect_kind": "plan",
+          "before": "引入key宏做模式特化",
+          "after": "当前为kernel直调，正文明确TILING_KEY_IS不适用于该框架；保持真实mode字段和入口接线。",
+          "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+            "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+          },
+          "locator": "lines:70-110",
+          "effect_kind": "rejection",
+          "before": "两次Cast似乎可以删除",
+          "after": "RINT位置承担概率量化；保留其与负尾/NaN/Inf合同，拒绝未证数值改写。",
+          "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-10",
+      "operator": "sigmoid",
+      "round": 1,
+      "decision": {
+        "path": "cases/case-10/decision-R1.json",
+        "sha256": "sha256:e709cb407bfb91c1d116113f22fb4bb15e9e7001af44468188352f808eda9231"
+      },
+      "C1": {
+        "path": "cases/case-10/C1-R1.json",
+        "sha256": "sha256:1f54711ca14c6406340fe4b0e8ed1cc39ef61bb3b167e6ed8eb6a33d748f0028"
+      },
+      "compared_problem_ids": [
+        "problem.pipeline_serialization",
+        "problem.dynamic_shape_mismatch",
+        "problem.redundant_cast"
+      ],
+      "action": "action.software_pipeline_stages",
+      "mode": "conditional_plan",
+      "choice_reason": "可保持原T而提供真实双物理槽和预取窗口，直接检验原排程可避免等待；相比只增大tile，未把更大临时区当作必需。cast删除缺等价依据且不会消除必要数学计算。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+            "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+          },
+          "locator": "lines:271-318",
+          "effect_kind": "mechanism",
+          "before": "InitBuffer两块即可宣称有overlap",
+          "after": "必须展示prefetch/steady/drain与槽完成边；单tile作为fallback，overlap仍是性能预测。",
+          "applicability": "sigmoid当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.transfer_compute_contention.md",
+            "sha256": "sha256:055ef2406cd741a26a11f55e813f356567195c4f26fab9fa0c9ada1b2727bdc7"
+          },
+          "locator": "lines:278-325",
+          "effect_kind": "alternative",
+          "before": "更多重叠必然更快",
+          "after": "同资源竞争可能反向影响Task，若只见并发不能确认争用；后继保留单槽T8192对照。",
+          "applicability": "sigmoid当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+            "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+          },
+          "locator": "lines:67-114",
+          "effect_kind": "parameters",
+          "before": "深度翻倍时tile应机械减半",
+          "after": "tile与物理槽需联合预算；T4096若实际容量允许先保持，避免额外发射混杂。",
+          "applicability": "sigmoid当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+            "sha256": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603"
+          },
+          "locator": "lines:57-104",
+          "effect_kind": "plan",
+          "before": "把TQue模板depth改2即可流水",
+          "after": "InitBuffer物理num与队列depth不同；depth1只允许当前DeQue后预取下一块，完整0/1/2/奇数tile/drain。",
+          "applicability": "sigmoid当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-10",
+      "operator": "sigmoid",
+      "round": 2,
+      "decision": {
+        "path": "cases/case-10/decision-R2.json",
+        "sha256": "sha256:e630146eafbaaafefb87cf06b9b02bff4ced305be4dc34e5ea8590557a8bda53"
+      },
+      "C1": {
+        "path": "cases/case-10/C1-R2.json",
+        "sha256": "sha256:92649d3dc4340bb6f6f0265842951164675f350e8af358e671da89ba3116e1b4"
+      },
+      "compared_problem_ids": [
+        "problem.pipeline_serialization",
+        "problem.dynamic_shape_mismatch",
+        "problem.redundant_cast"
+      ],
+      "action": "action.software_pipeline_stages",
+      "mode": "conditional_plan",
+      "choice_reason": "可保持原T而提供真实双物理槽和预取窗口，直接检验原排程可避免等待；相比只增大tile，未把更大临时区当作必需。cast删除缺等价依据且不会消除必要数学计算。 R2：20case重算显式UB公式确认双槽在T4096为65536B，不能拿它直接和注释192KiB作容量通过。对1/2/3tile排程审读：prefetch只在当前DeQue后发生，队列未消费上限1；尾t+1先检查域，drain不能遗漏。此为依赖模型复核，不是已证明目标事件实现或实际overlap。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+            "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+          },
+          "locator": "lines:271-318",
+          "effect_kind": "mechanism",
+          "before": "InitBuffer两块即可宣称有overlap",
+          "after": "必须展示prefetch/steady/drain与槽完成边；单tile作为fallback，overlap仍是性能预测。",
+          "applicability": "sigmoid当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.transfer_compute_contention.md",
+            "sha256": "sha256:055ef2406cd741a26a11f55e813f356567195c4f26fab9fa0c9ada1b2727bdc7"
+          },
+          "locator": "lines:278-325",
+          "effect_kind": "alternative",
+          "before": "更多重叠必然更快",
+          "after": "同资源竞争可能反向影响Task，若只见并发不能确认争用；后继保留单槽T8192对照。",
+          "applicability": "sigmoid当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+            "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+          },
+          "locator": "lines:67-114",
+          "effect_kind": "parameters",
+          "before": "深度翻倍时tile应机械减半",
+          "after": "tile与物理槽需联合预算；T4096若实际容量允许先保持，避免额外发射混杂。",
+          "applicability": "sigmoid当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        },
+        {
+          "opportunity_ids": [
+            "opportunity.primary"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+            "sha256": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603"
+          },
+          "locator": "lines:57-104",
+          "effect_kind": "plan",
+          "before": "把TQue模板depth改2即可流水",
+          "after": "InitBuffer物理num与队列depth不同；depth1只允许当前DeQue后预取下一块，完整0/1/2/奇数tile/drain。",
+          "applicability": "sigmoid当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-11",
+      "operator": "foreach_addcdiv_scalar",
+      "round": 1,
+      "decision": {
+        "path": "cases/case-11/R1-action-decision.json",
+        "sha256": "sha256:0ab80f13a15ee5dcc7f601889e70d4f0abaafa9b00db6aa3430c3d44583cdf9e"
+      },
+      "C1": {
+        "path": "cases/case-11/R1-C1.json",
+        "sha256": "sha256:ae0f5d40bf02a7c759c96b8b85b7f4e3a7d25e6cf84cdf5facedaff3d59cf41b"
+      },
+      "compared_problem_ids": [
+        "problem.pipeline_serialization",
+        "problem.onchip_capacity_pressure",
+        "problem.redundant_cast"
+      ],
+      "action": "action.software_pipeline_stages",
+      "mode": "conditional_plan",
+      "choice_reason": "跨tile预取释放单槽依赖，必要GM流量仍为4Ns，代价是更多raw槽及序言尾声。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+            "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+          },
+          "locator": "lines:285-297",
+          "effect_kind": "mechanism",
+          "before": "源码显示：Process明确CopyIn→Compute→CopyOut；4个TQue均num=1，2048元素tile；输入3读输出1写。",
+          "after": "跨tile预取释放单槽依赖，必要GM流量仍为4Ns，代价是更多raw槽及序言尾声。",
+          "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+        },
+        {
+          "opportunity_ids": [
+            "o2"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+            "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+          },
+          "locator": "lines:320-332",
+          "effect_kind": "mechanism",
+          "before": "源码显示：低精度Cast三输入至fp1/fp2/fp3，Div写fpOut再Muls/Add并最终Cast；不是连续宽窄往返。",
+          "after": "将Div后的fc区用于之后Cast(a)可从四FP32 scratch降至三块，但需先延后Cast(a)并核对API alias/事件；尚未知道容量是否限制tile。",
+          "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+        },
+        {
+          "opportunity_ids": [
+            "o3"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.redundant_cast.md",
+            "sha256": "sha256:c7f8ace396cc0a0f53f4bc0a5b9f0883cbd8b439d45dce74edc1e4f50b1b326d"
+          },
+          "locator": "lines:303-315",
+          "effect_kind": "mechanism",
+          "before": "源码显示：低精度Cast三输入至fp1/fp2/fp3，Div写fpOut再Muls/Add并最终Cast；不是连续宽窄往返。",
+          "after": "三输入各只扩位一次、输出只缩位一次；删除Cast会变更FP32除法路径，case12/13异常值不允许用scalar特化跳过算术。",
+          "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+        },
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+            "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+          },
+          "locator": "lines:78-90",
+          "effect_kind": "parameters",
+          "before": "尚未把源循环转换为有界任务/内存方案。",
+          "after": "连续输出模板要求每输出唯一owner与总分配预算；保留host chunk和现有所有权，双raw槽+四FP32 scratch按65536B(U=2048)计，不把活跃下界当物理分配。",
+          "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+        },
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+            "sha256": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603"
+          },
+          "locator": "lines:62-74",
+          "effect_kind": "parameters",
+          "before": "尚未把源循环转换为有界任务/内存方案。",
+          "after": "foreach中物理num=2与depth=1分别计；每次DeQue后再预取，并闭合输入最后读和MTE3读完后的回收；SDK队列能力另为unknown。",
+          "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+        },
+        {
+          "opportunity_ids": [
+            "o1",
+            "o2"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+            "sha256": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603"
+          },
+          "locator": "lines:62-74",
+          "effect_kind": "alternative",
+          "before": "此前尚未比较该方法的边界。",
+          "after": "foreach中物理num=2与depth=1分别计；每次DeQue后再预取，并闭合输入最后读和MTE3读完后的回收；SDK队列能力另为unknown。",
+          "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+        },
+        {
+          "opportunity_ids": [
+            "o1",
+            "o2"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+            "sha256": "sha256:04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483"
+          },
+          "locator": "lines:80-92",
+          "effect_kind": "alternative",
+          "before": "此前尚未比较该方法的边界。",
+          "after": "独立InitBuffer不因词法作用域而自动共享；foreach只有重排Cast(a)并物理合并fc/fa后才从四FP32区降至三，目标API alias与完成边须核对。",
+          "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-11",
+      "operator": "foreach_addcdiv_scalar",
+      "round": 2,
+      "decision": {
+        "path": "cases/case-11/R2-action-decision.json",
+        "sha256": "sha256:fb352aaf2df69bb62ed958ef65f1f39b72864aa908ac57f45c28528c6f4bc182"
+      },
+      "C1": {
+        "path": "cases/case-11/R2-C1.json",
+        "sha256": "sha256:040a7bc62321cd7c7e2622ced9ba95305753e650fdce66833a245e585c7598f9"
+      },
+      "compared_problem_ids": [
+        "problem.pipeline_serialization",
+        "problem.onchip_capacity_pressure",
+        "problem.redundant_cast"
+      ],
+      "action": "action.software_pipeline_stages",
+      "mode": "conditional_plan",
+      "choice_reason": "跨tile预取释放单槽依赖，必要GM流量仍为4Ns，代价是更多raw槽及序言尾声。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+            "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+          },
+          "locator": "lines:285-297",
+          "effect_kind": "mechanism",
+          "before": "源码显示：Process明确CopyIn→Compute→CopyOut；4个TQue均num=1，2048元素tile；输入3读输出1写。",
+          "after": "跨tile预取释放单槽依赖，必要GM流量仍为4Ns，代价是更多raw槽及序言尾声。",
+          "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+        },
+        {
+          "opportunity_ids": [
+            "o2"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+            "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+          },
+          "locator": "lines:320-332",
+          "effect_kind": "mechanism",
+          "before": "源码显示：低精度Cast三输入至fp1/fp2/fp3，Div写fpOut再Muls/Add并最终Cast；不是连续宽窄往返。",
+          "after": "将Div后的fc区用于之后Cast(a)可从四FP32 scratch降至三块，但需先延后Cast(a)并核对API alias/事件；尚未知道容量是否限制tile。",
+          "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+        },
+        {
+          "opportunity_ids": [
+            "o3"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.redundant_cast.md",
+            "sha256": "sha256:c7f8ace396cc0a0f53f4bc0a5b9f0883cbd8b439d45dce74edc1e4f50b1b326d"
+          },
+          "locator": "lines:303-315",
+          "effect_kind": "mechanism",
+          "before": "源码显示：低精度Cast三输入至fp1/fp2/fp3，Div写fpOut再Muls/Add并最终Cast；不是连续宽窄往返。",
+          "after": "三输入各只扩位一次、输出只缩位一次；删除Cast会变更FP32除法路径，case12/13异常值不允许用scalar特化跳过算术。",
+          "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+        },
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+            "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+          },
+          "locator": "lines:78-90",
+          "effect_kind": "parameters",
+          "before": "尚未把源循环转换为有界任务/内存方案。",
+          "after": "连续输出模板要求每输出唯一owner与总分配预算；保留host chunk和现有所有权，双raw槽+四FP32 scratch按65536B(U=2048)计，不把活跃下界当物理分配。",
+          "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+        },
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+            "sha256": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603"
+          },
+          "locator": "lines:62-74",
+          "effect_kind": "parameters",
+          "before": "尚未把源循环转换为有界任务/内存方案。",
+          "after": "foreach中物理num=2与depth=1分别计；每次DeQue后再预取，并闭合输入最后读和MTE3读完后的回收；SDK队列能力另为unknown。",
+          "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+        },
+        {
+          "opportunity_ids": [
+            "o1",
+            "o2"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+            "sha256": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603"
+          },
+          "locator": "lines:62-74",
+          "effect_kind": "alternative",
+          "before": "此前尚未比较该方法的边界。",
+          "after": "foreach中物理num=2与depth=1分别计；每次DeQue后再预取，并闭合输入最后读和MTE3读完后的回收；SDK队列能力另为unknown。",
+          "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+        },
+        {
+          "opportunity_ids": [
+            "o1",
+            "o2"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+            "sha256": "sha256:04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483"
+          },
+          "locator": "lines:80-92",
+          "effect_kind": "alternative",
+          "before": "此前尚未比较该方法的边界。",
+          "after": "独立InitBuffer不因词法作用域而自动共享；foreach只有重排Cast(a)并物理合并fc/fa后才从四FP32区降至三，目标API alias与完成边须核对。",
+          "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-12",
+      "operator": "maximum",
+      "round": 1,
+      "decision": {
+        "path": "cases/case-12/R1-action-decision.json",
+        "sha256": "sha256:c631e7861aa2adb67cd1e195004cb2a20a8d9b1fd6aca3bec03c88f90c5073e7"
+      },
+      "C1": {
+        "path": "cases/case-12/R1-C1.json",
+        "sha256": "sha256:943371eee870b9359ee2ea9101f1078989020e92fc0c0ef0e5f5879266ae2bca"
+      },
+      "compared_problem_ids": [
+        "problem.broadcast_strategy_mismatch",
+        "problem.scalar_control_hot_loop",
+        "problem.insufficient_input_reuse"
+      ],
+      "action": "action.restructure_broadcast",
+      "mode": "conditional_plan",
+      "choice_reason": "将重复rank解码降至每连续片段，并把长连续x1从scalar GM读取改为DataCopy+批量比较。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.broadcast_strategy_mismatch.md",
+            "sha256": "sha256:1b2609ac77d163bda7a1992cd1e36fbc698fac4bfd4b1140afc3298472a38fb1"
+          },
+          "locator": "lines:311-323",
+          "effect_kind": "mechanism",
+          "before": "源码显示：sameShape除int64外已Vector；所有int64和非FP16广播走MaximumScalar逐元素rank次除模。",
+          "after": "将重复rank解码降至每连续片段，并把长连续x1从scalar GM读取改为DataCopy+批量比较。",
+          "applicability": "广播映射由右补1与零stride严格确定；每个输出唯一owner；int64保留原64bit有序比较。"
+        },
+        {
+          "opportunity_ids": [
+            "o2"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+            "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+          },
+          "locator": "lines:292-304",
+          "effect_kind": "mechanism",
+          "before": "源码显示：sameShape除int64外已Vector；所有int64和非FP16广播走MaximumScalar逐元素rank次除模。",
+          "after": "同形int64 case5很大但目标Vector int64比较未有能力依据；不能用float替代，纯地址外提保留可行。",
+          "applicability": "广播映射由右补1与零stride严格确定；每个输出唯一owner；int64保留原64bit有序比较。"
+        },
+        {
+          "opportunity_ids": [
+            "o3"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.insufficient_input_reuse.md",
+            "sha256": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4"
+          },
+          "locator": "lines:265-277",
+          "effect_kind": "mechanism",
+          "before": "源码显示：case11/12/13/20连续x1配重复零stride x2，原内循环重建ai/bi；case18已有FP16 last-axis分段。",
+          "after": "case18在255行重复加载同8193元素半精度源，可保留一行或列片段；目前已Vector，不消除其他四组逐输出解码。",
+          "applicability": "广播映射由右补1与零stride严格确定；每个输出唯一owner；int64保留原64bit有序比较。"
+        },
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/broadcast.md",
+            "sha256": "sha256:e9656ff1eb44e019b72c4199f8a993f084e587f92b65b1c740d23fd4912d5cee"
+          },
+          "locator": "lines:98-110",
+          "effect_kind": "parameters",
+          "before": "尚未把源循环转换为有界任务/内存方案。",
+          "after": "广播模板的零stride/位图合轴使case12/13/20可按W=37/256/101内轴分段；axis=0源字节对齐限制使case18的16386B源不自动满足静态Broadcast。",
+          "applicability": "广播映射由右补1与零stride严格确定；每个输出唯一owner；int64保留原64bit有序比较。"
+        },
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+            "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+          },
+          "locator": "lines:76-88",
+          "effect_kind": "parameters",
+          "before": "尚未把源循环转换为有界任务/内存方案。",
+          "after": "maximum只合并本owner连续x1行片，广播源偏移按零stride计算；不得把跨row或padding当有效元素。",
+          "applicability": "广播映射由右补1与零stride严格确定；每个输出唯一owner；int64保留原64bit有序比较。"
+        },
+        {
+          "opportunity_ids": [
+            "o1",
+            "o2"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+            "sha256": "sha256:d1a2e2eb822d93e4962d5c0198fd3a124e81e5af354c73596b513bd53ee13f08"
+          },
+          "locator": "lines:85-97",
+          "effect_kind": "alternative",
+          "before": "此前尚未比较该方法的边界。",
+          "after": "maximum优先有效count并保持广播row边界；scalar ternary与Vector Max的NaN/±0不自动等价，完整semantic_equivalence保持unknown。",
+          "applicability": "广播映射由右补1与零stride严格确定；每个输出唯一owner；int64保留原64bit有序比较。"
+        },
+        {
+          "opportunity_ids": [
+            "o1",
+            "o2"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+            "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+          },
+          "locator": "lines:121-133",
+          "effect_kind": "alternative",
+          "before": "此前尚未比较该方法的边界。",
+          "after": "case18的255行同8193列小源是同原值，驻留需保留x2只读且不能套输出off；实际源宽16386B和独立分配仍计入UB。",
+          "applicability": "广播映射由右补1与零stride严格确定；每个输出唯一owner；int64保留原64bit有序比较。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-12",
+      "operator": "maximum",
+      "round": 2,
+      "decision": {
+        "path": "cases/case-12/R2-action-decision.json",
+        "sha256": "sha256:00439ccedd07b5fb0a67fa8dd5f198646fc993bdf4e361cbd4cd00d2f9d81989"
+      },
+      "C1": {
+        "path": "cases/case-12/R2-C1.json",
+        "sha256": "sha256:b36456e4c2595888adbfab21461addc300ae6fc0da606e5c2ee90e96028e9529"
+      },
+      "compared_problem_ids": [
+        "problem.broadcast_strategy_mismatch",
+        "problem.scalar_control_hot_loop",
+        "problem.insufficient_input_reuse"
+      ],
+      "action": "action.restructure_broadcast",
+      "mode": "conditional_plan",
+      "choice_reason": "将重复rank解码降至每连续片段，并把长连续x1从scalar GM读取改为DataCopy+批量比较。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.broadcast_strategy_mismatch.md",
+            "sha256": "sha256:1b2609ac77d163bda7a1992cd1e36fbc698fac4bfd4b1140afc3298472a38fb1"
+          },
+          "locator": "lines:311-323",
+          "effect_kind": "mechanism",
+          "before": "源码显示：sameShape除int64外已Vector；所有int64和非FP16广播走MaximumScalar逐元素rank次除模。",
+          "after": "将重复rank解码降至每连续片段，并把长连续x1从scalar GM读取改为DataCopy+批量比较。",
+          "applicability": "广播映射由右补1与零stride严格确定；每个输出唯一owner；int64保留原64bit有序比较。"
+        },
+        {
+          "opportunity_ids": [
+            "o2"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+            "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+          },
+          "locator": "lines:292-304",
+          "effect_kind": "mechanism",
+          "before": "源码显示：sameShape除int64外已Vector；所有int64和非FP16广播走MaximumScalar逐元素rank次除模。",
+          "after": "同形int64 case5很大但目标Vector int64比较未有能力依据；不能用float替代，纯地址外提保留可行。",
+          "applicability": "广播映射由右补1与零stride严格确定；每个输出唯一owner；int64保留原64bit有序比较。"
+        },
+        {
+          "opportunity_ids": [
+            "o3"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.insufficient_input_reuse.md",
+            "sha256": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4"
+          },
+          "locator": "lines:265-277",
+          "effect_kind": "mechanism",
+          "before": "源码显示：case11/12/13/20连续x1配重复零stride x2，原内循环重建ai/bi；case18已有FP16 last-axis分段。",
+          "after": "case18在255行重复加载同8193元素半精度源，可保留一行或列片段；目前已Vector，不消除其他四组逐输出解码。",
+          "applicability": "广播映射由右补1与零stride严格确定；每个输出唯一owner；int64保留原64bit有序比较。"
+        },
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/broadcast.md",
+            "sha256": "sha256:e9656ff1eb44e019b72c4199f8a993f084e587f92b65b1c740d23fd4912d5cee"
+          },
+          "locator": "lines:98-110",
+          "effect_kind": "parameters",
+          "before": "尚未把源循环转换为有界任务/内存方案。",
+          "after": "广播模板的零stride/位图合轴使case12/13/20可按W=37/256/101内轴分段；axis=0源字节对齐限制使case18的16386B源不自动满足静态Broadcast。",
+          "applicability": "广播映射由右补1与零stride严格确定；每个输出唯一owner；int64保留原64bit有序比较。"
+        },
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+            "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+          },
+          "locator": "lines:76-88",
+          "effect_kind": "parameters",
+          "before": "尚未把源循环转换为有界任务/内存方案。",
+          "after": "maximum只合并本owner连续x1行片，广播源偏移按零stride计算；不得把跨row或padding当有效元素。",
+          "applicability": "广播映射由右补1与零stride严格确定；每个输出唯一owner；int64保留原64bit有序比较。"
+        },
+        {
+          "opportunity_ids": [
+            "o1",
+            "o2"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+            "sha256": "sha256:d1a2e2eb822d93e4962d5c0198fd3a124e81e5af354c73596b513bd53ee13f08"
+          },
+          "locator": "lines:85-97",
+          "effect_kind": "alternative",
+          "before": "此前尚未比较该方法的边界。",
+          "after": "maximum优先有效count并保持广播row边界；scalar ternary与Vector Max的NaN/±0不自动等价，完整semantic_equivalence保持unknown。",
+          "applicability": "广播映射由右补1与零stride严格确定；每个输出唯一owner；int64保留原64bit有序比较。"
+        },
+        {
+          "opportunity_ids": [
+            "o1",
+            "o2"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+            "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+          },
+          "locator": "lines:121-133",
+          "effect_kind": "alternative",
+          "before": "此前尚未比较该方法的边界。",
+          "after": "case18的255行同8193列小源是同原值，驻留需保留x2只读且不能套输出off；实际源宽16386B和独立分配仍计入UB。",
+          "applicability": "广播映射由右补1与零stride严格确定；每个输出唯一owner；int64保留原64bit有序比较。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-13",
+      "operator": "apply_rotary_pos_emb",
+      "round": 1,
+      "decision": {
+        "path": "cases/case-13/R1-action-decision.json",
+        "sha256": "sha256:1b30dde12263ecbfd637be39c0ad3e19cb98ac7fc9fb35f7d80fc914ba471f1b"
+      },
+      "C1": {
+        "path": "cases/case-13/R1-C1.json",
+        "sha256": "sha256:9676c322ada78a8d87aedb61e9b6a284181765f524a80471c3beaa4917140c5f"
+      },
+      "compared_problem_ids": [
+        "problem.scalar_control_hot_loop",
+        "problem.insufficient_input_reuse",
+        "problem.excessive_sync_scope"
+      ],
+      "action": "action.vectorize_scalar_loop",
+      "mode": "conditional_plan",
+      "choice_reason": "half mode的partner是连续半区，逐元素volatile标量乘加可表达为逐半区Vector，仍保留运算边界。 数学结构支持该条件方案，完整数值语义仍待证明。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+            "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+          },
+          "locator": "lines:292-304",
+          "effect_kind": "mechanism",
+          "before": "源码显示：Row将q/k/cos/sin搬入UB后，for(d<D)逐d GetValue多次并SetValue两输出，q/k分别先两乘再加。",
+          "after": "half mode的partner是连续半区，逐元素volatile标量乘加可表达为逐半区Vector，仍保留运算边界。",
+          "applicability": "两个输出每一维只读本行q/k及同一trig，不是归约；half mode partner=d±H，独立输出在原owner内；输入输出host分开分配。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o2"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.insufficient_input_reuse.md",
+            "sha256": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4"
+          },
+          "locator": "lines:265-277",
+          "effect_kind": "mechanism",
+          "before": "源码显示：layout0同seq的连续N个head复用trig；layout1相邻row是seq变化，cosBatched属于host参数。",
+          "after": "layout0且N>1同seq重复读取cos/sin，复用可省trig读但不消除大部分逐元素算术；layout1需改任务顺序。",
+          "applicability": "两个输出每一维只读本行q/k及同一trig，不是归约；half mode partner=d±H，独立输出在原owner内；输入输出host分开分配。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o3"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.excessive_sync_scope.md",
+            "sha256": "sha256:398689df25a9f16697480f068a9e9951cefe7e2e53d945a4a65613e76a8e4d19"
+          },
+          "locator": "lines:304-316",
+          "effect_kind": "mechanism",
+          "before": "源码显示：Row在MTE2、Cast后、Scalar SetValue后和输出Cast后调用PIPE_ALL，必须保持原生产消费完成边。",
+          "after": "多次PIPE_ALL可能过宽，但当前V cast→Scalar GetValue与Scalar SetValue→V cast均有跨流水边，不能直接删。",
+          "applicability": "两个输出每一维只读本行q/k及同一trig，不是归约；half mode partner=d±H，独立输出在原owner内；输入输出host分开分配。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+            "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+          },
+          "locator": "lines:78-90",
+          "effect_kind": "parameters",
+          "before": "尚未把源循环转换为有界任务/内存方案。",
+          "after": "连续模板的相同索引前提不能直接套RoPE partner。这里只迁移互斥输出区间原则，task边界固定完整row，两个半区仍在同一owner内，不拆成互相覆盖的原地更新。",
+          "applicability": "两个输出每一维只读本行q/k及同一trig，不是归约；half mode partner=d±H，独立输出在原owner内；输入输出host分开分配。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+            "sha256": "sha256:d1a2e2eb822d93e4962d5c0198fd3a124e81e5af354c73596b513bd53ee13f08"
+          },
+          "locator": "lines:85-97",
+          "effect_kind": "parameters",
+          "before": "尚未把源循环转换为有界任务/内存方案。",
+          "after": "RoPE half区采用H=32/64连续count，保留逐步乘加和Cast意图；batch正文要求保持原舍入，故完整精度仍须证明，不能仅由partner映射授权。",
+          "applicability": "两个输出每一维只读本行q/k及同一trig，不是归约；half mode partner=d±H，独立输出在原owner内；输入输出host分开分配。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o1",
+            "o2"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+            "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+          },
+          "locator": "lines:121-133",
+          "effect_kind": "alternative",
+          "before": "此前尚未比较该方法的边界。",
+          "after": "只有同seq的cos/sin原值才可共用；layout0且N>1可复用，case13 N=1无收益，layout1相邻row变seq需重定窗口。",
+          "applicability": "两个输出每一维只读本行q/k及同一trig，不是归约；half mode partner=d±H，独立输出在原owner内；输入输出host分开分配。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o1",
+            "o2"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+            "sha256": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603"
+          },
+          "locator": "lines:62-74",
+          "effect_kind": "alternative",
+          "before": "此前尚未比较该方法的边界。",
+          "after": "RoPE的MTE2→Cast→Scalar GetValue以及Scalar SetValue→Cast边必须保留；仅将数据算术改Vector不自动授权删除所有PIPE_ALL。",
+          "applicability": "两个输出每一维只读本行q/k及同一trig，不是归约；half mode partner=d±H，独立输出在原owner内；输入输出host分开分配。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-13",
+      "operator": "apply_rotary_pos_emb",
+      "round": 2,
+      "decision": {
+        "path": "cases/case-13/R2-action-decision.json",
+        "sha256": "sha256:74f77f18d1b5cdb5e6890794b76cc3e704b6a7cd28432b3d3b2b6f3d5c9bcaf5"
+      },
+      "C1": {
+        "path": "cases/case-13/R2-C1.json",
+        "sha256": "sha256:9ad787853b838dda77138832273d2bc3b1518933c79826639c1e2ff28c245112"
+      },
+      "compared_problem_ids": [
+        "problem.scalar_control_hot_loop",
+        "problem.insufficient_input_reuse",
+        "problem.excessive_sync_scope"
+      ],
+      "action": "action.vectorize_scalar_loop",
+      "mode": "conditional_plan",
+      "choice_reason": "half mode的partner是连续半区，逐元素volatile标量乘加可表达为逐半区Vector，仍保留运算边界。 数学结构支持该条件方案，完整数值语义仍待证明。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+            "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+          },
+          "locator": "lines:292-304",
+          "effect_kind": "mechanism",
+          "before": "源码显示：Row将q/k/cos/sin搬入UB后，for(d<D)逐d GetValue多次并SetValue两输出，q/k分别先两乘再加。",
+          "after": "half mode的partner是连续半区，逐元素volatile标量乘加可表达为逐半区Vector，仍保留运算边界。",
+          "applicability": "两个输出每一维只读本行q/k及同一trig，不是归约；half mode partner=d±H，独立输出在原owner内；输入输出host分开分配。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o2"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.insufficient_input_reuse.md",
+            "sha256": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4"
+          },
+          "locator": "lines:265-277",
+          "effect_kind": "mechanism",
+          "before": "源码显示：layout0同seq的连续N个head复用trig；layout1相邻row是seq变化，cosBatched属于host参数。",
+          "after": "layout0且N>1同seq重复读取cos/sin，复用可省trig读但不消除大部分逐元素算术；layout1需改任务顺序。",
+          "applicability": "两个输出每一维只读本行q/k及同一trig，不是归约；half mode partner=d±H，独立输出在原owner内；输入输出host分开分配。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o3"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.excessive_sync_scope.md",
+            "sha256": "sha256:398689df25a9f16697480f068a9e9951cefe7e2e53d945a4a65613e76a8e4d19"
+          },
+          "locator": "lines:304-316",
+          "effect_kind": "mechanism",
+          "before": "源码显示：Row在MTE2、Cast后、Scalar SetValue后和输出Cast后调用PIPE_ALL，必须保持原生产消费完成边。",
+          "after": "多次PIPE_ALL可能过宽，但当前V cast→Scalar GetValue与Scalar SetValue→V cast均有跨流水边，不能直接删。",
+          "applicability": "两个输出每一维只读本行q/k及同一trig，不是归约；half mode partner=d±H，独立输出在原owner内；输入输出host分开分配。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+            "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+          },
+          "locator": "lines:78-90",
+          "effect_kind": "parameters",
+          "before": "尚未把源循环转换为有界任务/内存方案。",
+          "after": "连续模板的相同索引前提不能直接套RoPE partner。这里只迁移互斥输出区间原则，task边界固定完整row，两个半区仍在同一owner内，不拆成互相覆盖的原地更新。",
+          "applicability": "两个输出每一维只读本行q/k及同一trig，不是归约；half mode partner=d±H，独立输出在原owner内；输入输出host分开分配。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+            "sha256": "sha256:d1a2e2eb822d93e4962d5c0198fd3a124e81e5af354c73596b513bd53ee13f08"
+          },
+          "locator": "lines:85-97",
+          "effect_kind": "parameters",
+          "before": "尚未把源循环转换为有界任务/内存方案。",
+          "after": "RoPE half区采用H=32/64连续count，保留逐步乘加和Cast意图；batch正文要求保持原舍入，故完整精度仍须证明，不能仅由partner映射授权。",
+          "applicability": "两个输出每一维只读本行q/k及同一trig，不是归约；half mode partner=d±H，独立输出在原owner内；输入输出host分开分配。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o1",
+            "o2"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+            "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+          },
+          "locator": "lines:121-133",
+          "effect_kind": "alternative",
+          "before": "此前尚未比较该方法的边界。",
+          "after": "只有同seq的cos/sin原值才可共用；layout0且N>1可复用，case13 N=1无收益，layout1相邻row变seq需重定窗口。",
+          "applicability": "两个输出每一维只读本行q/k及同一trig，不是归约；half mode partner=d±H，独立输出在原owner内；输入输出host分开分配。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o1",
+            "o2"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+            "sha256": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603"
+          },
+          "locator": "lines:62-74",
+          "effect_kind": "alternative",
+          "before": "此前尚未比较该方法的边界。",
+          "after": "RoPE的MTE2→Cast→Scalar GetValue以及Scalar SetValue→Cast边必须保留；仅将数据算术改Vector不自动授权删除所有PIPE_ALL。",
+          "applicability": "两个输出每一维只读本行q/k及同一trig，不是归约；half mode partner=d±H，独立输出在原owner内；输入输出host分开分配。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-14",
+      "operator": "transpose",
+      "round": 1,
+      "decision": {
+        "path": "cases/case-14/R1-action-decision.json",
+        "sha256": "sha256:4f175597a3aa45598f946de506749398f42276ff251bf4edc9c70741c05cc375"
+      },
+      "C1": {
+        "path": "cases/case-14/R1-C1.json",
+        "sha256": "sha256:ee19fd29e2a7d37698cd7a30dc78452508a581805297d1c569d7bdc85f22530d"
+      },
+      "compared_problem_ids": [
+        "problem.noncontiguous_access",
+        "problem.scalar_control_hot_loop",
+        "problem.control_metadata_overhead"
+      ],
+      "action": "action.reorder_contiguous_access",
+      "mode": "conditional_plan",
+      "choice_reason": "二维矩形转置降低跨stride逐元素GM访问，连续suffix可直接块拷；新增局部重排与UB资源。 物理写owner未证，补全A粒度字节分区后再判断实施资格。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+            "sha256": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db"
+          },
+          "locator": "lines:329-341",
+          "effect_kind": "mechanism",
+          "before": "源码显示：perm[rank-1]==rank-1仅case1/14；其他case输入跨stride，矩形能令搬入/搬出分别连续。",
+          "after": "二维矩形转置降低跨stride逐元素GM访问，连续suffix可直接块拷；新增局部重排与UB资源。",
+          "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+        },
+        {
+          "opportunity_ids": [
+            "o2"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+            "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+          },
+          "locator": "lines:292-304",
+          "effect_kind": "mechanism",
+          "before": "源码显示：TransposeScalar每输出rank次除模、1个原始位宽GM读和1个写；没有Vector或UB分块。",
+          "after": "只对逐元素循环做Vector gather仍可能保留离散GM访问，先把数据通路规则化更直接。",
+          "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+        },
+        {
+          "opportunity_ids": [
+            "o3"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+            "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+          },
+          "locator": "lines:310-322",
+          "effect_kind": "mechanism",
+          "before": "源码显示：TransposeScalar每输出rank次除模、1个原始位宽GM读和1个写；没有Vector或UB分块。",
+          "after": "混合基数递增消除大部分每元素除模，能覆盖复杂perm但仍每元素GM搬运；作为fallback后继。",
+          "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+        },
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md",
+            "sha256": "sha256:678b709d7ea4092de4145febb3c7174155094d097e47f2b42b3f073d499b1c25"
+          },
+          "locator": "lines:51-69",
+          "effect_kind": "parameters",
+          "before": "尚未把源循环转换为有界任务/内存方案。",
+          "after": "transpose正文53要求不同owner不因DMA对齐触及同一物理块，故撤回output_ownership=true。采用真实A全局物理块同owner、矩形行段与owner区间求交，尾块须核验有效写许可；原矩形思路保留为条件方案。",
+          "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+        },
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+            "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+          },
+          "locator": "lines:76-88",
+          "effect_kind": "parameters",
+          "before": "尚未把源循环转换为有界任务/内存方案。",
+          "after": "transpose仅连续suffix或局部重排后的输出行片可合并；输出行片先裁切至真实物理块owner，不能跨owner补齐写。",
+          "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+        },
+        {
+          "opportunity_ids": [
+            "o1",
+            "o2"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+            "sha256": "sha256:d1a2e2eb822d93e4962d5c0198fd3a124e81e5af354c73596b513bd53ee13f08"
+          },
+          "locator": "lines:85-97",
+          "effect_kind": "alternative",
+          "before": "此前尚未比较该方法的边界。",
+          "after": "transpose批量重排必须保持原始位；count或mask不能保护GM写，且局部位宽重排API与物理写owner分别待核验。",
+          "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+        },
+        {
+          "opportunity_ids": [
+            "o1",
+            "o2"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+            "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+          },
+          "locator": "lines:70-82",
+          "effect_kind": "alternative",
+          "before": "此前尚未比较该方法的边界。",
+          "after": "外提只减少地址控制，不会自行改善离散GM；复杂perm保留混合基数递增fallback，矩形方案优先解决数据通路。",
+          "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-14",
+      "operator": "transpose",
+      "round": 2,
+      "decision": {
+        "path": "cases/case-14/R2-action-decision.json",
+        "sha256": "sha256:3a58519d455b48657038479a5a21f2ac7aef8d0bcd14ec6a614050f2058e6d26"
+      },
+      "C1": {
+        "path": "cases/case-14/R2-C1.json",
+        "sha256": "sha256:a61e7ea98c66c5c9b7625a72bac964a061d115706fb7d22113ea2b0da7581a7c"
+      },
+      "compared_problem_ids": [
+        "problem.noncontiguous_access",
+        "problem.scalar_control_hot_loop",
+        "problem.control_metadata_overhead"
+      ],
+      "action": "action.reorder_contiguous_access",
+      "mode": "conditional_plan",
+      "choice_reason": "二维矩形转置降低跨stride逐元素GM访问，连续suffix可直接块拷；新增局部重排与UB资源。 物理写owner未证，补全A粒度字节分区后再判断实施资格。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+            "sha256": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db"
+          },
+          "locator": "lines:329-341",
+          "effect_kind": "mechanism",
+          "before": "源码显示：perm[rank-1]==rank-1仅case1/14；其他case输入跨stride，矩形能令搬入/搬出分别连续。",
+          "after": "二维矩形转置降低跨stride逐元素GM访问，连续suffix可直接块拷；新增局部重排与UB资源。",
+          "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+        },
+        {
+          "opportunity_ids": [
+            "o2"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+            "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+          },
+          "locator": "lines:292-304",
+          "effect_kind": "mechanism",
+          "before": "源码显示：TransposeScalar每输出rank次除模、1个原始位宽GM读和1个写；没有Vector或UB分块。",
+          "after": "只对逐元素循环做Vector gather仍可能保留离散GM访问，先把数据通路规则化更直接。",
+          "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+        },
+        {
+          "opportunity_ids": [
+            "o3"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+            "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+          },
+          "locator": "lines:310-322",
+          "effect_kind": "mechanism",
+          "before": "源码显示：TransposeScalar每输出rank次除模、1个原始位宽GM读和1个写；没有Vector或UB分块。",
+          "after": "混合基数递增消除大部分每元素除模，能覆盖复杂perm但仍每元素GM搬运；作为fallback后继。",
+          "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+        },
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md",
+            "sha256": "sha256:678b709d7ea4092de4145febb3c7174155094d097e47f2b42b3f073d499b1c25"
+          },
+          "locator": "lines:51-69",
+          "effect_kind": "parameters",
+          "before": "尚未把源循环转换为有界任务/内存方案。",
+          "after": "transpose正文53要求不同owner不因DMA对齐触及同一物理块，故撤回output_ownership=true。采用真实A全局物理块同owner、矩形行段与owner区间求交，尾块须核验有效写许可；原矩形思路保留为条件方案。",
+          "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+        },
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+            "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+          },
+          "locator": "lines:76-88",
+          "effect_kind": "parameters",
+          "before": "尚未把源循环转换为有界任务/内存方案。",
+          "after": "transpose仅连续suffix或局部重排后的输出行片可合并；输出行片先裁切至真实物理块owner，不能跨owner补齐写。",
+          "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+        },
+        {
+          "opportunity_ids": [
+            "o1",
+            "o2"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+            "sha256": "sha256:d1a2e2eb822d93e4962d5c0198fd3a124e81e5af354c73596b513bd53ee13f08"
+          },
+          "locator": "lines:85-97",
+          "effect_kind": "alternative",
+          "before": "此前尚未比较该方法的边界。",
+          "after": "transpose批量重排必须保持原始位；count或mask不能保护GM写，且局部位宽重排API与物理写owner分别待核验。",
+          "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+        },
+        {
+          "opportunity_ids": [
+            "o1",
+            "o2"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+            "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+          },
+          "locator": "lines:70-82",
+          "effect_kind": "alternative",
+          "before": "此前尚未比较该方法的边界。",
+          "after": "外提只减少地址控制，不会自行改善离散GM；复杂perm保留混合基数递增fallback，矩形方案优先解决数据通路。",
+          "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-15",
+      "operator": "resize_bilinear",
+      "round": 1,
+      "decision": {
+        "path": "cases/case-15/R1-action-decision.json",
+        "sha256": "sha256:d882e9f0df4bbb54d826dd871fedabd58ee629a4d51f2e7542c4779abf88cb03"
+      },
+      "C1": {
+        "path": "cases/case-15/R1-C1.json",
+        "sha256": "sha256:294f0234a7f174565938144ce3e938aacaf434acd8b6e78f6a362c73b1efcd61"
+      },
+      "compared_problem_ids": [
+        "problem.scalar_control_hot_loop",
+        "problem.control_metadata_overhead",
+        "problem.insufficient_input_reuse"
+      ],
+      "action": "action.vectorize_scalar_loop",
+      "mode": "conditional_plan",
+      "choice_reason": "把逐输出输入解码和插值运算移到UB/Vector，地址按连续输出row分段，直接减少主体Scalar数据处理。 数学结构支持该条件方案，完整数值语义仍待证明。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+            "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+          },
+          "locator": "lines:292-304",
+          "effect_kind": "mechanism",
+          "before": "源码显示：ResizeOne每输出计算linear%outputSpatial、nc、oh/ow和两次ResizeCoord，四个GM标量读取，逐输出FP32加权。",
+          "after": "把逐输出输入解码和插值运算移到UB/Vector，地址按连续输出row分段，直接减少主体Scalar数据处理。",
+          "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o2"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+            "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+          },
+          "locator": "lines:310-322",
+          "effect_kind": "mechanism",
+          "before": "源码显示：ResizeOne每输出计算linear%outputSpatial、nc、oh/ow和两次ResizeCoord，四个GM标量读取，逐输出FP32加权。",
+          "after": "每row只算ih/h0/h1/dh，宽坐标按列计算或缓存可减少重复坐标，但仍4个GM标量读及输入解码。",
+          "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o3"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.insufficient_input_reuse.md",
+            "sha256": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4"
+          },
+          "locator": "lines:265-277",
+          "effect_kind": "mechanism",
+          "before": "源码显示：ResizeCoord对每个输出列给出相邻w0/w1，scale<1时邻接输出可复用同源索引，scale=2时pair分离；原四点值只读。",
+          "after": "上采样同源行/列强复用；整2倍下采样邻居不重叠，统一驻留整源行可能多搬无用字节。",
+          "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+            "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+          },
+          "locator": "lines:104-116",
+          "effect_kind": "parameters",
+          "before": "尚未把源循环转换为有界任务/内存方案。",
+          "after": "Gather模板的尾轴源窗口/输出owner原则迁移到ResizeCoord生成的有界索引，未声称是GatherElements算子；取数只搬值，之后另保留四项FP32插值，强下采样源span按实址计。",
+          "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+            "sha256": "sha256:d1a2e2eb822d93e4962d5c0198fd3a124e81e5af354c73596b513bd53ee13f08"
+          },
+          "locator": "lines:85-97",
+          "effect_kind": "parameters",
+          "before": "尚未把源循环转换为有界任务/内存方案。",
+          "after": "Resize按W=64/128/256有效count规划，GM范围须单独核对；逐步乘加/Cast与原手工解码的全域语义仍unknown。",
+          "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o1",
+            "o2"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+            "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+          },
+          "locator": "lines:121-133",
+          "effect_kind": "alternative",
+          "before": "此前尚未比较该方法的边界。",
+          "after": "相邻四点只是部分重叠，不能删整次第二加载；逐输出列枚举union后保留两源行共同区，强下采样pair分离时撤回驻留。",
+          "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o1",
+            "o2"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+            "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+          },
+          "locator": "lines:70-82",
+          "effect_kind": "alternative",
+          "before": "此前尚未比较该方法的边界。",
+          "after": "nc/oh不变量只可提到行作用域；ow坐标仍直接FP32求值，禁止累加scale产生不同舍入，输入pair代次变化时重建窗口。",
+          "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    },
+    {
+      "case": "case-15",
+      "operator": "resize_bilinear",
+      "round": 2,
+      "decision": {
+        "path": "cases/case-15/R2-action-decision.json",
+        "sha256": "sha256:8c13d501b65cb2c0aedfdcd7bf748afda0205ead97de7d33cf4f174c6416a96a"
+      },
+      "C1": {
+        "path": "cases/case-15/R2-C1.json",
+        "sha256": "sha256:b97149a8a5f780cd60bc2c16ffaf0778218cb652116e9befd8062d85130519d3"
+      },
+      "compared_problem_ids": [
+        "problem.scalar_control_hot_loop",
+        "problem.control_metadata_overhead",
+        "problem.insufficient_input_reuse"
+      ],
+      "action": "action.vectorize_scalar_loop",
+      "mode": "conditional_plan",
+      "choice_reason": "把逐输出输入解码和插值运算移到UB/Vector，地址按连续输出row分段，直接减少主体Scalar数据处理。 数学结构支持该条件方案，完整数值语义仍待证明。",
+      "knowledge_use": [
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+            "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+          },
+          "locator": "lines:292-304",
+          "effect_kind": "mechanism",
+          "before": "源码显示：ResizeOne每输出计算linear%outputSpatial、nc、oh/ow和两次ResizeCoord，四个GM标量读取，逐输出FP32加权。",
+          "after": "把逐输出输入解码和插值运算移到UB/Vector，地址按连续输出row分段，直接减少主体Scalar数据处理。",
+          "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o2"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+            "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+          },
+          "locator": "lines:310-322",
+          "effect_kind": "mechanism",
+          "before": "源码显示：ResizeOne每输出计算linear%outputSpatial、nc、oh/ow和两次ResizeCoord，四个GM标量读取，逐输出FP32加权。",
+          "after": "每row只算ih/h0/h1/dh，宽坐标按列计算或缓存可减少重复坐标，但仍4个GM标量读及输入解码。",
+          "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o3"
+          ],
+          "owner": "diagnosis",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.insufficient_input_reuse.md",
+            "sha256": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4"
+          },
+          "locator": "lines:265-277",
+          "effect_kind": "mechanism",
+          "before": "源码显示：ResizeCoord对每个输出列给出相邻w0/w1，scale<1时邻接输出可复用同源索引，scale=2时pair分离；原四点值只读。",
+          "after": "上采样同源行/列强复用；整2倍下采样邻居不重叠，统一驻留整源行可能多搬无用字节。",
+          "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "parallel-planning",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+            "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+          },
+          "locator": "lines:104-116",
+          "effect_kind": "parameters",
+          "before": "尚未把源循环转换为有界任务/内存方案。",
+          "after": "Gather模板的尾轴源窗口/输出owner原则迁移到ResizeCoord生成的有界索引，未声称是GatherElements算子；取数只搬值，之后另保留四项FP32插值，强下采样源span按实址计。",
+          "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o1"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+            "sha256": "sha256:d1a2e2eb822d93e4962d5c0198fd3a124e81e5af354c73596b513bd53ee13f08"
+          },
+          "locator": "lines:85-97",
+          "effect_kind": "parameters",
+          "before": "尚未把源循环转换为有界任务/内存方案。",
+          "after": "Resize按W=64/128/256有效count规划，GM范围须单独核对；逐步乘加/Cast与原手工解码的全域语义仍unknown。",
+          "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o1",
+            "o2"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+            "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+          },
+          "locator": "lines:121-133",
+          "effect_kind": "alternative",
+          "before": "此前尚未比较该方法的边界。",
+          "after": "相邻四点只是部分重叠，不能删整次第二加载；逐输出列枚举union后保留两源行共同区，强下采样pair分离时撤回驻留。",
+          "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        },
+        {
+          "opportunity_ids": [
+            "o1",
+            "o2"
+          ],
+          "owner": "optimization",
+          "document_ref": {
+            "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+            "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+          },
+          "locator": "lines:70-82",
+          "effect_kind": "alternative",
+          "before": "此前尚未比较该方法的边界。",
+          "after": "nc/oh不变量只可提到行作用域；ow坐标仍直接FP32求值，禁止累加scale产生不同舍入，输入pair代次变化时重建窗口。",
+          "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+        }
+      ],
+      "opportunity_count": 3,
+      "formal_C2_C3": false,
+      "performance_result": "not_measured"
+    }
+  ],
+  "observed_action_distribution": {
+    "action.software_pipeline_stages": 8,
+    "action.reuse_disjoint_onchip_buffers": 4,
+    "action.coalesce_contiguous_transfers": 2,
+    "action.hoist_invariant_control": 4,
+    "action.reorder_contiguous_access": 4,
+    "action.dispatch_by_workload": 2,
+    "action.restructure_broadcast": 2,
+    "action.vectorize_scalar_loop": 4
+  },
+  "diversity_requirement": false,
+  "limit": "从已冻结的实际 Agent 决策提取导航，非预设答案或性能结果。"
+}

@@ -54,7 +54,6 @@ references:
 - implementation.pipeline-sync.slots
 evidence_status: source_reviewed_not_benchmarked
 ---
-
 # 流水与同步的正确性回退及重规划边界
 
 ## 何时进入
@@ -76,7 +75,7 @@ C3的最小回退单位是C2已允许的实现参数：同一tile/算法/数值�
 
 ## 最浅可证明路径
 
-按每个合法tile执行“等待槽空闲→搬入→等待就绪→完整计算→等待输出就绪→搬出→等待异步读完后复用”。纯Vector优先用支持的TQue管理同一核内生命周期；手写TBuf则为每条真实跨流水依赖显式配对事件。跨AIC/AIV仍需合法的CrossCore发布/消费，单核`PipeBarrier`无法替代。每轮全局drain可作诊断性的串行候选，但它不是可无条件删减正确同步的理由。
+按每个合法tile执行“等待槽空闲→搬入→等待就绪→完整计算→等待输出就绪→搬出→等待异步读完后复用”。纯Vector可用支持的TQue、TBuf配对事件或已证明的静态租约管理同核生命周期；根据目标动态域、容量、事件所有权和实际成本选择，任何方案均保留真实跨流水完成边。跨AIC/AIV仍需合法的CrossCore发布/消费，单核`PipeBarrier`无法替代。每轮全局drain可作诊断性的串行候选，但它不是可无条件删减正确同步的理由。
 
 ```text
 for task in C2_frozen_task_order:

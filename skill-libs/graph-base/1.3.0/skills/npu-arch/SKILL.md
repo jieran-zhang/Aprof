@@ -1,9 +1,11 @@
 ---
 name: npu-arch
-description: 在并行规划或执行调优前，建立有证据的 AProf 架构档案，区分 910B/A2、910C/A3 与 950/3510 能力。
+description: 为代码理解、并行规划与执行调优建立有证据的 AProf 架构档案，区分 910B/A2、910C/A3 与 950/3510 能力。
 ---
 
 # AProf 架构档案
+
+code-understanding 角色可按需使用本技能，将当前源码路径解释到有依据的 910C 硬件行为；只核对与理解相关的架构条件，缺实测性能不阻断静态理解。
 
 分别保留原始 SoC 名、ISA、device/die 视角、已安装 CANN/编译器和可见资源。先读 [平台身份与证据](references/platform-evidence.md)；仅在确认 3510 路径后读 [RegBase/SIMT](references/regbase-simt.md)。
 

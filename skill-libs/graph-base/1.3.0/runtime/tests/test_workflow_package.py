@@ -21,6 +21,13 @@ def test_install_exposes_complete_workflow_and_is_idempotent(tmp_path):
     assert result.returncode == 0, result.stderr
     registry = json.loads((PACKAGE / "skills/registry.json").read_text())
     skills = registry["capabilities"]["core"] + registry["support_skills"]
+    core = {entry["name"]: entry["source"] for entry in registry["capabilities"]["core"]}
+    assert core["ascendc-code-understanding"] == "skills/ascendc-code-understanding"
+    assert "workflows/agents/code-understanding.md" in registry["workflow_plugin"]["agents"]
+    assert {"name": "aprof-code-understanding-agent", "source": "workflows/agents/code-understanding.md"} in registry["cursor_agents"]
+    for name in ("npu-arch", "ascendc-api-best-practices", "ascendc-docs-search"):
+        assert "code-understanding" in next(entry["roles"] for entry in registry["support_skills"]
+                                            if entry["name"] == name)
     assert {path.name for path in target.iterdir()} == {entry["name"] for entry in skills}
     for entry in skills:
         assert (target / entry["name"]).resolve() == PACKAGE / entry["source"]
@@ -41,7 +48,9 @@ def test_removed_remote_option_cannot_install_anything(tmp_path):
     assert not target.exists()
 
 
-@pytest.mark.parametrize("damage", ["plugin_path", "role_identity", "missing_contract"])
+@pytest.mark.parametrize("damage", ["plugin_path", "role_identity", "missing_contract",
+                                    "code_understanding_skill", "code_understanding_agent",
+                                    "code_understanding_contract"])
 def test_release_rejects_broken_workflow_entry(tmp_path, damage):
     package = tmp_path / "package"
     shutil.copytree(PACKAGE, package,
@@ -56,9 +65,23 @@ def test_release_rejects_broken_workflow_entry(tmp_path, damage):
         path = package / "workflows/agents/diagnosis.md"
         path.write_text(path.read_text().replace("name: aprof-diagnosis-agent", "name: stale-agent"))
         expected = "agent frontmatter name mismatch"
-    else:
+    elif damage == "missing_contract":
         (package / "workflows/contracts/candidate.md").unlink()
         expected = "incomplete package"
+    elif damage == "code_understanding_contract":
+        (package / "workflows/contracts/code-understanding.md").unlink()
+        expected = "incomplete package"
+    else:
+        path = package / "skills/registry.json"
+        value = json.loads(path.read_text())
+        if damage == "code_understanding_skill":
+            value["capabilities"]["core"] = [entry for entry in value["capabilities"]["core"]
+                                               if entry["name"] != "ascendc-code-understanding"]
+            expected = "skill inventory differs from registry"
+        else:
+            value["workflow_plugin"]["agents"].remove("workflows/agents/code-understanding.md")
+            expected = "workflow agent inventory differs from registry"
+        path.write_text(json.dumps(value))
     result = run_tool(package, "release.py", "--allow-unsealed")
     assert result.returncode != 0
     assert expected in result.stderr

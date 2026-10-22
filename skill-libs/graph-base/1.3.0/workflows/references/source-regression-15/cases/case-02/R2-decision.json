@@ -1,0 +1,481 @@
+{
+  "schema_version": "aprof.action-decision/v1",
+  "task_id": "raw15-case-02",
+  "context_hash": "sha256:696a3d6fb012702d15fcb4eab078738b5389d19fd62352a5c6704548cfd95eef",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "reasoning_ref": {
+    "path": "R2-reasoning.json",
+    "sha256": "sha256:80076fd070d66da825aaed30af23e49cfeba09c91d5954d8c716da89181f3751"
+  },
+  "reasoning_hash": "sha256:6f253f6219916df37688a3299c87f66ef8caebfd4b256c48012a66f446cae713",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/f3a6d55be57ea647180e624b4fffe6a25b55beea2b35d140d50fe71108f4232d.json",
+    "sha256": "sha256:02d64ca8cc4efafae4665940ea3cfd6bf955b40e79d76125906445f4337450a4"
+  },
+  "round": 2,
+  "current_parent_ref": {
+    "path": "source-refs.json",
+    "sha256": "sha256:a50d5c60b3ffde636e52dbee3488f7bd45099734a70365c8bc7ce6981ea34af6"
+  },
+  "opportunities": [
+    {
+      "id": "storage",
+      "hypothesis_id": "storage",
+      "action_id": "action.reuse_disjoint_onchip_buffers",
+      "action_instance_id": "selected-intent",
+      "case_ids": [
+        "2",
+        "5",
+        "8",
+        "11",
+        "13",
+        "15",
+        "18",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel_structure",
+        "source.host_dispatch",
+        "workload.matrix",
+        "derived.source_cost"
+      ],
+      "cost_mechanism": "FP32路径同时分配in/out队列和fi/work/fo三片FP32区；fi可使用已DeQue的in物理区，fo可使用已分配out区，work单独保存。",
+      "predictions": [
+        {
+          "id": "storage.source",
+          "kind": "source_work",
+          "statement": "FP32显式数据区由20T变12T，mask另计；T2048减少16384字节，可在同一原数据预算内提升至T3392。",
+          "check_method": "源码/整数公式及R2-static-evidence.json；后续候选需对照真实patch",
+          "on_support": "保留此结构候选并满足API/容量域",
+          "on_refute": "修正字节/生命周期/地址模型后重新比较"
+        },
+        {
+          "id": "storage.time",
+          "kind": "performance",
+          "statement": "此结构变化可能降低所列case的Task时间；当前没有测得改善。",
+          "check_method": "后继完整原20case正确性后按包统一协议测试，区分大小/尾/特殊值组",
+          "on_support": "按同scope结果确认适用域，不能直接授予因果归因",
+          "on_refute": "检查预测是否落实以及额外shuffle/小tile/同步成本，回退或再规划"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_source_ub_live_bytes_near_capacity",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "storage.time",
+          "unknown_id": "storage.legacy_symptom_source_ub_live_bytes_near_capacity",
+          "reason": "来源机制与当前结构支持比较；未将源码次数推导为测得时延。"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "storage.time",
+          "unknown_id": "storage.cost_reduction",
+          "reason": "来源机制与当前结构支持比较；未将源码次数推导为测得时延。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "storage.legacy_symptom_source_ub_live_bytes_near_capacity",
+          "kind": "performance",
+          "fact": "symptom.source.ub_live_bytes_near_capacity",
+          "expected_state": null,
+          "statement": "当前真实容量占比未知；物理分配减少已单独推导，是否释放关键资源/能提高T仍需目标B。不需要先断言UB接近上限。通过减少8T字节给更大tile留空间，优于未经证明删除Mish稳定尾分支；相对双缓冲没有新增原始输入槽。",
+          "affects": "旧条件 symptom.source.ub_live_bytes_near_capacity 的期望状态为 true。接近容量上限影响收益与选择，不决定不重叠buffer复用是否合法；安全由生命周期、容量和语义约束负责。",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "storage.cost_reduction",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "当前同scope硬件阶段重叠/发射与关键路径成本未测；不需要先断言UB接近上限。通过减少8T字节给更大tile留空间，优于未经证明删除Mish稳定尾分支；相对双缓冲没有新增原始输入槽。",
+          "affects": "复用可降低物理峰值，并可能使更合适tile或流水深度可行；若释放容量无用途，时延可能不变。",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "storage.constraint.capacity",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "需确认目标Adds/Abs/Mul/Tanh等在VECIN/VECOUT位置及完全原地alias的支持，实际UB及Select/Tanh临时需求；不改变负尾-8阈值或浮点运算顺序。",
+          "affects": "具体T/物理槽或alias/shuffle的实施合法性",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "storage.constraint.target_api_support",
+          "kind": "implementation_safety",
+          "fact": "constraint.target_api_support",
+          "expected_state": true,
+          "statement": "需确认目标Adds/Abs/Mul/Tanh等在VECIN/VECOUT位置及完全原地alias的支持，实际UB及Select/Tanh临时需求；不改变负尾-8阈值或浮点运算顺序。",
+          "affects": "具体T/物理槽或alias/shuffle的实施合法性",
+          "resolution": "check_before_implementation"
+        }
+      ],
+      "strongest_alternative_id": "pipeline",
+      "comparison": "不需要先断言UB接近上限。通过减少8T字节给更大tile留空间，优于未经证明删除Mish稳定尾分支；相对双缓冲没有新增原始输入槽。",
+      "disposition": "selected",
+      "reason": "不需要先断言UB接近上限。通过减少8T字节给更大tile留空间，优于未经证明删除Mish稳定尾分支；相对双缓冲没有新增原始输入槽。"
+    },
+    {
+      "id": "pipeline",
+      "hypothesis_id": "pipeline",
+      "action_id": "action.software_pipeline_stages",
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel_structure",
+        "source.host_dispatch",
+        "workload.matrix",
+        "derived.source_cost"
+      ],
+      "cost_mechanism": "2048 tile输入输出1槽且串行调用；15个Vector调用形成长计算链。",
+      "predictions": [
+        {
+          "id": "pipeline.source",
+          "kind": "source_work",
+          "statement": "多tile间允许MTE与Vector交错，但必要Exp/Ln/Tanh调用不变。",
+          "check_method": "源码/整数公式及R2-static-evidence.json；后续候选需对照真实patch",
+          "on_support": "保留此结构候选并满足API/容量域",
+          "on_refute": "修正字节/生命周期/地址模型后重新比较"
+        },
+        {
+          "id": "pipeline.time",
+          "kind": "performance",
+          "statement": "此结构变化可能降低所列case的Task时间；当前没有测得改善。",
+          "check_method": "后继完整原20case正确性后按包统一协议测试，区分大小/尾/特殊值组",
+          "on_support": "按同scope结果确认适用域，不能直接授予因果归因",
+          "on_refute": "检查预测是否落实以及额外shuffle/小tile/同步成本，回退或再规划"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_overlap_low",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "pipeline.time",
+          "unknown_id": "pipeline.legacy_symptom_profile_overlap_low",
+          "reason": "来源机制与当前结构支持比较；未将源码次数推导为测得时延。"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "pipeline.time",
+          "unknown_id": "pipeline.cost_reduction",
+          "reason": "来源机制与当前结构支持比较；未将源码次数推导为测得时延。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "pipeline.legacy_symptom_profile_overlap_low",
+          "kind": "performance",
+          "fact": "symptom.profile.overlap_low",
+          "expected_state": null,
+          "statement": "当前同scope硬件阶段重叠/发射与关键路径成本未测；可能隐藏搬运，但增加原始槽容量且长计算本身可能主导；优先减少明确多余的物理区以放宽后续流水。",
+          "affects": "旧条件 symptom.profile.overlap_low 的期望状态为 true。低重叠是性能假设/判别依据，依赖及生命周期正确才是重排的实施安全条件。",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "pipeline.cost_reduction",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "当前同scope硬件阶段重叠/发射与关键路径成本未测；可能隐藏搬运，但增加原始槽容量且长计算本身可能主导；优先减少明确多余的物理区以放宽后续流水。",
+          "affects": "合法预取/计算/写回重排可能缩短稳态关键路径；短任务、单tile、最慢阶段不变或额外buffer成本会限制收益。",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "storage",
+      "comparison": "可能隐藏搬运，但增加原始槽容量且长计算本身可能主导；优先减少明确多余的物理区以放宽后续流水。",
+      "disposition": "deferred",
+      "reason": "可能隐藏搬运，但增加原始槽容量且长计算本身可能主导；优先减少明确多余的物理区以放宽后续流水。"
+    },
+    {
+      "id": "casts",
+      "hypothesis_id": "casts",
+      "action_id": "action.coalesce_cast",
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "3",
+        "4",
+        "6",
+        "7",
+        "9",
+        "10",
+        "12",
+        "14",
+        "16",
+        "17",
+        "19"
+      ],
+      "source_fact_ids": [
+        "source.kernel_structure",
+        "source.host_dispatch",
+        "workload.matrix",
+        "derived.source_cost"
+      ],
+      "cost_mechanism": "低精度只在链入口扩位、末尾缩位，没有中途FP32→低精度→FP32往返。",
+      "predictions": [
+        {
+          "id": "casts.source",
+          "kind": "source_work",
+          "statement": "删除入口/出口Cast会改变中间精度或输出dtype，当前没有等价删减。",
+          "check_method": "源码/整数公式及R2-static-evidence.json；后续候选需对照真实patch",
+          "on_support": "保留此结构候选并满足API/容量域",
+          "on_refute": "修正字节/生命周期/地址模型后重新比较"
+        },
+        {
+          "id": "casts.time",
+          "kind": "performance",
+          "statement": "此结构变化可能降低所列case的Task时间；当前没有测得改善。",
+          "check_method": "后继完整原20case正确性后按包统一协议测试，区分大小/尾/特殊值组",
+          "on_support": "按同scope结果确认适用域，不能直接授予因果归因",
+          "on_refute": "检查预测是否落实以及额外shuffle/小tile/同步成本，回退或再规划"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "casts.time",
+          "unknown_id": "casts.cost_reduction",
+          "reason": "来源机制与当前结构支持比较；未将源码次数推导为测得时延。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "casts.cost_reduction",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "当前同scope硬件阶段重叠/发射与关键路径成本未测；正文要求可删数值边界；此处Cast保护原FP32稳定计算，不能按语法出现两次就判冗余，作为当前不采用候选。",
+          "affects": "合法减少转换可能减少指令与临时区，但更宽中间值、不同指令路径或寄存器压力可抵消。",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "storage",
+      "comparison": "正文要求可删数值边界；此处Cast保护原FP32稳定计算，不能按语法出现两次就判冗余，作为当前不采用候选。",
+      "disposition": "rejected",
+      "reason": "正文要求可删数值边界；此处Cast保护原FP32稳定计算，不能按语法出现两次就判冗余，作为当前不采用候选。"
+    }
+  ],
+  "evidence_requests": [
+    {
+      "id": "check.constraint.capacity",
+      "opportunity_ids": [
+        "storage"
+      ],
+      "unknown_ids": [
+        "storage.constraint.capacity"
+      ],
+      "method": "由后继获准的实际设备/SDK资料核验 constraint.capacity；以本报告公式和全部20case有效域查参数，当前不调用硬件。",
+      "discriminating_results": [
+        {
+          "outcome": "目标支持且公式≤真实B",
+          "decision_effect": "冻结合法T/槽/alias参数，构建并做原20case正确性后试验"
+        },
+        {
+          "outcome": "某参数超容量或API不支持",
+          "decision_effect": "减T/保留原独立buffer或原segment fallback，不改精度与输入域"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本次只允许源码与CPU分析",
+      "defer_reason": "需确认目标Adds/Abs/Mul/Tanh等在VECIN/VECOUT位置及完全原地alias的支持，实际UB及Select/Tanh临时需求；不改变负尾-8阈值或浮点运算顺序。"
+    },
+    {
+      "id": "check.constraint.target_api_support",
+      "opportunity_ids": [
+        "storage"
+      ],
+      "unknown_ids": [
+        "storage.constraint.target_api_support"
+      ],
+      "method": "由后继获准的实际设备/SDK资料核验 constraint.target_api_support；以本报告公式和全部20case有效域查参数，当前不调用硬件。",
+      "discriminating_results": [
+        {
+          "outcome": "目标支持且公式≤真实B",
+          "decision_effect": "冻结合法T/槽/alias参数，构建并做原20case正确性后试验"
+        },
+        {
+          "outcome": "某参数超容量或API不支持",
+          "decision_effect": "减T/保留原独立buffer或原segment fallback，不改精度与输入域"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本次只允许源码与CPU分析",
+      "defer_reason": "需确认目标Adds/Abs/Mul/Tanh等在VECIN/VECOUT位置及完全原地alias的支持，实际UB及Select/Tanh临时需求；不改变负尾-8阈值或浮点运算顺序。"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "storage"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+        "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+      },
+      "locator": "lines:308-351",
+      "effect_kind": "mechanism",
+      "before": "当前源码结构：FP32路径同时分配in/out队列和fi/work/fo三片FP32区；fi可使用已DeQue的in物理区，fo可使用已分配out区，work单独保存。",
+      "after": "正文机制/边界确认：不需要先断言UB接近上限。通过减少8T字节给更大tile留空间，优于未经证明删除Mish稳定尾分支；相对双缓冲没有新增原始输入槽。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+        "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+      },
+      "locator": "lines:272-316",
+      "effect_kind": "mechanism",
+      "before": "当前源码结构：2048 tile输入输出1槽且串行调用；15个Vector调用形成长计算链。",
+      "after": "正文机制/边界确认：可能隐藏搬运，但增加原始槽容量且长计算本身可能主导；优先减少明确多余的物理区以放宽后续流水。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "casts"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.redundant_cast.md",
+        "sha256": "sha256:c7f8ace396cc0a0f53f4bc0a5b9f0883cbd8b439d45dce74edc1e4f50b1b326d"
+      },
+      "locator": "lines:290-334",
+      "effect_kind": "mechanism",
+      "before": "当前源码结构：低精度只在链入口扩位、末尾缩位，没有中途FP32→低精度→FP32往返。",
+      "after": "正文机制/边界确认：正文要求可删数值边界；此处Cast保护原FP32稳定计算，不能按语法出现两次就判冗余，作为当前不采用候选。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "storage"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+      },
+      "locator": "lines:72-108",
+      "effect_kind": "plan",
+      "before": "有元素总数与原始块长，但尚未明确新方案的owner/存储范围。",
+      "after": "保留每核独占输出与原逐元素数学链，T和物理槽分别计入字节公式；已有分区提取不算新并行优化。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "storage"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+        "sha256": "sha256:04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483"
+      },
+      "locator": "lines:74-119",
+      "effect_kind": "parameters",
+      "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+      "after": "仅FP32模板：fi绑定in，fo绑定out，删除fpIn_/fpOut_两项InitBuffer，fpWork_保留；保留开头Adds(fi,in,+0)和末尾Adds(out,fo,+0)的原指令次序（即原地Adds），避免擅自改变±0行为。in活到最终Mul，out活到MTE3完成。先T2048，再在原41216字节显式预算内比较T∈{2048,2560,3072,3392}，UB=12T+ceil(ceil(T/8)/256)*256+API预留≤B。低精度路径继续2048和原Cast/负尾Exp+Select。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "storage"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+        "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+      },
+      "locator": "lines:75-110",
+      "effect_kind": "parameters",
+      "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+      "after": "保留输入/输出Cast、原算术顺序、NaN/Inf及±0；没有把值域case当公共输入保证。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    }
+  ],
+  "selection": {
+    "mode": "conditional_plan",
+    "opportunity_id": "storage",
+    "action_instance_id": "selected-intent",
+    "reason": "不需要先断言UB接近上限。通过减少8T字节给更大tile留空间，优于未经证明删除Mish稳定尾分支；相对双缓冲没有新增原始输入槽。",
+    "concrete_plan": "仅FP32模板：fi绑定in，fo绑定out，删除fpIn_/fpOut_两项InitBuffer，fpWork_保留；保留开头Adds(fi,in,+0)和末尾Adds(out,fo,+0)的原指令次序（即原地Adds），避免擅自改变±0行为。in活到最终Mul，out活到MTE3完成。先T2048，再在原41216字节显式预算内比较T∈{2048,2560,3072,3392}，UB=12T+ceil(ceil(T/8)/256)*256+API预留≤B。低精度路径继续2048和原Cast/负尾Exp+Select。",
+    "stop_reason": null
+  },
+  "previous_feedback": {
+    "previous_decision_ref": {
+      "path": "R1-decision.json",
+      "sha256": "sha256:2b78f520265fb1a3e87cc22bf4715e6916dd8a5ece36a5bc0823cdf6226c3611"
+    },
+    "result_ref": null,
+    "measurement": "not_measured",
+    "result_limits": "R1无真实patch/编译/正确性/计时；新证据仅CPU源码和整数公式，不能判定性能。",
+    "prediction_updates": [
+      {
+        "prediction_id": "storage.source",
+        "judgement": "supported",
+        "reason": "生命周期逐项复核：fi在最后Mul前仍活，不能把fi和work互相覆盖；fo从Maxs后持续参与Add/Select/Tanh直到Mul。正确复用是fi=in、fo=out，不是fi/work/fo三者共用一块。保留两次+0，源工作预测调整为减少静态分配与扩大tile，不能宣称已删两条Vector指令。T3392时12T+mask512=41216，恰等于原20×2048+256。；支持的是拟变更结构的静态模型，未声称实现已发生。",
+        "evidence_refs": [
+          {
+            "path": "R2-static-evidence.json",
+            "sha256": "sha256:1992db897dfdeae241e0c8c03207eb5e0940c8128af8bf75331e3bc2b7a1448b"
+          }
+        ]
+      },
+      {
+        "prediction_id": "storage.time",
+        "judgement": "not_tested",
+        "reason": "无硬件结果不能支持或削弱时延预测",
+        "evidence_refs": []
+      }
+    ],
+    "current_parent_ref": {
+      "path": "source-refs.json",
+      "sha256": "sha256:a50d5c60b3ffde636e52dbee3488f7bd45099734a70365c8bc7ce6981ea34af6"
+    },
+    "parent_reason": "前轮只分析，未产生新实现；继续原始父本",
+    "same_action_reason": "生命周期逐项复核：fi在最后Mul前仍活，不能把fi和work互相覆盖；fo从Maxs后持续参与Add/Select/Tanh直到Mul。正确复用是fi=in、fo=out，不是fi/work/fo三者共用一块。保留两次+0，源工作预测调整为减少静态分配与扩大tile，不能宣称已删两条Vector指令。T3392时12T+mask512=41216，恰等于原20×2048+256。",
+    "new_information": "生命周期逐项复核：fi在最后Mul前仍活，不能把fi和work互相覆盖；fo从Maxs后持续参与Add/Select/Tanh直到Mul。正确复用是fi=in、fo=out，不是fi/work/fo三者共用一块。保留两次+0，源工作预测调整为减少静态分配与扩大tile，不能宣称已删两条Vector指令。T3392时12T+mask512=41216，恰等于原20×2048+256。"
+  }
+}

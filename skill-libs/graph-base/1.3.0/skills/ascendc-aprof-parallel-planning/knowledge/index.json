@@ -105,7 +105,7 @@
       "version": "1.1.0"
     },
     {
-      "body": "# 广播复用与容量分块\n\n## 适用 shape、合轴与索引合同\n\n输入为连续 ND 张量，按算子明确的右对齐广播规则产生输出。先在左侧补 1；对每一轴，所有非 1 输入维度必须相同，禁止以 max(dim) 掩盖不兼容 shape。对于零长度轴，直接遵循框架的空张量广播规则。一般 stride view 先保留真实 stride，不能套用本条仅根据连续 shape 累乘得到的 stride。\n\n每轴记录“哪些输入在该轴广播”的完整位图，相邻轴只有位图相同且真实存储可合并时才能合轴。输入维度为 1 而输出大于 1 的轴设逻辑 stride=0；其他轴保留连续 stride。输出坐标 o 对输入 j 的元素偏移为 `offset_j(o)=Σ_i o_i*stride_ji`。这个零 stride 只表达读复用，绝不用于输出写地址。\n\n例如 Add `[4,3,8] + [1,3,8]` 可压成 `[4,24]+[1,24]`；Mul `[2,1,4] × [2,3,1]` 的相邻广播位图不同，保留三轴。若合轴后只有一维且某输入仅一个元素，则它是标量输入：先比较 Adds/Muls 等 TensorScalar 路径，不必为一个标量分配完整展开区。\n\n## 输出所有权、复用域与分核\n\n从最内轴向外增加 tile，令 k 为切分轴，内轴积 I=∏_{i>k} D_i；每个 tile 覆盖固定外轴坐标和 k 轴上至多 u 个值，输出元素 E=u*I。外层逻辑任务数 `T=(∏_{i<k}D_i)*ceil(D_k/u)`。按均衡 q/r 将这 T 个 tile 唯一分给核，tile 中再按必要的小片计算。尾任务使用 `u_valid=min(u,D_k-u*tile_k)`。\n\n每个输出元素只有一个核写，无归约、无需跨核同步。广播源为只读，可以被不同核重复读；“装入一次”只保证本核声明的复用域内，不表示全芯片只读一次。扩大复用域要说明同一源块跨多少输出 tile 驻留、何时失效、是否增加片上资源或减少独立任务。若同一源跨核共享需要另一个协议，本模板不默认引入。\n\n输入 tile 的起点用当前坐标与该输入 stride 计算；若切分轴是广播轴，源偏移不随 tile_k 增长。若切分轴不广播，源起点随 `tile_k*u*stride_jk` 前移。广播轴被切片本身可以合法，但传给 Broadcast 的必须是当前 tile 的 dstShape 和对应的 srcShape，不能仍用全张量 shape 或把广播源也按输出长度前移。\n\n## 三种实现路径与平台边界\n\n| 路径 | 数据流、适用条件 | 主要成本与边界 |\n| --- | --- | --- |\n| 标量/索引复用 | 标量 Adds/Muls；或沿非广播连续内轴迭代 | 省完整展开区；需保持原操作的参数顺序、舍入与除法语义 |\n| UB 广播 | GM 搬入独立源块，在 UB 展开到当前输出 tile，再计算 | 保留源区、展开区、API 临时区；适合在核内多次使用小源块 |\n| NDDMA 搬入广播 | 950/DAV_3510 的 GM→UB 多维搬运，广播轴源 stride=0 | 到 UB 时已经展开；不能用于 UB 内中间结果；最多五轴由一次描述符覆盖，更多轴需外层循环 |\n\n在 910C/A3 目标，先核对实际编译架构与 SDK；不能启用仅在 950PR/950DT 支持的动态 rank 1~9 Broadcast、NDDMA。当前 asc-devkit 的静态 Broadcast 只支持 dim=1/2、axis=0/1，ND、src/dst 不重叠；A2/A3 支持 int8/uint8/half/float。axis=0 的实际 srcShape[1] 对应字节需满足 32B 约束；把 UB 搬入长度向上补齐，不等于源 shape 自动满足该约束。官方 API 只对 Atlas 推理 AI Core 另列 axis=1 的 srcShape[0] 对齐限制，不能把该条泛化到 A3；cannbot 的概括与这里有差异，以固定 API 文档和当前编译验证为准。\n\n950 动态接口 rank∈[1,9]、srcInnerPad=false，仍需合法地址、容量、形状和不重叠证明；“无静态 shape 对齐限制”不等于零临时空间。NDDMA 的描述符 stride 单位、轴顺序、计数字段范围按所选重载核验，逻辑元素 stride 不应未经换算直接写入任意 DMA 字段。\n\n来源给出按 dcache、dtype、尾轴长度选 NDDMA/UB BRC 的经验决策链；在这里仅作为候选方向，未有相同目标的性能依据时不固化成阈值或必然排序。\n\n## 字节容量、读流量与选择公式\n\n设 E 为输出 tile 的元素数，U_j 为输入 j 在该 tile 中实际访问的不同元素数，s_j/s_o 为输入/输出字节，d_j 为实际 buffer 份数，A_a 为按 a 字节对齐。\n\nUB 广播：\n`B_UB = Σ普通输入 d_j*A_a(E*s_j) + Σ广播输入[d_src,j*A_a(U_j*s_j)+d_exp,j*A_a(E*s_j)] + d_o*A_a(E*s_o) + B_compute + T_broadcast ≤ B_available`。\n\nNDDMA 广播通常省掉独立未展开源区和 UB Broadcast 临时区，但仍保留完整展开输入 E*s_j；额外中间计算或 SDK 内部分配不能漏算。若某广播源跨多 tile 驻留，按驻留区额外计入，并明确它是否与下一 tile 的展开区同时存活。\n\n无缓存假设下，UB 显式复用每个 tile 读入的有效输入字节为 `Σ_j U_j*s_j`，写出 E*s_o；与按输出索引逐次读取相比，源数据量的理想减少是 `Σ_j(E-U_j)*s_j`。展开同时引入 UB 写/读与向量搬运成本，NDDMA 也可能重复发出源读，实际缓存命中与总耗时需测量。成本比较应同时列 `GM字节、UB展开字节、API调用数、task数`，不能仅凭节省一次 API 宣称收益。\n\n取 u 时先满足所有输入的真实源 tile、展开区和临时区容量，再考虑 T 是否足够并行。增大 tile 有利于摊销索引/调用并复用源，减小 tile 可增加独立任务，两者按同一计时协议比较。所有容量用字节；上游 128B/256B、8KB 或“核数一半”的调整是来源启发式，不能代替合法 API 约束或当前硬件测量。\n\n## 可执行索引与任务伪代码\n\n```python\n# 已完成合法补维/合轴，D 是输出维度，Sj 是逻辑元素 stride。\nT = product(D[:k]) * ceil_div(D[k], u)\nfor t in balanced_owned_tasks(T, core_id, core_count):\n    outer, tile_k = divmod(t, ceil_div(D[k], u))\n    coord = unravel(outer, D[:k]) + [tile_k*u]\n    uv = min(u, D[k]-coord[k])\n    dst_shape = [uv] + D[k+1:]\n    args = []\n    for j in inputs:\n        off = sum(coord[i]*Sj[j][i] for i in range(k+1))\n        src_shape = [1 if broadcast[j][i] else dst_shape[i-k]\n                     for i in range(k, len(D))]\n        src = load_distinct_source(j, off, src_shape)\n        args.append(expand_or_index(src, src_shape, dst_shape))\n    y = frozen_elementwise(args)\n    store_owned_output(coord, dst_shape, y)  # 仅有效输出坐标\n```\n\n## 有界 Ascend C 片段\n\n下面是 A3/950 均可候选的 FP32 静态 axis=0 小片段，前提为实际 srcShape={1,8}、dstShape={m,8}、m>0，源与目标不重叠，容量足够，src 已通过队列完成搬入；sharedTmp 为查询所得大小的 LocalTensor<uint8_t>。8*sizeof(float)=32B 满足该特定源的接口约束，8 不是通用 tile 推荐值。\n\n```cpp\nuint32_t srcShape[2] = {1, 8};\nuint32_t dstShape[2] = {m, 8};\nAscendC::Broadcast<float, 2, 0>(expanded, src, dstShape, srcShape, sharedTmp);\nAscendC::Add(out, x, expanded, m * 8);\n```\n\n若是 950 上 `[2,1,4]→[2,3,4]` 的 UB 内中间结果，可使用来源动态接口；不能在 A3 kernel 中无条件实例化：\n\n```cpp\n// 950/DAV_3510 专用编译分支；张量均为 LocalTensor<float>。\nuint32_t dstShape[3] = {2, 3, 4};\nuint32_t srcShape[3] = {2, 1, 4};\nAscendC::BroadcastTiling brTiling;\nAscendC::GetBroadcastTilingInfo<float>(3, dstShape, srcShape, false, brTiling);\nAscendC::Broadcast<float>(expanded, src, dstShape, srcShape, &brTiling);\n```\n\n上述片段只展示广播与计算；输入/输出队列、跨流水同步和有效长度搬出须由 C3 工程补齐。若 API、不重叠、dtype 或容量依据缺失，采用已验证的按轴迭代/索引广播基线，不手写依赖未验证 dummy 填充值的快捷复制。\n\n## 验证与来源范围\n\n覆盖前补维、标量、交替广播轴、仅尾轴广播、仅非尾轴广播、维度 1/0、合轴前后索引等价、切分轴广播和非广播、最末 u_valid、每核最后一个 task。对比所有输出坐标的输入 offset，验证每个输出恰写一次，并检查最大工作集与额外分配。来源事实是维度塌缩、零 stride、UB/NDDMA 路径与固定 API 限制；字节账、合法切片说明和候选比较为工程推导。来源审读完成，未在 NPU 上验证性能。",
+      "body": "# 广播复用与容量分块\n\n## 适用 shape、合轴与索引合同\n\n输入为连续 ND 张量，按算子明确的右对齐广播规则产生输出。先在左侧补 1；对每一轴，所有非 1 输入维度必须相同，禁止以 max(dim) 掩盖不兼容 shape。对于零长度轴，直接遵循框架的空张量广播规则。一般 stride view 先保留真实 stride，不能套用本条仅根据连续 shape 累乘得到的 stride。\n\n每轴记录“哪些输入在该轴广播”的完整位图，相邻轴只有位图相同且真实存储可合并时才能合轴。输入维度为 1 而输出大于 1 的轴设逻辑 stride=0；其他轴保留连续 stride。输出坐标 o 对输入 j 的元素偏移为 `offset_j(o)=Σ_i o_i*stride_ji`。这个零 stride 只表达读复用，绝不用于输出写地址。\n\n例如 Add `[4,3,8] + [1,3,8]` 可压成 `[4,24]+[1,24]`；Mul `[2,1,4] × [2,3,1]` 的相邻广播位图不同，保留三轴。若合轴后只有一维且某输入仅一个元素，则它是标量输入：先比较 Adds/Muls 等 TensorScalar 路径，不必为一个标量分配完整展开区。\n\n## 输出所有权、复用域与分核\n\n从最内轴向外增加 tile，令 k 为切分轴，内轴积 I=∏_{i>k} D_i；每个 tile 覆盖固定外轴坐标和 k 轴上至多 u 个值，输出元素 E=u*I。外层逻辑任务数 `T=(∏_{i<k}D_i)*ceil(D_k/u)`。按均衡 q/r 将这 T 个 tile 唯一分给核，tile 中再按必要的小片计算。尾任务使用 `u_valid=min(u,D_k-u*tile_k)`。\n\n每个输出元素只有一个核写，无归约、无需跨核同步。广播源为只读，可以被不同核重复读；“装入一次”只保证本核声明的复用域内，不表示全芯片只读一次。扩大复用域要说明同一源块跨多少输出 tile 驻留、何时失效、是否增加片上资源或减少独立任务。若同一源跨核共享需要另一个协议，本模板不默认引入。\n\n输入 tile 的起点用当前坐标与该输入 stride 计算；若切分轴是广播轴，源偏移不随 tile_k 增长。若切分轴不广播，源起点随 `tile_k*u*stride_jk` 前移。广播轴被切片本身可以合法，但传给 Broadcast 的必须是当前 tile 的 dstShape 和对应的 srcShape，不能仍用全张量 shape 或把广播源也按输出长度前移。\n\n## 三种实现路径与平台边界\n\n| 路径 | 数据流、适用条件 | 主要成本与边界 |\n| --- | --- | --- |\n| 标量/索引复用 | 标量 Adds/Muls；或沿非广播连续内轴迭代 | 省完整展开区；需保持原操作的参数顺序、舍入与除法语义 |\n| UB 广播 | GM 搬入独立源块，在 UB 展开到当前输出 tile，再计算 | 保留源区、展开区、API 临时区；适合在核内多次使用小源块 |\n| NDDMA 搬入广播 | 950/DAV_3510 的 GM→UB 多维搬运，广播轴源 stride=0 | 到 UB 时已经展开；不能用于 UB 内中间结果；最多五轴由一次描述符覆盖，更多轴需外层循环 |\n\n在 910C/A3 目标，先核对实际编译架构与 SDK；不能启用仅在 950PR/950DT 支持的动态 rank 1~9 Broadcast、NDDMA。当前 asc-devkit 的静态 Broadcast 只支持 dim=1/2、axis=0/1，ND、src/dst 不重叠；A2/A3 支持 int8/uint8/half/float。axis=0 的实际 srcShape[1] 对应字节需满足 32B 约束；把 UB 搬入长度向上补齐，不等于源 shape 自动满足该约束。官方 API 只对 Atlas 推理 AI Core 另列 axis=1 的 srcShape[0] 对齐限制，不能把该条泛化到 A3；cannbot 的概括与这里有差异，以固定 API 文档和当前编译验证为准。\n\n950 动态接口 rank∈[1,9]、srcInnerPad=false，仍需合法地址、容量、形状和不重叠证明；“无静态 shape 对齐限制”不等于零临时空间。NDDMA 的描述符 stride 单位、轴顺序、计数字段范围按所选重载核验，逻辑元素 stride 不应未经换算直接写入任意 DMA 字段。\n\n来源给出按 dcache、dtype、尾轴长度选 NDDMA/UB BRC 的经验决策链；在这里仅作为候选方向，未有相同目标的性能依据时不固化成阈值或必然排序。\n\n## 字节容量、读流量与选择公式\n\n设 E 为输出 tile 的元素数，U_j 为输入 j 在该 tile 中实际访问的不同元素数，s_j/s_o 为输入/输出字节，d_j 为实际 buffer 份数，A_a 为按 a 字节对齐。\n\nUB 广播：\n`B_UB = Σ普通输入 d_j*A_a(E*s_j) + Σ广播输入[d_src,j*A_a(U_j*s_j)+d_exp,j*A_a(E*s_j)] + d_o*A_a(E*s_o) + B_compute + T_broadcast ≤ B_available`。\n\nNDDMA 广播通常省掉独立未展开源区和 UB Broadcast 临时区，但仍保留完整展开输入 E*s_j；额外中间计算或 SDK 内部分配不能漏算。若某广播源跨多 tile 驻留，按驻留区额外计入，并明确它是否与下一 tile 的展开区同时存活。\n\n无缓存假设下，UB 显式复用每个 tile 读入的有效输入字节为 `Σ_j U_j*s_j`，写出 E*s_o；与按输出索引逐次读取相比，源数据量的理想减少是 `Σ_j(E-U_j)*s_j`。展开同时引入 UB 写/读与向量搬运成本，NDDMA 也可能重复发出源读，实际缓存命中与总耗时需测量。成本比较应同时列 `GM字节、UB展开字节、API调用数、task数`，不能仅凭节省一次 API 宣称收益。\n\n取 u 时先满足所有输入的真实源 tile、展开区和临时区容量，再考虑 T 是否足够并行。增大 tile 有利于摊销索引/调用并复用源，减小 tile 可增加独立任务，两者按同一计时协议比较。所有容量用字节；上游 128B/256B、8KB 或“核数一半”的调整是来源启发式，不能代替合法 API 约束或当前硬件测量。\n\n## 可执行索引与任务伪代码\n\n```python\n# 已完成合法补维/合轴，D 是输出维度，Sj 是逻辑元素 stride。\nT = product(D[:k]) * ceil_div(D[k], u)\nfor t in balanced_owned_tasks(T, core_id, core_count):\n    outer, tile_k = divmod(t, ceil_div(D[k], u))\n    coord = unravel(outer, D[:k]) + [tile_k*u]\n    uv = min(u, D[k]-coord[k])\n    dst_shape = [uv] + D[k+1:]\n    args = []\n    for j in inputs:\n        off = sum(coord[i]*Sj[j][i] for i in range(k+1))\n        src_shape = [1 if broadcast[j][i] else dst_shape[i-k]\n                     for i in range(k, len(D))]\n        src = load_distinct_source(j, off, src_shape)\n        args.append(expand_or_index(src, src_shape, dst_shape))\n    y = frozen_elementwise(args)\n    store_owned_output(coord, dst_shape, y)  # 仅有效输出坐标\n```\n\n## 有界 Ascend C 片段\n\n下面是 A3/950 均可候选的 FP32 静态 axis=0 小片段，前提为实际 srcShape={1,8}、dstShape={m,8}、m>0，源与目标不重叠，容量足够，src 已通过队列完成搬入；sharedTmp 为查询所得大小的 LocalTensor<uint8_t>。8*sizeof(float)=32B 满足该特定源的接口约束，8 不是通用 tile 推荐值。\n\n```cpp\nuint32_t srcShape[2] = {1, 8};\nuint32_t dstShape[2] = {m, 8};\nAscendC::Broadcast<float, 2, 0>(expanded, src, dstShape, srcShape, sharedTmp);\nAscendC::Add(out, x, expanded, m * 8);\n```\n\n若是 950 上 `[2,1,4]→[2,3,4]` 的 UB 内中间结果，可使用来源动态接口；不能在 A3 kernel 中无条件实例化：\n\n```cpp\n// 950/DAV_3510 专用编译分支；张量均为 LocalTensor<float>。\nuint32_t dstShape[3] = {2, 3, 4};\nuint32_t srcShape[3] = {2, 1, 4};\nAscendC::BroadcastTiling brTiling;\nAscendC::GetBroadcastTilingInfo<float>(3, dstShape, srcShape, false, brTiling);\nAscendC::Broadcast<float>(expanded, src, dstShape, srcShape, &brTiling);\n```\n\n上述片段只展示广播与计算；输入/输出队列、跨流水同步和有效长度搬出须由 C3 工程补齐。若 API、不重叠、dtype 或容量依据缺失，采用已验证的按轴迭代/索引广播基线，不手写依赖未验证 dummy 填充值的快捷复制。\n\n## 验证与来源范围\n\n覆盖前补维、标量、交替广播轴、仅尾轴广播、仅非尾轴广播、维度 1/0、合轴前后索引等价、切分轴广播和非广播、最末 u_valid、每核最后一个 task。对比所有输出坐标的输入 offset，验证每个输出恰写一次，并检查最大工作集与额外分配。来源事实是维度塌缩、零 stride、UB/NDDMA 路径与固定 API 限制；字节账、合法切片说明和候选比较为工程推导。来源审读完成，未在 NPU 上验证性能。\n\n## 按复用域比较三种骨架，而非一见广播就扩展张量\n\n固定 RoPE 来源的 interleaved host 按 sequence/batch/head 和实际 UB、dtype 临时区选择切分；对应 kernel 每次搬入一段 headDim 的 cos/sin，再向当前 head 片广播。这直接说明“源块大小”和“使用该源块的输出大小”不同，也说明更大复用域受容量与任务数约束。RoPE 是组合依据，不是任意广播算子的 API 或数值合同。\n\n令一个复用组输出为 `[R,H]`，源 B 为 `[1,H]`，另一个输入 A 为 `[R,H]`；元素宽分别 sB/sA/sY 字节。比较下列候选时，保持同一数值函数与输出所有权：\n\n| 骨架 | 明确减少的工作 | 新增/保留代价及适用条件 |\n| --- | --- | --- |\n| 每元素通用零 stride 解码 | 无；覆盖任意合法位图，是比较基准 | 每输出 rank 级解码，逻辑源取数 RH 次；缓存命中未知，不能声称实际读取 RHsB 字节 DRAM |\n| 每行/连续段解码＋局部广播 | 把解码从 RH 次降至每行或每段一次；在段内使用固定步长 | R 次源段装载，段尾和 Broadcast/标量指令限制；H 短时调用/同步仍可能多 |\n| 同 owner 保留 B，连续处理 r 行 | 每组 B 逻辑 GM→UB 读取由 rH 降至 H 元素；不改变 A/Y 的必要字节 | B 驻留期跨 r 行；若展开 B 为 rHa 个元素会新增本地写入及存储；任务数可能减少，需足够独立组 |\n\n第三种不必物化完整广播输入。可保留 B[H]，依次计算 A[row,H]；或根据合法 API 同时计算 r 行。按行实现的保守 UB 为 `A(Ha*sB)+dA*A(Ha*sA)+dY*A(Ha*sY)+Tmp+F`，A(z) 是字节对齐；r 行并行实现应把对应 A/Y 与展开区长度乘 r，不能仍套用逐行预算。B 若与其他队列共享物理区，最后一个消费完成前不能覆盖。\n\n真实源重读次数由每个核、每个外层域与每个 tile 是否重新搬入决定，不能把跨核只读共享当片上共享。源码只证明同一 owner 内可复用时，跨核缓存命中和带宽效果仍是待测预测。扩大 r 导致核心不足时，比较保留较小 r、每核重读 B 的方案；允许有依据地选择重读。\n\n短内轴 H 可将若干行组合，但只有所有输入广播位图一致的相邻轴才能合轴。`A=[P,1,H]、B=[P,R,1]` 的两类广播轴不同，不能错误合并成连续 RH 源。每行边界、部分尾行和输出物理搬出边界都应归同一 owner 或采用已经证明的非重叠写法。\n\n**影响选择的结论**：记录保留源块、展开值、派生中间量三者的对象/生命周期；连续段处理未解决的昂贵函数、其他 dtype 和不规则 stride 作为残余范围。来源知识足以提出条件方案，不要求先测出 bandwidth；但 API、别名、容量与精度未知不能用性能假设代替。若现有 Action 只承载输入值驻留，不能用它隐含授权重排派生几何计算。",
       "evidence_status": "source_reviewed_not_benchmarked",
       "id": "planning.elementwise.broadcast",
       "kind": "template",
@@ -128,7 +128,7 @@
         ]
       },
       "seed_reason": "固定开源修订审读并补全中文算法、所有权、字节容量与选择边界；保留原 ID/主归属/数值合同，未做 NPU 性能验证。",
-      "source_hash": "sha256:e9656ff1eb44e019b72c4199f8a993f084e587f92b65b1c740d23fd4912d5cee",
+      "source_hash": "sha256:485c6aec11ef4e73458f85be904d0692bf7ed6b97db0ecd88d7694b039c505f0",
       "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/broadcast.md",
       "sources": [
         {
@@ -218,6 +218,61 @@
           "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/README.md",
           "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
           "sha256": "sha256:14f2219ba48fdf536ac5cf018c2f70b6fd4a0a074d2dede49c9a6ca187d8e9dd"
+        },
+        {
+          "excerpt_sha256": "sha256:0584361aaf5de66a2e5290e73880764867c112b65192db8fdd2a8a545b4e5f7f",
+          "lines": [
+            1,
+            51
+          ],
+          "original_path": "posembedding/rotary_position_embedding/README.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/README.md",
+          "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+          "sha256": "sha256:5c367eaca3ad1b7008afd6804ccc997be9cde35a76bb03d23df2a931d810a784"
+        },
+        {
+          "excerpt_sha256": "sha256:43e2749e99d4ff0e456b7039f18af6a7645511e6d6cbdcbcd6d8d0e58a3b3e85",
+          "lines": [
+            151,
+            348
+          ],
+          "original_path": "posembedding/rotary_position_embedding/op_host/rope_interleaved_tiling.cpp",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_host/rope_interleaved_tiling.cpp",
+          "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+          "sha256": "sha256:0f2bac0d6cd52e57ef38976b7fb8205e3104f2e0ea26f3689f0be1dd0a09cec6"
+        },
+        {
+          "excerpt_sha256": "sha256:24d59f53fadba324ba0346704b8fbaff23d6de81b93fd9f8282d5e9d15e28f28",
+          "lines": [
+            145,
+            200
+          ],
+          "original_path": "posembedding/rotary_position_embedding/op_kernel/rotary_position_embedding.cpp",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_kernel/rotary_position_embedding.cpp",
+          "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+          "sha256": "sha256:5160d08c053ba32694df0c699d31ddc9b67a26d3ae4545f4fb9d6122efc3400e"
+        },
+        {
+          "excerpt_sha256": "sha256:aee09fcfd96fbd9fa8fd9dee7eee943d5d9f288672ae0c74f2ee4759e5c7f18b",
+          "lines": [
+            80,
+            195
+          ],
+          "original_path": "posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bsn.h",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bsn.h",
+          "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+          "sha256": "sha256:1b9db64d84e6abf43eda6f65ca706df6d5219e8b73ebeec794c5ff106fa2434b"
+        },
+        {
+          "excerpt_sha256": "sha256:8b118ddbc4e70ada3debaf013838c8690abc85bb5f9d847d113ed2db40208830",
+          "lines": [
+            1,
+            165
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/broadcast/patterns.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/broadcast/patterns.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:8b118ddbc4e70ada3debaf013838c8690abc85bb5f9d847d113ed2db40208830"
         }
       ],
       "status": "active",
@@ -226,10 +281,10 @@
         "elementwise"
       ],
       "title": "广播复用与容量分块",
-      "version": "1.1.0"
+      "version": "1.2.0"
     },
     {
-      "body": "# 连续输出分区与均衡尾块\n\n## 适用域与先决语义\n\n输入、输出具有相同的逻辑 shape，且每个输出元素只依赖同一下标的输入或已冻结的只读标量。输入真实连续或已存在合法的连续视图，才可将 shape 的乘积展平为 N；带 stride 的 view 不能仅凭元素总数走本模板。N=0 在 host 空张量分支处理，不启动会执行零 count 或除以零的 kernel。\n\n一元函数、同形 Add/Mul、独立的算术链均可采用相同所有权。C2 先明确每步 dtype、Cast 舍入、溢出/饱和、NaN/Inf、输出别名和计算顺序。来源提出半精度加减链升 FP32 的候选；这是需要与 oracle 比较的数值实现选择，不是对所有 FP16/BF16 Add 的自动改写许可，更不能保证最后 Cast 后保留任意小增量。\n\n## 分区、任务数与核内循环\n\n令 g 为满足实际搬运接口及输出独占写要求的元素粒度，Q=ceil(N/g) 为逻辑块数。选择 1≤C≤min(Q,C_available)，定义 q=Q//C、r=Q%C。核 c 的起始块 b_c=cq+min(c,r)，块数 n_c=q+[c<r]，其有效元素区间为 `[b_c*g, min((b_c+n_c)*g,N))`。所有区间并集恰为 `[0,N)`，交集为空；尾部不足 g 的部分由唯一末核处理，绝不通过重叠搬出尾块补齐。\n\n核内再按 U 个元素分 tile，循环条件用当前位置小于核的有效结束位置，`valid=min(U,end-pos)`。只在 valid>0 时执行搬运与计算。U 是片上工作集粒度，g 是分核边界粒度，两者不必相同。若 C 很大而单核只有一个很短 tile，需与较少核数比较；增加 task 数、减少每核工作量、减少流水循环之间存在取舍。\n\n所有输入只读，每个输出片段只有一个写者，无跨核归约和全局同步。精确原址逐元素操作只有在 API 与算子别名合同均允许时才可使用；部分重叠 view 可能使一个核覆盖另一核尚未读取的输入，必须用已有安全基线。\n\n## 字节容量与成本模型\n\n定义 A_a(x)=ceil(x/a)*a，为按 a 字节向上对齐。s_j 是第 j 个存活张量的元素字节数，d_j 是它实际分配的 buffer 份数（含双缓冲），T_api 是按当前 API、dtype、形状查询的临时字节，B_res 是其他必须预留的字节。一般容量合同为：\n\n`B_UB = Σ_j d_j*A_aj(U*s_j) + B_fixed + T_api ≤ B_available`。\n\n这里计入所有已分配且未释放/未合法复用的区域；仅逻辑上不再使用但 TPipe 仍保留的独立分配不能从账上删除。若共享同一物理区，必须说明不同阶段的生命周期互斥以及跨流水依赖已完成。\n\n同 dtype 二输入 Add、两个输入队列与一个输出队列深度都为 d 时，数据区约 `3*d*A_a(U*s)` 字节；升 FP32 另有 K 个非别名中间区，则另加 `K*A_a(4U)`。K 由 API 的 dst/src 别名约束决定，不应把一个 Cast buffer 当三个运算都能安全原址复用。UB 余量不足一个合法 tile 时直接淘汰该候选，不能把 U 强制改成 1 掩盖超容。\n\n一次无复用扫描的必要 GM 数据量为 `B_GM=N*(Σ_inputs s_i+Σ_outputs s_o)`，不含额外 workspace、重读和隐式变换。设 F 为计算操作量、BW_eff/P_eff 为同一目标机测得的有效带宽/算力，则 `max(B_GM/BW_eff,F/P_eff)` 只是服务时间下界；实际还包括 launch、tile 循环、同步及尾块开销。该表达式用于解释候选，不能给出未经测量的微秒数。\n\n来源有 bits/bytes 混用的示意公式；本条全部以字节重推，若输入是 bit 宽度 b，先显式转换 s=b/8。上游 4KB 每核、512 元素、256B repeat 等是其示例选择，不能代替当前目标的合法对齐或性能阈值。\n\n## 参数选择与替代边界\n\n| 决策 | 优先检查的条件 | 不满足时的路径 |\n| --- | --- | --- |\n| 展平 | 同 shape、真实连续、逐元素无依赖 | 广播模板或保留 stride 的基线 |\n| 更多核 | 独立逻辑块够多，单核工作能摊销启动/调度成本 | 比较更少 C，并保持完整覆盖 |\n| 更大 U | 片上容量、API count 范围、足够 tile 循环 | 减 U 或降低队列深度 |\n| 双缓冲 | 两份数据区确实可容纳，存在可重叠阶段 | 单缓冲；双缓冲本身不证明速度更快 |\n| 半精度升 FP32 | 语义允许且精度需要，K 已确认 | 保持 oracle 认可的原 dtype 路径 |\n\nHost 用溢出安全的宽整数计算 shape 乘积、Q、偏移与 U*s；把 uint64 值转换为搬运接口的 uint32/int32 字段前验证范围。tile 的有效长度、存储长度、搬运字段单位要分别保存，不能共享一个含义不清的 length。\n\n## 可执行伪代码\n\n```python\n# host；checked_product 与 choose_tile 已证明不溢出、容量足够。\nN = checked_product(shape)\nif N == 0: return empty_result(shape)\nQ = (N + g - 1) // g\nC = choose_cores(1, min(Q, available_cores))\nq, r = divmod(Q, C)\nU = choose_tile(capacity_bytes, dtype_sizes, queue_depths, api_tmp)\n# kernel(c)\nbegin = (c*q + min(c, r))*g\nend = min(begin + (q + int(c < r))*g, N)\nfor pos in range(begin, end, U):\n    valid = min(U, end-pos)\n    xs = load_valid_inputs(pos, valid)  # queue producer -> consumer\n    ys = elementwise_with_frozen_casts(xs, valid)\n    store_valid_outputs(pos, ys, valid) # 不写 [valid,U) 的 padding\n```\n\n## 有界 Ascend C 片段与同步上下文\n\n下段采用来源 Add 样例的 TQue 生命周期，适用于一个合法对齐的 FP32 主 tile。xGm/yGm/zGm 已按本核 begin 绑定；队列已用字节容量初始化；pos 相对本核起点；n>0 且符合 DataCopy 主块约束。非对齐尾 tile 改用经核验的有效长度 DataCopyPad 封装，不能直接沿用主块搬出。\n\n```cpp\n// 包含 kernel_operator.h；inX/inY 为 VECIN，outZ 为 VECOUT。\nauto x = inX.AllocTensor<float>();\nauto y = inY.AllocTensor<float>();\nAscendC::DataCopy(x, xGm[pos], n);\nAscendC::DataCopy(y, yGm[pos], n);\ninX.EnQue(x); inY.EnQue(y);\nx = inX.DeQue<float>(); y = inY.DeQue<float>();\nauto z = outZ.AllocTensor<float>();\nAscendC::Add(z, x, y, n);\noutZ.EnQue(z);\ninX.FreeTensor(x); inY.FreeTensor(y);\nz = outZ.DeQue<float>();\nAscendC::DataCopy(zGm[pos], z, n);\noutZ.FreeTensor(z);\n```\n\nEnQue/DeQue 表达搬入→计算→搬出依赖；不得在同一物理区的异步消费者完成前覆盖或回收。原 Add 样例固定可整除的输入并将每核整段一次放进 UB，本条的 q/r 和核内 U 循环是为任意合法长度增加的规划推导，不能把样例直接改 totalLength 后视作通用 kernel。\n\n## 平台、验证与证据\n\n固定 asc-devkit 样例 README 给出的范围是 Atlas A2/A3（CANN≥9.0）和 950PR/950DT（CANN≥9.1）；这是该修订的样例范围。面向 910C/A3 应核对实际 SoC/编译目标，不能借用 950 的寄存器路径、NDDMA 或动态 Broadcast 能力。scope=all 仅表示可检索，未证明任意平台、dtype、API 组合可执行。\n\n至少验证 N∈{0,1,g−1,g,g+1,U−1,U,U+1}、Q 不能整除 C、多核最后一片、最大整数偏移、全分配容量和精确输出覆盖。数值用大/小量级混合、±0、NaN/Inf、溢出边界检查声明的合同。来源事实是均匀连续分区、UB 分块、队列数据流；均衡公式、字节模型与参数比较为本条工程推导。证据状态为 source_reviewed_not_benchmarked，无 NPU 时延或收益验证。",
+      "body": "# 连续输出分区与均衡尾块\n\n## 适用域与先决语义\n\n输入、输出具有相同的逻辑 shape，且每个输出元素只依赖同一下标的输入或已冻结的只读标量。输入真实连续或已存在合法的连续视图，才可将 shape 的乘积展平为 N；带 stride 的 view 不能仅凭元素总数走本模板。N=0 在 host 空张量分支处理，不启动会执行零 count 或除以零的 kernel。\n\n一元函数、同形 Add/Mul、独立的算术链均可采用相同所有权。C2 先明确每步 dtype、Cast 舍入、溢出/饱和、NaN/Inf、输出别名和计算顺序。来源提出半精度加减链升 FP32 的候选；这是需要与 oracle 比较的数值实现选择，不是对所有 FP16/BF16 Add 的自动改写许可，更不能保证最后 Cast 后保留任意小增量。\n\n## 分区、任务数与核内循环\n\n令 g 为满足实际搬运接口及输出独占写要求的元素粒度，Q=ceil(N/g) 为逻辑块数。选择 1≤C≤min(Q,C_available)，定义 q=Q//C、r=Q%C。核 c 的起始块 b_c=cq+min(c,r)，块数 n_c=q+[c<r]，其有效元素区间为 `[b_c*g, min((b_c+n_c)*g,N))`。所有区间并集恰为 `[0,N)`，交集为空；尾部不足 g 的部分由唯一末核处理，绝不通过重叠搬出尾块补齐。\n\n核内再按 U 个元素分 tile，循环条件用当前位置小于核的有效结束位置，`valid=min(U,end-pos)`。只在 valid>0 时执行搬运与计算。U 是片上工作集粒度，g 是分核边界粒度，两者不必相同。若 C 很大而单核只有一个很短 tile，需与较少核数比较；增加 task 数、减少每核工作量、减少流水循环之间存在取舍。\n\n所有输入只读，每个输出片段只有一个写者，无跨核归约和全局同步。精确原址逐元素操作只有在 API 与算子别名合同均允许时才可使用；部分重叠 view 可能使一个核覆盖另一核尚未读取的输入，必须用已有安全基线。\n\n## 字节容量与成本模型\n\n定义 A_a(x)=ceil(x/a)*a，为按 a 字节向上对齐。s_j 是第 j 个存活张量的元素字节数，d_j 是它实际分配的 buffer 份数（含双缓冲），T_api 是按当前 API、dtype、形状查询的临时字节，B_res 是其他必须预留的字节。一般容量合同为：\n\n`B_UB = Σ_j d_j*A_aj(U*s_j) + B_fixed + T_api ≤ B_available`。\n\n这里计入所有已分配且未释放/未合法复用的区域；仅逻辑上不再使用但 TPipe 仍保留的独立分配不能从账上删除。若共享同一物理区，必须说明不同阶段的生命周期互斥以及跨流水依赖已完成。\n\n同 dtype 二输入 Add、两个输入队列与一个输出队列深度都为 d 时，数据区约 `3*d*A_a(U*s)` 字节；升 FP32 另有 K 个非别名中间区，则另加 `K*A_a(4U)`。K 由 API 的 dst/src 别名约束决定，不应把一个 Cast buffer 当三个运算都能安全原址复用。UB 余量不足一个合法 tile 时直接淘汰该候选，不能把 U 强制改成 1 掩盖超容。\n\n一次无复用扫描的必要 GM 数据量为 `B_GM=N*(Σ_inputs s_i+Σ_outputs s_o)`，不含额外 workspace、重读和隐式变换。设 F 为计算操作量、BW_eff/P_eff 为同一目标机测得的有效带宽/算力，则 `max(B_GM/BW_eff,F/P_eff)` 只是服务时间下界；实际还包括 launch、tile 循环、同步及尾块开销。该表达式用于解释候选，不能给出未经测量的微秒数。\n\n来源有 bits/bytes 混用的示意公式；本条全部以字节重推，若输入是 bit 宽度 b，先显式转换 s=b/8。上游 4KB 每核、512 元素、256B repeat 等是其示例选择，不能代替当前目标的合法对齐或性能阈值。\n\n## 参数选择与替代边界\n\n| 决策 | 优先检查的条件 | 不满足时的路径 |\n| --- | --- | --- |\n| 展平 | 同 shape、真实连续、逐元素无依赖 | 广播模板或保留 stride 的基线 |\n| 更多核 | 独立逻辑块够多，单核工作能摊销启动/调度成本 | 比较更少 C，并保持完整覆盖 |\n| 更大 U | 片上容量、API count 范围、足够 tile 循环 | 减 U 或降低队列深度 |\n| 双缓冲 | 两份数据区确实可容纳，存在可重叠阶段 | 单缓冲；双缓冲本身不证明速度更快 |\n| 半精度升 FP32 | 语义允许且精度需要，K 已确认 | 保持 oracle 认可的原 dtype 路径 |\n\nHost 用溢出安全的宽整数计算 shape 乘积、Q、偏移与 U*s；把 uint64 值转换为搬运接口的 uint32/int32 字段前验证范围。tile 的有效长度、存储长度、搬运字段单位要分别保存，不能共享一个含义不清的 length。\n\n## 可执行伪代码\n\n```python\n# host；checked_product 与 choose_tile 已证明不溢出、容量足够。\nN = checked_product(shape)\nif N == 0: return empty_result(shape)\nQ = (N + g - 1) // g\nC = choose_cores(1, min(Q, available_cores))\nq, r = divmod(Q, C)\nU = choose_tile(capacity_bytes, dtype_sizes, queue_depths, api_tmp)\n# kernel(c)\nbegin = (c*q + min(c, r))*g\nend = min(begin + (q + int(c < r))*g, N)\nfor pos in range(begin, end, U):\n    valid = min(U, end-pos)\n    xs = load_valid_inputs(pos, valid)  # queue producer -> consumer\n    ys = elementwise_with_frozen_casts(xs, valid)\n    store_valid_outputs(pos, ys, valid) # 不写 [valid,U) 的 padding\n```\n\n## 有界 Ascend C 片段与同步上下文\n\n下段采用来源 Add 样例的 TQue 生命周期，适用于一个合法对齐的 FP32 主 tile。xGm/yGm/zGm 已按本核 begin 绑定；队列已用字节容量初始化；pos 相对本核起点；n>0 且符合 DataCopy 主块约束。非对齐尾 tile 改用经核验的有效长度 DataCopyPad 封装，不能直接沿用主块搬出。\n\n```cpp\n// 包含 kernel_operator.h；inX/inY 为 VECIN，outZ 为 VECOUT。\nauto x = inX.AllocTensor<float>();\nauto y = inY.AllocTensor<float>();\nAscendC::DataCopy(x, xGm[pos], n);\nAscendC::DataCopy(y, yGm[pos], n);\ninX.EnQue(x); inY.EnQue(y);\nx = inX.DeQue<float>(); y = inY.DeQue<float>();\nauto z = outZ.AllocTensor<float>();\nAscendC::Add(z, x, y, n);\noutZ.EnQue(z);\ninX.FreeTensor(x); inY.FreeTensor(y);\nz = outZ.DeQue<float>();\nAscendC::DataCopy(zGm[pos], z, n);\noutZ.FreeTensor(z);\n```\n\nEnQue/DeQue 表达搬入→计算→搬出依赖；不得在同一物理区的异步消费者完成前覆盖或回收。原 Add 样例固定可整除的输入并将每核整段一次放进 UB，本条的 q/r 和核内 U 循环是为任意合法长度增加的规划推导，不能把样例直接改 totalLength 后视作通用 kernel。\n\n## 平台、验证与证据\n\n固定 asc-devkit 样例 README 给出的范围是 Atlas A2/A3（CANN≥9.0）和 950PR/950DT（CANN≥9.1）；这是该修订的样例范围。面向 910C/A3 应核对实际 SoC/编译目标，不能借用 950 的寄存器路径、NDDMA 或动态 Broadcast 能力。scope=all 仅表示可检索，未证明任意平台、dtype、API 组合可执行。\n\n至少验证 N∈{0,1,g−1,g,g+1,U−1,U,U+1}、Q 不能整除 C、多核最后一片、最大整数偏移、全分配容量和精确输出覆盖。数值用大/小量级混合、±0、NaN/Inf、溢出边界检查声明的合同。来源事实是均匀连续分区、UB 分块、队列数据流；均衡公式、字节模型与参数比较为本条工程推导。证据状态为 source_reviewed_not_benchmarked，无 NPU 时延或收益验证。\n\n## 选择前比较：连续段、短行与 tile 不能只看容量\n\n本节为依据 Add 队列样例与广播合轴规则作出的规划推导。样例只能直接确认“连续分区、按字节分配、队列传递”的事实，不能确认队列已经隐藏搬运延迟。\n\n先对每个 dtype/真实 stride 域保存 `(N,C,U,d)`，并按有效元素数分别计：输入读 `NΣs_i` 字节、输出写 `Ns_o` 字节、算术 `Nf` 次、核内 tile 数 `L=Σ_c ceil(N_c/U)`、尾片数及 padding 元素数。`f` 是每元素明确列出的逻辑算术次数；Cast、地址解码和同步单独列，不合并为“总成本”。采用新 U 只减少循环与接口调用，不会自动减少必要 GM 字节或逐元素算术。\n\n对于由 R 行、每行 H 个连续元素构成的路径，有两种不同机会：\n\n- **直接展平**：所有输入在行边界两侧都连续、标量/属性及数值路径不随行改变时，以 RH 元素连续段处理；跨行无需重新初始化。若输入每行有 padding 或广播位图变化，则不能如此展平。\n- **短行组合**：语义仍按行执行，但同一 owner 收集 h 行进入一个批次。保持每行有效 H 与物理行跨度 Ha 分离；容量与计算按 hHa，GM 有效搬出按 hH。规则行间 stride 可用已验证的多段搬运，任意间隔仍需逐段；批次不等于只发一次 DMA。初始化、mask、索引表等若按 Ha 执行，新增 `h(Ha−H)` 个无效 lane 工作必须计入比较。\n\n这两者的主要收益假设分别是去掉行级调度和摊销短接口发射；都不是扩大 UB 的同义词。更大 h/U 会减少核内批次或循环；固定核数 C 时不改变独立 owner/task 数，只有同时改变跨 owner 工作域或重新分核才可能减少 task，可能增加尾部浪费、临时存活量并挤掉第二个 buffer。若瓶颈仍可能是逐元素昂贵函数、转换或不连续输入，本次选择须保留它们作为残余机会。没有测得时间权重时，只比较工作类别及方向，不从调用次数给出确定收益。\n\nC2 输出完整适用域与未变路径；C3 若为了 API 尾部把所有主 tile 都清零、额外转换或加入全流水 barrier，应将新增工作反馈给选择阶段。不能以“已有 TQue”“已实现 Vector API”作为无需比较流水或计算粒度的依据。",
       "evidence_status": "source_reviewed_not_benchmarked",
       "id": "planning.elementwise.continuous",
       "kind": "template",
@@ -252,7 +307,7 @@
         ]
       },
       "seed_reason": "固定开源修订审读并补全中文算法、所有权、字节容量与选择边界；保留原 ID/主归属/数值合同，未做 NPU 性能验证。",
-      "source_hash": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d",
+      "source_hash": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4",
       "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
       "sources": [
         {
@@ -309,6 +364,28 @@
           "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/README.md",
           "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
           "sha256": "sha256:14f2219ba48fdf536ac5cf018c2f70b6fd4a0a074d2dede49c9a6ca187d8e9dd"
+        },
+        {
+          "excerpt_sha256": "sha256:fb975d9faab55d910f8e4df0a9f2995d9cf26ed8c737bfb91a1e08504979c297",
+          "lines": [
+            20,
+            75
+          ],
+          "original_path": "examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/add_tpipe_tque.asc",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/add_tpipe_tque.asc",
+          "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+          "sha256": "sha256:3fd854a223214eec19b03eebf4be3397c81358ebd526d07b17202a5fd522b654"
+        },
+        {
+          "excerpt_sha256": "sha256:accaf93a389515058582a1b86c73fddc763155871b2f09255a4a08212d7541de",
+          "lines": [
+            7,
+            18
+          ],
+          "original_path": "examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/README.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/README.md",
+          "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+          "sha256": "sha256:14f2219ba48fdf536ac5cf018c2f70b6fd4a0a074d2dede49c9a6ca187d8e9dd"
         }
       ],
       "status": "active",
@@ -317,7 +394,7 @@
         "elementwise"
       ],
       "title": "连续输出分区与均衡尾块",
-      "version": "1.1.0"
+      "version": "1.2.0"
     },
     {
       "body": "# Elementwise / Broadcast 通用回退\n\n## 回退触发与必须保留的合同\n\n当连续性、广播形状、有效长度、容量、API 支持或数值等价任一项未知/不成立时，保留已有已验证 entry/key。回退首先是一条实际可执行且被验证的路径；本条给出如何记录与最小化它的规划，不因来源中有示意 API 就声称新 baseline 已验证。C2 写出专用路径的完整适用谓词以及互补域，host 对每个输入只能选择一个互斥 entry，不能先执行部分新输出再静默改走旧路径。\n\n逐元素运算保留原计算顺序、dtype/Cast、特殊值、输出别名规则；广播保留完整右对齐 shape 和真实 stride。若输入非连续，不展平为同形线性数组；若存在部分重叠的输入输出 view，不允许无依据地分核并发。空输出在 host 返回，非法 shape 按原接口错误处理。\n\n## 最小任务所有权与可容纳的片段\n\n连续、同形的已知子域可令每个任务拥有一个不相交的连续输出片段；一般广播/stride 子域按输出坐标解码，读取 `Σcoord_i*stride_ji`，广播轴 stride=0。每个输出只写一次，输入只读，无归约和全局同步。最保守的单任务执行也必须完整覆盖全部输出，不能靠启动多核掩盖分区证据缺失。\n\n固定 tile U 至少为一个当前 API 合法且可容纳的有效工作单元。令 A_a 为字节对齐，s_j 为每个独立输入/输出/计算区元素字节，d_j 为实际份数：`B_UB=Σ_j d_j*A_a(U_j*s_j)+B_fixed+T_api≤B_available`。stride 广播的 U_j 可小于输出 U，但若实现显式展开就另计 U*s_j。即使 fallback 也不能忽略升 FP32、双缓冲和 Broadcast 临时区。\n\n无法证明一个向量 tile 的资源或 API 约束时，继续使用原框架/库实现；“U=1”不是普遍安全策略，基础搬运/向量接口仍可能要求最小地址/长度粒度。必要流量约为有效输入读取字节加输出字节，一般索引实现可能重复读取广播源；这是保证语义的基准成本，不作收益承诺。\n\n## 执行骨架与可复用片段\n\n```python\nif validated_specialized_domain(metadata):\n    return specialized_entry(metadata)\nassert baseline_entry_is_validated_for(metadata)\n# 下列逻辑是 baseline 应满足的语义，不是擅自替换现有 baseline。\nfor out_tile in uniquely_owned_output_tiles():\n    for out_coord in valid_coords(out_tile):\n        args = [read_input(j, sum(out_coord[i]*stride[j][i]\n                                 for i in range(rank))) for j in inputs]\n        write_once(out_coord, oracle_elementwise(args))\n```\n\n在已确认的连续 FP32 Add 主片域，当前工程的队列已完成搬入且 x/y/z 是不重叠、容量足够的 LocalTensor，n>0 且满足接口合法范围时，计算部分可保持如下最小代码；非对齐搬入/搬出仍由原基线封装处理：\n\n```cpp\nAscendC::Add(zLocal, xLocal, yLocal, n);\n```\n\n来源 Add 工程用 AllocTensor→DataCopy→EnQue→DeQue→Add→EnQue→DeQue→DataCopy→FreeTensor 管理生命周期。保留该同步链，不能把局部 Add 片段当完整 kernel。来源工程的整除长度、固定核数与每核全载只是样例条件；回退 entry 仍需覆盖任意声明形状的尾块。\n\n## 往专用路径补证据与验证\n\n| 缺项 | 补齐后可重新比较的方向 |\n| --- | --- |\n| 真实连续性/stride 未知 | 固定 shape-stride 映射后比较连续分区 |\n| 广播轴或复用域未知 | 明确输入 offset 与每核复用范围后比较 UB 广播 |\n| UB/API 临时区未核算 | 给出字节账和合法最小 tile，再讨论队列深度 |\n| dtype/数值误差未定义 | 对照原 oracle 验证计算与 Cast 顺序 |\n| 平台能力未知 | 按实际 SoC/SDK 编译目标确认 API，保持现有 entry |\n\n验证空/标量、非整除 tile、多核尾块、非连续 view、交替广播轴、别名和所有输出覆盖；用 sentinel 检查只写有效输出且没有空洞。910C/A3 不默认支持 950 的 NDDMA/动态 Broadcast；scope=all 是检索范围。来源事实为连续分块、广播索引与 TQue 数据流；一般坐标 baseline、互斥分派和容量账为工程推导。来源审读完成，未进行 NPU 性能测量，未将未验证的草图注册为新的 fallback entry。",
@@ -905,7 +982,7 @@
       "version": "1.1.0"
     },
     {
-      "body": "# 索引访问与索引写入\n\n按 family 与 workload 选择任务划分、所有权和组合方案；可同时进入多个分支。比较适用主方案与保守回退，C2 输出必要内容快照、参数和实现自由度。\n\n- [Gather 输出所有权、行列分区与尾轴路径](templates/gather_output_owned.md)\n- [索引写与重复目标：目标所有权、原子和分组归约](templates/indexed_write_reduce.md)\n- [索引访问与索引写入：保守回退](fallback.md)\n\n来源审读不等于目标硬件收益验证；不确定的能力或容量返回 needs_evidence，不能由模板代填。",
+      "body": "# 索引访问与索引写入\n\n按 family 与 workload 选择任务划分、所有权和组合方案；可同时进入多个分支。比较适用主方案与保守回退，C2 输出必要内容快照、参数和实现自由度。\n\n- [Gather 输出所有权、行列分区与尾轴路径](templates/gather_output_owned.md)\n- [索引写与重复目标：目标所有权、原子和分组归约](templates/indexed_write_reduce.md)\n- [索引访问与索引写入：保守回退](fallback.md)\n\n来源审读不等于目标硬件收益验证；不确定的能力或容量返回 needs_evidence，不能由模板代填。\n- [坐标生成与邻域读取的条件化骨架](templates/coordinate_neighborhood.md)\n\ncoordinate_mapping：绑定坐标生成/边界变换/输入stride/累加函数的数学契约；neighborhood_bounds：所有邻域读取的有效域或合法掩码策略。二者可由任务定义与源码证明，缺失时只能参考原则/条件规划，不能由Gather来源补造插值语义。",
       "evidence_status": "source_reviewed_not_benchmarked",
       "id": "planning.indexing",
       "kind": "router",
@@ -961,6 +1038,28 @@
           "required_evidence": [],
           "seed_reason": "未知条件保留现有合法方案并补资料。",
           "target": "planning.indexing.fallback"
+        },
+        {
+          "exclude": [
+            {
+              "field": "excluded_templates",
+              "op": "contains",
+              "value": "planning.indexing.coordinate_neighborhood"
+            }
+          ],
+          "fallback": false,
+          "match": [],
+          "prior_score": 2,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.task_ownership",
+            "constraint.coordinate_mapping",
+            "constraint.neighborhood_bounds",
+            "constraint.precision"
+          ],
+          "seed_reason": "按当前语义/实现条件咨询；不由算子名称、case编号或Key数量决定，不保证收益。",
+          "target": "planning.indexing.coordinate_neighborhood"
         }
       ],
       "schema_version": "aprof.knowledge-record/v1",
@@ -976,7 +1075,7 @@
         ]
       },
       "seed_reason": "固定开源修订审读并以中文提炼；未做性能训练或硬件收益验证。",
-      "source_hash": "sha256:160ebc5ced1e87bebafb495cb2fe29998e22565ee81065b7d4e266916b54ea5c",
+      "source_hash": "sha256:833e119fbef58747bbbe51cfba88601ef19aa95645afdd526cd3f222517a8f15",
       "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/ROUTER.md",
       "sources": [
         {
@@ -1060,6 +1159,156 @@
       "status": "active",
       "tags": [],
       "title": "索引访问与索引写入",
+      "version": "1.3.0"
+    },
+    {
+      "body": "# 坐标生成与邻域读取：空间块、复用轴及重算取舍\n\n## 身份与采用边界\n\n这是**本次机制推导**的通用条件化骨架。固定来源直接确认 GatherElements 的输出独占/间接取数/转置中转，RoPE 的共享输入块广播及按容量分区，950 SIMT Gather 的逐行或输出元素分配；这些事实不证明任意插值公式、边界规则或 API 在目标平台合法。五个固定仓库本次检索未找到可用的 GridSampler/Resize 完整实现链，不能把本条说成已移植的上游采样 kernel。\n\n用于输出可独立计算、每输出从有限邻域读数的任务。实例必须给定：输入/输出真实布局与 stride，坐标来源函数 G，边界函数 B，邻域/权重函数 H，按既定次序消费邻域的函数 F，dtype/Cast/舍入、NaN/Inf、越界与空输入规则。**这些槽位未绑定时只能作为部分原则参考；绑定且证明输出互斥、地址/容量/数值条件后，才可完整采用其任务骨架。** 本条不提供通用插值数值实现，也不授权从任务 oracle 改写特殊值行为。\n\n最近邻可令 K=1、F 为读取合法元素；加权邻域的 K、权重计算精度和累加顺序必须来自任务定义。二维四邻域、三维八邻域只是已绑定特定数学定义后可能出现的 K，不是所有采样任务的假定。GatherElements 的 index 同形语义独立保留，不能因两者都读离散地址就采用同一完整模板。\n\n## 坐标、依赖轴与所有权\n\n示例符号：输出 `Y[n,c,p]`，n 为外层独立对象，c 为可复用轴，p 为展平输出空间点；输入 `X[n,c,i]`，真实 stride 显式保存。几何记录 `D[n,p]=H(B(G(n,p)))` 含 K 个源空间坐标、有效标记及必要权重。当 G/B/H 也依赖 c 时，必须改成 D[n,c,p]，不允许跨 c 复用。输入值 X 仍依赖 c，**几何相同不代表输入值相同**。\n\n将输出切成互斥 `[n,c0:c1,p0:p1]` 矩形；owner 为该矩形唯一写者，完整覆盖各有效维度。物理布局为 NCHW 类时 p 通常连续，c 跨一个源/输出平面；NHWC 类时 c 通常连续、p 跨通道行。代码必须用真实 stride，而非借用上述逻辑维度的连续假设。布局、边界策略、插值模式与 dtype 属于不同适用域；不能把只优化一域计为全算子覆盖。\n\n## 三种骨架与选择\n\n| 骨架 | 步骤与所有权 | 减少的工作与新增代价 |\n| --- | --- | --- |\n| 输出连续空间块，独立生成几何 | 每 owner 固定 n/c，连续 p 片批量生成坐标、验证邻域、读取并写出 | 输出连续、任务多；几何可能跨 c 重算，适合作为通用基线及无共享依赖的域 |\n| 同 owner 的复用轴块×空间块 | 先生成 St 个 D，再按 c 块逐次读取各自输入并消费，保持每个 c 的 p 子块连续 | 几何从每输出一次降为每复用块一次；新增 D 活跃状态、可能减少 task，跨 c 访问可能更离散 |\n| 有局部输入窗口的空间块 | 只有已证明邻域地址落在合法小窗口，才搬入含 halo 的窗口并本地读取 | 减少重复源请求的潜力；增加未用窗口字节、halo 重读和 Gather/布局成本；任意数据相关坐标不能假定局部性 |\n\n窗口方案与几何复用是不同维度，可以组合，也可以分开比较。没有地址局部性证据时保留逐输出间接取数或合法的本地分组方案；不凭输出连续推定源地址连续。950 SIMT 样例只支持其 README 指定产品，不能直接作为 910C/A3 的 GM Gather API。A3 需根据现有可用 Scalar/搬运/UB Gather 路径组成，API 选择归 C3 并须再次核对。\n\n## 工作量、字节与容量公式\n\n设外层数量 N、复用轴长度 C、空间点数 S，tile 为 Ct×St，最大邻域 K。G/B/H 每点的逻辑操作列表记为 g（按操作类型分开）；不把 g 当秒数。逐输出生成需 NCS 次几何，按 c 块保留需 `NS*ceil(C/Ct)` 次；所有 c 由同一 owner 顺序消费时可降到 NS 次，但 task 数会相应减少。边界点 Kvalid≤K 可不同，源读取请求上界 NCSK 个，真实缓存/DRAM 字节需要测量，不能把复用几何直接写成消除这些输入请求。\n\n令 bI/bW 为每索引/权重字节，bM 为每点完整 mask 记录字节，d 为源空间维数，bX/bY 为输入/输出元素宽。一个空间片的几何存储上界：\n\n`B_D = A(St*(K*d*bI + K*bW + bM))` 字节。\n\nA 是当前分配器的字节对齐函数；最近邻不需要权重时令 bW=0；存储基坐标+少量差分可有更小表示，但必须保留数值/范围证明。若每次只处理一个 c，输出 buffer 只需 St 元素；若同时处理 Ct 列，则按 CtSt 分配。保守 UB：\n\n`B_UB = B_D_UB + qX*A(LX*bX) + qY*A(LY*bY) + B_offsets + B_masks + B_cast + B_api_tmp + B_fixed`。\n\nLX 为真实搬入输入窗口/片的元素数，LY 为同时存活输出数，qX/qY 是实际分配份数。若 D 放 Scalar 私有数组，另列私有状态 `B_D_private` 与编译后寄存器/栈/spill 未知；**不能把其从 UB 删除就认定没有资源代价**。跨核共享 D 若另存 GM，还要增加 D 的写读与阶段完成关系；这已改变 C2 通路，不能当作局部复用免费实现。\n\n参数 St/Ct 的扩大可能分别改善空间连续性/几何摊销，也增加存储、尾片浪费、编译器活跃状态并减少 task。仅初始化真正需要的区域；若为合法向量尾部填充，计入 padded−valid 的本地工作。节省坐标操作、增加源访问、额外同步等分项记录，不使用统一成本分数掩盖无时间依据。\n\n## 带语义槽位的完整任务骨架\n\n```python\n# 所有偏移以元素为单位；转换到具体 API 字节偏移只做一次。\n# G/B/H/F 已绑定本任务语义，exact_read 只读取已证明有效的地址。\nfor n, c0, c1, p0, p1 in owned_rectangles:\n    D = [H(B(G(n, p))) for p in range(p0, p1)]  # 必须证明不依赖 c\n    for c in range(c0, c1):\n        out = []\n        for p, record in zip(range(p0, p1), D):\n            state = F.begin(n, c, p)\n            for neighbor in record.in_required_order():\n                if neighbor.is_valid:\n                    off = offset_from_true_strides(n, c, neighbor.coordinate)\n                    value = exact_read(X, off)\n                else:\n                    value = F.out_of_bounds_value(neighbor)  # 先判界，禁止先读越界再mask\n                state = F.consume(state, value, neighbor.weight)\n            out.append(F.finish(state))\n        write_valid_owned_output(n, c, p0, out)\n    wait_for_all_consumers_before_reusing(D_or_output_storage)\n```\n\nD 依赖 c 的域改为 c 循环内生成；这不是失败回退，而是语义要求。批量坐标/邻域 API 可以替换内层实现，但需证明 mask、舍入与运算顺序满足任务合同。无跨核归约；若采用两阶段 GM 几何表，生产者写唯一表槽，完成后消费者只读，不能省略阶段同步。\n\n## 复用、重算与 Action 意图\n\n输入值复用保存原始 X/B；派生数据复用保存 G/B/H 的结果；不变量外提保存地址或控制计算；三者分别记录依赖轴、owner 和生命周期。`reuse_input_tiles` 不能自动承载几何派生结果，`hoist_invariant_control` 不能自动承载插值计算重排。新意图 `action.reuse_derived_results` 独立处理合法派生状态复用（须使用经独立复核注册的冻结版本），不能把不适用旧Action改名塞入；未满足其条件时继续部分原则分析。\n\nC2 需比较“复用 D”“缩小 St/Ct 重算 D”“保留源窗口”及最强合理替代；不要求固定比较数量。若选择复用，写出哪些操作仍逐输出执行，以及布局/模式/dtype 的残余域。R2 发生回归时分别检查 D 表示与活跃状态、访存顺序、task 数、初始化/同步和数值实现，再决定缩 tile、重算、换骨架或保留原计划；不能从一次整体退化直接否定重复几何机制。\n\n本条没有硬件收益、通用阈值或完整插值 API 资格证明。最低 CPU 规划检查包括矩形覆盖、零/单点、Ct/St 尾部、依赖轴变化、负/边界坐标、真实 stride、地址溢出和所有生存期容量；这些检查不能代替实际数值与性能验收。\n\n\n## 派生保存、GM中转与布局准备的完整成本\n\n将几何生成、邻域消费与最终Cast分开计数：每个c仍需读取其源值、按原次序加权/累计并写输出。若D要从坐标结构重排为Gather偏移、宽化整数、生成mask或打包权重，准备工作P(St)及其buffer单列；同复用窗口可共享才做一次，不能因移入Init就视为免费。两阶段GM表每份D至少写B_D、按真实消费者次数读B_D，并需要发布完成与workspace容量；NORMAL可容纳后继消费者复用的假设，不保证实际命中。输出/派生表的cache策略统一交action.align_cache_policy，不能由输入样例排除写出方向。\n\n把每消费者重算、UB保留与GM表同时作为条件性候选：保存的生成次数、GM逻辑字节、布局准备、较小tile/较少task、同步及残余逐元素工作分别报告，不以单一总分伪装时间。一般Vector生产消费融合参见planning.under-fusion.vector_producer_consumer；它是现有under-fusion的叶子，不引入新一级分类。具体局部加权和、finalCast及严格阈值见O numeric，未证明数值次序等价时不得重排。",
+      "evidence_status": "mechanism_inference_from_reviewed_source_not_benchmarked",
+      "id": "planning.indexing.coordinate_neighborhood",
+      "kind": "template",
+      "learning": {},
+      "parent": "planning.indexing",
+      "references": [
+        "planning.indexing.gather_output_owned",
+        "planning.elementwise.broadcast",
+        "planning.layout.transpose",
+        "planning.under-fusion.vector_producer_consumer"
+      ],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "固定来源确认间接取数/输出所有权及广播分区组成；完整采样骨架为明确条件化的本次机制推导，不是上游已有插值实现。",
+      "source_hash": "sha256:7875ed32b39568a3f9108d6e88eecc2ad25321203362a1abe97149f66e054638",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/coordinate_neighborhood.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:710989d3762b9a9b098d32ae60880ef24e30e663be574d65aeb494ae047304d6",
+          "lines": [
+            1,
+            16
+          ],
+          "original_path": "index/gather_elements_v2/README.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/README.md",
+          "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+          "sha256": "sha256:c8df45df36e823c8531e2e64a7d396d53f04c7e75ddc223dfb476c3910ffc43e"
+        },
+        {
+          "excerpt_sha256": "sha256:e3de11b8245bfed856224ab85e90f622e751b99b8a00cacab770c6d8cb7b2546",
+          "lines": [
+            105,
+            280
+          ],
+          "original_path": "index/gather_elements_v2/op_host/gather_elements_v2_tiling.cpp",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_host/gather_elements_v2_tiling.cpp",
+          "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+          "sha256": "sha256:c7bb8d76d1741b5c3212a8de9f28bf6f9de5fe2f7d012bfa90780b25e6f12793"
+        },
+        {
+          "excerpt_sha256": "sha256:27c6ffe9981fd02e7bf51e3722407a0bbe0b2ec0a73904fb0162e78f43843ab3",
+          "lines": [
+            35,
+            187
+          ],
+          "original_path": "index/gather_elements_v2/op_kernel/gather_elements_v2_scalar.h",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_kernel/gather_elements_v2_scalar.h",
+          "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+          "sha256": "sha256:d7038ab1282e3a89aaecc2123a5b5c6bd3e6ce041703dfcbc63c34a0fbace77f"
+        },
+        {
+          "excerpt_sha256": "sha256:cc2ec40a9f9d3cfce1021e356e4e8f2a5f27e1528caaeb2ff1796a6a530c0d75",
+          "lines": [
+            1,
+            522
+          ],
+          "original_path": "index/gather_elements_v2/op_kernel/gather_elements_v2_transpose.h",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_kernel/gather_elements_v2_transpose.h",
+          "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+          "sha256": "sha256:cc2ec40a9f9d3cfce1021e356e4e8f2a5f27e1528caaeb2ff1796a6a530c0d75"
+        },
+        {
+          "excerpt_sha256": "sha256:e61ea7721f247f0bc3c4bfc634d10b507668909fa619d5a0eab4ce14fb4bc5d4",
+          "lines": [
+            24,
+            106
+          ],
+          "original_path": "Samples/0_Introduction/03_simt_api/01_gather/general_gather/gather.asc",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/cann-samples/17c948bb961fc6a660e4fcab45f6bf217c9c6239/Samples/0_Introduction/03_simt_api/01_gather/general_gather/gather.asc",
+          "revision": "17c948bb961fc6a660e4fcab45f6bf217c9c6239",
+          "sha256": "sha256:736f80f904a485299798f602f5dec5349582544ed5bbbf82a74c97479074f913"
+        },
+        {
+          "excerpt_sha256": "sha256:aca4c07f4c58eb05c59d299de5d7142d08972a1602152cdc24f5b0a696d310f9",
+          "lines": [
+            1,
+            58
+          ],
+          "original_path": "Samples/0_Introduction/03_simt_api/01_gather/general_gather/README.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/cann-samples/17c948bb961fc6a660e4fcab45f6bf217c9c6239/Samples/0_Introduction/03_simt_api/01_gather/general_gather/README.md",
+          "revision": "17c948bb961fc6a660e4fcab45f6bf217c9c6239",
+          "sha256": "sha256:c4f0943995abfc0f44bfcd74fe8ca25ef908ba95d003c7b8dc2649e4683f84f1"
+        },
+        {
+          "excerpt_sha256": "sha256:0584361aaf5de66a2e5290e73880764867c112b65192db8fdd2a8a545b4e5f7f",
+          "lines": [
+            1,
+            51
+          ],
+          "original_path": "posembedding/rotary_position_embedding/README.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/README.md",
+          "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+          "sha256": "sha256:5c367eaca3ad1b7008afd6804ccc997be9cde35a76bb03d23df2a931d810a784"
+        },
+        {
+          "excerpt_sha256": "sha256:43e2749e99d4ff0e456b7039f18af6a7645511e6d6cbdcbcd6d8d0e58a3b3e85",
+          "lines": [
+            151,
+            348
+          ],
+          "original_path": "posembedding/rotary_position_embedding/op_host/rope_interleaved_tiling.cpp",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_host/rope_interleaved_tiling.cpp",
+          "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+          "sha256": "sha256:0f2bac0d6cd52e57ef38976b7fb8205e3104f2e0ea26f3689f0be1dd0a09cec6"
+        },
+        {
+          "excerpt_sha256": "sha256:24d59f53fadba324ba0346704b8fbaff23d6de81b93fd9f8282d5e9d15e28f28",
+          "lines": [
+            145,
+            200
+          ],
+          "original_path": "posembedding/rotary_position_embedding/op_kernel/rotary_position_embedding.cpp",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_kernel/rotary_position_embedding.cpp",
+          "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+          "sha256": "sha256:5160d08c053ba32694df0c699d31ddc9b67a26d3ae4545f4fb9d6122efc3400e"
+        },
+        {
+          "excerpt_sha256": "sha256:aee09fcfd96fbd9fa8fd9dee7eee943d5d9f288672ae0c74f2ee4759e5c7f18b",
+          "lines": [
+            80,
+            195
+          ],
+          "original_path": "posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bsn.h",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bsn.h",
+          "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+          "sha256": "sha256:1b9db64d84e6abf43eda6f65ca706df6d5219e8b73ebeec794c5ff106fa2434b"
+        }
+      ],
+      "status": "active",
+      "tags": [
+        "indexing",
+        "coordinate-generation",
+        "neighborhood-read",
+        "derived-reuse"
+      ],
+      "title": "坐标生成与邻域读取：空间块、复用轴及重算取舍",
       "version": "1.0.0"
     },
     {
@@ -1495,7 +1744,7 @@
       "version": "1.1.0"
     },
     {
-      "body": "# 布局转换、有效宽度与对齐宽度\n\n## 语义与任务所有权\n\n布局转换把输出坐标映射回同一输入元素，本身不作数值归约。先写出输入/输出 shape、每维 stride 的单位（元素或字节）、轴置换、dtype/cast、padding 是否可见及原地别名。只有相邻轴在两端都保持相对次序与连续 stride 时才能合轴。一般置换用 `src_offset=Σ output_coord[j]*src_stride[perm[j]]`；不能直接把非连续 tensor 展平成连续块。\n\n将输出切成互不重叠的矩形/连续条带，每个 task 只写自己的有效区域；为了连续输入搬运，输入 tile 的形状可以不同。任意两个输出 owner 不能因为对齐 DMA 触及同一边界块而形成读改写竞争；尾部使用受支持的非对齐搬运，或为物理块指定同一 owner。原地转置若输入会被另一 task 后续读取，必须有合法环置换或 workspace，不能沿用普通 out-of-place 调度。\n\n## 选择方法\n\n先比较三种合法分解：连续切片可直接批量搬运；规则矩形可用片上 transpose；小通道 `[C,N]→[N,C]` 可比较 `TransDataTo5HD+Gather` 组合。后者在来源中是小 C 的特定实现，绝非全部 permute 的默认算法。大 C、复杂 stride、多个非相邻移动轴使用一般矩形转置或通用索引搬运。若转换只服务一个消费者且该消费者接受原 stride，可比较在消费者内改变地址计算；保留外部可见转换输出的要求。\n\n小通道组合先按 C 个源平面搬入 UB，转换成 API 支持的局部布局，按 offset 表挑出有效 C 通道并可执行声明的 cast/后处理，再连续写回 `[curN,C]`。定义 tileN 为计划的 N 方向长度，tileNA 为 UB 存储跨度，curN 为尾块有效长度；分配、局部行地址和 offset 表用 tileNA，GM 读写和有效 mask 用 curN。不能用 curN 替换已分配行跨度。\n\n## 容量、索引与同步\n\n令 a 为字节对齐、`A(n)=ceil(n/a)*a`，b_x/b_y 为输入/输出字节宽，b_m 为转换中间类型宽，b_o 为 offset 宽，q_x/q_y 为输入输出分配份数，C_pad 为 API 局部布局通道数：\n\n`U_peak=q_x*A(C*tileNA*b_x)+q_y*A(C*tileNA*b_y)+A(C*tileNA*b_m)+A(C_pad*tileNA*b_m)+A(C*tileNA*b_o)+Tmp+F≤U_available`。\n\n这是列全量并存的保守预算；若分时复用必须列出具体存活期。来源的 float→half→uint8 路径在 q_x=q_y=2、b_x=4、b_y=1、b_m=2、b_o=4、C_pad=16 时产生 `tileNA*(16*C+32)` 字节（尚需实际对齐/tmp/保留）；该公式不能给别的 dtype 套用。该特定 API 重载的 repeat 上限、地址对齐和跨度范围须随 SDK 证明；文档里的 255 和 C≤16 不能直接作为全平台硬限制。\n\noffset 表元素若是字节偏移应只乘一次 b_m；若 API 接受元素偏移则不乘。源/目的寄存器地址表同样按其声明单位构造。DMA→转换→Gather/Cast→DMA 有生产消费依赖，队列只解决其管理范围的依赖；临时区复用必须等待所有读者和异步搬运完成。每 task 独立时无需全核 barrier。\n\n```text\ntask -> 输出 N 条带 [n0,n0+curN)，唯一 owner\n按输入 stride 搬入 C×curN；本地每平面跨度固定 tileNA\n在合法 repeat/stride 范围转换，尾部 mask 排除 padding\n按声明 offset 单位抽取 C 通道；执行明确 cast/后处理\n仅写出 curN×C 个有效输出，等待搬出后复用 buffer\n```\n\n```cpp\n// 规划片段：n0、N、tileN、tileNA 已由 host 给定，均为元素数。\nuint64_t curN = (N - n0 < tileN) ? N - n0 : tileN;\nuint64_t localPlaneOffset = channel * tileNA; // 不用 curN 作物理跨度\n// DataCopy/Transpose 参数按对应 API 的元素、字节或块单位分别生成。\n```\n\n本条的通用映射/owner 方法 scope all，不代表任何 SoC 已通过该 API 组合验证。索引决定源地址的 Gather 另见 `planning.indexing.gather_output_owned`；融合边界见 `planning.under-fusion.chain`。验证 C/N 非对齐、非连续 stride、单通道、多个小轴合轴、异 dtype、超大地址、别名和输出边界；当前没有 NPU 性能验证。",
+      "body": "# 布局转换、有效宽度与对齐宽度\n\n## 语义与任务所有权\n\n布局转换把输出坐标映射回同一输入元素，本身不作数值归约。先写出输入/输出 shape、每维 stride 的单位（元素或字节）、轴置换、dtype/cast、padding 是否可见及原地别名。只有相邻轴在两端都保持相对次序与连续 stride 时才能合轴。一般置换用 `src_offset=Σ output_coord[j]*src_stride[perm[j]]`；不能直接把非连续 tensor 展平成连续块。\n\n将输出切成互不重叠的矩形/连续条带，每个 task 只写自己的有效区域；为了连续输入搬运，输入 tile 的形状可以不同。任意两个输出 owner 不能因为对齐 DMA 触及同一边界块而形成读改写竞争；尾部使用受支持的非对齐搬运，或为物理块指定同一 owner。原地转置若输入会被另一 task 后续读取，必须有合法环置换或 workspace，不能沿用普通 out-of-place 调度。\n\n## 选择方法\n\n先比较三种合法分解：连续切片可直接批量搬运；规则矩形可用片上 transpose；小通道 `[C,N]→[N,C]` 可比较 `TransDataTo5HD+Gather` 组合。后者在来源中是小 C 的特定实现，绝非全部 permute 的默认算法。大 C、复杂 stride、多个非相邻移动轴使用一般矩形转置或通用索引搬运。若转换只服务一个消费者且该消费者接受原 stride，可比较在消费者内改变地址计算；保留外部可见转换输出的要求。\n\n小通道组合先按 C 个源平面搬入 UB，转换成 API 支持的局部布局，按 offset 表挑出有效 C 通道并可执行声明的 cast/后处理，再连续写回 `[curN,C]`。定义 tileN 为计划的 N 方向长度，tileNA 为 UB 存储跨度，curN 为尾块有效长度；分配、局部行地址和 offset 表用 tileNA，GM 读写和有效 mask 用 curN。不能用 curN 替换已分配行跨度。\n\n## 容量、索引与同步\n\n令 a 为字节对齐、`A(n)=ceil(n/a)*a`，b_x/b_y 为输入/输出字节宽，b_m 为转换中间类型宽，b_o 为 offset 宽，q_x/q_y 为输入输出分配份数，C_pad 为 API 局部布局通道数：\n\n`U_peak=q_x*A(C*tileNA*b_x)+q_y*A(C*tileNA*b_y)+A(C*tileNA*b_m)+A(C_pad*tileNA*b_m)+A(C*tileNA*b_o)+Tmp+F≤U_available`。\n\n这是列全量并存的保守预算；若分时复用必须列出具体存活期。来源的 float→half→uint8 路径在 q_x=q_y=2、b_x=4、b_y=1、b_m=2、b_o=4、C_pad=16 时产生 `tileNA*(16*C+32)` 字节（尚需实际对齐/tmp/保留）；该公式不能给别的 dtype 套用。该特定 API 重载的 repeat 上限、地址对齐和跨度范围须随 SDK 证明；文档里的 255 和 C≤16 不能直接作为全平台硬限制。\n\noffset 表元素若是字节偏移应只乘一次 b_m；若 API 接受元素偏移则不乘。源/目的寄存器地址表同样按其声明单位构造。DMA→转换→Gather/Cast→DMA 有生产消费依赖，队列只解决其管理范围的依赖；临时区复用必须等待所有读者和异步搬运完成。每 task 独立时无需全核 barrier。\n\n```text\ntask -> 输出 N 条带 [n0,n0+curN)，唯一 owner\n按输入 stride 搬入 C×curN；本地每平面跨度固定 tileNA\n在合法 repeat/stride 范围转换，尾部 mask 排除 padding\n按声明 offset 单位抽取 C 通道；执行明确 cast/后处理\n仅写出 curN×C 个有效输出，等待搬出后复用 buffer\n```\n\n```cpp\n// 规划片段：n0、N、tileN、tileNA 已由 host 给定，均为元素数。\nuint64_t curN = (N - n0 < tileN) ? N - n0 : tileN;\nuint64_t localPlaneOffset = channel * tileNA; // 不用 curN 作物理跨度\n// DataCopy/Transpose 参数按对应 API 的元素、字节或块单位分别生成。\n```\n\n本条的通用映射/owner 方法 scope all，不代表任何 SoC 已通过该 API 组合验证。索引决定源地址的 Gather 另见 `planning.indexing.gather_output_owned`；融合边界见 `planning.under-fusion.chain`。验证 C/N 非对齐、非连续 stride、单通道、多个小轴合轴、异 dtype、超大地址、别名和输出边界；当前没有 NPU 性能验证。\n\n## 用整个数据通路比较，防止局部转置的收益被中转抵消\n\n固定 GatherElements host 只有在 `CalcMaxBufferSize()` 可行时才选择 transpose，并为每核配置 workspace；kernel 的流程是转置、Gather、反转置，包含结果写 workspace 后重新读回。此为源码直接事实，不能缩写成“向量 Gather 替代标量，所以更快”。\n\n对一个含 M 个有效元素、元素宽 s 字节的纯 out-of-place 置换，必要输入读与输出写为 `2Ms` 字节；若中间数组 W 字节落 GM 并完整写读一次，额外至少 `2W` 字节，每多一次中转另计。局部 transpose 的输入/输出 padding、offset 表生成、Gather、Cast、同步分别计工作量，不与字节数相加。相同 offset 表若只依赖 tile 物理布局，可每 owner 生成一次；尾片有效 mask 仍须更新，表保存增加活跃存储。\n\n比较矩形的两条轴长时，较长连续输入方向可减少搬运段数，却可能使输出行更短、尾部 padding 更多；反向 tile 则相反。至少依据真实 stride 列出每 tile 输入/输出段数、每段有效字节、边界 owner 与全分配容量。扩大 tile 只有在这些代价与 task 数一并比较后才有选择依据。\n\n若转置只为下游消费，咨询消费者能否接受原布局；如果接口要求可见的置换结果，就保留完整物化。删除转换、融合消费者或改变 workspace 所有权均属于 C2 方案变化。C3 用新 API 实现后增加 workspace 或改变中转布局，也应返回 C2 重算，不能继续沿用旧“只读写一次”的性能解释。",
       "evidence_status": "source_reviewed_not_benchmarked",
       "id": "planning.layout.transpose",
       "kind": "template",
@@ -1519,7 +1768,7 @@
         ]
       },
       "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
-      "source_hash": "sha256:678b709d7ea4092de4145febb3c7174155094d097e47f2b42b3f073d499b1c25",
+      "source_hash": "sha256:9b830c4ea01484b8a7e2d89e8c44d4d8087a821a2b887f3bd28c1e2172c53d49",
       "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md",
       "sources": [
         {
@@ -1543,6 +1792,50 @@
           "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_kernel/gather_elements_v2_transpose.h",
           "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
           "sha256": "sha256:cc2ec40a9f9d3cfce1021e356e4e8f2a5f27e1528caaeb2ff1796a6a530c0d75"
+        },
+        {
+          "excerpt_sha256": "sha256:710989d3762b9a9b098d32ae60880ef24e30e663be574d65aeb494ae047304d6",
+          "lines": [
+            1,
+            16
+          ],
+          "original_path": "index/gather_elements_v2/README.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/README.md",
+          "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+          "sha256": "sha256:c8df45df36e823c8531e2e64a7d396d53f04c7e75ddc223dfb476c3910ffc43e"
+        },
+        {
+          "excerpt_sha256": "sha256:e3de11b8245bfed856224ab85e90f622e751b99b8a00cacab770c6d8cb7b2546",
+          "lines": [
+            105,
+            280
+          ],
+          "original_path": "index/gather_elements_v2/op_host/gather_elements_v2_tiling.cpp",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_host/gather_elements_v2_tiling.cpp",
+          "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+          "sha256": "sha256:c7bb8d76d1741b5c3212a8de9f28bf6f9de5fe2f7d012bfa90780b25e6f12793"
+        },
+        {
+          "excerpt_sha256": "sha256:27c6ffe9981fd02e7bf51e3722407a0bbe0b2ec0a73904fb0162e78f43843ab3",
+          "lines": [
+            35,
+            187
+          ],
+          "original_path": "index/gather_elements_v2/op_kernel/gather_elements_v2_scalar.h",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_kernel/gather_elements_v2_scalar.h",
+          "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+          "sha256": "sha256:d7038ab1282e3a89aaecc2123a5b5c6bd3e6ce041703dfcbc63c34a0fbace77f"
+        },
+        {
+          "excerpt_sha256": "sha256:cc2ec40a9f9d3cfce1021e356e4e8f2a5f27e1528caaeb2ff1796a6a530c0d75",
+          "lines": [
+            1,
+            522
+          ],
+          "original_path": "index/gather_elements_v2/op_kernel/gather_elements_v2_transpose.h",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_kernel/gather_elements_v2_transpose.h",
+          "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+          "sha256": "sha256:cc2ec40a9f9d3cfce1021e356e4e8f2a5f27e1528caaeb2ff1796a6a530c0d75"
         }
       ],
       "status": "active",
@@ -1553,7 +1846,7 @@
         "ownership"
       ],
       "title": "布局转换、有效宽度与对齐宽度",
-      "version": "1.1.0"
+      "version": "1.2.0"
     },
     {
       "body": "# MatMul / GMM 路由\n\n按 family 与 workload 选择任务划分、所有权和组合方案；可同时进入多个分支。比较适用主方案与保守回退，C2 输出必要内容快照、参数和实现自由度。\n\n- [MN 输出分块与完整 K 所有权](templates/mn.md)\n- [小侧驻留与 L1/L0 复用](templates/resident.md)\n- [静态 Split-K：固定 K 分段与部分和归并](templates/splitk.md)\n- [MatMul / GMM 通用回退](fallback.md)\n- [GMM：跨组任务串接、异构负载与组尾轮转](templates/gmm.md)\n- [StreamK：工作量调度与完整波次/尾轮混合](templates/streamk.md)\n\n来源审读不等于目标硬件收益验证；不确定的能力或容量返回 needs_evidence，不能由模板代填。",
@@ -3321,7 +3614,7 @@
       "version": "1.1.0"
     },
     {
-      "body": "# ColSplit/RowSplit 与分段合并\n\n## 两层切分问题与适用域\n\n输入按真实连续性表示为 `[A1,R,A0]`，AR 为 A0=1，ARA 为 A0>1。完整 R 及必要计算区放不进 UB 时：AR 沿连续 R 列切成 chunk（ColSplit）；ARA 沿 R 行切，每次搬 `[Rc,V]` 的 A0 连续片（RowSplit）。切 A0 只是把不同输出分给不同任务，不构成跨核归约。\n\n必须区分“同一核顺序读取多个 chunk”和“多个核分别计算同一输出的 R 段”。前者只解决容量，状态在核内，无 workspace 与全局同步；后者增加并行任务并引入 partial 写、全局完成关系、merge 和额外 launch。R 再大仍可由一核流式遍历，不能仅因为放不下就宣称必须跨核。\n\n跨段合并前冻结状态类型、单位元、合并公式、顺序、finalize 和特殊值规则。sum 合并 partial sum，mean 合并 sum+count 最后除总数，不能平均不同长度 chunk 的 mean；variance 合并 (n,μ,M2)；softmax 不能简单相加分片归一化结果；norm 先合并变换后的统计量再开方/取幂一次。\n\n## 输出所有权与同步协议\n\n先将独立输出拆为 P 个组，每组最多 V 个输出（AR 可一行一个标量组）。基线流式方案的组 g 唯一属于一个核，该核从 r=0 遍历到 R，只有它写最终输出。\n\n若输出组不足且允许跨 R 并行，选 S 个 split，任务 `(g,s)` 的线性编号为 `g*S+s`。split s 拥有 `[floor(s*R/S),floor((s+1)*R/S))`，段内再按 Rc 分 UB chunk；选 S≤R，或明确空段状态。每个 `(g,s)` 只写自己的 workspace 槽，唯一 merge 任务 g 读全部 S 槽并写最终输出。workspace 地址使用字节 stride 与明确的类型视图，不能把字节偏移又当作元素下标。\n\n最容易核验的完成关系是同一执行流按序启动 producer kernel 和 merge kernel；merge 启动时 producer 全部完成。来源展示单 kernel SyncAll 草图，它只在目标支持、启动模式/驻留/参与核集合与工作区发布协议均证明合法后才是候选。普通 PipeBarrier/队列同步只保证核内依赖，不能代替跨核完成关系；不能让 core0 先读尚未完成的 partial。\n\n## 字节容量与额外成本\n\n令 `L_in=A_a(V_valid*s_in)`，`L_acc=A_a(V_valid*s_acc)`；AR 时 V_valid=1 且一块连续输入的字节为 A_a(Rc*s_in)。ARA chunk 的输入大小 Rc*L_in。d_in 是输入 buffer 实际份数，K_cast 是独立升精度工作区份数，B_state/B_chunk 是持久状态与本块状态的字节数。\n\n`B_chunk_live = d_in*Rc*L_in + K_cast*Rc*L_acc + B_state + B_chunk + B_out + T_api(Rc,V_align) + B_other ≤ B_available`（ARA）。\n\nAR 将前两项替换为 `d_in*A_a(Rc*s_in)+K_cast*A_a(Rc*s_acc)`。最终选 Rc/V 时同时验 API 的 count、blockCount、repeat 和偏移字段范围。不同阶段物理区共用前要证明生命周期不重叠；source 中固定 4KB 临时区、64 列、255 行不能用作所有芯片的常量。\n\n对跨核方案，定义 H 为一个输出组的已序列化 partial 状态字节，a_ws 为工作区槽合法对齐，`slot=A_aws(H)`，则 `W=P*S*slot`，producer→merge 额外 GM 交通约 `2W`（一次写入、一次读取，实际 padding 搬运按实现计）。H 不等于输出字节：FP32 sum 为 V*4，Welford 需 mean/M2/count，argmax 需 value/index。若使用 SoA 分区，分别对各数组求和并记录 count 精确类型。\n\n必要原始输入量仍为 `A1*R*A0*s_in`；streaming sum 本身不因 chunk 个数增加而重读整行，但 softmax/归一化多遍会增加扫描。候选比较用：\n\n`T_split ≈ T_producer(P*S,R/S,Rc,V)+T_merge(P,S)+T_extra_launch+T_workspace`。\n\n这是待实测的成本分解，没有固定跨核收益阈值。当 P 已足够、R/S 过短、状态 H 很大或 merge 重读昂贵时，单核流式常更值得先比较；跨核方案必须在完整端到端计时中包含 merge 与 workspace 初始化。\n\n## 合并状态与数值边界\n\n| 操作 | partial 与 merge | finalization / 额外约束 |\n| --- | --- | --- |\n| sum | 0；按约定顺序相加 | FP32/更高精度与重排仍按误差合同验证 |\n| mean | (sum,count)；两者分别合并 | 总 sum/总 count，count 不受存储 padding 影响 |\n| max/min | 极值或首个有效段；按 oracle 比较 | NaN 传播、±0、空段规则不能由 `>` 猜测 |\n| argmax/min | (value,global_index) | 局部 index 加真实 R 段起点；相等时按合同取最早/最晚 |\n| variance/std | (n,μ,M2) 的 Welford 合并 | 全部完成后才除 n−correction/开方 |\n| norm/softmax | 各自可合并的统计状态 | 不能对每段先完成输出归一化 |\n\n最大值 initialized=-∞ 并用 `>` 更新仅在声明的特殊值规则下成立；存在全 NaN、首个 NaN 或 tie 规则时先选首个有效元素或显式 NaN 状态。浮点求和不满足逐位结合律，S/Rc/合并树是数值实现的一部分，C3 不能为了 tile 改动偷偷换树。\n\n索引应使用足够范围的整数类型。若某 A3 Select 路径用 float 暂存整数，只能覆盖已证明可精确表示的索引范围（FP32 连续整数至 2^24），超范围回退整数索引方案；不能把 half 最大有限数当其精确连续索引上限。\n\n## 可执行双阶段伪代码\n\n```python\n# producer：S=1 时可直接 finalize，避免写 workspace。\nfor g, s in owned_group_splits(P, S):\n    lo, hi = s*R//S, (s+1)*R//S\n    state = identity_or_empty_state(op)\n    for r0 in range(lo, hi, Rc):\n        rv = min(Rc, hi-r0)\n        x = load_valid_strided_tile(g, r0, rv, V_valid[g])\n        part = local_reduce(x, rv, V_valid[g], op)\n        state = merge_in_frozen_order(state, part)\n    write_unique_slot(g, s, state)\n# 两个 kernel 的执行顺序建立所有 producer 完成关系。\nfor g in owned_merge_groups(P):\n    state = identity_or_empty_state(op)\n    for s in frozen_merge_order(S):\n        state = merge(state, read_slot(g, s))\n    write_unique_output(g, finalize_once(state))\n```\n\n## 有界 Ascend C 片段\n\n以下是 ARA FP32 sum 的一个已就绪 chunk。xChunk 物理布局 `[rCount,vAlign]`；sumState/chunkSum 为独立 float LocalTensor；tmpByte 为按同 shape/pattern/reuse 查询的 uint8_t 临时区。所有 count>0，容量和 API 支持已验证，输入队列已完成搬入。\n\n```cpp\nuint32_t shape[2] = {rCount, vAlign};\nAscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, false>(\n    chunkSum, xChunk, tmpByte, shape, true);\nAscendC::Add(sumState, sumState, chunkSum, vValid);\n```\n\nsumState 在首块前按有效 lane 初始化 0，完成所有 chunk 后才搬出有效 vValid。AR 的 local reduce 使用基础四参数 ReduceSum，并以当前 rv 而非 Rc/R_align 为 count。DataCopyPad 的 ARA 搬入 blockLen 为 `vValid*sizeof(T)` 字节、srcStride 为 `(A0-vValid)*sizeof(T)`（限该已核验重载），UB 行 stride 与 vAlign 一致；rCount 的 uint16 字段必须在转换前验证。\n\n## 多轴、替代路径与验证\n\n多轴归约保留交替 A/R 轴，外层遍历真实输入片段，将内层 AR/ARA partial 合并到同一输出状态；只有数学上允许且误差合同接受时才能改变多轴次序。可用规则 stride copy 或连续 slice 循环，950 的 NDDMA 是额外搬运候选，910C/A3 不因支持普通 DataCopyPad 就获得该能力。\n\n验证 R 不能整除 Rc/S、最后 rCount、S=1/S=R、V尾片、空输入、单输出、多个输出组、不同 dtype、workspace 槽无重叠、producer 全覆盖、merge 唯一写和最大容量。跨核数值对照需包含同组不同切分与大数/小数混合；只测 producer 正确不算整个算法正确。失败回到已验证单核流式或原框架基线，记录具体 entry/key 与互斥的 tiling 域。\n\n来源事实为 AR/ARA 分载、Group Reduce 两阶段和 Welford/索引增量；字节序列化、独立 kernel 同步路径与成本比较为工程推导。来源审读完成，未验证 NPU 性能；平台/SDK 适用范围须按实际 910C/A3 或 950 分别核实。",
+      "body": "# ColSplit/RowSplit 与分段合并\n\n## 两层切分问题与适用域\n\n输入按真实连续性表示为 `[A1,R,A0]`，AR 为 A0=1，ARA 为 A0>1。完整 R 及必要计算区放不进 UB 时：AR 沿连续 R 列切成 chunk（ColSplit）；ARA 沿 R 行切，每次搬 `[Rc,V]` 的 A0 连续片（RowSplit）。切 A0 只是把不同输出分给不同任务，不构成跨核归约。\n\n必须区分“同一核顺序读取多个 chunk”和“多个核分别计算同一输出的 R 段”。前者只解决容量，状态在核内，无 workspace 与全局同步；后者增加并行任务并引入 partial 写、全局完成关系、merge 和额外 launch。R 再大仍可由一核流式遍历，不能仅因为放不下就宣称必须跨核。\n\n跨段合并前冻结状态类型、单位元、合并公式、顺序、finalize 和特殊值规则。sum 合并 partial sum，mean 合并 sum+count 最后除总数，不能平均不同长度 chunk 的 mean；variance 合并 (n,μ,M2)；softmax 不能简单相加分片归一化结果；norm 先合并变换后的统计量再开方/取幂一次。\n\n## 输出所有权与同步协议\n\n先将独立输出拆为 P 个组，每组最多 V 个输出（AR 可一行一个标量组）。基线流式方案的组 g 唯一属于一个核，该核从 r=0 遍历到 R，只有它写最终输出。\n\n若输出组不足且允许跨 R 并行，选 S 个 split，任务 `(g,s)` 的线性编号为 `g*S+s`。split s 拥有 `[floor(s*R/S),floor((s+1)*R/S))`，段内再按 Rc 分 UB chunk；选 S≤R，或明确空段状态。每个 `(g,s)` 只写自己的 workspace 槽，唯一 merge 任务 g 读全部 S 槽并写最终输出。workspace 地址使用字节 stride 与明确的类型视图，不能把字节偏移又当作元素下标。\n\n最容易核验的完成关系是同一执行流按序启动 producer kernel 和 merge kernel；merge 启动时 producer 全部完成。来源展示单 kernel SyncAll 草图，它只在目标支持、启动模式/驻留/参与核集合与工作区发布协议均证明合法后才是候选。普通 PipeBarrier/队列同步只保证核内依赖，不能代替跨核完成关系；不能让 core0 先读尚未完成的 partial。\n\n## 字节容量与额外成本\n\n令 `L_in=A_a(V_valid*s_in)`，`L_acc=A_a(V_valid*s_acc)`；AR 时 V_valid=1 且一块连续输入的字节为 A_a(Rc*s_in)。ARA chunk 的输入大小 Rc*L_in。d_in 是输入 buffer 实际份数，K_cast 是独立升精度工作区份数，B_state/B_chunk 是持久状态与本块状态的字节数。\n\n`B_chunk_live = d_in*Rc*L_in + K_cast*Rc*L_acc + B_state + B_chunk + B_out + T_api(Rc,V_align) + B_other ≤ B_available`（ARA）。\n\nAR 将前两项替换为 `d_in*A_a(Rc*s_in)+K_cast*A_a(Rc*s_acc)`。最终选 Rc/V 时同时验 API 的 count、blockCount、repeat 和偏移字段范围。不同阶段物理区共用前要证明生命周期不重叠；source 中固定 4KB 临时区、64 列、255 行不能用作所有芯片的常量。\n\n对跨核方案，定义 H 为一个输出组的已序列化 partial 状态字节，a_ws 为工作区槽合法对齐，`slot=A_aws(H)`，则 `W=P*S*slot`，producer→merge 额外 GM 交通约 `2W`（一次写入、一次读取，实际 padding 搬运按实现计）。H 不等于输出字节：FP32 sum 为 V*4，Welford 需 mean/M2/count，argmax 需 value/index。若使用 SoA 分区，分别对各数组求和并记录 count 精确类型。\n\n必要原始输入量仍为 `A1*R*A0*s_in`；streaming sum 本身不因 chunk 个数增加而重读整行，但 softmax/归一化多遍会增加扫描。候选比较用：\n\n`T_split ≈ T_producer(P*S,R/S,Rc,V)+T_merge(P,S)+T_extra_launch+T_workspace`。\n\n这是待实测的成本分解，没有固定跨核收益阈值。当 P 已足够、R/S 过短、状态 H 很大或 merge 重读昂贵时，单核流式常更值得先比较；跨核方案必须在完整端到端计时中包含 merge 与 workspace 初始化。\n\n## 合并状态与数值边界\n\n| 操作 | partial 与 merge | finalization / 额外约束 |\n| --- | --- | --- |\n| sum | 0；按约定顺序相加 | FP32/更高精度与重排仍按误差合同验证 |\n| mean | (sum,count)；两者分别合并 | 总 sum/总 count，count 不受存储 padding 影响 |\n| max/min | 极值或首个有效段；按 oracle 比较 | NaN 传播、±0、空段规则不能由 `>` 猜测 |\n| argmax/min | (value,global_index) | 局部 index 加真实 R 段起点；相等时按合同取最早/最晚 |\n| variance/std | (n,μ,M2) 的 Welford 合并 | 全部完成后才除 n−correction/开方 |\n| norm/softmax | 各自可合并的统计状态 | 不能对每段先完成输出归一化 |\n\n最大值 initialized=-∞ 并用 `>` 更新仅在声明的特殊值规则下成立；存在全 NaN、首个 NaN 或 tie 规则时先选首个有效元素或显式 NaN 状态。浮点求和不满足逐位结合律，S/Rc/合并树是数值实现的一部分，C3 不能为了 tile 改动偷偷换树。\n\n索引应使用足够范围的整数类型。若某 A3 Select 路径用 float 暂存整数，只能覆盖已证明可精确表示的索引范围（FP32 连续整数至 2^24），超范围回退整数索引方案；不能把 half 最大有限数当其精确连续索引上限。\n\n## 可执行双阶段伪代码\n\n```python\n# producer：S=1 时可直接 finalize，避免写 workspace。\nfor g, s in owned_group_splits(P, S):\n    lo, hi = s*R//S, (s+1)*R//S\n    state = identity_or_empty_state(op)\n    for r0 in range(lo, hi, Rc):\n        rv = min(Rc, hi-r0)\n        x = load_valid_strided_tile(g, r0, rv, V_valid[g])\n        part = local_reduce(x, rv, V_valid[g], op)\n        state = merge_in_frozen_order(state, part)\n    write_unique_slot(g, s, state)\n# 两个 kernel 的执行顺序建立所有 producer 完成关系。\nfor g in owned_merge_groups(P):\n    state = identity_or_empty_state(op)\n    for s in frozen_merge_order(S):\n        state = merge(state, read_slot(g, s))\n    write_unique_output(g, finalize_once(state))\n```\n\n## 有界 Ascend C 片段\n\n以下是 ARA FP32 sum 的一个已就绪 chunk。xChunk 物理布局 `[rCount,vAlign]`；sumState/chunkSum 为独立 float LocalTensor；tmpByte 为按同 shape/pattern/reuse 查询的 uint8_t 临时区。所有 count>0，容量和 API 支持已验证，输入队列已完成搬入。\n\n```cpp\nuint32_t shape[2] = {rCount, vAlign};\nAscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, false>(\n    chunkSum, xChunk, tmpByte, shape, true);\nAscendC::Add(sumState, sumState, chunkSum, vValid);\n```\n\nsumState 在首块前按有效 lane 初始化 0，完成所有 chunk 后才搬出有效 vValid。AR 的 local reduce 使用基础四参数 ReduceSum，并以当前 rv 而非 Rc/R_align 为 count。DataCopyPad 的 ARA 搬入 blockLen 为 `vValid*sizeof(T)` 字节、srcStride 为 `(A0-vValid)*sizeof(T)`（限该已核验重载），UB 行 stride 与 vAlign 一致；rCount 的 uint16 字段必须在转换前验证。\n\n## 多轴、替代路径与验证\n\n多轴归约保留交替 A/R 轴，外层遍历真实输入片段，将内层 AR/ARA partial 合并到同一输出状态；只有数学上允许且误差合同接受时才能改变多轴次序。可用规则 stride copy 或连续 slice 循环，950 的 NDDMA 是额外搬运候选，910C/A3 不因支持普通 DataCopyPad 就获得该能力。\n\n验证 R 不能整除 Rc/S、最后 rCount、S=1/S=R、V尾片、空输入、单输出、多个输出组、不同 dtype、workspace 槽无重叠、producer 全覆盖、merge 唯一写和最大容量。跨核数值对照需包含同组不同切分与大数/小数混合；只测 producer 正确不算整个算法正确。失败回到已验证单核流式或原框架基线，记录具体 entry/key 与互斥的 tiling 域。\n\n来源事实为 AR/ARA 分载、Group Reduce 两阶段和 Welford/索引增量；字节序列化、独立 kernel 同步路径与成本比较为工程推导。来源审读完成，未验证 NPU 性能；平台/SDK 适用范围须按实际 910C/A3 或 950 分别核实。\n\n## 复盘不能只看 producer：分核收益与合并成本分开\n\n固定 Group Reduce 文档直接陈述两阶段 partial→merge；多轴归约资料直接陈述按 A/R 结构遍历与同一扫描计算多个统计量。本节代价式是规划推导，不继承来源示意 `SyncAll` 的通用合法性，仍按前文已确认的跨 kernel 完成关系执行。\n\n令 G 为独立输出组数、R 为每组输入数、S 为分片数、b 为每个 partial 状态的字节数。单状态 sum 的 b 是累加 dtype 宽；Welford 是 count/mean/M2 完整状态及实际对齐，不能仅计一个 float。分核方案产生 GS 份 partial，GM workspace 的逻辑写读至少 `2GSb` 字节，另有每组 S−1 次状态合并、两阶段调度及槽位对齐开销。提高 S 可能增加可并行任务，但不会减少输入总读取和必须的归约工作。\n\n对比 S=1 的核内流式归约时，应同时列出：producer 每核工作、merge task 数、partial 写读、临时峰值、数值树与输出组数。G 已足够供核时，盲目增加 S 常只添加中转；G 太小且 R 长时，S>1 可以作为待测方案。不能把“R 大”推成固定分核阈值。\n\n输入值复用例如同一遍扫描求 sum 与 squareSum，派生状态复用例如保留已生成 partial，重算则可能节省活跃状态却增加输入重读。选择前冻结允许的数学表达和舍入顺序；sum/squareSum 不是任意精度条件下 Welford 的等价替代。R2 若 producer 改快而整体未改善，应重新检查 merge/中转/任务分布，而非自动认定归约机制错误；若数值失败，性能预测仍未测试。",
       "evidence_status": "source_reviewed_not_benchmarked",
       "id": "planning.reduction.split",
       "kind": "template",
@@ -3345,7 +3638,7 @@
         ]
       },
       "seed_reason": "固定开源修订审读并补全中文算法、所有权、字节容量与选择边界；保留原 ID/主归属/数值合同，未做 NPU 性能验证。",
-      "source_hash": "sha256:e9ef46ec3b297887a1f987d883fb32cf198e3fe52ebd3ec523f604af17f6194c",
+      "source_hash": "sha256:71c68eecdb1ff54b29329c3256628392858aa0a3dbf51818ba23cedc56cfe192",
       "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/split.md",
       "sources": [
         {
@@ -3446,6 +3739,28 @@
           "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/adv_api/reduction_operations/ReduceSum_interface/GetReduceSumMaxMinTmpSize.md",
           "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
           "sha256": "sha256:fecb415cf8ad60515cc925323c983cde9e23e0fd79addb8cc3333a20bf567144"
+        },
+        {
+          "excerpt_sha256": "sha256:d12dacc3e213fbb9b735beb37af5ee22e8879501109c467bf17518c1473352de",
+          "lines": [
+            1,
+            99
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/reduction/alg-group-reduce.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/reduction/alg-group-reduce.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:a093e609d217b38db7b739ff2f924e977d1b0abd6c5f18023623625cfebff5d5"
+        },
+        {
+          "excerpt_sha256": "sha256:2a18e0f523a8101607fc3fbe388517869ce25bd6d2f51be57444f46617f7d96f",
+          "lines": [
+            1,
+            83
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/reduction/multi-axis-transform.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/reduction/multi-axis-transform.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:2a18e0f523a8101607fc3fbe388517869ce25bd6d2f51be57444f46617f7d96f"
         }
       ],
       "status": "active",
@@ -3454,7 +3769,7 @@
         "reduction"
       ],
       "title": "ColSplit/RowSplit 与分段合并",
-      "version": "1.1.0"
+      "version": "1.2.0"
     },
     {
       "body": "# 方差、Norm 与 Softmax 数值状态\n\n## 适用域与算法选择\n\n输入沿已确认的归约轴分成输出组，每组 R 个有效样本；AR/ARA 仅决定访问布局，统计量的数学语义必须独立定义。先确定输出是 mean/variance/std、L_p norm、LayerNorm/RMSNorm 还是 softmax；明确 correction、epsilon 的位置、p 的允许值、累加/输出 dtype、特殊值与允许误差。输出变换相似不代表同一统计状态能互换。\n\n一个完整输出组能驻留 UB 时，TwoPass 可在已加载输入上先求 mean，再求 centered square 的和，无需两遍 GM。若需要分块且 mean 与 M2 相关，Welford 可以用一遍输入统计并可合并 partial。sum(x²)/n−mean² 会有大均值小方差抵消，除非精度合同已证明满足，不作为 Welford/centered TwoPass 的等价快捷替换。Welford 也有舍入误差，其稳定性不是无条件的精度保证。\n\n固定 ops-nn 的 arch35 LayerNorm 分别实现 TwoPass 容量判定和 Welford tile 预算，并查询对应高级 API 临时区；这证明这些是实际候选路径，不证明它们的常数/指令可直接移植到 910C/A3。\n\n## Welford：更新、合并与唯一 finalization\n\n每个输出 lane 保存 `(n,μ,M2)`，其中 n 是有效样本数，μ 为均值，`M2=Σ(x−μ)²`。空状态 n=0。读入一个有效 x：\n\n`n'=n+1; δ1=x−μ; μ'=μ+δ1/n'; δ2=x−μ'; M2'=M2+δ1*δ2`。\n\n第二个偏差必须使用新均值，不可写成 δ1²。合并两个非空状态 a,b 时：\n\n`n=na+nb; δ=μb−μa; μ=μa+δ*(nb/n); M2=M2a+M2b+δ²*(na*nb/n)`。\n\n若任一状态 count=0，直接返回另一状态，避免空段除以 0。n 用足够范围的整数保存；比例计算时选择合同规定的计算 dtype，并避免整数 na*nb 在转换前溢出。FP32 比例转换在很大 n 时不再精确，不能把 count 本身存 float 后假设任意 R 都能逐一加 1。\n\n所有段完成后由唯一 owner finalize：`variance=M2/(n−correction)`，std 再开方。n≤correction、空组、M2 因舍入略负时的处理由 oracle 决定；不能擅自截为 0 或给分母加 epsilon。LayerNorm 常用 `rsqrt(var+eps)`，RMSNorm 常用 `rsqrt(mean(x²)+eps)`；norm 的 clamp 与它们不同。\n\n同组每个状态只有一个核内 owner；跨核使用 `(group,split)` 独立槽，merge owner 按固定次序合并后只写一次。不可由每段分别减 correction、开平方，再平均结果。来源“每 8 个 chunk 合并”是其启发式分组，不是数值正确性条件；分组数和合并树纳入精度验证。\n\n## Norm：p 特例、变换与范围\n\n| p | 分段统计与合并 | 最后还原 |\n| --- | --- | --- |\n| 0 | 精确计数 x≠0，按合同定义 NaN 等 | 计数转输出 dtype；不是逐元素 x^0 |\n| 1 | Σabs(x)，partial 求和 | 原统计值 |\n| 2 | Σ(x*x)，partial 求和 | sqrt 一次 |\n| 3 | Σabs(x)^3，partial 求和 | 1/3 次幂一次 |\n| +∞ / −∞ | max/min(abs(x)) | 极值 |\n| 其他允许的有限 p | Σabs(x)^p，partial 求和 | 1/p 次幂一次 |\n\n表中公式的直接计算可能溢出/下溢；p<0、x=0、NaN/Inf 和空组需遵循算子规范。p 特化必须按实际属性判定，不得把接近 1/2/3 的任意 float 无声当相等。若用 scaled sum-of-squares 等更稳的替代法，需要单独证明语义和误差，不能仅凭代数等价跨过原合同。\n\n固定 ops-nn `lp_norm_v2` DAG 有独立的 NonZero/Abs/Square/Cube/Inf 路径，并在后置链使用 `max(norm,eps)`；其 LinalgVectorNorm API 路径传 epsilon=0，不能由此给任意 norm 添加一个正 epsilon。该 API 的固定实现中 regbase 支持更广 p，非 regbase 的检查只列 {0,1,2,3,±∞}；这是该实现的接口限制，不是数学定义或所有 A3 算子的普遍限制。\n\n## Softmax：统计与输出必须分离\n\n有限非空输入组的稳定写法：`m=max(x)`、`l=Σexp(x−m)`、`y_i=exp(x_i−m)/l`。FullLoad 可保留 x 或 exp(x−m)，在 UB 完成多个步骤后输出；分载的直接重算路径通常先扫描 max，再扫描 exp-sum，再扫描输入生成 y，必要输入交通约 `3*N*s_in` 加输出字节。固定 ops-nn arch35 AR recompute kernel 实际采用这三个阶段，并有分层求和缓存。\n\n若需要跨段融合统计，可将每段写成 `(m_s,l_s)`，对两个有限非空段合并：\n\n`m=max(ma,mb); l=la*exp(ma−m)+lb*exp(mb−m)`。\n\n这是由稳定 softmax 定义推导的可合并状态，并非这里引用的 recompute kernel 已执行的路径。得到全组 m,l 后，还需再次读取原输入或保存的未归一化数据才能生成所有 y；不能把每段先 softmax 的输出直接拼接。空状态用显式 valid/count 标志；全 −∞、含 +∞、全 mask、NaN 使差分出现非有限值时，不能机械使用 `−∞−(−∞)`，应走明确的特殊值规则。\n\nsoftmax 的输出拥有者可按输入输出 tile 分片，但统计必须先对同组完成合并；用执行流中独立 kernel 或已证明合法的全局完成协议建立依赖。核内 barrier 不能保证其他核的 m/l 已发布。\n\n## 字节工作集、状态与重读成本\n\n令 L 为一个 tile 的有效元素，V 为同时处理的输出 lanes；s_in/s_acc/s_out 为字节，d_in/d_out 为实际 buffer 份数，A_a 为按字节对齐。流式统计的通用账为：\n\n`B_UB=d_in*A_a(L*s_in)+K_cast*A_a(L*s_acc)+B_states(V)+B_scratch(L,V)+d_out*A_a(L_out*s_out)+T_api+B_params ≤ B_available`。\n\nWelford 若每个 lane 的 count 相同，可将 n 作为共享整数，mean/M2 两向量是必要状态；逐样本更新的 delta1/delta2/tmp 是额外工作区，不能只按“两输出”计容量。若 count 按 lane 不同则另分配 V 个 count。多输出、gamma/beta、残差、量化状态均分别计入，不随主输入 chunk 自动消失。\n\n跨核 S 份 partial、P 个输出组时，workspace 为 `P*S*A_aws(serialized_state_bytes)`；Welford 的序列化至少含两份累加值及精确 count，softmax 至少 m/l 和空状态标志。二阶段写读流量约 2W。TwoPass 分载统计需要约两遍输入，Welford 统计一遍；需要归一化输出时还要额外读输入，不能把“一遍统计”写成“整个 LayerNorm 一遍 GM”。\n\n比较候选时列完整读遍数、保存中间数据的 workspace、Exp/Sqrt/Pow 调用数、状态合并量和 launch。FullLoad 的 TwoPass 虽两次向量归约却可能只有一次 GM；因此不能仅比较算法名称或扫描次数。\n\n## 有界 Ascend C：ARA 逐样本 Welford 更新\n\n用于 `[rCount,vAlign]` 的 FP32 计算区，rCount>0，vValid>0；mean/M2/delta1/delta2/tmp 为容量足够、互不覆盖的 LocalTensor<float>，mean/M2 初始化为 0，valid lanes 的 count 在进入片段前为 n。每个 r 是 V 个独立输出的一次新样本；该片段不是 AR 向量的直接横向 Welford。\n\n```cpp\nfor (uint32_t r = 0; r < rCount; ++r) {\n    ++n; // 用经过范围证明的整数；转 FP32 形成 invN 的精度另行验证。\n    const float invN = 1.0f / static_cast<float>(n);\n    AscendC::Sub(delta1, xFp32[r * vAlign], mean, vValid);\n    AscendC::Muls(tmp, delta1, invN, vValid);\n    AscendC::Add(mean, mean, tmp, vValid);\n    AscendC::Sub(delta2, xFp32[r * vAlign], mean, vValid);\n    AscendC::Mul(tmp, delta1, delta2, vValid);\n    AscendC::Add(M2, M2, tmp, vValid);\n}\n```\n\n该标量转换是否受目标编译器限制须在 C3 核验；不支持时从 host/tiling 或已核验的标量转换路径提供 invN，保持相同 n 的语义。输入队列需在开始前 DeQue，输出与跨流水依赖由工程管理；不能看到局部片段顺序就省略异步搬入完成关系。\n\n## 验证、回退与来源证据\n\n方差覆盖常量输入、大均值小扰动、n=0/1、correction 边界、不同 chunk/合并树；norm 覆盖所有允许 p、负数、零、接近但不等于特化 p、空组及溢出；softmax 覆盖极大/极小差值、全相等、全 −∞、+∞/NaN、mask 全空，以及不同分片的总和与逐元素输出。所有验证均对照当前 oracle 的 dtype/舍入/特殊值规则。\n\n若数值/容量/平台证据缺失，回退已验证的原始统计实现并保留实际 entry/key；不能以性能动机减少 count 精度、删除 correction 或改变 epsilon 位置。cannbot 提供 Welford/Group Reduce 算法事实，ops-nn 提供 arch35 实现候选；softmax 状态合并与完整字节模型是显式工程推导。未执行 NPU 正确性或性能验证；A3/910C 与 950 能力、临时区查询及指令必须分别核实。",
@@ -4002,6 +4317,27 @@
             {
               "field": "excluded_templates",
               "op": "contains",
+              "value": "planning.under-fusion.vector_producer_consumer"
+            }
+          ],
+          "fallback": false,
+          "match": [],
+          "prior_score": 2,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.plan_freedom",
+            "constraint.dependency_lifetime",
+            "constraint.target_api"
+          ],
+          "seed_reason": "仅既有分支内的条件候选；正文适用域和成本仍须核验，不强制优先。",
+          "target": "planning.under-fusion.vector_producer_consumer"
+        },
+        {
+          "exclude": [
+            {
+              "field": "excluded_templates",
+              "op": "contains",
               "value": "planning.under-fusion.chain"
             }
           ],
@@ -4092,7 +4428,7 @@
         ]
       },
       "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
-      "source_hash": "sha256:630af453dab0bded9911422b07dae3df3dc8e6385ea83228cec3128093b4ba43",
+      "source_hash": "sha256:1b5a1e40af061c643402ada921eccc6f9b2b633a49cb9ebc21ece37b7ca8c484",
       "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/ROUTER.md",
       "sources": [
         {
@@ -4113,7 +4449,7 @@
       "version": "1.1.0"
     },
     {
-      "body": "# 融合与组合：连续逐元素链\n\n## 从计算图确定边界\n\n用于 `y=f_m(...f_2(f_1(x),p_2)...,p_m)` 的逐元素或可局部广播链。先列出每个中间值的 dtype、舍入位置、所有消费者、别名及可见输出。只有同一输出分区内可完成所有依赖，才能由一个 task 负责该 tile 的整条链；跨行统计、跨核更新或外部消费者会增加阶段边界或需要保留中间结果。融合 kernel 边界、复用片上 buffer 和中间数据经过何种存储是三个独立决策。\n\n顺序执行原算子中的 fp16/bf16 写回可能本身是一次舍入；移除 GM 写回不等于允许把整链提高到 fp32、合成 FMA、改变饱和/cast 或改变异常值传播。`cast_T(a*x)` 后再 `+b` 与 `cast_T(a*x+b)` 不自动等价。C2 必须写出保留哪些计算边界；若不满足精度契约，保留中间 cast，或在该处拆 kernel。\n\n## 片上计划与所有权\n\n每个 tile owner 搬入输入/参数、按原依赖完成算术链、只写自己负责的有效输出。常量参数可在多个本核 tile 间驻留，但常驻区会压缩主 tile 容量；多消费者中间值在最后一个消费者完成前不得覆写。维护“读者完成→失效→复用”的存活表；异步 MTE3 尚在读的输出 buffer 也算存活，不能仅以已发出写指令视为死亡。不同 task 不共享可变 UB；同一地址的原地更新只有 API 支持和跨 task 读写顺序均已证明才允许。\n\n对每个合法融合边界比较：整链驻留、在峰值存活最高处拆成两段、保留独立算子。参数较大时比较每 tile 重载与分块驻留；无需创造固定链长阈值。来源的 arch35 bank/寄存器规则仅能按该架构使用，本条只复用其生命周期分析方法，不据此给 dav-2201 安排 padding 或假定寄存器融合 API。\n\n## 容量与流量\n\n令 `A(n)=ceil(n/a)*a`（字节对齐 a）、b_j 为中间值 j 的计算字节宽、t_j 为其 tile 元素数、q_j 为并存分配份数。`U_peak=max_phase(Σ_live_j q_j*A(t_j*b_j)+Tmp_phase)+U_resident+F≤U_available`。输入输出双缓冲份数来自实际流水，不能无条件取 2；API 不允许 in-place 时源/目的要同时计入。workspace 只在跨 task/跨 kernel 保留值时另计峰值。\n\n若中间 j 在基线中恰写 GM 一次、被本链读一次，且没有外部消费者、在融合版完全片上保留，则可消去的理论 GM 流量为 `2*t_j*b_storage_j`；多消费者读数、外部可见输出、spill、GM 中转和额外参数重载应逐项重算。仅合并启动但仍经 GM 交接时该项为零，不能宣称必然省 GM。时间候选包含启动、实际 DMA、计算、等待和更高 UB 占用造成的 tile 数变化，不套用来源历史收益。\n\n```text\n冻结每一步 dtype/cast 与全部消费者\n对每个候选 kernel 边界做 live-byte trace；选容量可行的 tile\nfor 每个唯一输出 tile:\n    搬入输入与需要的参数；等待就绪\n    按依赖执行算术与必要 cast\n    每个值的最后读者完成后回收其空间\n    写有效输出及必须保留的中间输出；等待异步读者结束后复用\n```\n\n```cpp\n// 已声明的同长度 LocalTensor；展示顺序，不代表可省略原算子的 cast。\nAscendC::Muls(tmpLocal, xLocal, scale, validCount);\nAscendC::PipeBarrier<PIPE_V>();\nAscendC::Adds(outLocal, tmpLocal, bias, validCount);\n```\n\n片段非完整算子；具体 API 重载和队列依赖在目标 SDK 核验。涉及归约用 `planning.under-fusion.reduce_broadcast`，矩阵乘输出组合用 `planning.under-fusion.epilogue`。验证尾块、所有参数广播、输入输出别名、外部消费者、中间舍入边界、NaN/Inf/±0 和资源峰值。本条 scope all 是通用规划方法，未做硬件资格或性能验证。",
+      "body": "# 融合与组合：连续逐元素链\n\n## 从计算图确定边界\n\n用于 `y=f_m(...f_2(f_1(x),p_2)...,p_m)` 的逐元素或可局部广播链。先列出每个中间值的 dtype、舍入位置、所有消费者、别名及可见输出。只有同一输出分区内可完成所有依赖，才能由一个 task 负责该 tile 的整条链；跨行统计、跨核更新或外部消费者会增加阶段边界或需要保留中间结果。融合 kernel 边界、复用片上 buffer 和中间数据经过何种存储是三个独立决策。\n\n顺序执行原算子中的 fp16/bf16 写回可能本身是一次舍入；移除 GM 写回不等于允许把整链提高到 fp32、合成 FMA、改变饱和/cast 或改变异常值传播。`cast_T(a*x)` 后再 `+b` 与 `cast_T(a*x+b)` 不自动等价。C2 必须写出保留哪些计算边界；若不满足精度契约，保留中间 cast，或在该处拆 kernel。\n\n## 片上计划与所有权\n\n每个 tile owner 搬入输入/参数、按原依赖完成算术链、只写自己负责的有效输出。常量参数可在多个本核 tile 间驻留，但常驻区会压缩主 tile 容量；多消费者中间值在最后一个消费者完成前不得覆写。维护“读者完成→失效→复用”的存活表；异步 MTE3 尚在读的输出 buffer 也算存活，不能仅以已发出写指令视为死亡。不同 task 不共享可变 UB；同一地址的原地更新只有 API 支持和跨 task 读写顺序均已证明才允许。\n\n对每个合法融合边界比较：整链驻留、在峰值存活最高处拆成两段、保留独立算子。参数较大时比较每 tile 重载与分块驻留；无需创造固定链长阈值。来源的 arch35 bank/寄存器规则仅能按该架构使用，本条只复用其生命周期分析方法，不据此给 dav-2201 安排 padding 或假定寄存器融合 API。\n\n## 容量与流量\n\n令 `A(n)=ceil(n/a)*a`（字节对齐 a）、b_j 为中间值 j 的计算字节宽、t_j 为其 tile 元素数、q_j 为并存分配份数。`U_peak=max_phase(Σ_live_j q_j*A(t_j*b_j)+Tmp_phase)+U_resident+F≤U_available`。输入输出双缓冲份数来自实际流水，不能无条件取 2；API 不允许 in-place 时源/目的要同时计入。workspace 只在跨 task/跨 kernel 保留值时另计峰值。\n\n若中间 j 在基线中恰写 GM 一次、被本链读一次，且没有外部消费者、在融合版完全片上保留，则可消去的理论 GM 流量为 `2*t_j*b_storage_j`；多消费者读数、外部可见输出、spill、GM 中转和额外参数重载应逐项重算。仅合并启动但仍经 GM 交接时该项为零，不能宣称必然省 GM。时间候选包含启动、实际 DMA、计算、等待和更高 UB 占用造成的 tile 数变化，不套用来源历史收益。\n\n```text\n冻结每一步 dtype/cast 与全部消费者\n对每个候选 kernel 边界做 live-byte trace；选容量可行的 tile\nfor 每个唯一输出 tile:\n    搬入输入与需要的参数；等待就绪\n    按依赖执行算术与必要 cast\n    每个值的最后读者完成后回收其空间\n    写有效输出及必须保留的中间输出；等待异步读者结束后复用\n```\n\n```cpp\n// 已声明的同长度 LocalTensor；展示顺序，不代表可省略原算子的 cast。\nAscendC::Muls(tmpLocal, xLocal, scale, validCount);\nAscendC::PipeBarrier<PIPE_V>();\nAscendC::Adds(outLocal, tmpLocal, bias, validCount);\n```\n\n片段非完整算子；具体 API 重载和队列依赖在目标 SDK 核验。涉及归约用 `planning.under-fusion.reduce_broadcast`，矩阵乘输出组合用 `planning.under-fusion.epilogue`。验证尾块、所有参数广播、输入输出别名、外部消费者、中间舍入边界、NaN/Inf/±0 和资源峰值。本条 scope all 是通用规划方法，未做硬件资格或性能验证。\n\n\n一般Vector生产者/消费者不必是连续算术链；生成派生索引、布局准备、局部加权消费与GM中转的完整比较见planning.under-fusion.vector_producer_consumer。融合与派生复用分别绑定action.fuse_kernel_chain、action.keep_intermediate_onchip和独立action.reuse_derived_results，不扩大旧Action覆盖范围。",
       "evidence_status": "source_reviewed_not_benchmarked",
       "id": "planning.under-fusion.chain",
       "kind": "template",
@@ -4122,7 +4458,8 @@
       "references": [
         "planning.under-fusion.fallback",
         "planning.under-fusion.reduce_broadcast",
-        "planning.under-fusion.epilogue"
+        "planning.under-fusion.epilogue",
+        "planning.under-fusion.vector_producer_consumer"
       ],
       "schema_version": "aprof.knowledge-record/v1",
       "scope": {
@@ -4137,7 +4474,7 @@
         ]
       },
       "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
-      "source_hash": "sha256:13c01d7f32534de051ae9b0a159c8757ae3b66937f35915f123d3501c56596c3",
+      "source_hash": "sha256:3def96300d869d3ad6ecd00ac632f6a33b9b560c638f07634614c49a640a1128",
       "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/templates/chain.md",
       "sources": [
         {
@@ -4349,28 +4686,86 @@
       ],
       "title": "融合与组合：归约后广播",
       "version": "1.1.0"
+    },
+    {
+      "body": "# 一般Vector生产者—消费者融合与中转取舍\n\n本条使用既有under-fusion分类，覆盖生成坐标/系数/索引、局部变换、普通Vector链、加权邻域消费及必要局部归约；不要求存在MatMul、FA或归约广播模式。固定来源直接给出存活期融合方法与RoPE生成Gather偏移后在循环中反复消费；一般生产消费骨架为本次机制推导，不提供任意采样数学公式或通用API。\n\n先列有向数据流 `producer -> value(dtype,layout) -> 全部consumers`，标注外部可见输出、别名、Cast/舍入边界、每个consumer的owner和读取结束事件。只有生产者与消费者可由同一合法owner完成且依赖闭合时，才在同一kernel按tile局部生产/消费。消费者跨task/核、输出外部可见或容量不够时，保留GM中转或拆阶段；不能因合并启动就宣称省GM，也不能为省中转删除后继消费者。\n\n比较四类实际候选：每消费者重算；同owner生成一次并驻留；先写GM派生表供多消费者；在一个kernel保留完整生产消费链。它们不是互斥标签，需分别列生成、布局准备、存储位置与依赖。例如复用坐标可同时融合消费，但原始输入仍须按通道读取。\n\n对Q条派生记录、r消费者、记录s字节：重算r*G(Q)；片上保存G(Q)+r次本地读且新增A(Q*s)活跃状态；GM表至少写Q*s和r次读Q*s（缓存后的实际DRAM字节另论），再计发布/等待及workspace；融合消除每个内部值原GM写一次和读r次时，理论省(1+r)*Q*s，但仍有外部消费者、spill或布局中转则逐项扣回。G是分类型逻辑操作数量而非时间。布局准备P(Q)、对齐/打包/转置、索引宽化、初始化与API workspace都应按执行次数计入；准备仅当被多个消费者合法共享时才摊销，不能把它藏在Init而归零。\n\n每个tile执行“获取输入→生成必要派生值→等待生产完成→按既定数值顺序消费→写全部有效输出→等最后异步读完成后回收”；累计值每个输出初始化一次、finalCast按原边界执行，局部小加权和也需precision-boundaries.numeric。改变融合边界、owner、task或GM通路须C2确认；同一计划已授权范围的API/布局选择可留C3。容量用各phase同时存活的真实槽和API临时区高水位，扩大复用轴可能减少task、缩tile或破坏overlap。\n\n选择先判断哪种工作影响主要域，再比较启动/逻辑计算/中转/布局/存活与任务，不以少kernel、少API或最小patch直接判赢家；完整机制可联合变更，归因需要时才做单因素消融。R2把实际变化与预测、剩余逐元素工作和未覆盖域逐项对照。API按目标SDK的Vector/Cast/Gather/搬运路径核验，arch35寄存器/bank与950直通能力不能迁到A3。缺口：没有通用插值实现、目标编译和硬件收益，源代码数值链不能替代当前oracle。",
+      "evidence_status": "mechanism_inference_from_reviewed_source_not_benchmarked",
+      "id": "planning.under-fusion.vector_producer_consumer",
+      "kind": "template",
+      "learning": {},
+      "parent": "planning.under-fusion",
+      "references": [
+        "planning.under-fusion.chain",
+        "planning.indexing.coordinate_neighborhood"
+      ],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "固定五仓库来源审读；通用方法为条件化机制推导，未做目标硬件验证。",
+      "source_hash": "sha256:c39f0e219762cdcdb62e38253f3e614853b59f2a68e0e19793b9afffcb88090a",
+      "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/templates/vector_producer_consumer.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:5b1c369c0cad17cfb39c00a5bd4d354ab55d80d8eb0c902d05007674a233af35",
+          "lines": [
+            108,
+            225
+          ],
+          "original_path": "posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bs.h",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bs.h",
+          "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+          "sha256": "sha256:92e2365907ffbd499d113d173a67bd2ade41d1a92d82f3d20b3965eaad17b001"
+        },
+        {
+          "excerpt_sha256": "sha256:08f91ab6c5846b60435aa9e70fed185f0947718604320544a99dbd8132ba8477",
+          "lines": [
+            1,
+            111
+          ],
+          "original_path": "ops/ops-design-paradigms/references/paradigms/reduction/generic/liveness-fusion.md",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ops-design-paradigms/references/paradigms/reduction/generic/liveness-fusion.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:08f91ab6c5846b60435aa9e70fed185f0947718604320544a99dbd8132ba8477"
+        }
+      ],
+      "status": "active",
+      "tags": [
+        "execution-cost"
+      ],
+      "title": "一般Vector生产消费融合",
+      "version": "1.3.0"
     }
   ],
   "schema_version": "aprof.knowledge/v1",
   "source_hashes": {
-    "skills/ascendc-aprof-parallel-planning/knowledge/REGION.json": "sha256:7ad42359ac8a2d0234dfeb55041c89f2340297674fd0579d8851c194fd253d9d",
+    "skills/ascendc-aprof-parallel-planning/knowledge/REGION.json": "sha256:81edf44c34a51254a92bc18665818627bd2bfac2257090e8114236af6f899d04",
     "skills/ascendc-aprof-parallel-planning/knowledge/ROUTER.md": "sha256:6dff5ab850b1f2eb2ed79d2b3fc707cf227e228e6104c57b7445c459114f25de",
     "skills/ascendc-aprof-parallel-planning/knowledge/fallback.md": "sha256:3aa91a59e8c8d8d26907f08f73d298c09eaaed6c03118511d86f7cd7bff29b0d",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/ROUTER.md": "sha256:9f7cc8bc14f5c82d159d237c7915293188668def63d1c00cb75c8f8de69f8ac6",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/fallback.md": "sha256:283ebfb96e68f1427f7a44ebe958e3a0d3a059875f409e1ce5306fb2f7048cc3",
-    "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/broadcast.md": "sha256:e9656ff1eb44e019b72c4199f8a993f084e587f92b65b1c740d23fd4912d5cee",
-    "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/broadcast.md": "sha256:485c6aec11ef4e73458f85be904d0692bf7ed6b97db0ecd88d7694b039c505f0",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/flash-attention/ROUTER.md": "sha256:a7ec514617bbd332f280c8d29959abda09a3629bb0bc8eedcd613186cbae1cd6",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/flash-attention/fallback.md": "sha256:319f5cade6137a58eb08d1eb414861e849c198285bebf2c3658b9c33c427294b",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/flash-attention/templates/online.md": "sha256:c22508a525ec3b977972e913a6eecba11cd85b4c771c7658e81cb7bf4441d53c",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/flash-attention/templates/splitkv.md": "sha256:f4c75fd87120098e4f7252da5e695e02cd3616278fed660a03db94bce3202128",
-    "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/ROUTER.md": "sha256:160ebc5ced1e87bebafb495cb2fe29998e22565ee81065b7d4e266916b54ea5c",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/ROUTER.md": "sha256:833e119fbef58747bbbe51cfba88601ef19aa95645afdd526cd3f222517a8f15",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/fallback.md": "sha256:e5b53c745484ba2eadcfb8cdc2117165856d95ac85394d80dacb8148b4ee3407",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/coordinate_neighborhood.md": "sha256:7875ed32b39568a3f9108d6e88eecc2ad25321203362a1abe97149f66e054638",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/indexed_write_reduce.md": "sha256:d7590b4d193bb0adc9c1e88793f9d9909f7ec4dc1788d9ed17885c0a1d8f8c46",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/ROUTER.md": "sha256:493f353afae17079b8b9ea150ad888ca5900c0140b37e85ee1fd3b32f64c0ae9",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/fallback.md": "sha256:2b5d8948d442d811266c06b5fa61bf01d8eb16eb2caeea244957b0c34b61a1df",
-    "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md": "sha256:678b709d7ea4092de4145febb3c7174155094d097e47f2b42b3f073d499b1c25",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md": "sha256:9b830c4ea01484b8a7e2d89e8c44d4d8087a821a2b887f3bd28c1e2172c53d49",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/matmul/ROUTER.md": "sha256:5489d746b038dfcbbf7b81e4552618c61d726b61d27cd309da2ac56e53a08b1d",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/matmul/fallback.md": "sha256:2e2dbe6e0e23656ce2942479355b15450719149693a0398a57ba4d8622307597",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/matmul/templates/gmm.md": "sha256:7df76a44c4e5de5251f1c51101aba5d1e2752e928ac687ac7c6269d8755cf4e4",
@@ -4387,16 +4782,17 @@
     "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/examples/norm-partials.md": "sha256:4d257472a516e10b8ed1232eaf0b85fc56c2450eb84df7fc9f8c0f295d9c93a6",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/fallback.md": "sha256:ca83b09185977f3c6b3714d75a98039f6bdaa627e19e0e25a414fa84e9249be4",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/fullload.md": "sha256:d3eb3798cdb00847fb3c8f5da79da7216224e5dbce2d206eaf597a8376b07870",
-    "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/split.md": "sha256:e9ef46ec3b297887a1f987d883fb32cf198e3fe52ebd3ec523f604af17f6194c",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/split.md": "sha256:71c68eecdb1ff54b29329c3256628392858aa0a3dbf51818ba23cedc56cfe192",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/statistics.md": "sha256:19c5b1113ee43393664c25dd4684b3763f6764e409b013cfe69be05563503e38",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/sort-topk/ROUTER.md": "sha256:3e941065a01deacf404cab727443bb2844aee2fa9e05a0aa0cadf0e7d766ca4e",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/sort-topk/fallback.md": "sha256:5e09c86f6655dbdcc75292eba8ec341a918cb444c3dbe14a4adffcc0d0acf175",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/sort-topk/templates/merge.md": "sha256:e2e29e332a0be162529f7e3a43eadd789193f731a2f70f650ee51b119bdc8fff",
-    "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/ROUTER.md": "sha256:630af453dab0bded9911422b07dae3df3dc8e6385ea83228cec3128093b4ba43",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/ROUTER.md": "sha256:1b5a1e40af061c643402ada921eccc6f9b2b633a49cb9ebc21ece37b7ca8c484",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/fallback.md": "sha256:209202d734bf053c1a88f4f05822d55877b3f95cfea3e5ce64af2554032a6f30",
-    "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/templates/chain.md": "sha256:13c01d7f32534de051ae9b0a159c8757ae3b66937f35915f123d3501c56596c3",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/templates/chain.md": "sha256:3def96300d869d3ad6ecd00ac632f6a33b9b560c638f07634614c49a640a1128",
     "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/templates/epilogue.md": "sha256:eca4fe88ccfbbc4578ff9d7d733ca53a2f378a261a6ec2fc7eef5c957e26022e",
-    "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/templates/reduce_broadcast.md": "sha256:2bf58443f1cfc35b9177e7ba184c4ad222cd3313244a32cfc366e465864ba8f4"
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/templates/reduce_broadcast.md": "sha256:2bf58443f1cfc35b9177e7ba184c4ad222cd3313244a32cfc366e465864ba8f4",
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/templates/vector_producer_consumer.md": "sha256:c39f0e219762cdcdb62e38253f3e614853b59f2a68e0e19793b9afffcb88090a"
   },
-  "version": "v0002"
+  "version": "v0004"
 }

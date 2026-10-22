@@ -1,0 +1,541 @@
+{
+  "schema_version": "aprof.action-decision/v1",
+  "task_id": "raw-case-15",
+  "context_hash": "sha256:a48be6309d1808077fecb54e65cd6f4510780e213c17e941d84591a2c78ac7be",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "reasoning_ref": {
+    "path": "R2-reasoning.json",
+    "sha256": "sha256:fb40a88c69300f640fffa701ed3d43aadc112223956df40e7f0a3e79a1c24587"
+  },
+  "reasoning_hash": "sha256:eccea2fc1248c4056e62fa04fa4b20f38eabce98b5b6c02b550d8567009a8267",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/f3a6d55be57ea647180e624b4fffe6a25b55beea2b35d140d50fe71108f4232d.json",
+    "sha256": "sha256:02d64ca8cc4efafae4665940ea3cfd6bf955b40e79d76125906445f4337450a4"
+  },
+  "round": 2,
+  "current_parent_ref": {
+    "path": "source/SOURCE-MANIFEST.json",
+    "sha256": "sha256:055122fc869f7b352dc69e5f37b53971d9cb47ff1ed7f95f01d2008401c09c5e"
+  },
+  "opportunities": [
+    {
+      "id": "o1",
+      "hypothesis_id": "h1",
+      "action_id": "action.vectorize_scalar_loop",
+      "action_instance_id": "intent-1",
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.observation_1"
+      ],
+      "cost_mechanism": "把逐输出输入解码和插值运算移到UB/Vector，地址按连续输出row分段，直接减少主体Scalar数据处理。",
+      "predictions": [
+        {
+          "id": "o1-work",
+          "kind": "source_work",
+          "statement": "把逐输出输入解码和插值运算移到UB/Vector，地址按连续输出row分段，直接减少主体Scalar数据处理。",
+          "check_method": "源码与完整case形状的逻辑访问/运算量复核；R2静态证据文件",
+          "on_support": "继续具体参数与API合法性核对",
+          "on_refute": "修订目标或保留fallback"
+        },
+        {
+          "id": "o1-perf",
+          "kind": "performance",
+          "statement": "满足合法性并通过完整oracle后，比较本机会对所列case的Task时间；不预设加速比。",
+          "check_method": "未来同协议原20case清L2 Task计时，必要时补指令/timeline；本次不运行",
+          "on_support": "记录同源合法结果并确认是否有回归",
+          "on_refute": "检查新增资源/控制成本，重新比较该机会"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_scalar_hot",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "o1-perf",
+          "unknown_id": "o1-performance",
+          "reason": "Vector与UB Gather是否摊薄索引准备成本、强下采样span带来额外字节是否抵消Scalar指令减少。"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "o1-perf",
+          "unknown_id": "o1-performance",
+          "reason": "Vector与UB Gather是否摊薄索引准备成本、强下采样span带来额外字节是否抵消Scalar指令减少。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "o1-performance",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "Vector与UB Gather是否摊薄索引准备成本、强下采样span带来额外字节是否抵消Scalar指令减少。",
+          "affects": "该机会的收益及优先级，不决定结构合法性",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "o1-safety-0",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "连续源span随缩放比变化，实际UB及Gather临时区未知，需逐tile而非只按Wtile预算。",
+          "affects": "具体参数/API实施是否合法",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "o1-safety-1",
+          "kind": "implementation_safety",
+          "fact": "constraint.target_api",
+          "expected_state": true,
+          "statement": "目标SDK的UB Gather/index单位、half/bf16输入Cast、count乘加及特殊值行为未核验。",
+          "affects": "具体参数/API实施是否合法",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "o1-safety-2",
+          "kind": "implementation_safety",
+          "fact": "constraint.numeric_order",
+          "expected_state": true,
+          "statement": "原四项FP32累加顺序与源手工解码特殊值必须保留，Vector Cast/融合对NaN/Inf和bf16 round的等价需要核验。",
+          "affects": "具体参数/API实施是否合法",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "review-semantic_equivalence",
+          "kind": "implementation_safety",
+          "fact": "constraint.semantic_equivalence",
+          "expected_state": true,
+          "statement": "ResizeCoord索引域和四项插值表达式可由源码恢复，但手写half/BF16解码的次正规数/NaN处理与目标Cast、Vector乘加舍入/融合、正负零和Inf传播的全域等价尚未核验。完整constraint.semantic_equivalence保持unknown，不由clamp/地址证明推成true。",
+          "affects": "具体Vector/搬出方案实施合法性；性能未知不因此被否决",
+          "resolution": "check_before_implementation"
+        }
+      ],
+      "strongest_alternative_id": "o2",
+      "comparison": "Gather+Vector覆盖四点取数、输入解码和插值主体；仅外提坐标留下四个GM标量读，驻留只在复用多的缩放组划算。完整数值/物理范围仍以具体条件约束。",
+      "disposition": "selected",
+      "reason": "把逐输出输入解码和插值运算移到UB/Vector，地址按连续输出row分段，直接减少主体Scalar数据处理。"
+    },
+    {
+      "id": "o2",
+      "hypothesis_id": "h2",
+      "action_id": "action.hoist_invariant_control",
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.observation_1"
+      ],
+      "cost_mechanism": "每row只算ih/h0/h1/dh，宽坐标按列计算或缓存可减少重复坐标，但仍4个GM标量读及输入解码。",
+      "predictions": [
+        {
+          "id": "o2-work",
+          "kind": "source_work",
+          "statement": "每row只算ih/h0/h1/dh，宽坐标按列计算或缓存可减少重复坐标，但仍4个GM标量读及输入解码。",
+          "check_method": "源码与完整case形状的逻辑访问/运算量复核；R2静态证据文件",
+          "on_support": "继续具体参数与API合法性核对",
+          "on_refute": "修订目标或保留fallback"
+        },
+        {
+          "id": "o2-perf",
+          "kind": "performance",
+          "statement": "满足合法性并通过完整oracle后，比较本机会对所列case的Task时间；不预设加速比。",
+          "check_method": "未来同协议原20case清L2 Task计时，必要时补指令/timeline；本次不运行",
+          "on_support": "记录同源合法结果并确认是否有回归",
+          "on_refute": "检查新增资源/控制成本，重新比较该机会"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "o2-perf",
+          "unknown_id": "o2-performance",
+          "reason": "每row只算ih/h0/h1/dh，宽坐标按列计算或缓存可减少重复坐标，但仍4个GM标量读及输入解码。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "o2-performance",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "每row只算ih/h0/h1/dh，宽坐标按列计算或缓存可减少重复坐标，但仍4个GM标量读及输入解码。 当前源结构可估算，实际主导程度/代价尚未测得。",
+          "affects": "该机会的收益及优先级，不决定结构合法性",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "o1",
+      "comparison": "每row只算ih/h0/h1/dh，宽坐标按列计算或缓存可减少重复坐标，但仍4个GM标量读及输入解码。 与主方案比较：把逐输出输入解码和插值运算移到UB/Vector，地址按连续输出row分段，直接减少主体Scalar数据处理。",
+      "disposition": "deferred",
+      "reason": "每row只算ih/h0/h1/dh，宽坐标按列计算或缓存可减少重复坐标，但仍4个GM标量读及输入解码。"
+    },
+    {
+      "id": "o3",
+      "hypothesis_id": "h3",
+      "action_id": "action.reuse_input_tiles",
+      "action_instance_id": null,
+      "case_ids": [
+        "4",
+        "5",
+        "7",
+        "13",
+        "14",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.observation_4"
+      ],
+      "cost_mechanism": "上采样同源行/列强复用；整2倍下采样邻居不重叠，统一驻留整源行可能多搬无用字节。",
+      "predictions": [
+        {
+          "id": "o3-work",
+          "kind": "source_work",
+          "statement": "上采样同源行/列强复用；整2倍下采样邻居不重叠，统一驻留整源行可能多搬无用字节。",
+          "check_method": "源码与完整case形状的逻辑访问/运算量复核；R2静态证据文件",
+          "on_support": "继续具体参数与API合法性核对",
+          "on_refute": "修订目标或保留fallback"
+        },
+        {
+          "id": "o3-perf",
+          "kind": "performance",
+          "statement": "满足合法性并通过完整oracle后，比较本机会对所列case的Task时间；不预设加速比。",
+          "check_method": "未来同协议原20case清L2 Task计时，必要时补指令/timeline；本次不运行",
+          "on_support": "记录同源合法结果并确认是否有回归",
+          "on_refute": "检查新增资源/控制成本，重新比较该机会"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "o3-perf",
+          "unknown_id": "o3-performance",
+          "reason": "上采样同源行/列强复用；整2倍下采样邻居不重叠，统一驻留整源行可能多搬无用字节。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "o3-performance",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "上采样同源行/列强复用；整2倍下采样邻居不重叠，统一驻留整源行可能多搬无用字节。 当前源结构可估算，实际主导程度/代价尚未测得。",
+          "affects": "该机会的收益及优先级，不决定结构合法性",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "o1",
+      "comparison": "上采样同源行/列强复用；整2倍下采样邻居不重叠，统一驻留整源行可能多搬无用字节。 与主方案比较：把逐输出输入解码和插值运算移到UB/Vector，地址按连续输出row分段，直接减少主体Scalar数据处理。",
+      "disposition": "deferred",
+      "reason": "上采样同源行/列强复用；整2倍下采样邻居不重叠，统一驻留整源行可能多搬无用字节。"
+    }
+  ],
+  "evidence_requests": [
+    {
+      "id": "request-o1-safety-0",
+      "opportunity_ids": [
+        "o1"
+      ],
+      "unknown_ids": [
+        "o1-safety-0"
+      ],
+      "method": "连续源span随缩放比变化，实际UB及Gather临时区未知，需逐tile而非只按Wtile预算。 核验对象：全部适用case；后续允许设备/SDK只读查询及候选代码审查。",
+      "discriminating_results": [
+        {
+          "outcome": "证据满足计划公式及API/语义条件",
+          "decision_effect": "允许以该参数形成严格C2并隔离实施"
+        },
+        {
+          "outcome": "不满足或未知",
+          "decision_effect": "减tile/缩适用域或保留原fallback，不伪造ready"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本轮仅源码/CPU权限，保留明确参数域。",
+      "defer_reason": "禁止SDK build、native、设备probe；实际architecture缺项不能靠目标名称补齐。"
+    },
+    {
+      "id": "request-o1-safety-1",
+      "opportunity_ids": [
+        "o1"
+      ],
+      "unknown_ids": [
+        "o1-safety-1"
+      ],
+      "method": "目标SDK的UB Gather/index单位、half/bf16输入Cast、count乘加及特殊值行为未核验。 核验对象：全部适用case；后续允许设备/SDK只读查询及候选代码审查。",
+      "discriminating_results": [
+        {
+          "outcome": "证据满足计划公式及API/语义条件",
+          "decision_effect": "允许以该参数形成严格C2并隔离实施"
+        },
+        {
+          "outcome": "不满足或未知",
+          "decision_effect": "减tile/缩适用域或保留原fallback，不伪造ready"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本轮仅源码/CPU权限，保留明确参数域。",
+      "defer_reason": "禁止SDK build、native、设备probe；实际architecture缺项不能靠目标名称补齐。"
+    },
+    {
+      "id": "request-o1-safety-2",
+      "opportunity_ids": [
+        "o1"
+      ],
+      "unknown_ids": [
+        "o1-safety-2"
+      ],
+      "method": "原四项FP32累加顺序与源手工解码特殊值必须保留，Vector Cast/融合对NaN/Inf和bf16 round的等价需要核验。 核验对象：全部适用case；后续允许设备/SDK只读查询及候选代码审查。",
+      "discriminating_results": [
+        {
+          "outcome": "证据满足计划公式及API/语义条件",
+          "decision_effect": "允许以该参数形成严格C2并隔离实施"
+        },
+        {
+          "outcome": "不满足或未知",
+          "decision_effect": "减tile/缩适用域或保留原fallback，不伪造ready"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本轮仅源码/CPU权限，保留明确参数域。",
+      "defer_reason": "禁止SDK build、native、设备probe；实际architecture缺项不能靠目标名称补齐。"
+    },
+    {
+      "id": "request-review-semantic_equivalence",
+      "opportunity_ids": [
+        "o1"
+      ],
+      "unknown_ids": [
+        "review-semantic_equivalence"
+      ],
+      "method": "ResizeCoord索引域和四项插值表达式可由源码恢复，但手写half/BF16解码的次正规数/NaN处理与目标Cast、Vector乘加舍入/融合、正负零和Inf传播的全域等价尚未核验。完整constraint.semantic_equivalence保持unknown，不由clamp/地址证明推成true。 核验当前拟采用API完整语义、编译选项、有效域及原oracle全部20case；本轮无此证据。",
+      "discriminating_results": [
+        {
+          "outcome": "完整语义/物理写契约证明覆盖所有适用case",
+          "decision_effect": "将对应谓词建立有来源的true后继，再进入严格C2/隔离实施"
+        },
+        {
+          "outcome": "不满足或仍未知",
+          "decision_effect": "保持Vector/矩形条件方案，缩小适用域或原fallback；不得宣称C3就绪"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "静态映射成立不足以回答这个完整条件。",
+      "defer_reason": "当前只有源码/CPU分析权限，缺目标SDK/编译语义或真实写粒度契约。"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "o1"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+        "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+      },
+      "locator": "lines:292-304",
+      "effect_kind": "mechanism",
+      "before": "源码显示：ResizeOne每输出计算linear%outputSpatial、nc、oh/ow和两次ResizeCoord，四个GM标量读取，逐输出FP32加权。",
+      "after": "把逐输出输入解码和插值运算移到UB/Vector，地址按连续输出row分段，直接减少主体Scalar数据处理。",
+      "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+    },
+    {
+      "opportunity_ids": [
+        "o2"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+        "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+      },
+      "locator": "lines:310-322",
+      "effect_kind": "mechanism",
+      "before": "源码显示：ResizeOne每输出计算linear%outputSpatial、nc、oh/ow和两次ResizeCoord，四个GM标量读取，逐输出FP32加权。",
+      "after": "每row只算ih/h0/h1/dh，宽坐标按列计算或缓存可减少重复坐标，但仍4个GM标量读及输入解码。",
+      "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+    },
+    {
+      "opportunity_ids": [
+        "o3"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.insufficient_input_reuse.md",
+        "sha256": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4"
+      },
+      "locator": "lines:265-277",
+      "effect_kind": "mechanism",
+      "before": "源码显示：ResizeCoord对每个输出列给出相邻w0/w1，scale<1时邻接输出可复用同源索引，scale=2时pair分离；原四点值只读。",
+      "after": "上采样同源行/列强复用；整2倍下采样邻居不重叠，统一驻留整源行可能多搬无用字节。",
+      "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+    },
+    {
+      "opportunity_ids": [
+        "o1"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+        "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+      },
+      "locator": "lines:104-116",
+      "effect_kind": "parameters",
+      "before": "尚未把源循环转换为有界任务/内存方案。",
+      "after": "Gather模板的尾轴源窗口/输出owner原则迁移到ResizeCoord生成的有界索引，未声称是GatherElements算子；取数只搬值，之后另保留四项FP32插值，强下采样源span按实址计。",
+      "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+    },
+    {
+      "opportunity_ids": [
+        "o1"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+        "sha256": "sha256:d1a2e2eb822d93e4962d5c0198fd3a124e81e5af354c73596b513bd53ee13f08"
+      },
+      "locator": "lines:85-97",
+      "effect_kind": "parameters",
+      "before": "尚未把源循环转换为有界任务/内存方案。",
+      "after": "Resize按W=64/128/256有效count规划，GM范围须单独核对；逐步乘加/Cast与原手工解码的全域语义仍unknown。",
+      "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+    },
+    {
+      "opportunity_ids": [
+        "o1",
+        "o2"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+        "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+      },
+      "locator": "lines:121-133",
+      "effect_kind": "alternative",
+      "before": "此前尚未比较该方法的边界。",
+      "after": "相邻四点只是部分重叠，不能删整次第二加载；逐输出列枚举union后保留两源行共同区，强下采样pair分离时撤回驻留。",
+      "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+    },
+    {
+      "opportunity_ids": [
+        "o1",
+        "o2"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+        "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+      },
+      "locator": "lines:70-82",
+      "effect_kind": "alternative",
+      "before": "此前尚未比较该方法的边界。",
+      "after": "nc/oh不变量只可提到行作用域；ow坐标仍直接FP32求值，禁止累加scale产生不同舍入，输入pair代次变化时重建窗口。",
+      "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+    }
+  ],
+  "selection": {
+    "mode": "conditional_plan",
+    "opportunity_id": "o1",
+    "action_instance_id": "intent-1",
+    "reason": "把逐输出输入解码和插值运算移到UB/Vector，地址按连续输出row分段，直接减少主体Scalar数据处理。 数学结构支持该条件方案，完整数值语义仍待证明。",
+    "concrete_plan": "固定(nc,oh)后按Wtile∈{64,128,256}输出列分片；用原FP32 ResizeCoord直接算每个ow的w0/w1/dw，禁止累加scale递推。读入所需两源行的有界区间，按索引从UB取a/b/c/d，再批量执行原a*ah*aw+b*ah*dw+c*dh*aw+d*dh*dw的乘加顺序和最终Cast，不启FMA。强下采样若连续源span大于4*Wtile则用保守索引fallback或仅搬稀疏需要点；上采样保留两源行窗口。容量2*A(span*s)+至少A(7*4*Wtile)+输出raw+索引表+Tmp+reserve≤UB。所有20case分组执行，输出连续片归单核。",
+    "stop_reason": null
+  },
+  "previous_feedback": {
+    "previous_decision_ref": {
+      "path": "R1-action-decision.json",
+      "sha256": "sha256:d882e9f0df4bbb54d826dd871fedabd58ee629a4d51f2e7542c4779abf88cb03"
+    },
+    "result_ref": null,
+    "measurement": "not_measured",
+    "result_limits": "R1只有静态提案，没有patch/build/native/correctness/performance结果。 本次复核不提供完整浮点语义或DMA物理边界证明。",
+    "prediction_updates": [
+      {
+        "prediction_id": "o1-work",
+        "judgement": "supported",
+        "reason": "按20case解析scale_factor到真实outH/outW，逐输出列枚举w0/w1集合并算span与unique数；整2倍下采样源pair不重叠，跨输出reuse不成立；8倍上采样case5共享源区显著，复用策略须分组。源行边界clamp使h0==h1或w0==w1允许读复用却不允许删四项运算：0*Inf/NaN仍影响结果。若API/精度不满足，只先外提oh相关坐标且仍用原ResizeOne算术，不声称Vector方案已实现。 这些检查只支持源工作/地址表达式适用性，不能支持完整数值语义；semantic_equivalence已改为unknown。",
+        "evidence_refs": [
+          {
+            "path": "R2-static-evidence.json",
+            "sha256": "sha256:e38f50f43f8da7b751a34e46bd7afbfe52d5616d0db5f1d066df31a57fa63114"
+          }
+        ]
+      },
+      {
+        "prediction_id": "o1-perf",
+        "judgement": "not_tested",
+        "reason": "没有有效硬件计时，静态操作数不能支持性能预测。",
+        "evidence_refs": []
+      }
+    ],
+    "current_parent_ref": {
+      "path": "source/SOURCE-MANIFEST.json",
+      "sha256": "sha256:055122fc869f7b352dc69e5f37b53971d9cb47ff1ed7f95f01d2008401c09c5e"
+    },
+    "parent_reason": "无已实施后继；保持原始源码hash。",
+    "same_action_reason": "按20case解析scale_factor到真实outH/outW，逐输出列枚举w0/w1集合并算span与unique数；整2倍下采样源pair不重叠，跨输出reuse不成立；8倍上采样case5共享源区显著，复用策略须分组。源行边界clamp使h0==h1或w0==w1允许读复用却不允许删四项运算：0*Inf/NaN仍影响结果。若API/精度不满足，只先外提oh相关坐标且仍用原ResizeOne算术，不声称Vector方案已实现。",
+    "new_information": "逐20case新增公式/地址检验，参见R2-static-evidence.json。 独立复核修正精确证明定位；完整语义条件收紧为unknown，数学映射单独已知。"
+  }
+}

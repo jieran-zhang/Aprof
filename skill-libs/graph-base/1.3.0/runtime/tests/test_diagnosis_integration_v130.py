@@ -1,4 +1,4 @@
-"""真实200条知识包与隔离目录演练；fixture全为CPU合成声明，不是实测案例。"""
+"""真实202条知识包与隔离目录演练；fixture全为CPU合成声明，不是实测案例。"""
 import json
 import os
 from pathlib import Path
@@ -9,7 +9,9 @@ import sys
 from aprof_runtime import bindings, diagnosis
 from aprof_runtime.diagnosis_reasoning import validate_case, validate_proposal
 from aprof_runtime.jsonio import content_hash
-from test_action_handoff_v3 import chain_fixture, write_json
+from test_action_decision import attach, make_decision
+from test_action_decision_v2 import v2_fields
+from test_action_handoff_v3 import write_json
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -37,8 +39,10 @@ def test_profile_retrieval_requires_explicit_time_basis():
 
 def test_real_templates_route_and_cli_handoff(tmp_path):
     artifact = diagnosis.verify(ROOT)
-    assert len(artifact['records']) == 200
-    chain = chain_fixture(ROOT, artifact, tmp_path / 'task')
+    assert len(artifact['records']) == 202
+    decision, chain = make_decision(ROOT, artifact, tmp_path / 'task', workload={'cases': [{'case_id': 'singleton', 'workload': {'shape': [64], 'dtype': 'float32', 'layout': 'ND'}}]})
+    decision = v2_fields(decision, chain[0]['reasoning'])
+    attach(decision, chain, tmp_path / 'task')
     result = bindings.validate_chain(ROOT, *chain, task_root=tmp_path / 'task')
     assert result['status'] == 'implemented'
     assert 'optimization' not in chain[1]['selection']
@@ -60,12 +64,14 @@ def test_real_templates_route_and_cli_handoff(tmp_path):
         assert not validate_proposal(ROOT, json.loads(path.read_text()))['promotion']['eligible']
 
 
-def test_v4_package_relocates_and_replays_without_checkout_network_or_scratch(tmp_path):
+def test_v7_package_relocates_and_replays_without_checkout_network_or_scratch(tmp_path):
     package = tmp_path / 'retained-package'
     shutil.copytree(ROOT, package, ignore=shutil.ignore_patterns(
         '__pycache__', '.pytest_cache', '.runtime-env', '*.egg-info'))
     artifact = diagnosis.verify(package)
-    chain = chain_fixture(package, artifact, package / 'task')
+    decision, chain = make_decision(package, artifact, package / 'task', workload={'cases': [{'case_id': 'singleton', 'workload': {'shape': [64], 'dtype': 'float32', 'layout': 'ND'}}]})
+    decision = v2_fields(decision, chain[0]['reasoning'])
+    attach(decision, chain, package / 'task')
     for index, record in enumerate(chain, 1):
         write_json(package / f'C{index}.json', record)
     script = r'''
@@ -82,15 +88,17 @@ def isolated(event, args):
             raise RuntimeError('external package dependency: ' + str(path))
 sys.addaudithook(isolated)
 sys.path.insert(0, str(root / 'runtime/src'))
-from aprof_runtime import bindings, diagnosis
+from aprof_runtime import __version__, bindings, diagnosis
 from aprof_runtime.graph import load_snapshot
 from aprof_runtime.knowledge import verify as verify_tree
 from aprof_runtime.diagnosis_reasoning import validate_case, validate_proposal
-assert diagnosis.verify(root)['version'] == 'v0004'
-for owner, version in (('parallel-planning', 'v0002'), ('optimization', 'v0004')):
+assert __version__ == '0.8.1'
+assert diagnosis.verify(root)['version'] == 'v0007'
+for owner, version in (('parallel-planning', 'v0004'), ('optimization', 'v0007')):
     assert verify_tree(root, owner)['version'] == version
-old, _ = load_snapshot(root / 'skills/ascendc-aprof-diagnosis/graph/versions/v0003')
-assert old['version'] == 'v0003'
+for version in ('v0003', 'v0004', 'v0005', 'v0006'):
+    old, _ = load_snapshot(root / 'skills/ascendc-aprof-diagnosis/graph/versions' / version)
+    assert old['version'] == version
 chain = [json.loads((root / f'C{i}.json').read_text()) for i in (1, 2, 3)]
 assert bindings.validate_chain(root, *chain, task_root=root / 'task')['status'] == 'implemented'
 skill = root / 'skills/ascendc-aprof-diagnosis'

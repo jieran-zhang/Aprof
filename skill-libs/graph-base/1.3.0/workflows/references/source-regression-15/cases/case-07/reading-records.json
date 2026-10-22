@@ -1,0 +1,82 @@
+{
+  "task_id": "case-07",
+  "complete_directory_count": 28,
+  "directory_review": "全部28个轻目录均审读；按当前复制/坐标/分配/队列成本选正文。Cube、跨kernel融合、归约/merge等不属于当前主数据路径，不加载全部正文。",
+  "used": [
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+        "sha256": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db"
+      },
+      "locator": "lines:316-363",
+      "effect_kind": "applicability",
+      "before": "以全输出大小作为可合并长度",
+      "after": "必须逐段核对真实地址差；不连续空洞分开，run1路径不能用连续DMA。",
+      "applicability": "strided_slice当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md",
+        "sha256": "sha256:678b709d7ea4092de4145febb3c7174155094d097e47f2b42b3f073d499b1c25"
+      },
+      "locator": "lines:46-86",
+      "effect_kind": "plan",
+      "before": "布局模板似乎要求引入转置",
+      "after": "正文先列连续切片直接批量搬运；只采用一般映射、合轴和唯一owner，不引入transpose/Gather中间区。",
+      "applicability": "strided_slice当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+        "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+      },
+      "locator": "lines:69-108",
+      "effect_kind": "parameters",
+      "before": "合并跨行DataCopy即可",
+      "after": "前段末端必须等于后段起点；将run与原owner交集后按有效字节搬运，并在MTE3读取结束后复用槽。",
+      "applicability": "strided_slice当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    }
+  ],
+  "additional_problem_reading": [
+    {
+      "id": "problem.scalar_control_hot_loop",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+      "why": "每元素rank除模和Raw复制能否改成连续段搬运"
+    },
+    {
+      "id": "problem.noncontiguous_access",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+      "why": "正stride和mask归一化后，哪些case可保留物理连续内轴"
+    },
+    {
+      "id": "problem.fragmented_writeback",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.fragmented_writeback.md",
+      "why": "连续输出逐元素写回与按段批写的成本/合法性"
+    },
+    {
+      "id": "problem.control_metadata_overhead",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+      "why": "正文提出的替代解释/代价：结合当前strided_slice源码，进一步区分新增局部状态spill、地址控制或容量对流水的限制。"
+    }
+  ],
+  "selected_P": [
+    "planning.layout.transpose"
+  ],
+  "selected_O": [
+    "implementation.memory-transfer.coalesce",
+    "implementation.tiling-tail.valid-length"
+  ],
+  "limits": "真正采用项单列，不把router自动复制全文或全部matches视为已读/已实施；P/O采用仅为条件分析。"
+}

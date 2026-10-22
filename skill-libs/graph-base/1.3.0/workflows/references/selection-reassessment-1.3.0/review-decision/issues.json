@@ -1,0 +1,67 @@
+{
+  "review_scope": "decision v2 runtime/schema/workflow/contracts",
+  "issues": [
+    {
+      "id": "R1",
+      "priority": 1,
+      "title": "正常 valid timing 被绝对请求路径误拒",
+      "status": "fixed_and_independently_verified",
+      "file": "runtime/src/aprof_runtime/action_decision_v2.py",
+      "initial_line": 198,
+      "reproduction": "test_valid_timing_output_rejected_due_to_absolute_request_path",
+      "problem": "finalize_timing 生成绝对 request.path；v2误用只接受包内相对路径的 _task_ref。正常反馈全部拒绝。",
+      "fix": "复用已由 verify_timing 验证的绝对请求路径读取。"
+    },
+    {
+      "id": "R2",
+      "priority": 1,
+      "title": "结构和正确性可串用另一候选/工作负载的证据",
+      "status": "fixed_and_independently_verified",
+      "file": "runtime/src/aprof_runtime/action_decision_v2.py",
+      "initial_line": 212,
+      "reproduction": "test_cross_candidate_correctness_and_structure_evidence_accepted",
+      "problem": "同task/path/hash合法的候选B结果可作为候选A passed/realized证据；未核对结果身份。",
+      "fix": "证据JSON回执显式绑定父实现、候选实现和workload身份；结构源码可直接绑定当前attempt。"
+    },
+    {
+      "id": "R3",
+      "priority": 2,
+      "title": "补证据标签绕过继续同方案检查并授权实施",
+      "status": "fixed_and_independently_verified",
+      "file": "runtime/src/aprof_runtime/action_decision_v2.py",
+      "initial_line": 238,
+      "reproduction": "test_next_step_collect_evidence_can_authorize_unchanged_c3",
+      "problem": "R1预测与证据原样照抄，next_step=collect_evidence但selection=experiment能通过implementation=True；改名continue才拒绝。",
+      "fix": "补证据与实施选择必须一致，后继引用包含所选机会，修复及机制更换检查实际状态。"
+    },
+    {
+      "id": "R4",
+      "priority": 2,
+      "title": "声明测量域未绑定真实计时case",
+      "status": "fixed_and_independently_verified",
+      "file": "runtime/src/aprof_runtime/action_decision_v2.py",
+      "initial_line": 201,
+      "reproduction": "probe_measurement_scope.py",
+      "problem": "前轮域只含singleton，实际计时case=1；隔离绝对路径缺陷后仍可宣称该域已测。",
+      "fix": "将真实result.cases与声明域中的case成员交叉核对，禁止扩大或隐去范围。"
+    },
+    {
+      "id": "R5",
+      "priority": 2,
+      "title": "替代机会同名预测覆盖所选机会的继续判据",
+      "status": "fixed_and_independently_verified",
+      "file": "runtime/src/aprof_runtime/action_decision_v2.py",
+      "initial_line": 241,
+      "reproduction": "test_alternative_same_named_prediction_can_satisfy_selected_continuation",
+      "problem": "预测ID仅在机会内唯一；全局字典覆盖使仅修改替代机会的同名预测即可允许所选方案继续。",
+      "fix": "后继判别预测仅解析当前及前轮所选机会，避免跨机会借用。"
+    }
+  ],
+  "unresolved_findings": [],
+  "verification": "fix-verification.json",
+  "limits": [
+    "CPU synthetic measurement only, no hardware or training",
+    "Runtime identity checks do not prove natural-language causal reasoning"
+  ],
+  "final_increment": "measured_case_ids binds actual result; semantic domains only declare intersection, allowing partial-domain feedback without rewriting previous records"
+}

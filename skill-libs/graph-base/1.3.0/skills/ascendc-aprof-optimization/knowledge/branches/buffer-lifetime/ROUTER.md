@@ -28,6 +28,21 @@ parent: implementation.root
 references: []
 evidence_status: source_reviewed_not_benchmarked
 routes:
+- target: implementation.buffer-lifetime.derived-results
+  match: []
+  exclude:
+  - field: excluded_recipes
+    op: contains
+    value: implementation.buffer-lifetime.derived-results
+  required_evidence:
+  - constraint.semantic_equivalence
+  - constraint.capacity
+  - constraint.plan_freedom
+  - constraint.dependency_lifetime
+  - constraint.target_api
+  prior_score: 2
+  fallback: false
+  seed_reason: 仅既有分支内的条件候选；正文适用域和成本仍须核验，不强制优先。
 - target: implementation.buffer-lifetime.reuse
   match: []
   exclude:
@@ -75,7 +90,6 @@ routes:
   fallback: false
   seed_reason: 属于本分支的条件性方案；先核验正文的能力、语义和资源前提，再比较成本。
 ---
-
 # Buffer 存活期与布局 路由
 
 按 C2 冻结的方案与 features 选择实现技巧；可同时进入多个分支。保持算法、所有权和数值契约；超出已声明自由度时请求重规划。

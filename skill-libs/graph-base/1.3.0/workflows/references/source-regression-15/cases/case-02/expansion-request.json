@@ -1,0 +1,41 @@
+{
+  "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+  "task_id": "raw15-case-02",
+  "context_hash": "sha256:696a3d6fb012702d15fcb4eab078738b5389d19fd62352a5c6704548cfd95eef",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "graph_version": "v0005",
+  "source_context_ref": {
+    "path": "origin.json",
+    "sha256": "sha256:dd530e374ba9c2b66352284a0d47952cd31846d5cfe12f1702095d487b36ef0d"
+  },
+  "retrieval_hash": "sha256:f1b5f7c55890fe41c549f25d273ed9db51986c293bc0e06787d783d749af8fee",
+  "selections": [
+    {
+      "problem_id": "problem.onchip_capacity_pressure",
+      "reason": "FP32仍有三片fp buffer与原始in/out，需区分可复用机会与已证容量压力。",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.current_kernel"
+      ]
+    },
+    {
+      "problem_id": "problem.redundant_cast",
+      "reason": "低精度仅输入输出各转换一次，判断是否存在可删转换。",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.current_kernel"
+      ]
+    },
+    {
+      "problem_id": "problem.pipeline_serialization",
+      "reason": "2048 tile单槽，比较保留数值链的流水方案。",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.current_kernel"
+      ]
+    }
+  ]
+}

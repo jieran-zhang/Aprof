@@ -2,7 +2,7 @@
 schema_version: aprof.knowledge-record/v1
 id: implementation.scalar-control.constant_lifetime
 kind: recipe
-version: 1.0.0
+version: 1.2.0
 status: active
 title: 编译期常量、对象别名与标量存活期
 scope:
@@ -41,6 +41,22 @@ sources:
   - 296
   sha256: sha256:103ec2d4324f59620a49df8b4ddaec36c81552c1a5a850233177ecec77a34946
   excerpt_sha256: sha256:103ec2d4324f59620a49df8b4ddaec36c81552c1a5a850233177ecec77a34946
+- path: skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md
+  original_path: ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md
+  revision: 41377d0a442cd5b1c2356874873a3dda591c6633
+  lines:
+  - 1
+  - 478
+  sha256: sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c
+  excerpt_sha256: sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c
+- path: skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bs.h
+  original_path: posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bs.h
+  revision: d7e6a7c6c1450c040049486845336c77f3100406
+  lines:
+  - 1
+  - 299
+  sha256: sha256:92e2365907ffbd499d113d173a67bd2ade41d1a92d82f3d20b3965eaad17b001
+  excerpt_sha256: sha256:92e2365907ffbd499d113d173a67bd2ade41d1a92d82f3d20b3965eaad17b001
 learning: {}
 tags:
 - alias-analysis
@@ -97,3 +113,9 @@ __aicore__ inline uint64_t TileOffset(uint64_t tileIndex,
 常量化与作用域变化应保持全部数学操作、Cast 舍入和特殊值模式；浮点表达式的折叠、FMA 合并或运算重排可能改变数值，必须按原精度标准审查，不能把“都是常量”当作等价证明。验证所有特化命中/未命中、空输入、尾部、别名允许/禁止与固定布局的全部分支。检查 binary 大小、栈、spill、对象初始化指令和 Task 时间；spill 增长、ICache 恶化、tensor 绑定旧槽、事件被错误常量化时回退到原动态实现。
 
 来源事实：通用 scalar 文档给出动态数组别名、局部值、贴近使用、避免多级指针、constexpr 和对象构造/地址逃逸的机制；arch22 FA 文档把静态 LocalTensor 限定为固定布局并要求区间证明。上述有限特化乘积、活跃集合模型与区间核验为工程提炼。通用改写可用于 910B/910C 与 950，具体构造与架构 guard 由目标 SDK 确认；没有引入 3510 的 VF/SIMT，也没有任何跨代阈值或速度保证。
+
+## 缓存派生状态之前，比较重算与活跃范围
+
+首先辨认值依赖哪些轴以及跨哪层循环不变。字段缓存/地址外提与数学派生状态复用不是同一意图：后者涉及浮点顺序、边界模式、索引范围和更多状态，必须按C2/Action许可审查。共同成本模型见 [buffer生命周期中的值与存储复用](../../buffer-lifetime/recipes/reuse.md)，不把任意预计算归入本条自动授权。
+
+候选可比较“即用即算”“每小段构造后消费”“整个复用域常驻”三种实际可行范围，分别计构造次数、状态个数、读取次数及循环次序变化。来自固定scalar文档的活跃区间/spill说明支持检查风险，不提供通用的寄存器数或结构体大小门槛。源码可确认依赖和生命周期；编译器是否已CSE、是否spill及其耗时未测时保留预测，不因此否决有依据的试验，也不认定缓存必然有效。

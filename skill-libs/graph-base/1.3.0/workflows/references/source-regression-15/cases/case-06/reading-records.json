@@ -1,0 +1,81 @@
+{
+  "task_id": "case-06",
+  "complete_directory_count": 28,
+  "directory_review": "全部28个轻目录均审读；按当前复制/坐标/分配/队列成本选正文。Cube、跨kernel融合、归约/merge等不属于当前主数据路径，不加载全部正文。",
+  "used": [
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+        "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+      },
+      "locator": "lines:297-344",
+      "effect_kind": "mechanism",
+      "before": "考虑仅缓存几项字段",
+      "after": "重复地址前缀是同等可选意图，选择mixed-radix增量地址以删除每输出rank除模；编译器CSE和spill留待检验。",
+      "applicability": "gather当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+        "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+      },
+      "locator": "lines:85-126",
+      "effect_kind": "plan",
+      "before": "展平P/J/Q可直接套地址",
+      "after": "非gather轴可小于X，必须保留逐维xStride；尾轴Gather与非尾轴transpose是不同代价，优先所有case地址递增。",
+      "applicability": "gather当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+        "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+      },
+      "locator": "lines:57-104",
+      "effect_kind": "parameters",
+      "before": "用固定rank特化替换整个实现",
+      "after": "按最小不变域初始化和进位，保持原每核序列，不复制无关平台指令；rank1单独删掉无用坐标。",
+      "applicability": "gather当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    }
+  ],
+  "additional_problem_reading": [
+    {
+      "id": "problem.scalar_control_hot_loop",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+      "why": "逐元素 index/x/y 访存与rank解码是否应整体改造而非仅缓存字段"
+    },
+    {
+      "id": "problem.noncontiguous_access",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+      "why": "随机输入地址与连续输出并存；区分无法消除的随机输入和可批写输出"
+    },
+    {
+      "id": "problem.control_metadata_overhead",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+      "why": "每元素64位除模及公共地址前缀可增量更新，核对其与向量化的区别"
+    },
+    {
+      "id": "problem.register_spill",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.register_spill.md",
+      "why": "正文提出的替代解释/代价：结合当前gather源码，进一步区分新增局部状态spill、地址控制或容量对流水的限制。"
+    }
+  ],
+  "selected_P": [
+    "planning.indexing.gather_output_owned"
+  ],
+  "selected_O": [
+    "implementation.scalar-control.hot_loop_address"
+  ],
+  "limits": "真正采用项单列，不把router自动复制全文或全部matches视为已读/已实施；P/O采用仅为条件分析。"
+}

@@ -1,0 +1,41 @@
+{
+  "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+  "task_id": "case-07",
+  "context_hash": "sha256:2392dbb27c8ea1f92eb2160cd3f59b549942e62f399ced3e4aef71389b127ae6",
+  "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+  "graph_version": "v0006",
+  "source_context_ref": {
+    "path": "context-origin.json",
+    "sha256": "sha256:f8d091358616028242f22a8e35fd802044a548b3e9d1624dd40aaaf167575f90"
+  },
+  "retrieval_hash": "sha256:6487cd7673c607c340d36b768d16617a7858de40bbab927d5a1cc2866371448d",
+  "selections": [
+    {
+      "problem_id": "problem.scalar_control_hot_loop",
+      "reason": "仿射切片逐元素解码和标量copy，可按连续段或固定步长批量表达",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "仿射切片逐元素解码和标量copy，可按连续段或固定步长批量表达"
+      ]
+    },
+    {
+      "problem_id": "problem.control_metadata_overhead",
+      "reason": "比较仅减少地址解码与批量搬运的工作差别",
+      "trigger": "alternative_mechanism",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "比较仅减少地址解码与批量搬运的工作差别"
+      ]
+    },
+    {
+      "problem_id": "problem.noncontiguous_access",
+      "reason": "sourceStep正步长且new/shrink轴改变物理连续段，检查布局边界",
+      "trigger": "alternative_mechanism",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "sourceStep正步长且new/shrink轴改变物理连续段，检查布局边界"
+      ]
+    }
+  ]
+}

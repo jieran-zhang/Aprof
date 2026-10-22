@@ -2,7 +2,7 @@
 schema_version: aprof.knowledge-record/v1
 id: planning.elementwise.continuous
 kind: template
-version: 1.1.0
+version: 1.2.0
 status: active
 title: 连续输出分区与均衡尾块
 scope:
@@ -46,6 +46,22 @@ sources:
   sha256: sha256:3fd854a223214eec19b03eebf4be3397c81358ebd526d07b17202a5fd522b654
   excerpt_sha256: sha256:5c62ddc8f95f62eca158343a50005bb51f6f08f057946a4d67ba030dbd26da6c
 - path: skills/ascendc-aprof-parallel-planning/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/README.md
+  original_path: examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/README.md
+  revision: d378849769f9ee610af9d0ac38db2b3b6bed3209
+  lines:
+  - 7
+  - 18
+  sha256: sha256:14f2219ba48fdf536ac5cf018c2f70b6fd4a0a074d2dede49c9a6ca187d8e9dd
+  excerpt_sha256: sha256:accaf93a389515058582a1b86c73fddc763155871b2f09255a4a08212d7541de
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/add_tpipe_tque.asc
+  original_path: examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/add_tpipe_tque.asc
+  revision: d378849769f9ee610af9d0ac38db2b3b6bed3209
+  lines:
+  - 20
+  - 75
+  sha256: sha256:3fd854a223214eec19b03eebf4be3397c81358ebd526d07b17202a5fd522b654
+  excerpt_sha256: sha256:fb975d9faab55d910f8e4df0a9f2995d9cf26ed8c737bfb91a1e08504979c297
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/README.md
   original_path: examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/README.md
   revision: d378849769f9ee610af9d0ac38db2b3b6bed3209
   lines:
@@ -155,3 +171,18 @@ EnQue/DeQue 表达搬入→计算→搬出依赖；不得在同一物理区的�
 固定 asc-devkit 样例 README 给出的范围是 Atlas A2/A3（CANN≥9.0）和 950PR/950DT（CANN≥9.1）；这是该修订的样例范围。面向 910C/A3 应核对实际 SoC/编译目标，不能借用 950 的寄存器路径、NDDMA 或动态 Broadcast 能力。scope=all 仅表示可检索，未证明任意平台、dtype、API 组合可执行。
 
 至少验证 N∈{0,1,g−1,g,g+1,U−1,U,U+1}、Q 不能整除 C、多核最后一片、最大整数偏移、全分配容量和精确输出覆盖。数值用大/小量级混合、±0、NaN/Inf、溢出边界检查声明的合同。来源事实是均匀连续分区、UB 分块、队列数据流；均衡公式、字节模型与参数比较为本条工程推导。证据状态为 source_reviewed_not_benchmarked，无 NPU 时延或收益验证。
+
+## 选择前比较：连续段、短行与 tile 不能只看容量
+
+本节为依据 Add 队列样例与广播合轴规则作出的规划推导。样例只能直接确认“连续分区、按字节分配、队列传递”的事实，不能确认队列已经隐藏搬运延迟。
+
+先对每个 dtype/真实 stride 域保存 `(N,C,U,d)`，并按有效元素数分别计：输入读 `NΣs_i` 字节、输出写 `Ns_o` 字节、算术 `Nf` 次、核内 tile 数 `L=Σ_c ceil(N_c/U)`、尾片数及 padding 元素数。`f` 是每元素明确列出的逻辑算术次数；Cast、地址解码和同步单独列，不合并为“总成本”。采用新 U 只减少循环与接口调用，不会自动减少必要 GM 字节或逐元素算术。
+
+对于由 R 行、每行 H 个连续元素构成的路径，有两种不同机会：
+
+- **直接展平**：所有输入在行边界两侧都连续、标量/属性及数值路径不随行改变时，以 RH 元素连续段处理；跨行无需重新初始化。若输入每行有 padding 或广播位图变化，则不能如此展平。
+- **短行组合**：语义仍按行执行，但同一 owner 收集 h 行进入一个批次。保持每行有效 H 与物理行跨度 Ha 分离；容量与计算按 hHa，GM 有效搬出按 hH。规则行间 stride 可用已验证的多段搬运，任意间隔仍需逐段；批次不等于只发一次 DMA。初始化、mask、索引表等若按 Ha 执行，新增 `h(Ha−H)` 个无效 lane 工作必须计入比较。
+
+这两者的主要收益假设分别是去掉行级调度和摊销短接口发射；都不是扩大 UB 的同义词。更大 h/U 会减少核内批次或循环；固定核数 C 时不改变独立 owner/task 数，只有同时改变跨 owner 工作域或重新分核才可能减少 task，可能增加尾部浪费、临时存活量并挤掉第二个 buffer。若瓶颈仍可能是逐元素昂贵函数、转换或不连续输入，本次选择须保留它们作为残余机会。没有测得时间权重时，只比较工作类别及方向，不从调用次数给出确定收益。
+
+C2 输出完整适用域与未变路径；C3 若为了 API 尾部把所有主 tile 都清零、额外转换或加入全流水 barrier，应将新增工作反馈给选择阶段。不能以“已有 TQue”“已实现 Vector API”作为无需比较流水或计算粒度的依据。

@@ -2,7 +2,7 @@
 schema_version: aprof.knowledge-record/v1
 id: implementation.pipeline-sync.pipeline
 kind: recipe
-version: 1.1.0
+version: 1.2.0
 status: active
 title: 流水阶段、队列与事件的闭合实现
 scope:
@@ -45,6 +45,38 @@ sources:
   - 151
   sha256: sha256:69845e8fa794040e321959eaa57105a79cdf880c2d9460b7bf65a53f3c644827
   excerpt_sha256: sha256:02edbe3918b020be18c5b07b81c9bc18153e3f3ab7ba41a9962391c7173aa399
+- path: skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/cann-samples/17c948bb961fc6a660e4fcab45f6bf217c9c6239/Samples/2_Performance/rms_norm_quant_story/src/4_double_buffer.asc
+  original_path: Samples/2_Performance/rms_norm_quant_story/src/4_double_buffer.asc
+  revision: 17c948bb961fc6a660e4fcab45f6bf217c9c6239
+  lines:
+  - 1
+  - 569
+  sha256: sha256:6b027cb2b0faa24546a5d13339f06f93a1e8fe0bed527c80866038ae12c0557a
+  excerpt_sha256: sha256:6b027cb2b0faa24546a5d13339f06f93a1e8fe0bed527c80866038ae12c0557a
+- path: skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/cann-samples/17c948bb961fc6a660e4fcab45f6bf217c9c6239/Samples/2_Performance/rms_norm_quant_story/CMakeLists.txt
+  original_path: Samples/2_Performance/rms_norm_quant_story/CMakeLists.txt
+  revision: 17c948bb961fc6a660e4fcab45f6bf217c9c6239
+  lines:
+  - 1
+  - 57
+  sha256: sha256:6e7620af55c25f4c17416072ad4e9b82f065e23d55b58449d56db6ad3e46a123
+  excerpt_sha256: sha256:6e7620af55c25f4c17416072ad4e9b82f065e23d55b58449d56db6ad3e46a123
+- path: skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/cann-samples/17c948bb961fc6a660e4fcab45f6bf217c9c6239/Samples/2_Performance/rms_norm_quant_story/README.md
+  original_path: Samples/2_Performance/rms_norm_quant_story/README.md
+  revision: 17c948bb961fc6a660e4fcab45f6bf217c9c6239
+  lines:
+  - 1
+  - 607
+  sha256: sha256:31d54b8888424d789e909b56e16e410042d3575ce85c3b0df8e62f717affa2aa
+  excerpt_sha256: sha256:31d54b8888424d789e909b56e16e410042d3575ce85c3b0df8e62f717affa2aa
+- path: skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/sync_control/intra_core_sync/PipeBarrier_ISASI.md
+  original_path: docs/zh/api/SIMD-API/basic_api/sync_control/intra_core_sync/PipeBarrier_ISASI.md
+  revision: d378849769f9ee610af9d0ac38db2b3b6bed3209
+  lines:
+  - 1
+  - 97
+  sha256: sha256:730571f5039906830624ccba76cff76d318305831f96538d7821be7c7c737773
+  excerpt_sha256: sha256:730571f5039906830624ccba76cff76d318305831f96538d7821be7c7c737773
 learning: {}
 tags: []
 seed_reason: 内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。
@@ -163,3 +195,13 @@ S2/S3 的 arch22 路线支持 L1/L0 ping-pong 与精确反向事件。A/B 的大
 - S4：[docs/zh/api/SIMD-API/basic_api/sync_control/inter_core_sync/CrossCoreWaitFlag_ISASI.md](../../../sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/sync_control/inter_core_sync/CrossCoreWaitFlag_ISASI.md)，行 28–151；修订 `d378849769f9ee610af9d0ac38db2b3b6bed3209`。
 
 来源事实、本文推导与待验证项在正文分别标注。冻结源码及仓库许可证随包保存；本次仅完成审读，未在目标 SDK 构建，未运行 NPU 正确性或性能测量。源码存在不代表当前 shape 已分派到该路径，任何收益都须由当前候选的完整正确性、Task Duration 与针对性 timeline 证明。
+
+## 选择前比较流水代价，实施后核对真正的完成边
+
+已有queue只证明使用了管理接口，不证明有并发阶段。先列每个tile的实际copy/compute/store及其等待：某个等待是否依赖本tile，是否错误等待其他槽，是否在下一独立任务发射前执行了全流水完成。缩小同步按依赖边做，不按“删除barrier数量”做。MTE2→V输入就绪、V→MTE2输入槽可覆盖、V→MTE3输出就绪、MTE3→V输出槽可覆盖是不同边；`PIPE_V`不能替代跨引擎边。
+
+令N为tile数，`ti,tc,to`分别为单tile搬入/计算/搬出时间（同一单位，未测时保留符号）。无重叠参考为 `N*(ti+tc+to)`；在资源独立、依赖允许且达到稳态的理想模型中为 `ti+tc+to+(N-1)*max(ti,tc,to)`。这是时间下界式比较模型，不是收益保证；共享带宽、发射、队列阻塞、尾部与启动成本都可能破坏理想假设。没有时间依据就仅报告可以重叠的阶段，不编造数值。
+
+增加槽数d若迫使tile从T减到T'，要同时比较tile数从`ceil(total/T)`增至`ceil(total/T')`后的API/事件/尾部次数；不能只看“覆盖了搬运”。参数化tile+单/双槽可在C2许可范围内比较，无需先增加Tiling Key。无法证明多槽覆盖范围、或仅单tile域时保留简单计划也是合理结果。
+
+固定cann-samples RMSNormQuant故事的`4_double_buffer.asc`使用两份输入/输出物理槽、单份gamma输入并在循环前搬入及转FP32 gamma。它的CMake明确限定dav-3510、README限定950，代码中VF/Reg不可直接移植910C。可复用的工程推导是“长存活复用区与轮转槽分别预算”，不是把该样例的性能、数量或Reg路径当作A3证明。

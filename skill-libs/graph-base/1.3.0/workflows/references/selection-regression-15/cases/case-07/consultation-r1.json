@@ -1,0 +1,191 @@
+{
+  "task_id": "case-07",
+  "round": 1,
+  "consultations": [
+    {
+      "instance_id": "batch-r1",
+      "owner": "parallel-planning",
+      "route_ref": {
+        "path": "batch-r1-parallel-planning-route.json",
+        "sha256": "sha256:8f477416174951984ca5cff524dc9189b9fa3257b742cc28d06b6e9776bcf015"
+      },
+      "mode": "conditional_consultation",
+      "consulted_document_refs": [
+        {
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+          "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+        }
+      ],
+      "consultation_limits": "正文用于机会比较与条件方案；只有route_ref内的可路由候选可进入该实例正式选择；partial适用见knowledge_use。本轮无P/O叶子正式采用或实现。",
+      "plan_status": "extract_existing_or_replan; no prior confirmed plan; no KEEP",
+      "implementation": "not_implemented"
+    },
+    {
+      "instance_id": "batch-r1",
+      "owner": "optimization",
+      "route_ref": {
+        "path": "batch-r1-optimization-route.json",
+        "sha256": "sha256:3fd4cac3ae9ead076f09187b9ec7ae0a2d1c8cf7c77a0ded771d17328dc1b6e9"
+      },
+      "mode": "conditional_consultation",
+      "consulted_document_refs": [
+        {
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/strided-pad.md",
+          "sha256": "sha256:dbd61eaa8bb85b89b10ae445f1cff983baaaf8aa7a707b07900c18ac60262403"
+        },
+        {
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+          "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+        }
+      ],
+      "consultation_limits": "正文用于机会比较与条件方案；只有route_ref内的可路由候选可进入该实例正式选择；partial适用见knowledge_use。本轮无P/O叶子正式采用或实现。",
+      "plan_status": "extract_existing_or_replan; no prior confirmed plan; no KEEP",
+      "implementation": "not_implemented"
+    },
+    {
+      "instance_id": "address-r1",
+      "owner": "parallel-planning",
+      "route_ref": {
+        "path": "address-r1-parallel-planning-route.json",
+        "sha256": "sha256:8f477416174951984ca5cff524dc9189b9fa3257b742cc28d06b6e9776bcf015"
+      },
+      "mode": "conditional_consultation",
+      "consulted_document_refs": [
+        {
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+          "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+        }
+      ],
+      "consultation_limits": "正文用于机会比较与条件方案；只有route_ref内的可路由候选可进入该实例正式选择；partial适用见knowledge_use。本轮无P/O叶子正式采用或实现。",
+      "plan_status": "extract_existing_or_replan; no prior confirmed plan; no KEEP",
+      "implementation": "not_implemented"
+    },
+    {
+      "instance_id": "address-r1",
+      "owner": "optimization",
+      "route_ref": {
+        "path": "address-r1-optimization-route.json",
+        "sha256": "sha256:f6ef6b77cc1dcac4443855d33ad4835c41dd3587ee500b73f6e24eaef1595e95"
+      },
+      "mode": "conditional_consultation",
+      "consulted_document_refs": [
+        {
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+          "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+        }
+      ],
+      "consultation_limits": "正文用于机会比较与条件方案；只有route_ref内的可路由候选可进入该实例正式选择；partial适用见knowledge_use。本轮无P/O叶子正式采用或实现。",
+      "plan_status": "extract_existing_or_replan; no prior confirmed plan; no KEEP",
+      "implementation": "not_implemented"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "batch",
+        "address"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+        "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+      },
+      "locator": "lines:85-126",
+      "effect_kind": "plan",
+      "before": "从原源码识别 Host解释begin/end/masks为outputShape/sourceStep/sourceBase；按64B写所有权对齐分核。Kernel逐元素rank解码，按位复制，不存在浮点算术。",
+      "after": "采用输出独占与真实source stride原则；Slice没有数据相关index，不采用完整Gather模板",
+      "applicability": "partial：只取owner/stride/bit-copy原则"
+    },
+    {
+      "opportunity_ids": [
+        "batch"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/strided-pad.md",
+        "sha256": "sha256:dbd61eaa8bb85b89b10ae445f1cff983baaaf8aa7a707b07900c18ac60262403"
+      },
+      "locator": "lines:77-138",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host解释begin/end/masks为outputShape/sourceStep/sourceBase；按64B写所有权对齐分核。Kernel逐元素rank解码，按位复制，不存在浮点算术。",
+      "after": "按有效行长/GM间隙/UB对齐分别定义单位；stride大到跨列不能整span载入",
+      "applicability": "partial：s=1规则连续段可完整表达，小stride压紧另需Gather"
+    },
+    {
+      "opportunity_ids": [
+        "address"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+        "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+      },
+      "locator": "lines:57-107",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host解释begin/end/masks为outputShape/sourceStep/sourceBase；按64B写所有权对齐分核。Kernel逐元素rank解码，按位复制，不存在浮点算术。",
+      "after": "大步长回退仍可按段地址递增，保持negative stride原位模式",
+      "applicability": "full：规则仿射地址且不改变原拷贝次序"
+    },
+    {
+      "opportunity_ids": [
+        "batch"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+        "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+      },
+      "locator": "lines:90-131",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host解释begin/end/masks为outputShape/sourceStep/sourceBase；按64B写所有权对齐分核。Kernel逐元素rank解码，按位复制，不存在浮点算术。",
+      "after": "普通整数bit-copy不能误用float Select，采用同宽UB取数需具体API证明",
+      "applicability": "partial：批处理控制与容量原则"
+    },
+    {
+      "opportunity_ids": [
+        "batch"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+        "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+      },
+      "locator": "lines:279-414",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host解释begin/end/masks为outputShape/sourceStep/sourceBase；按64B写所有权对齐分核。Kernel逐元素rank解码，按位复制，不存在浮点算术。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；本可按向量表达的元素处理使用逐元素Scalar访存或算术",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    },
+    {
+      "opportunity_ids": [
+        "address"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+        "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+      },
+      "locator": "lines:297-432",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host解释begin/end/masks为outputShape/sourceStep/sourceBase；按64B写所有权对齐分核。Kernel逐元素rank解码，按位复制，不存在浮点算术。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；循环不变字段或公共地址前缀在每轮重复加载/计算",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    },
+    {
+      "opportunity_ids": [
+        "batch"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+        "sha256": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db"
+      },
+      "locator": "lines:316-458",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host解释begin/end/masks为outputShape/sourceStep/sourceBase；按64B写所有权对齐分核。Kernel逐元素rank解码，按位复制，不存在浮点算术。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；切分或遍历轴跨过物理连续内轴",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    }
+  ],
+  "selected_intent_gap": null
+}

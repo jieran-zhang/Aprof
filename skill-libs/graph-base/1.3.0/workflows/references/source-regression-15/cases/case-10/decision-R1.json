@@ -1,0 +1,420 @@
+{
+  "schema_version": "aprof.action-decision/v1",
+  "task_id": "case-10",
+  "context_hash": "sha256:a954a5ee36bff4287fa8c7bbd6e4d07f05a2c5caf60533751468b64e92d53507",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "reasoning_ref": {
+    "path": "reasoning-R1.json",
+    "sha256": "sha256:73088375a879ae4d243975e7b601f672f88f0e664c2557e829b6149016f9b71c"
+  },
+  "reasoning_hash": "sha256:8b50cac8af488c2a6eb620de8bc99734662aefc8ce3de76a9955b6e927bec919",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/f3a6d55be57ea647180e624b4fffe6a25b55beea2b35d140d50fe71108f4232d.json",
+    "sha256": "sha256:02d64ca8cc4efafae4665940ea3cfd6bf955b40e79d76125906445f4337450a4"
+  },
+  "round": 1,
+  "current_parent_ref": {
+    "path": "source-index.json",
+    "sha256": "sha256:0c8706f1b3fb3ec5c5f0706c03434c1ed130f23e1287cd79bfb4ab0a98a2f2fe"
+  },
+  "opportunities": [
+    {
+      "id": "opportunity.primary",
+      "hypothesis_id": "hypothesis.primary",
+      "action_id": "action.software_pipeline_stages",
+      "action_instance_id": "instance.primary",
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "source.matrix",
+        "source.oracle"
+      ],
+      "cost_mechanism": "单物理输入/输出槽，CopyIn-Compute-CopyOut按tile4096顺序。FP32直接Sigmoid，半精度仅在边界各Cast一次并保留FP32中间两个区。必要逻辑GM为2*N*b，显式UB FP32=8*T，half/BF16=12*T；原192KiB注释不能认作目标资源。",
+      "predictions": [
+        {
+          "id": "primary.source-work",
+          "kind": "source_work",
+          "statement": "输入/输出物理槽由各1变2；T4096下显式UB全部dtype均65536B（未含SigmoidTmp/保留），原FP32为32768B、half/BF16为49152B。操作数、Cast数和有效GM字节不变，预取发射可跨tile安排。",
+          "check_method": "当前源码审读与完整20case公式；R2静态证据，后续真实patch/编译检查",
+          "on_support": "保留结构预测，按参数域继续条件规划",
+          "on_refute": "修订地址/分配公式或降低该候选优先级"
+        },
+        {
+          "id": "primary.performance",
+          "kind": "performance",
+          "statement": "如果原slot复用等待挡住下一tile MTE2且MTE/Vector可重叠，稳态时间可能下降；若实际已有充分重叠、Sigmoid计算独占或并发争用增加则不应保留双缓冲。",
+          "check_method": "未来完整正确性后，同源20case Task计时及针对性timeline/编译检查；本任务未测",
+          "on_support": "按组检查收益与回归后决定是否保留",
+          "on_refute": "保留失败与父本，按最强替代进一步判别"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_overlap_low",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "primary.performance",
+          "unknown_id": "primary.performance-unknown-1",
+          "reason": "当前仅有可适用来源及源码工作量；没有该项当前性能观察。"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "primary.performance",
+          "unknown_id": "primary.performance-unknown-2",
+          "reason": "当前仅有可适用来源及源码工作量；没有该项当前性能观察。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "primary.performance-unknown-1",
+          "kind": "performance",
+          "fact": "symptom.profile.overlap_low",
+          "expected_state": null,
+          "statement": "如果原slot复用等待挡住下一tile MTE2且MTE/Vector可重叠，稳态时间可能下降；若实际已有充分重叠、Sigmoid计算独占或并发争用增加则不应保留双缓冲。；具体政策假设 legacy_symptom_profile_overlap_low 尚无当前编译/Task证据。",
+          "affects": "决定该变化是否缩短当前关键路径，不能从源码工作量直接推出时延。",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "primary.performance-unknown-2",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "如果原slot复用等待挡住下一tile MTE2且MTE/Vector可重叠，稳态时间可能下降；若实际已有充分重叠、Sigmoid计算独占或并发争用增加则不应保留双缓冲。；具体政策假设 cost_reduction 尚无当前编译/Task证据。",
+          "affects": "决定该变化是否缩短当前关键路径，不能从源码工作量直接推出时延。",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "primary.safety-1",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "实际UB、Sigmoid内部临时空间与保留未取得；必须按每dtype/T和真实物理槽数总计。",
+          "affects": "限制具体参数/路径实施合法性，不否决条件方案或性能假设。",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "primary.safety-2",
+          "kind": "implementation_safety",
+          "fact": "constraint.dependency_lifetime",
+          "expected_state": true,
+          "statement": "具体目标TQue/异步API实现尚未编译核验，需确认Free后框架在下次复用前等待最后MTE3/Vector读者；已有依赖模型不是SDK回执。",
+          "affects": "限制具体参数/路径实施合法性，不否决条件方案或性能假设。",
+          "resolution": "check_before_implementation"
+        }
+      ],
+      "strongest_alternative_id": "opportunity.alt1",
+      "comparison": "可保持原T而提供真实双物理槽和预取窗口，直接检验原排程可避免等待；相比只增大tile，未把更大临时区当作必需。cast删除缺等价依据且不会消除必要数学计算。",
+      "disposition": "selected",
+      "reason": "可保持原T而提供真实双物理槽和预取窗口，直接检验原排程可避免等待；相比只增大tile，未把更大临时区当作必需。cast删除缺等价依据且不会消除必要数学计算。"
+    },
+    {
+      "id": "opportunity.alt1",
+      "hypothesis_id": "hypothesis.alt1",
+      "action_id": "action.dispatch_by_workload",
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "source.matrix",
+        "source.oracle"
+      ],
+      "cost_mechanism": "按dtype预算单槽T2048/4096/8192，增加tile可减少循环但可能降低流水或增加scratch；没有证据应一律取最大。",
+      "predictions": [
+        {
+          "id": "alt1.source-work",
+          "kind": "source_work",
+          "statement": "按dtype预算单槽T2048/4096/8192，增加tile可减少循环但可能降低流水或增加scratch；没有证据应一律取最大。",
+          "check_method": "当前源码审读与完整20case公式；R2静态证据，后续真实patch/编译检查",
+          "on_support": "保留结构预测，按参数域继续条件规划",
+          "on_refute": "修订地址/分配公式或降低该候选优先级"
+        },
+        {
+          "id": "alt1.performance",
+          "kind": "performance",
+          "statement": "按dtype预算单槽T2048/4096/8192，增加tile可减少循环但可能降低流水或增加scratch；没有证据应一律取最大。：收益未知。",
+          "check_method": "未来完整正确性后，同源20case Task计时及针对性timeline/编译检查；本任务未测",
+          "on_support": "按组检查收益与回归后决定是否保留",
+          "on_refute": "保留失败与父本，按最强替代进一步判别"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "alt1.performance",
+          "unknown_id": "alt1.performance-unknown-1",
+          "reason": "当前仅有可适用来源及源码工作量；没有该项当前性能观察。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "alt1.performance-unknown-1",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "按dtype预算单槽T2048/4096/8192，增加tile可减少循环但可能降低流水或增加scratch；没有证据应一律取最大。；具体政策假设 cost_reduction 尚无当前编译/Task证据。",
+          "affects": "决定该变化是否缩短当前关键路径，不能从源码工作量直接推出时延。",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "opportunity.primary",
+      "comparison": "按dtype预算单槽T2048/4096/8192，增加tile可减少循环但可能降低流水或增加scratch；没有证据应一律取最大。",
+      "disposition": "deferred",
+      "reason": "按dtype预算单槽T2048/4096/8192，增加tile可减少循环但可能降低流水或增加scratch；没有证据应一律取最大。"
+    },
+    {
+      "id": "opportunity.alt2",
+      "hypothesis_id": "hypothesis.alt2",
+      "action_id": "action.coalesce_cast",
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "source.matrix",
+        "source.oracle"
+      ],
+      "cost_mechanism": "只有输入升FP32与最终缩位，没有中间反复往返；删边界Cast会改变低精度精度契约。",
+      "predictions": [
+        {
+          "id": "alt2.source-work",
+          "kind": "source_work",
+          "statement": "只有输入升FP32与最终缩位，没有中间反复往返；删边界Cast会改变低精度精度契约。",
+          "check_method": "当前源码审读与完整20case公式；R2静态证据，后续真实patch/编译检查",
+          "on_support": "保留结构预测，按参数域继续条件规划",
+          "on_refute": "修订地址/分配公式或降低该候选优先级"
+        },
+        {
+          "id": "alt2.performance",
+          "kind": "performance",
+          "statement": "只有输入升FP32与最终缩位，没有中间反复往返；删边界Cast会改变低精度精度契约。：收益未知。",
+          "check_method": "未来完整正确性后，同源20case Task计时及针对性timeline/编译检查；本任务未测",
+          "on_support": "按组检查收益与回归后决定是否保留",
+          "on_refute": "保留失败与父本，按最强替代进一步判别"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "alt2.performance",
+          "unknown_id": "alt2.performance-unknown-1",
+          "reason": "当前仅有可适用来源及源码工作量；没有该项当前性能观察。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "alt2.performance-unknown-1",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "只有输入升FP32与最终缩位，没有中间反复往返；删边界Cast会改变低精度精度契约。；具体政策假设 cost_reduction 尚无当前编译/Task证据。",
+          "affects": "决定该变化是否缩短当前关键路径，不能从源码工作量直接推出时延。",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "opportunity.primary",
+      "comparison": "只有输入升FP32与最终缩位，没有中间反复往返；删边界Cast会改变低精度精度契约。",
+      "disposition": "rejected",
+      "reason": "只有输入升FP32与最终缩位，没有中间反复往返；删边界Cast会改变低精度精度契约。"
+    }
+  ],
+  "evidence_requests": [
+    {
+      "id": "request.safety-1",
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "unknown_ids": [
+        "primary.safety-1"
+      ],
+      "method": "在允许硬件/SDK阶段读取真实平台/API证据并对照方案逐项证明：实际UB、Sigmoid内部临时空间与保留未取得；必须按每dtype/T和真实物理槽数总计。",
+      "discriminating_results": [
+        {
+          "outcome": "条件与所给参数域成立",
+          "decision_effect": "允许构建候选并完整20case验证；仍不代表性能改善"
+        },
+        {
+          "outcome": "条件不满足",
+          "decision_effect": "缩小参数域或走原fallback；不把失败解释为性能机制反证"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行硬件/构建；当前任务禁止相关动作。",
+      "defer_reason": "用户限定CPU源码/公式分析，保留具体补项交后继。"
+    },
+    {
+      "id": "request.safety-2",
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "unknown_ids": [
+        "primary.safety-2"
+      ],
+      "method": "在允许硬件/SDK阶段读取真实平台/API证据并对照方案逐项证明：具体目标TQue/异步API实现尚未编译核验，需确认Free后框架在下次复用前等待最后MTE3/Vector读者；已有依赖模型不是SDK回执。",
+      "discriminating_results": [
+        {
+          "outcome": "条件与所给参数域成立",
+          "decision_effect": "允许构建候选并完整20case验证；仍不代表性能改善"
+        },
+        {
+          "outcome": "条件不满足",
+          "decision_effect": "缩小参数域或走原fallback；不把失败解释为性能机制反证"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行硬件/构建；当前任务禁止相关动作。",
+      "defer_reason": "用户限定CPU源码/公式分析，保留具体补项交后继。"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+        "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+      },
+      "locator": "lines:271-318",
+      "effect_kind": "mechanism",
+      "before": "InitBuffer两块即可宣称有overlap",
+      "after": "必须展示prefetch/steady/drain与槽完成边；单tile作为fallback，overlap仍是性能预测。",
+      "applicability": "sigmoid当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.transfer_compute_contention.md",
+        "sha256": "sha256:055ef2406cd741a26a11f55e813f356567195c4f26fab9fa0c9ada1b2727bdc7"
+      },
+      "locator": "lines:278-325",
+      "effect_kind": "alternative",
+      "before": "更多重叠必然更快",
+      "after": "同资源竞争可能反向影响Task，若只见并发不能确认争用；后继保留单槽T8192对照。",
+      "applicability": "sigmoid当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+      },
+      "locator": "lines:67-114",
+      "effect_kind": "parameters",
+      "before": "深度翻倍时tile应机械减半",
+      "after": "tile与物理槽需联合预算；T4096若实际容量允许先保持，避免额外发射混杂。",
+      "applicability": "sigmoid当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+        "sha256": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603"
+      },
+      "locator": "lines:57-104",
+      "effect_kind": "plan",
+      "before": "把TQue模板depth改2即可流水",
+      "after": "InitBuffer物理num与队列depth不同；depth1只允许当前DeQue后预取下一块，完整0/1/2/奇数tile/drain。",
+      "applicability": "sigmoid当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    }
+  ],
+  "selection": {
+    "mode": "conditional_plan",
+    "opportunity_id": "opportunity.primary",
+    "action_instance_id": "instance.primary",
+    "reason": "可保持原T而提供真实双物理槽和预取窗口，直接检验原排程可避免等待；相比只增大tile，未把更大临时区当作必需。cast删除缺等价依据且不会消除必要数学计算。",
+    "concrete_plan": "保留每元素Sigmoid/Cast与原任务输出区间。对至少2个tile的owner，输入/输出各2个物理槽；队列模板depth仍1，每次Compute先DeQue当前输入，再发下一tile的CopyIn，最多1个未DeQue，随后CopyOut当前；最后drain。FP32中间计算仅半精度需要，Vector按tile顺序复用fpIn/fpOut，必须保持最后读完成再覆盖。T∈{2048,4096,8192}但首选容量允许时维持4096；U=4*Align32(b*T)+(dtype!=fp32 ? 2*Align32(4*T):0)+SigmoidTmp(T)+reserve≤actualUB。0/1tile或容量不足走原单槽。",
+    "stop_reason": null
+  },
+  "previous_feedback": null
+}

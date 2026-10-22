@@ -2,7 +2,7 @@
 schema_version: aprof.diagnosis-record/v1
 id: action.rebalance_mixed_stages
 kind: action
-version: 1.1.0
+version: 1.2.0
 status: active
 title: 平衡混合流水阶段工作量
 scope:
@@ -112,7 +112,7 @@ invariants:
 - 完整语义和精度
 - 有效元素覆盖和唯一写回
 - 容量、同步与所有权合法
-expected_effect: 预期减少该机制的额外成本；具体方案由 C2 比较、C3 实施，统一计时核验。
+expected_effect: 联合调整tile和后处理粒度可能缩短阶段DAG关键路径；占用、交接与同步开销可能增加。 是否作用于关键路径及实际收益由后继验证，不能由Action就绪推出。
 slots:
 - name: target
   kind: object
@@ -172,7 +172,7 @@ claims:
 - id: intervention
   text: 在数学和owner契约允许下联合调整AIC/AIV阶段tile、工作分担或交接粒度
   basis: mechanism_inference
-  source_indexes: &id001
+  source_indexes:
   - 2
   - 3
   - 4
@@ -188,10 +188,26 @@ claims:
 - id: costs
   text: 扩大中间区/workspace并改变buffer深度；重分阶段可能改变同步拓扑，需返回C2核算
   basis: mechanism_inference
-  source_indexes: *id001
+  source_indexes:
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
   review_status: reviewed
   limitations:
   - 代价需要绑定具体候选量化，尚无本任务收益
+- id: condition_separation
+  text: 同tile的AIC/AIV任务、交接tensor、依赖和owner已知；重分工作/粒度必须满足算术语义及目标核角色。 阶段粒度或工作比例不同是结构观察，不代表阶段时间应相等或已出现不均衡。 联合调整tile和后处理粒度可能缩短阶段DAG关键路径；占用、交接与同步开销可能增加。
+  basis: mechanism_inference
+  source_indexes: []
+  review_status: reviewed
+  limitations:
+  - 本次基于已有模板、包内来源和变换语义的条件分层归纳，不是上游新增性能结论。
+  - 性能证据不足不等于变换不安全；实施安全也不证明当前关键路径、收益或试验优先级。
 review:
   state: reviewed_with_limits
   source_credibility: 固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。
@@ -216,7 +232,7 @@ instantiation:
   costs:
   - 扩大中间区/workspace并改变buffer深度
   - 重分阶段可能改变同步拓扑，需返回C2核算
-  unknown_policy: 任一硬前提缺失、unknown或proxy则needs_evidence；明确不满足则blocked。C2可比较条件方案，C3须完成全部原前提及invariants核验。
+  unknown_policy: 实施前逐条满足本版本preconditions与invariants；安全/结构条件缺失则指出具体未证项，C2可继续条件分析，C3不得绕过。性能假设独立记录：来源与当前源码足以支持适用时，可在合法且有试验价值的条件下提出优化，不以尚无严格性能实测一律否决；不把未知写成确认。Action优先级由成本机会比较和补证据决策形成。
   replan_triggers:
   - 目标/阶段、owner或有效元素域变化
   - 算法、归并/同步拓扑、workspace owner、融合、通路或dispatch域超出已确认C2计划自由度
@@ -231,21 +247,31 @@ instantiation:
 
 具有依赖交接的AIC与AIV阶段及同一tile的中间状态；阶段：host混合kernel模式与任务粒度；AIC QK/PV；AIV softmax/rescale与交接。
 
-## 实例绑定与原硬前提
+## 实例绑定与实施安全条件
 
-实例必须给出精确template_hash、task与parent实现、目标和阶段；参数逐项给单位、来源及有效域，关联已确认C2计划。未知信息不从样例常量或聊天推断。
+实例必须给出精确template_hash、task与parent实现、目标和阶段；参数逐项给单位、来源及有效域，关联已确认C2计划。来源/源码/合法API与资源公式可以证明安全，无需将每项伪装成硬件观测。
 
-- target
-- stage
-- workload
-- implementation
+同tile的AIC/AIV任务、交接tensor、依赖和owner已知；重分工作/粒度必须满足算术语义及目标核角色。
 
-- symptom.source.mixed_pipeline_imbalance=true
-- constraint.cross_engine_dependencies=true
-- constraint.semantic_equivalence=true
-- constraint.capacity=true
+- `symptom.source.mixed_pipeline_imbalance=true`：阶段粒度或工作比例不同是结构观察，不代表阶段时间应相等或已出现不均衡。
+- `constraint.cross_engine_dependencies=true`：AIC/AIV角色、跨引擎数据可见性、事件和消费者生命周期必须符合目标支持。
+- `constraint.semantic_equivalence=true`：完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。
+- `constraint.capacity=true`：按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。
 
-原invariants：完整语义和精度；有效元素覆盖和唯一写回；容量、同步与所有权合法。
+不变量：完整语义和精度；有效元素覆盖和唯一写回；容量、同步与所有权合法。
+
+## 性能假设、比较与补证据
+
+阶段粒度或工作比例不同是结构观察，不代表阶段时间应相等或已出现不均衡。
+
+联合调整tile和后处理粒度可能缩短阶段DAG关键路径；占用、交接与同步开销可能增加。
+
+1. 建立每阶段工作量、交接字节、buffer峰值和先后关系，找实际可以重分或改变粒度的范围。
+2. 比较目标是最长依赖链而非AIC/AIV总时间相等；缺阶段timing仍可按不同比例workload提出有界试验。
+
+已有来源说明该方法，并且当前源码形态、对象、目标API与约束匹配时，即可将其作为有依据的优化候选；不要求先完成严格性能实验。每个unknown只写具体缺失项、决策影响和是否值得补证据。若补充检查不会改变候选选择，就记录预测后进入获授权的试验，不把“信息不完备”当统一否决。反之，安全未知或明确不适用必须阻断实施。
+
+本Action能实施只是准入。选择前应与当前workload的主要字节、逐元素工作、任务/流水机会比较，说明预计改变何种成本、影响哪些case、可能代价及为何优先；不能以容易等价作为唯一理由。R2把R1实际patch与预测逐项对照，区分支持、削弱和无法判断；继续同一Action应有新证据、不同参数或尚未验证的预测，不要求机械换Action。
 
 ## 预期效果与代价
 
@@ -256,7 +282,7 @@ instantiation:
 
 ## 未知与返回规划
 
-任一硬前提缺失、unknown或proxy则needs_evidence；明确不满足则blocked。C2可比较条件方案，C3须完成全部原前提及invariants核验。
+实施前逐条满足本版本preconditions与invariants；安全/结构条件缺失则指出具体未证项，C2可继续条件分析，C3不得绕过。性能假设独立记录：来源与当前源码足以支持适用时，可在合法且有试验价值的条件下提出优化，不以尚无严格性能实测一律否决；不把未知写成确认。Action优先级由成本机会比较和补证据决策形成。
 
 - 目标/阶段、owner或有效元素域变化
 - 算法、归并/同步拓扑、workspace owner、融合、通路或dispatch域超出已确认C2计划自由度
@@ -304,3 +330,10 @@ FA资源设计按同时存活buffer、queue深度与对齐验算容量；workspa
 扩大中间区/workspace并改变buffer深度；重分阶段可能改变同步拓扑，需返回C2核算
 
 来源索引：2, 3, 4, 5, 6, 7, 8, 9。限制：代价需要绑定具体候选量化，尚无本任务收益
+
+
+### condition_separation [mechanism_inference]
+
+同tile的AIC/AIV任务、交接tensor、依赖和owner已知；重分工作/粒度必须满足算术语义及目标核角色。 阶段粒度或工作比例不同是结构观察，不代表阶段时间应相等或已出现不均衡。 联合调整tile和后处理粒度可能缩短阶段DAG关键路径；占用、交接与同步开销可能增加。
+
+本次维护归纳；原来源与许可不变。旧条件逐项去向见包内 `workflows/references/action-condition-policy.json`，v0004前提仅在历史快照继续按原义回放。

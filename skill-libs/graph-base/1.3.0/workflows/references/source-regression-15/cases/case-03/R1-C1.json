@@ -1,0 +1,503 @@
+{
+  "schema_version": "aprof.handoff/v3",
+  "stage": "C1",
+  "task_id": "raw15-case-03",
+  "candidate_id": null,
+  "parent_hash": null,
+  "artifacts": [
+    {
+      "path": "R1-decision.json",
+      "sha256": "sha256:a062d0fc3a43468b655cc111b498d045855ac5e5bb4877c671a36294eba52be1"
+    },
+    {
+      "path": "expansion.json",
+      "sha256": "sha256:41a4dc2e2b8c592c70a840ccdc6b527bb906447896e64e1d92d0efff3ffd891a"
+    },
+    {
+      "path": "R1-analysis.md",
+      "sha256": "sha256:307f8b24f9c4dfdec3dab0e55a35e608393ea80b2c3985d00f43db8487833dd0"
+    },
+    {
+      "path": "matrix-costs.json",
+      "sha256": "sha256:faf97d1368c94d3f4c3e3bd211e419299844722c0a7f7748fccd339e03b51204"
+    },
+    {
+      "path": "predicate-proofs.json",
+      "sha256": "sha256:9b8855a8081dc0a44d33d4c0d3f0a58a1dd5c0812eb73a84eea4f1fc29603456"
+    }
+  ],
+  "reasoning": {
+    "schema_version": "aprof.diagnosis-reasoning/v1",
+    "task_id": "raw15-case-03",
+    "context_hash": "sha256:fcc70e688c07c9017155d002cee20218aa8e45fd3a534e945ccdb50465b6f4a5",
+    "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+    "source_context_ref": {
+      "path": "origin.json",
+      "sha256": "sha256:e43cd395dd4dec31c36cb58565d3af33fb796ebb729ddbebe5a8d94ac2463540"
+    },
+    "context_snapshot": {
+      "schema_version": "aprof.evidence/v1",
+      "task_id": "raw15-case-03",
+      "source_context_ref": {
+        "path": "origin.json",
+        "sha256": "sha256:e43cd395dd4dec31c36cb58565d3af33fb796ebb729ddbebe5a8d94ac2463540"
+      },
+      "attributes": {
+        "family": [
+          "elementwise"
+        ],
+        "dtype": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ],
+        "features": [
+          "tiling-tail",
+          "memory-transfer",
+          "pipeline-sync",
+          "vector-api",
+          "precision-boundaries",
+          "buffer-lifetime"
+        ]
+      },
+      "facts": {
+        "source.current_kernel": {
+          "state": true,
+          "kind": "raw",
+          "view": "source",
+          "evidence_id": "kernel-source",
+          "ref": {
+            "path": "source/op_kernel/masked_scale_kernel.asc",
+            "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3",
+            "locator": "lines:1-140"
+          }
+        }
+      }
+    },
+    "current": {
+      "implementation_ref": {
+        "path": "source-refs.json",
+        "sha256": "sha256:82f0183326cf41596c74711b44fb2b23b2e36a18b24d278774efe2e7f2a74212"
+      },
+      "workload_ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279"
+      },
+      "objects": [
+        {
+          "object_id": "target",
+          "kind": "object",
+          "description": "MaskedScale当前tile/输出及局部计算对象"
+        },
+        {
+          "object_id": "stage",
+          "kind": "stage",
+          "description": "host-tiling-kernel计算与搬运"
+        },
+        {
+          "object_id": "workload",
+          "kind": "workload",
+          "description": "全部原始20case"
+        },
+        {
+          "object_id": "implementation",
+          "kind": "implementation",
+          "description": "原始源码冻结manifest"
+        }
+      ],
+      "scope": {
+        "task_id": "raw15-case-03",
+        "parent_implementation_hash": "sha256:82f0183326cf41596c74711b44fb2b23b2e36a18b24d278774efe2e7f2a74212",
+        "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      }
+    },
+    "facts": {
+      "source.kernel_structure": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "masked_scale_kernel.asc#lines:1-140",
+        "ref": {
+          "path": "source/op_kernel/masked_scale_kernel.asc",
+          "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3",
+          "locator": "lines:1-140"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "raw15-case-03",
+          "parent_implementation_hash": "sha256:82f0183326cf41596c74711b44fb2b23b2e36a18b24d278774efe2e7f2a74212",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "source.host_dispatch": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "masked_scale.asc#lines:1-90",
+        "ref": {
+          "path": "source/op_host/masked_scale.asc",
+          "sha256": "sha256:e09aa9781ad5c6c851fee91441e673b860cee51c4a64d639269f424182f8f28c",
+          "locator": "lines:1-90"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "raw15-case-03",
+          "parent_implementation_hash": "sha256:82f0183326cf41596c74711b44fb2b23b2e36a18b24d278774efe2e7f2a74212",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "workload.matrix": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "matrix-20.json#cases:1-20",
+        "ref": {
+          "path": "source/matrix-20.json",
+          "sha256": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "locator": "cases:1-20"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "raw15-case-03",
+          "parent_implementation_hash": "sha256:82f0183326cf41596c74711b44fb2b23b2e36a18b24d278774efe2e7f2a74212",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "workload"
+      },
+      "source.tiling": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "masked_scale_tiling.h#lines:1-35",
+        "ref": {
+          "path": "source/op_kernel/masked_scale_tiling.h",
+          "sha256": "sha256:cda8b11cf98d5f0d0737937f0ace050a45a1ebf41e06d1a9623bcb62089b6cae",
+          "locator": "lines:1-35"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "raw15-case-03",
+          "parent_implementation_hash": "sha256:82f0183326cf41596c74711b44fb2b23b2e36a18b24d278774efe2e7f2a74212",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "derived.source_cost": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "source.kernel_structure",
+          "source.host_dispatch",
+          "workload.matrix",
+          "source.tiling"
+        ],
+        "scope": {
+          "task_id": "raw15-case-03",
+          "parent_implementation_hash": "sha256:82f0183326cf41596c74711b44fb2b23b2e36a18b24d278774efe2e7f2a74212",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "constraint.task_ownership": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "source.kernel_structure",
+          "source.host_dispatch",
+          "workload.matrix",
+          "source.tiling"
+        ],
+        "scope": {
+          "task_id": "raw15-case-03",
+          "parent_implementation_hash": "sha256:82f0183326cf41596c74711b44fb2b23b2e36a18b24d278774efe2e7f2a74212",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "constraint"
+      },
+      "constraint.valid_lengths": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "source.kernel_structure",
+          "source.host_dispatch",
+          "workload.matrix",
+          "source.tiling"
+        ],
+        "scope": {
+          "task_id": "raw15-case-03",
+          "parent_implementation_hash": "sha256:82f0183326cf41596c74711b44fb2b23b2e36a18b24d278774efe2e7f2a74212",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "constraint"
+      },
+      "constraint.output_ownership": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "source.kernel_structure",
+          "source.host_dispatch",
+          "workload.matrix",
+          "source.tiling"
+        ],
+        "scope": {
+          "task_id": "raw15-case-03",
+          "parent_implementation_hash": "sha256:82f0183326cf41596c74711b44fb2b23b2e36a18b24d278774efe2e7f2a74212",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "constraint"
+      },
+      "constraint.semantic_equivalence": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "source.kernel_structure",
+          "source.host_dispatch",
+          "workload.matrix",
+          "source.tiling"
+        ],
+        "scope": {
+          "task_id": "raw15-case-03",
+          "parent_implementation_hash": "sha256:82f0183326cf41596c74711b44fb2b23b2e36a18b24d278774efe2e7f2a74212",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "constraint"
+      },
+      "constraint.dependency_lifetime": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "source.kernel_structure",
+          "source.host_dispatch",
+          "workload.matrix",
+          "source.tiling"
+        ],
+        "scope": {
+          "task_id": "raw15-case-03",
+          "parent_implementation_hash": "sha256:82f0183326cf41596c74711b44fb2b23b2e36a18b24d278774efe2e7f2a74212",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "constraint"
+      }
+    },
+    "candidates": [
+      {
+        "hypothesis_id": "storage",
+        "problem_id": "problem.onchip_capacity_pressure",
+        "mechanism": "xf只用于Mul(of,xf,mf)，随后不再读旧xf；of后续仅Muls及FromFloat。因此目标完全alias xf可删outFp_一片。",
+        "targets": [
+          "target"
+        ],
+        "scope": {
+          "task_id": "raw15-case-03",
+          "parent_implementation_hash": "sha256:82f0183326cf41596c74711b44fb2b23b2e36a18b24d278774efe2e7f2a74212",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "support": [
+          "source.kernel_structure",
+          "derived.source_cost"
+        ],
+        "counter": [],
+        "unknown": [],
+        "alternatives": [
+          "casts",
+          "pipeline"
+        ],
+        "checks": [
+          "UB系数从2sx+sm+12+2Ibyte下降为2sx+sm+8+2Ibyte，T4096减少16384字节。",
+          "每种X/M dtype都可减少4T静态字节并扩大tile域；相对直接删int8→half→float转换，不依赖未核验的直接Cast支持，也不改精度。"
+        ],
+        "status": "plausible",
+        "reason": "每种X/M dtype都可减少4T静态字节并扩大tile域；相对直接删int8→half→float转换，不依赖未核验的直接Cast支持，也不改精度。",
+        "excluded_by": [],
+        "independent_evidence_groups": []
+      },
+      {
+        "hypothesis_id": "casts",
+        "problem_id": "problem.redundant_cast",
+        "mechanism": "int8/uint8先转half再转float，整型值范围可在half精确表示；直接int8→float若目标支持可省一次Cast与half缓冲。",
+        "targets": [
+          "target"
+        ],
+        "scope": {
+          "task_id": "raw15-case-03",
+          "parent_implementation_hash": "sha256:82f0183326cf41596c74711b44fb2b23b2e36a18b24d278774efe2e7f2a74212",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "support": [
+          "source.kernel_structure",
+          "derived.source_cost"
+        ],
+        "counter": [],
+        "unknown": [],
+        "alternatives": [
+          "storage",
+          "pipeline"
+        ],
+        "checks": [
+          "若支持直接Cast，则每tile减少一个转换和2T中间区；否则保持两段。",
+          "数值域可静态证明，但实际目标SDK直接Cast是否支持未读到已验证平台，暂缓；不把int8→half→float当成必然冗余性能瓶颈。"
+        ],
+        "status": "plausible",
+        "reason": "数值域可静态证明，但实际目标SDK直接Cast是否支持未读到已验证平台，暂缓；不把int8→half→float当成必然冗余性能瓶颈。",
+        "excluded_by": [],
+        "independent_evidence_groups": []
+      },
+      {
+        "hypothesis_id": "pipeline",
+        "problem_id": "problem.pipeline_serialization",
+        "mechanism": "两路CopyIn及一路CopyOut使用单槽，Compute含转换及两个乘法。",
+        "targets": [
+          "target"
+        ],
+        "scope": {
+          "task_id": "raw15-case-03",
+          "parent_implementation_hash": "sha256:82f0183326cf41596c74711b44fb2b23b2e36a18b24d278774efe2e7f2a74212",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "support": [
+          "source.kernel_structure",
+          "derived.source_cost"
+        ],
+        "counter": [],
+        "unknown": [],
+        "alternatives": [
+          "storage",
+          "casts"
+        ],
+        "checks": [
+          "输入搬运可与前tile计算重叠，逻辑GM字节(2sx+sm)N不变。",
+          "能打开搬运重叠但多dtype槽宽不同，增槽压缩T；先用确定生命周期减少物理分配再决定双缓冲。"
+        ],
+        "status": "plausible",
+        "reason": "能打开搬运重叠但多dtype槽宽不同，增槽压缩T；先用确定生命周期减少物理分配再决定双缓冲。",
+        "excluded_by": [],
+        "independent_evidence_groups": []
+      }
+    ],
+    "action_instances": [
+      {
+        "instance_id": "selected-intent",
+        "action_id": "action.reuse_disjoint_onchip_buffers",
+        "template_hash": "sha256:ff111760f9125308a0f06c165aeb30ed4c72b1060eb6d8a8d27d45449ff90f97",
+        "hypothesis_id": "storage",
+        "targets": {
+          "target": "target",
+          "stage": "stage",
+          "workload": "workload",
+          "implementation": "implementation"
+        },
+        "scope": {
+          "task_id": "raw15-case-03",
+          "parent_implementation_hash": "sha256:82f0183326cf41596c74711b44fb2b23b2e36a18b24d278774efe2e7f2a74212",
+          "workload_hash": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "parameters": {
+          "conditional_plan": "删除outFp_，令of=xf，以Mul(xf,xf,mf)后Muls(xf,xf,scale)保持原先先乘mask再乘scale；FromFloat(yLocal,xf)保留原RoundMode。T=64k，第一候选4096；后续T≤floor64((UB原预算-API预留)/(2sx+sm+8+2Ibyte))，Ibyte表示int8/uint8 mask。输入输出所有权、每个有效count和半精度输出路径保持原定义；不把scale0或mask0替换成常数以规避Inf/NaN。",
+          "case_ids": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12",
+            "13",
+            "14",
+            "15",
+            "16",
+            "17",
+            "18",
+            "19",
+            "20"
+          ]
+        },
+        "evidence_bindings": {
+          "constraint.semantic_equivalence": "constraint.semantic_equivalence",
+          "constraint.dependency_lifetime": "constraint.dependency_lifetime"
+        },
+        "unknowns": [
+          "constraint.capacity"
+        ],
+        "status": "conditional",
+        "reason": "需确认目标Mul完整dst=src0别名及依赖完成规则，实际B与CopyPad/API字段上限。整型mask两段Cast的支持不能推断为直接转换支持。",
+        "parent_plan_hash": null
+      }
+    ],
+    "predecessor_ref": null
+  }
+}

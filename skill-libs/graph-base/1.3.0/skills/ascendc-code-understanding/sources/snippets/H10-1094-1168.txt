@@ -1,0 +1,75 @@
+template <typename T, typename U>
+__aicore__ inline void DataCopyL0C2GMImpl(__gm__ T* dst, __cc__ U* src, const DataCopyCO12DstParams& intriParams)
+{
+    if ASCEND_IS_AIC {
+        ASCENDC_ASSERT(
+            (SupportType<
+                Tuple<U, T>, Tuple<float, uint8_t>, Tuple<float, int8_t>, Tuple<float, half>, Tuple<float, bfloat16_t>,
+                Tuple<float, float>, Tuple<int32_t, uint8_t>, Tuple<int32_t, int8_t>, Tuple<int32_t, half>,
+                Tuple<int32_t, int16_t>, Tuple<int32_t, int32_t>>()),
+            {
+                KERNEL_LOG(
+                    KERNEL_ERROR,
+                    "Failed to check dtype in DataCopy from L0C Buffer(CO1) to GM, current api support dtype "
+                    "combination is src: float, "
+                    "dst: uint8_t / int8_t / half / bfloat16_t / float; src: int32_t, dst: uint8_t / "
+                    "int8_t / half / int16_t / "
+                    "int32_t.");
+            });
+        switch (intriParams.quantPre) {
+            case QuantMode_t::NoQuant:
+                return copy_matrix_cc_to_gm(
+                    dst, src, intriParams.sid, intriParams.nSize, intriParams.mSize, intriParams.dstStride,
+                    intriParams.srcStride, intriParams.unitFlag, QuantMode_t::NoQuant, intriParams.reluPre,
+                    intriParams.channelSplit, intriParams.nz2ndEn);
+            case QuantMode_t::F322F16:
+                return copy_matrix_cc_to_gm(
+                    dst, src, intriParams.sid, intriParams.nSize, intriParams.mSize, intriParams.dstStride,
+                    intriParams.srcStride, intriParams.unitFlag, QuantMode_t::F322F16, intriParams.reluPre,
+                    intriParams.channelSplit, intriParams.nz2ndEn);
+            case QuantMode_t::F322BF16:
+                return copy_matrix_cc_to_gm(
+                    dst, src, intriParams.sid, intriParams.nSize, intriParams.mSize, intriParams.dstStride,
+                    intriParams.srcStride, intriParams.unitFlag, QuantMode_t::F322BF16, intriParams.reluPre,
+                    intriParams.channelSplit, intriParams.nz2ndEn);
+            case QuantMode_t::DEQF16:
+                return copy_matrix_cc_to_gm(
+                    dst, src, intriParams.sid, intriParams.nSize, intriParams.mSize, intriParams.dstStride,
+                    intriParams.srcStride, intriParams.unitFlag, QuantMode_t::DEQF16, intriParams.reluPre,
+                    intriParams.channelSplit, intriParams.nz2ndEn);
+            case QuantMode_t::VDEQF16:
+                return copy_matrix_cc_to_gm(
+                    dst, src, intriParams.sid, intriParams.nSize, intriParams.mSize, intriParams.dstStride,
+                    intriParams.srcStride, intriParams.unitFlag, QuantMode_t::VDEQF16, intriParams.reluPre,
+                    intriParams.channelSplit, intriParams.nz2ndEn);
+            case QuantMode_t::QF322B8_PRE:
+                return copy_matrix_cc_to_gm(
+                    dst, src, intriParams.sid, intriParams.nSize, intriParams.mSize, intriParams.dstStride,
+                    intriParams.srcStride, intriParams.unitFlag, QuantMode_t::QF322B8_PRE, intriParams.reluPre,
+                    intriParams.channelSplit, intriParams.nz2ndEn);
+            case QuantMode_t::VQF322B8_PRE:
+                return copy_matrix_cc_to_gm(
+                    dst, src, intriParams.sid, intriParams.nSize, intriParams.mSize, intriParams.dstStride,
+                    intriParams.srcStride, intriParams.unitFlag, QuantMode_t::VQF322B8_PRE, intriParams.reluPre,
+                    intriParams.channelSplit, intriParams.nz2ndEn);
+            case QuantMode_t::REQ8:
+                return copy_matrix_cc_to_gm(
+                    dst, src, intriParams.sid, intriParams.nSize, intriParams.mSize, intriParams.dstStride,
+                    intriParams.srcStride, intriParams.unitFlag, QuantMode_t::REQ8, intriParams.reluPre,
+                    intriParams.channelSplit, intriParams.nz2ndEn);
+            case QuantMode_t::VREQ8:
+                return copy_matrix_cc_to_gm(
+                    dst, src, intriParams.sid, intriParams.nSize, intriParams.mSize, intriParams.dstStride,
+                    intriParams.srcStride, intriParams.unitFlag, QuantMode_t::VREQ8, intriParams.reluPre,
+                    intriParams.channelSplit, intriParams.nz2ndEn);
+            default:
+                ASCENDC_ASSERT(false, {
+                    KERNEL_LOG(
+                        KERNEL_ERROR,
+                        "Failed to check quantPre value in DataCopy from L0C Buffer(CO1) "
+                        "to GM, supported values are NoQuant / F322F16 / F322BF16 / DEQF16 / VDEQF16 / QF322B8_PRE / "
+                        "VQF322B8_PRE / REQ8 / VREQ8.");
+                });
+        }
+    }
+}

@@ -28,6 +28,21 @@ parent: planning.root
 references: []
 evidence_status: source_reviewed_not_benchmarked
 routes:
+- target: planning.under-fusion.vector_producer_consumer
+  match: []
+  exclude:
+  - field: excluded_templates
+    op: contains
+    value: planning.under-fusion.vector_producer_consumer
+  required_evidence:
+  - constraint.semantic_equivalence
+  - constraint.capacity
+  - constraint.plan_freedom
+  - constraint.dependency_lifetime
+  - constraint.target_api
+  prior_score: 2
+  fallback: false
+  seed_reason: 仅既有分支内的条件候选；正文适用域和成本仍须核验，不强制优先。
 - target: planning.under-fusion.chain
   match: []
   exclude:
@@ -84,7 +99,6 @@ routes:
   fallback: true
   seed_reason: 未知类型保留语义正确的现有方案并补证据。
 ---
-
 # 融合与组合模式
 
 按 family 与 workload 选择任务划分、所有权和组合方案；可同时进入多个分支。比较适用主方案与保守回退，C2 输出必要内容快照、参数和实现自由度。

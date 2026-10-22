@@ -1,0 +1,29 @@
+{
+  "schema": "aprof.independent-outcome-supplement/v1",
+  "reviewed_at_utc": "2026-10-21T12:13:55.570415+00:00",
+  "supersedes_finding_status": "OUTCOME-ADDENDUM.json OR-001",
+  "prior_review_sha256": "sha256:1a081d3158df254cbb860dba57261ad738e2c577d85558770abf3854a65a14fc",
+  "status": "fix statically reviewed; no remaining confirmed helper defect",
+  "finding_id": "OR-001",
+  "fix_evidence": {
+    "path": "runtime/src/aprof_runtime/knowledge_outcome.py",
+    "line": 53,
+    "detail": "分别要求request.operator等于measured.operator及confirmed_plan.parallel_plan.operator；原source/candidate/protocol校验保留。"
+  },
+  "test_review": {
+    "path": "runtime/tests/test_scheme_cli.py",
+    "line": 84,
+    "detail": "新增两种合法schema/重算ref及decision_hash的错operator负例：请求/结果同时other，以及仅结果other；另保留正常v3和坏decision_hash检查。",
+    "execution_by_reviewer": false,
+    "execution_by_parent": "targeted affected test running when supplement written; no result claimed"
+  },
+  "source_identity": {
+    "runtime/src/aprof_runtime/knowledge_outcome.py": "sha256:0a89ac30c2d0e6747c8f2da18529c0edee60a94cf3bed71393a5e598500fe122",
+    "runtime/tests/test_scheme_cli.py": "sha256:dee995a39578b805def9066d843426bd0cf7e85c37fde386073461e37b71cf7c",
+    "runtime/src/aprof_runtime/knowledge.py": "sha256:f09921f590f7306cd7777415784f3b894576d48cbc648a24dc0d43d199d70076"
+  },
+  "public_cli_prior_run_limitation": "原公开CLI4pass在此修复前，须与affected测试新进程结果分别报告，不能视为最终helper已由原4项覆盖。",
+  "implementation_modified": false,
+  "grades_modified": false,
+  "hardware_used": false
+}

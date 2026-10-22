@@ -4,7 +4,7 @@ id: implementation.memory-transfer.cache-hint
 kind: recipe
 version: 1.0.0
 status: active
-title: 一次性流式输入与复用输入的 L2 hint 区分
+title: 按输入、输出与后继消费者轨迹设置L2 hint
 scope:
   platforms:
   - dav-2201
@@ -57,7 +57,6 @@ references:
 - implementation.memory-transfer.coalesce
 evidence_status: source_reviewed_not_benchmarked
 ---
-
 # 按实际复用关系设置 L2 Cache hint
 
 ## 原理、适用域与默认路径
@@ -88,10 +87,19 @@ yGm.SetL2CacheHint(onePassY ? AscendC::CacheMode::CACHE_MODE_DISABLE
 
 设一个共享片段大小 `W` 字节，访问 `q` 轮。逻辑 load 总量两版均为 `qW`；理想可复用 cache 时 HBM 读接近 `W`，全 miss/bypass 则接近 `qW`，最多相差 `(q-1)W`，这只是说明风险的上界。流式 `q=1` 时无上述复用节约，才有可能受益于 bypass；系统中其他工作集和 cache 行浪费会使实际结果偏离估算。NORMAL 不能保证命中，DISABLE 不能保证端到端加速。
 
-在固定输入和同一测量协议下比较 Task、MTE2、HBM 读量和 L2 hit/miss；A2/A3 来源样例需要汇总 r0/r1 通道，不能把单通道命中率当总命中率。保留原有冷/热态协议，避免 baseline 冷 cache、候选热 cache。一次只改一类 tensor；cache hit 降低但 Task 更快可能是流式候选的合理现象，Task 变慢即使某引擎指标更好也不接受。
+在固定输入和同一测量协议下比较 Task、MTE2、HBM 读量和 L2 hit/miss；A2/A3 来源样例需要汇总 r0/r1 通道，不能把单通道命中率当总命中率。保留原有冷/热态协议，避免 baseline 冷 cache、候选热 cache。隔离某类tensor可用于归因；若完整机制要求多个相关对象联合调整，可整体比较并说明交互，不把单因素作为默认门槛；cache hit 降低但 Task 更快可能是流式候选的合理现象，Task 变慢即使某引擎指标更好也不接受。
 
 ## 失败边界与来源
 
 共享权重被误判一次性、多个核读同一输入、后继算子很快消费刚写出的结果、重复调用工作集可驻留时，bypass 容易回退。恢复 NORMAL 是最小退路。若复用存在但工作集大于可用 L2，应评估 `implementation.memory-transfer.l2-reuse-order` 的分片内复用；这需要 C2 已允许相应遍历顺序，不能在本条偷偷变算法。
 
 来源事实：asc-devkit Add case5 在双缓冲 Add 中对两个一次性输入设置 DISABLE；官方 SetL2CacheHint 文档说明默认 NORMAL、产品支持和 PERSISTENT 尚未支持。本文的访问表、qW 模型与隔离实验是提炼，原 case 的耗时和收益没有迁入任何 910C 默认结论。
+
+
+## 读写方向、输出与SDK接口的真实作用
+
+为每个GlobalTensor列“当前读/写方向→写者/读者核→本次各tile→相邻kernel/调用中的后继消费者→复用距离”，包括输出、派生GM表、workspace和输入输出别名。输出仅写一次也可能很快被下游读取，此时NORMAL是保留后继复用的合法比较对象；不得从一次性输入Add例子推断输出不在意图范围。无后继复用的大写流亦可作为条件性hint候选，但固定来源不提供所有写指令的实测缓存行为或速度保证，必须核验目标搬出API/编译结果，不能把“只写一次”等同于可获益。
+
+`GlobalTensor::SetL2CacheHint<CacheRwMode rwMode=RW>(CacheMode)`设置该对象L2模式，默认NORMAL。固定文档虽列READ/WRITE/RW枚举，却明确rwMode是预留参数、当前使用默认值；本条不声明当前SDK能分别控制读与写，也不提供显式READ/WRITE模板改法。使用默认接口给输入/输出对象设置合法mode，仍须证明该对象关联的具体读写指令能落实期望hint；这是cache策略API，不是预取、容量申请、驻留保证或完成事件。A2/A3支持；950的未来PERSISTENT计划不构成当前支持。
+
+选输出策略继续使用action.align_cache_policy。改变tensor布局、GM/UB通路、owner或遍历以争取复用另回C2，不把hint修改当这些变换的许可；同一tensor访问域DISABLE与依赖L2命中的方案不能叠加收益。可预测逻辑访问及替换风险，实际写分配、下游命中、HBM读写与端到端影响仍是缺口。

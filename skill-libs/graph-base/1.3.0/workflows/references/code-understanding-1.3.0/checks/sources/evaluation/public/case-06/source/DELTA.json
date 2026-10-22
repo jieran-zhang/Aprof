@@ -1,0 +1,43 @@
+{
+  "kind": "test_only_identifier_rename",
+  "changes": {
+    "vector": {
+      "ExpDType": "NacreDType",
+      "ExpTilingData": "NacrePlan",
+      "ComputeExpTiling": "MakeNacrePlan",
+      "EXP_FLOAT16": "NACRE_S16",
+      "EXP_FLOAT32": "NACRE_S32",
+      "EXP_BFLOAT16": "NACRE_B16",
+      "KernelExp": "StageNacre",
+      "exp_kernel": "nacre_entry",
+      "totalLength": "extent",
+      "blockLength": "laneExtent",
+      "blockNum": "laneCount",
+      "tileElements": "windowElements",
+      "dtype": "storageTag",
+      "multiplier": "gain",
+      "shift": "bias"
+    },
+    "cube": {
+      "KernelMatmul": "StageMica",
+      "aGM": "srcQuartz",
+      "bGM": "srcOnyx",
+      "cGM": "dstOpal",
+      "a1Local": "bufQuartz1",
+      "b1Local": "bufOnyx1",
+      "a2Local": "bufQuartz2",
+      "b2Local": "bufOnyx2",
+      "cLocal": "bufOpal0",
+      "vecLocal": "bufOpalV",
+      "LeakyReluCompute": "ApplyGate",
+      "mmad_vec_custom": "mica_entry"
+    }
+  },
+  "include_filename_updates": {
+    "exp_tiling.h": "nacre_plan.h",
+    "exp_kernel.asc": "nacre_stage.asc"
+  },
+  "numeric_constants_changed": false,
+  "api_calls_changed": false,
+  "production_source_modified": false
+}

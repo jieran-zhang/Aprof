@@ -1,0 +1,196 @@
+{
+  "task_id": "case-10",
+  "round": 1,
+  "consultations": [
+    {
+      "instance_id": "pipeline-r1",
+      "owner": "parallel-planning",
+      "route_ref": {
+        "path": "pipeline-r1-parallel-planning-route.json",
+        "sha256": "sha256:e8d7390befd96b6de7111494ae1a2d62b98dc3c238835be45661f9633ce52c50"
+      },
+      "mode": "conditional_consultation",
+      "consulted_document_refs": [
+        {
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+          "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+        }
+      ],
+      "consultation_limits": "正文用于机会比较与条件方案；只有route_ref内的可路由候选可进入该实例正式选择；partial适用见knowledge_use。本轮无P/O叶子正式采用或实现。",
+      "plan_status": "extract_existing_or_replan; no prior confirmed plan; no KEEP",
+      "implementation": "not_implemented"
+    },
+    {
+      "instance_id": "pipeline-r1",
+      "owner": "optimization",
+      "route_ref": {
+        "path": "pipeline-r1-optimization-route.json",
+        "sha256": "sha256:f63f513db6b66759fdefd61e47f5ea5f4947fa295e7a265e4e404928b8249d65"
+      },
+      "mode": "conditional_consultation",
+      "consulted_document_refs": [
+        {
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+          "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+        },
+        {
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/cast.md",
+          "sha256": "sha256:61a09c55c6f9139ee767c6dde221cacfbadca53cbbb483d4ced76d0421c7f464"
+        }
+      ],
+      "consultation_limits": "正文用于机会比较与条件方案；只有route_ref内的可路由候选可进入该实例正式选择；partial适用见knowledge_use。本轮无P/O叶子正式采用或实现。",
+      "plan_status": "extract_existing_or_replan; no prior confirmed plan; no KEEP",
+      "implementation": "not_implemented"
+    },
+    {
+      "instance_id": "batch-r1",
+      "owner": "parallel-planning",
+      "route_ref": {
+        "path": "batch-r1-parallel-planning-route.json",
+        "sha256": "sha256:e8d7390befd96b6de7111494ae1a2d62b98dc3c238835be45661f9633ce52c50"
+      },
+      "mode": "conditional_consultation",
+      "consulted_document_refs": [
+        {
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+          "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+        }
+      ],
+      "consultation_limits": "正文用于机会比较与条件方案；只有route_ref内的可路由候选可进入该实例正式选择；partial适用见knowledge_use。本轮无P/O叶子正式采用或实现。",
+      "plan_status": "extract_existing_or_replan; no prior confirmed plan; no KEEP",
+      "implementation": "not_implemented"
+    },
+    {
+      "instance_id": "batch-r1",
+      "owner": "optimization",
+      "route_ref": {
+        "path": "batch-r1-optimization-route.json",
+        "sha256": "sha256:ee53b6b7241e9580eb5cab01d856b292b9c906302691308c4814aaaa0cfbec32"
+      },
+      "mode": "conditional_consultation",
+      "consulted_document_refs": [
+        {
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+          "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+        },
+        {
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/cast.md",
+          "sha256": "sha256:61a09c55c6f9139ee767c6dde221cacfbadca53cbbb483d4ced76d0421c7f464"
+        }
+      ],
+      "consultation_limits": "正文用于机会比较与条件方案；只有route_ref内的可路由候选可进入该实例正式选择；partial适用见knowledge_use。本轮无P/O叶子正式采用或实现。",
+      "plan_status": "extract_existing_or_replan; no prior confirmed plan; no KEEP",
+      "implementation": "not_implemented"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "pipeline",
+        "batch"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+      },
+      "locator": "lines:83-188",
+      "effect_kind": "plan",
+      "before": "从原源码识别 Host展平后按ceil(N/4096)限制有效核数，tile4096。FP32直接Sigmoid，half/bf16先Cast FP32再算再Cast；深度1物理输入/输出槽，CopyIn Compute CopyOut顺序发射。",
+      "after": "多核分配影响每核tile循环数，不能只按全N断言能流水",
+      "applicability": "full：连续同形一元函数任务骨架；无父计划，不是P_KEEP"
+    },
+    {
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+        "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+      },
+      "locator": "lines:89-207",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host展平后按ceil(N/4096)限制有效核数，tile4096。FP32直接Sigmoid，half/bf16先Cast FP32再算再Cast；深度1物理输入/输出槽，CopyIn Compute CopyOut顺序发射。",
+      "after": "显式建MTE2→V、V→下一MTE2、V→MTE3、MTE3→下一V，逐槽代次闭合",
+      "applicability": "full：本核独立多tile流水，1tile保持原路径"
+    },
+    {
+      "opportunity_ids": [
+        "batch"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+        "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+      },
+      "locator": "lines:90-131",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host展平后按ceil(N/4096)限制有效核数，tile4096。FP32直接Sigmoid，half/bf16先Cast FP32再算再Cast；深度1物理输入/输出槽，CopyIn Compute CopyOut顺序发射。",
+      "after": "4096已批量，扩T的收益仅剩发射摊销且增加临时区，作为最强竞争",
+      "applicability": "full：连续count分片边界"
+    },
+    {
+      "opportunity_ids": [
+        "pipeline",
+        "batch"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/cast.md",
+        "sha256": "sha256:61a09c55c6f9139ee767c6dde221cacfbadca53cbbb483d4ced76d0421c7f464"
+      },
+      "locator": "lines:59-97",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host展平后按ceil(N/4096)限制有效核数，tile4096。FP32直接Sigmoid，half/bf16先Cast FP32再算再Cast；深度1物理输入/输出槽，CopyIn Compute CopyOut顺序发射。",
+      "after": "保留half→float→half及bf16 RINT；它们承担计算精度与输出边界而非冗余Cast",
+      "applicability": "full：拒绝删除当前必要转换"
+    },
+    {
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+        "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+      },
+      "locator": "lines:271-407",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host展平后按ceil(N/4096)限制有效核数，tile4096。FP32直接Sigmoid，half/bf16先Cast FP32再算再Cast；深度1物理输入/输出槽，CopyIn Compute CopyOut顺序发射。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；不同tile本可独立的搬运与计算使用同buffer或被过早等待阻断",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    },
+    {
+      "opportunity_ids": [
+        "batch"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.vector_api_fragmentation.md",
+        "sha256": "sha256:e5c0882f45cb270a9fd555e570428ba6f942efbb8c888972f3aadb655c09a34a"
+      },
+      "locator": "lines:258-392",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host展平后按ceil(N/4096)限制有效核数，tile4096。FP32直接Sigmoid，half/bf16先Cast FP32再算再Cast；深度1物理输入/输出槽，CopyIn Compute CopyOut顺序发射。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；可批处理的Vector工作被拆成大量小count/repeat调用",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    },
+    {
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.redundant_cast.md",
+        "sha256": "sha256:c7f8ace396cc0a0f53f4bc0a5b9f0883cbd8b439d45dce74edc1e4f50b1b326d"
+      },
+      "locator": "lines:289-425",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host展平后按ceil(N/4096)限制有效核数，tile4096。FP32直接Sigmoid，half/bf16先Cast FP32再算再Cast；深度1物理输入/输出槽，CopyIn Compute CopyOut顺序发射。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；局部链在相邻阶段反复宽窄往返转换",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    }
+  ],
+  "selected_intent_gap": null
+}

@@ -2,7 +2,7 @@
 schema_version: aprof.knowledge-record/v1
 id: implementation.memory-transfer.strided-pad
 kind: recipe
-version: 1.0.0
+version: 1.2.0
 status: active
 title: 规则跨行 DataCopyPad 与双端 stride 单位
 scope:
@@ -45,6 +45,22 @@ sources:
   - 55
   sha256: sha256:dbb672d9f6f872d02ba5a255ac9b1949595d8fa869efb174c27895da04560a38
   excerpt_sha256: sha256:10621504e99f08b702f2b096bf353ab282bc4da997e2d7e8b96df1a9f60c4c45
+- path: skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB.md
+  original_path: docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB.md
+  revision: d378849769f9ee610af9d0ac38db2b3b6bed3209
+  lines:
+  - 1
+  - 449
+  sha256: sha256:8fd9166a39e7ab163695f1d965ad633725afa1c60cff08708b439f58f2a646ee
+  excerpt_sha256: sha256:8fd9166a39e7ab163695f1d965ad633725afa1c60cff08708b439f58f2a646ee
+- path: skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_UBToGM.md
+  original_path: docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_UBToGM.md
+  revision: d378849769f9ee610af9d0ac38db2b3b6bed3209
+  lines:
+  - 1
+  - 261
+  sha256: sha256:23e9b37e62ff5c2fed4b142ad65b346f8987aa6be527e291dae63466dc88f315
+  excerpt_sha256: sha256:23e9b37e62ff5c2fed4b142ad65b346f8987aa6be527e291dae63466dc88f315
 learning: {}
 tags:
 - strided-copy
@@ -112,3 +128,11 @@ AscendC::DataCopyPad(tile, gm[base], cp, pad);
 DMA 完成前 `tile` 被写占用，最后一个消费者完成前整组对齐行仍存活；下一次 DataCopyPad 覆盖同槽必须等待这些消费者。输入输出可能别名时，先证明本组写回不会破坏未来行的读入。测试 `C*s` 为31/32/33字节附近的可表示 dtype 长度、单行/多行、非零列起点、尾行和不同 pitch。出现行错位首先核验单位/UB 行跨度；容量不足缩小 R，跨行不规则保留逐段路径。
 
 来源事实：asc-devkit `data_copy_ub.h` 用 `curCols` 与 `(n-curCols)*sizeof(half)` 搬运矩形尾列，API 文档给出本表单位、dummy 和范围。代码改用 Ext 参数、float 和显式变量定义，是避免字段截断的提炼版本；未引用上游私有 Kernel 类，也未做目标 SDK 编译或性能验证。
+
+## 短行组合、初始化和输出边界的比较
+
+源码里每行 DataCopyPad 不必都改成多行 copy。先比较三种可表达方案：保留逐行、一次 R 行规则 stride、将允许连续的多行视作一段。若GM行pitch恰等于有效行字节且数学上无行间边界，连续段可免去每行UB padding；若存在广播或每行独立计算，必须保留边界或显式布局变换。`R*AlignUp(C*s,32)` 与 `AlignUp(R*C*s,32)` 的差只是UB布局开销，不自动等于GM节省。跨行打包影响owner或C2布局时返回规划。
+
+初始化只针对消费者实际会读取、却没有被producer定义的区域。有效 `[0,C)` 被搬入覆盖时，不需为“安全”反复先清零；padding若会进入归约/整repeat，应定义相应值并预算其工作。多个API执行域不同，取实际读取集合的并集，不统一把整tile清零。A2/A3 Compare可能读到256B边界，不能由DataCopyPad的32B自动补齐推定全域已初始化。
+
+输出分开审查：逻辑元素owner、所用写入API的地址/长度、涉及Scalar cache或多引擎共享时的物理覆盖及完成协议。固定UB→GM文档明确非32B尾部在GM丢弃dummy；不能据此声称每个尾写必然覆盖相邻32B，更不能从单个混写失败推出所有输出都必须64B对齐。反过来，若混合Scalar与DMA或不同核共享物理粒度，需要具体目标API/架构依据，不能只凭逻辑元素不重叠判安全。优先同owner统一写回；若需重新分核或调整边界，交回C2。

@@ -1,0 +1,67 @@
+{
+  "answer_id": "answer-20003013d79a",
+  "case": "case-05",
+  "facts": [
+    {
+      "id": "CU05.A01",
+      "status": "correct",
+      "rationale": "明确给出逻辑矩阵乘法、B的[N,K]转置存储路线、half输入输出、float L0C累加及无激活，与场景1一致。",
+      "answer_span": "该程序计算 C[m,n]=ΣₖA[m,k]·B存储[n,k]，M=N=K=8192。A 是连续 [M,K]，B 文件是连续 [N,K]，代表逻辑 [K,N] 矩阵的转置存储，因此数学目标仍是 A×B。输入和输出均为 half；每个输出 tile 在 float 类型的 L0C 中累计，最后转成 half，无偏置或激活。"
+    },
+    {
+      "id": "CU05.A02",
+      "status": "correct",
+      "rationale": "完整给出2201场景1的全局尺寸、单核尺寸、基本块、24块映射、M/N循环及末N分区512列，并明确每tile有128次K迭代。",
+      "answer_span": "题面固定 SCENARIO_NUM=1，host/device宏均为2201，实际进入 Process，而非 ProcessL2Cache 或3510分支。没有独立运行时tiling结构，分块由模板常量决定：baseM/K/N=128/64/256，singleCoreM/K/N=2048/8192/1536，stepKa/Kb=8/4，启动24个Cube block（mmad.asc:559、575）。InitComputeParams 将核号p映射为 i=p%4、j=p/4；A、B、C的GM起始偏移分别为 i·2048·8192、j·1536·8192、i·2048·8192+j·1536，单位均为half元素，换成字节需乘2。\n\n每核按N块、M块、K块的嵌套顺序计算，每个输出tile独自完成全部K归约，无跨核部分和。所有核的M循环均为16；j=0…4时N循环为6，j=5时实际N=8192−5×1536=512，循环为2。故前20核各96个tile，后4核各32个，共2048=64×32个128×256 tile，覆盖整个输出且不重叠。本题各维均整除基本块，没有实际尾块。每tile执行8192/64=128次Mmad，合计262144次；A搬16个大包，B搬32个大包，最后一次Fixpipe写出结果（InitComputeParams、ProcessLoop）。"
+    },
+    {
+      "id": "CU05.A03",
+      "status": "correct",
+      "rationale": "全文明确stepKa/Kb=8/4及每轮baseK=64，说明首轮初始化、后续累加和Mmad/Fixpipe的UnitFlag协议。末段对具体方向配置的保留不否认已有协议，也未将缺少M_FIX判为已证实缺陷。",
+      "answer_span": "L0C另由UnitFlag保护：首轮cmatrixInitVal=true清零，此后保留并累加；前127轮unitFlag=2，写后维持可写状态0，末轮为3，写后置1。Fixpipe的unitFlag=3等待可读状态1，读取后置0，允许下一tile复用对应区域。"
+    },
+    {
+      "id": "CU05.E01",
+      "status": "correct",
+      "rationale": "明确A/B每个L1大包均为128KiB、共享L1及全部四个字节区间，B基址为256KiB；另明确沿K搬运A共16包、B共32包。",
+      "answer_span": "静态LocalTensor构造的地址单位为字节，长度单位为元素；operator[]偏移则按元素计。A1/B1共享同一L1。四个槽的字节区间，以KiB=1024字节表示，分别为A-P[0,128)、A-Q[128,256)、B-P[256,384)、B-Q[384,512)，合计512KiB。"
+    },
+    {
+      "id": "CU05.E02",
+      "status": "correct",
+      "rationale": "起点与有效长度完整确定L0A的[0,16384)、[32768,49152)及L0B的[0,32768)、[32768,65536)。明确两者物理独立，float L0C为131072字节。",
+      "answer_span": "L0A与L0B是不同物理存储，各自P/Q起点为0/32KiB；A每槽有效16KiB，B每槽有效32KiB。唯一的L0C位于本存储起点0，容量128×256×4=128KiB，并非双缓冲（Process，mmad.asc:52）。"
+    },
+    {
+      "id": "CU05.E03",
+      "status": "correct",
+      "rationale": "表格与公式给出k=0至9的完整槽选择，说明k0后首次pong预取、k3释放B ping及k7释放B pong和A ping；事件段明确A使用ID0/1、B使用ID2/3，并说明释放发生在大包末次LoadData完成后。",
+      "answer_span": "推导是A起点=128·(⌊t/8⌋%2)+16·(t%8)，B起点=256+128·(⌊t/4⌋%2)+32·(t%4)，L0起点=32·(t%2)。A在0…7轮读P，8…9轮读Q；B在0…3轮读P、4…7轮读Q、8…9轮重读已更新的P。L0每隔两轮复用同一地址；L0C始终使用同一区域，基线完成第t轮后保存k=0…64t+63的部分和。\n\n循环前，A-P装k=0…511，B-P装0…255。第0轮发射Compute后，代码依次向B-Q装256…511、A-Q装512…1023；第3轮释放B-P后向它装512…767；第7轮释放B-Q、A-P后，分别装768…1023和1024…1535。这些是指令与依赖顺序，不是已测得的重叠时间线（ProcessLoop，mmad.asc:178、238）。"
+    },
+    {
+      "id": "CU05.H01",
+      "status": "correct",
+      "rationale": "明确MTE2_MTE1在包首保障L1数据就绪，MTE1_M保障每次L0搬入后才能计算；变体分析明确这些正向事件不能替代反向复用依赖。",
+      "answer_span": "基线事件保护三层生命周期。MTE1_MTE2的ID0/1对应A-P/Q，ID2/3对应B-P/Q，初始置位表示可写；MTE2覆盖前消费它，搬入后以MTE2_MTE1同ID通知就绪，只在大包首轮等待。大包末轮的LoadData完成后，MTE1重新发出可覆盖事件，因此L1释放无需等待Mmad。L0的M_MTE1事件ID0/1也先预置；每轮LoadData前等待所选槽，Compute中的MTE1_M置位/等待保证搬运完成后M才能读取，Mmad后再以M_MTE1释放该槽。"
+    },
+    {
+      "id": "CU05.H02",
+      "status": "correct",
+      "rationale": "完整区分就绪与可复用：L1在包末LoadData完成后释放，L0在Mmad消费后释放；说明反向标志预置、每槽等待和末尾排空。",
+      "answer_span": "基线事件保护三层生命周期。MTE1_MTE2的ID0/1对应A-P/Q，ID2/3对应B-P/Q，初始置位表示可写；MTE2覆盖前消费它，搬入后以MTE2_MTE1同ID通知就绪，只在大包首轮等待。大包末轮的LoadData完成后，MTE1重新发出可覆盖事件，因此L1释放无需等待Mmad。L0的M_MTE1事件ID0/1也先预置；每轮LoadData前等待所选槽，Compute中的MTE1_M置位/等待保证搬运完成后M才能读取，Mmad后再以M_MTE1释放该槽。于是第2轮覆盖P前，必须等第0轮Mmad完成，随后各轮同理。循环结束还消费剩余释放事件，kernel末尾PIPE_ALL汇合流水。"
+    },
+    {
+      "id": "CU05.H03",
+      "status": "correct",
+      "rationale": "准确识别删除循环M_MTE1等待及Compute(k)到Load(k+2)的反向保证丢失，说明旧Mmad尚未读完时覆盖不再受该事件约束，且正向事件不能修复。",
+      "answer_span": "variant唯一变化是删除mmad.asc:209的M_MTE1等待（VARIANT.patch），地址、计算和其余事件均相同。它保留L1生命周期、L0搬入到计算的正向依赖及L0C的UnitFlag，却失去“旧Mmad读完L0后才能覆盖”的反向保证；例如第2轮LoadData不再由该事件约束在第0轮Mmad之后。正向事件和L0C标志不能替代这条依赖。"
+    },
+    {
+      "id": "CU05.H04",
+      "status": "correct",
+      "rationale": "指出残留SetFlag与未消费预置标志造成的配对及重复置位问题，将文档中的卡死示例与本题设备观测明确区分；没有声称已发生错算、卡死或性能变化。",
+      "answer_span": "并且初始化及每轮Mmad后的M_MTE1置位仍保留，未被循环内消费，首轮就再次设置已预置的同方向同ID事件。API将此类未配对的重复SetFlag列为未定义行为，并给出PIPE_ALL卡死示例；末尾一次等待不能追补早先的依赖。\n\n因此静态证据证明变体破坏了上述手工同步保证，不能证明它每次必然错算、必然卡死或更快。两版均无编译产物、自动同步插入或设备观测，24个block也不代表910C物理核总数。"
+    }
+  ],
+  "critical_errors": []
+}

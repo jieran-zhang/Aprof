@@ -2,7 +2,7 @@
 schema_version: aprof.knowledge-record/v1
 id: implementation.vector-api.batch
 kind: recipe
-version: 1.1.0
+version: 1.2.0
 status: active
 title: Repeat / mask / stride 与批量 Vector API
 scope:
@@ -57,6 +57,22 @@ sources:
   - 211
   sha256: sha256:103bb67af7b9bc8316403167dbfd6e57da2a757dd0bfbc8af03336378051b13e
   excerpt_sha256: sha256:103bb67af7b9bc8316403167dbfd6e57da2a757dd0bfbc8af03336378051b13e
+- path: skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Compare.md
+  original_path: docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Compare.md
+  revision: d378849769f9ee610af9d0ac38db2b3b6bed3209
+  lines:
+  - 1
+  - 357
+  sha256: sha256:353264a38c342ca8b668d0400e48750461820fa743be89ba59d6824eb4764262
+  excerpt_sha256: sha256:353264a38c342ca8b668d0400e48750461820fa743be89ba59d6824eb4764262
+- path: skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Select.md
+  original_path: docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Select.md
+  revision: d378849769f9ee610af9d0ac38db2b3b6bed3209
+  lines:
+  - 1
+  - 345
+  sha256: sha256:615845595e9b6ca5d150548eb27e9e6fd9d0bb972ee1533f933ad6bea8d940b5
+  excerpt_sha256: sha256:615845595e9b6ca5d150548eb27e9e6fd9d0bb972ee1533f933ad6bea8d940b5
 learning: {}
 tags:
 - count-overload
@@ -78,7 +94,7 @@ evidence_status: source_reviewed_not_benchmarked
 
 对同一计算、规则地址和相同有效 lane 的短调用，count 或高维 repeat 重载可减少 Scalar 参数计算与 API 发射。先确定是 API 发射/地址控制热点；如果瓶颈是 GM 搬运、数据依赖或 UB bank conflict，仅增加 repeat 不一定缩短 Task 时间。C2 需允许该局部实现，算法、算术操作顺序、跨核所有权和同步不变；归约重排、跨算子融合与改累加精度不属于本条。
 
-普通 memory vector API 的一 repeat 处理 8 个 32B DataBlock，共 256B；FP16 为 128 元素、FP32 为 64 元素。具体 API/混合 dtype 以支持文档为准。固定高维 API 文档的 repeatTime 上限为 255，不能将任意长 tensor 强塞进 uint8_t 发生截断。count 重载的参数是有效元素数，由 API 合法处理前 n 个数据，受 UB/具体类型范围约束；它与 repeat 重载不是同一单位。
+普通 memory vector API 的一 repeat 处理 8 个 32B DataBlock，共 256B；FP16 为 128 元素、FP32 为 64 元素。具体 API/混合 dtype 以支持文档为准。固定高维 API 文档的 repeatTime 上限为 255，不能将任意长 tensor 强塞进 uint8_t 发生截断。count 重载的单位是元素，但是否完整处理非整 repeat 的尾部必须查具体 API、重载和平台；例如 A2/A3 Compare 只处理 count 所占空间中完整的 256B 块，而 Add 的连续 count 不能代表它。它与 repeat 重载不是同一单位。
 
 ## 落地步骤和地址闭合
 
@@ -107,3 +123,9 @@ if (validElements != 0) {
 固定 cannbot vector 文档明确 arch35/3510 的 RegBase、Reg/MicroAPI/VF 内容专属；其收益百分比、32 RegTensor 预算或展开建议不当作 A2/A3 判据。这里的 A2/A3 memory vector count/repeat 依据 asc-devkit API；950 的兼容实现需独立核验支持和零 count 行为。跨平台显式跳过空调用更容易保持语义，不将 3510 SIMT/VF 片段放入 A3 kernel。
 
 普通逐元素 batch 应保持每元素运算和 RoundMode；reduction/scan、随机数或跨 repeat 依赖要单独证明顺序，不进入本条直接合并。测试 count=0/1、每 repeat±1、255 repeat±1、不同 dtype/stride、mask 全开/局部与 bit 模式、alias 合法/不合法，并在 buffer 周围放可检查哨兵。部分 lane 错、每 repeat 周期性错位、后续 API 全错多为 mask/stride/恢复错误；撤回至 count 或原小调用，保留失败日志。来源事实是固定高维 API、Add 与 mask 的单位/状态契约，地址闭合公式与合并步骤为工程提炼；未进行目标 SDK/NPU 验证。
+
+## 从调用合并转到实际工作量比较
+
+选择前分别记原 `k` 次调用、合并后的主/尾调用数、有效元素数、为 API 补齐而新增的元素数、predicate/转换区、同步次数。调用少而初始化/转换多的方案可能不合适；同时比较保持小调用、规则 repeat、连续 count 三种表达中真实可用的方案，不要求全部都实现。队列存在不证明 Vector 已批量化，源码调用数也不等于编译后发射成本。
+
+当拟用比较生成 predicate 再选择时，按需展开 [Compare/Select 的尾部与 predicate 契约](compare-select-tail.md)。该正文是此方法的唯一完整归属：A2/A3 Compare 的 count 对齐、Select 模式和临时空间不能从 Add 的连续 count 推断。已有明确 API 依据可以支持未测收益的条件候选；接口合法性与性能价值分别判断。

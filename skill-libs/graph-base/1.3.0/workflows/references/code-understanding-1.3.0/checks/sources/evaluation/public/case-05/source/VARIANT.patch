@@ -1,0 +1,11 @@
+--- baseline/mmad.asc
++++ variant/mmad.asc
+@@ -206,7 +206,7 @@
+                     AscendC::LocalTensor<half> b2Local = (mte1DBFlag == 0) ? b2LocalPing : b2LocalPong;
+ 
+                     // ---- 反向同步：等待上一轮 Compute 释放 L0 缓冲区 ----
+-                    AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(mte1DBFlag);
++                    // TEST_DELTA: reverse wait removed in this variant.
+ 
+                     // ---- 正向同步：等待 L1 大包数据就绪（仅大包中首元素需等待） ----
+                     if (kOffsetInChunkA == 0) {

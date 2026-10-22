@@ -1,0 +1,17 @@
+{
+  "task_id": "raw15-case-05",
+  "basis": "手工逐谓词源码与数学分析；非自动由Action条件列表生成truth",
+  "proofs": {
+    "symptom.source.serial_queue_or_event_order": [
+      "Float Process与Half Process均先4路CopyIn，再算术/SafeSqrt/SafeDiv，最后CopyOut；没有单独下一tile预取阶段。",
+      "Float五个TQue各num=1；Half五原始队列各num=1、五FP32TBuf；DeQue/Free及写回关系可在CopyOneIn/CastOne/Compute/CopyOut定位。",
+      "loops/tail来自host按ubFormer计算；首轮TPipe槽空闲、末轮count=tailCount；输入v_hat和分母仍在SafeSqrt/SafeDiv后段读。库Sqrt/Div内部排程未知，不声称测得低重叠。"
+    ],
+    "constraint.semantic_equivalence": "四个输入只读，kernel仅写y；各元素保留beta/invBias、safe sqrt/div恢复、weightDecay条件及signedLr，half/bf16输出CAST_RINT不变。prefetch只读下一tile不相交的输入区间，不改变计算次序或输入状态。",
+    "constraint.dependency_lifetime": "四路当前输入槽保持至其原最后Vector消费者结束，另四路槽仅供下一tile预取；Float被就地改写的grad/m/v不能在同一槽覆盖，Half原raw在CastOne之后交还队列；五FP32临时区只一套串行计算。输出仍一槽且等MTE3释放。此依赖模型不等于实际SDK已确认，target_api_support及容量另补。",
+    "constraint.task_ownership": "AdamW host blockFormer=AlignUp(ceil(N/C),512)，blockNum=ceil(N/blockFormer)，末块长度N-(blockNum-1)*blockFormer；loops=ceil(length/T)，末tail=length-(loops-1)T。区间无交叠且尾长在1..T，prefetch需t+1<loops。",
+    "constraint.valid_lengths": "AdamW host blockFormer=AlignUp(ceil(N/C),512)，blockNum=ceil(N/blockFormer)，末块长度N-(blockNum-1)*blockFormer；loops=ceil(length/T)，末tail=length-(loops-1)T。区间无交叠且尾长在1..T，prefetch需t+1<loops。",
+    "constraint.output_ownership": "AdamW host blockFormer=AlignUp(ceil(N/C),512)，blockNum=ceil(N/blockFormer)，末块长度N-(blockNum-1)*blockFormer；loops=ceil(length/T)，末tail=length-(loops-1)T。区间无交叠且尾长在1..T，prefetch需t+1<loops。"
+  },
+  "limitations": "B实际值、目标两槽队列约束和Select内部预留是否仍需8192尚未硬件/SDK确认；8192+2048来自原host源码而非已验证910C资源。"
+}

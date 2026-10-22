@@ -2,7 +2,7 @@
 schema_version: aprof.knowledge-record/v1
 id: implementation.vector-api
 kind: router
-version: 1.1.0
+version: 1.3.0
 status: active
 title: Vector / API 路由
 scope:
@@ -77,6 +77,21 @@ routes:
   prior_score: 2
   fallback: false
   seed_reason: 属于本分支的条件性方案；先核验正文的能力、语义和资源前提，再比较成本。
+- target: implementation.vector-api.compare_select_tail
+  match: []
+  exclude:
+  - field: excluded_recipes
+    op: contains
+    value: implementation.vector-api.compare_select_tail
+  required_evidence:
+  - constraint.semantic_equivalence
+  - constraint.capacity
+  - constraint.plan_freedom
+  - constraint.target_api
+  - constraint.precision
+  prior_score: 2
+  fallback: false
+  seed_reason: 按当前语义/实现条件咨询；不由算子名称、case编号或Key数量决定，不保证收益。
 ---
 
 # Vector / API 路由
@@ -89,3 +104,6 @@ routes:
 - [Cast 转换链合并与舍入边界保持](recipes/cast.md)
 
 来源审读不等于目标硬件收益验证；不确定的能力或容量返回 needs_evidence，不能由模板代填。
+- [Compare/Select 重载、predicate 与有效尾部](recipes/compare-select-tail.md)
+
+所选 Compare/Select 重载的 dtype、count/repeat/mask、predicate 布局和 NaN/舍入语义由 target_api/precision 绑定当前实现；仅有 Vector feature 不表示满足。

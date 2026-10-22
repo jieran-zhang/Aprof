@@ -1,0 +1,180 @@
+# DataCopyPad（GMToUB非对齐数据搬运）<a name="ZH-CN_TOPIC_0000001894460401"></a>
+
+## 产品支持情况<a name="section1550532418810"></a>
+
+### 不含mode模板参数的函数原型
+
+<!-- npu="950" id1 -->
+- Ascend 950PR&950DT系列产品：不支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- Atlas A3系列产品：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- Atlas A2系列产品：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- Atlas 200I/500 A2推理产品：支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- Atlas推理系列产品AI Core：不支持
+<!-- end id5 -->
+<!-- npu="310p" id6 -->
+- Atlas推理系列产品Vector Core：不支持
+<!-- end id6 -->
+<!-- npu="910" id7 -->
+- Atlas训练系列产品：不支持
+<!-- end id7 -->
+<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB_res.md#id1 -->
+
+### 含mode模板参数的函数原型
+
+<!-- npu="950" id8 -->
+- Ascend 950PR&950DT系列产品：支持
+<!-- end id8 -->
+<!-- npu="A3" id9 -->
+- Atlas A3系列产品：不支持
+<!-- end id9 -->
+<!-- npu="910b" id10 -->
+- Atlas A2系列产品：不支持
+<!-- end id10 -->
+<!-- npu="310b" id11 -->
+- Atlas 200I/500 A2推理产品：不支持
+<!-- end id11 -->
+<!-- npu="310p" id12 -->
+- Atlas推理系列产品AI Core：不支持
+<!-- end id12 -->
+<!-- npu="310p" id13 -->
+- Atlas推理系列产品Vector Core：不支持
+<!-- end id13 -->
+<!-- npu="910" id14 -->
+- Atlas训练系列产品：不支持
+<!-- end id14 -->
+<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB_res.md#id2 -->
+
+## 功能说明<a name="section618mcpsimp"></a>
+
+头文件路径为：`"basic_api/kernel_operator_data_copy_intf.h"`。
+
+该接口提供将数据从Global Memory非对齐搬运至Unified Buffer（UB）的功能，可以根据开发者的需要自行填充数据。
+
+当每个搬运的数据块长度（blockLen）非32字节对齐时，每一个数据块都需要填充数据至32字节对齐。
+
+<!-- npu="950" id15 -->
+特别地，针对Ascend 950PR&950DT系列产品，支持Compact模式，该模式支持单个数据块非32字节对齐，将所有数据块合并成一个连续数据块，在该数据块右侧填充数据至32字节对齐。
+<!-- end id15 -->
+
+具体支持的数据通路为（以[逻辑位置TPosition](../../aux_data_structures/TPosition.md)表示）：
+
+- Global Memory -> UB
+    - GM -> VECIN
+    - GM -> VECOUT
+    <!-- npu="950" id16 -->
+    - GM -> VECCALC（仅Ascend 950PR&950DT系列产品支持）
+    <!-- end id16 -->
+
+填充的数据有两种配置方式：
+
+- 配置结构体[DataCopyPadExtParams](#table_gm2ub_pad_5)的参数paddingValue，此时DataCopyPadExtParams的参数isPad需要设置为true。
+- 使用寄存器配置接口[SetPadValue](../data_move_aux_config/SetPadValue_ISASI.md)在接口外部设置需要填充的数据，此时DataCopyPadExtParams的参数isPad需要设置为false。
+
+## 函数原型<a name="section620mcpsimp"></a>
+
+- 不支持配置设置数据搬运模式mode
+
+    ```cpp
+    template <typename T>
+    __aicore__ inline void DataCopyPad(const LocalTensor<T>& dst, const GlobalTensor<T>& src, const DataCopyExtParams& dataCopyParams, const DataCopyPadExtParams<T>& padParams)
+    ```
+
+<!-- npu="950" id17 -->
+
+- 支持配置设置数据搬运模式mode（仅Ascend 950PR&950DT系列产品支持）
+
+    ```cpp
+    // 该函数原型仅支持Ascend 950PR&950DT系列产品
+    template <typename T, PaddingMode mode = PaddingMode::Normal>
+    __aicore__ inline void DataCopyPad(const LocalTensor<T>& dst, const GlobalTensor<T>& src, const DataCopyExtParams& dataCopyParams, const DataCopyPadExtParams<T>& padParams)
+    ```
+
+<!-- end id17 -->
+
+## 参数说明<a name="section622mcpsimp"></a>
+
+**表1**  模板参数说明
+
+| 参数名 | 描述 |
+| :--- | :--- |
+| T | 操作数以及paddingValue（待填充数据值）的数据类型。各产品支持的数据类型请参考[数据类型](#section4219135304818)。 |
+| mode | 配置数据搬运模式。PaddingMode类型，定义如下：<br>enum class PaddingMode : uint8_t {<br>    Normal = 0,  // 默认模式，与原有数据搬运格式保持一致，每次数据搬运都会补齐至32字节对齐<br>    Compact,     // 紧凑模式，允许单次搬运不对齐，统一在整块数据末尾补齐至32字节对齐<br>}; |
+
+**表2**  接口参数说明
+
+| 参数名 | 输入/输出 | 描述 |
+| :--- | :---: | :--- |
+| dst | 输出 | 目的操作数，类型为[LocalTensor](../../data_structures/LocalTensor/LocalTensor_intro.md)，存储位置为UB，目的地址需要32字节对齐。 |
+| src | 输入 | 源操作数，类型为[GlobalTensor](../../data_structures/GlobalTensor/GlobalTensor_intro.md)，存储位置为Global Memory，源地址需要1字节对齐。 |
+| dataCopyParams | 输入 | 搬运参数。DataCopyExtParams类型，具体参数说明见下文。 |
+| padParams | 输入 | 从Global Memory搬运数据至Local Memory时，可以根据开发者需要，在搬运数据左边或右边填充数据。padParams是用于控制数据填充过程的参数。DataCopyPadExtParams类型，具体参数请参考[表5](#table_gm2ub_pad_5)。 |
+
+下文表格中列出的结构体参数定义请参考`${INSTALL_DIR}/asc/include/basic_api/kernel_struct_data_copy.h`，`${INSTALL_DIR}`请替换为CANN软件安装后文件存储路径。
+
+<!-- npu="950" id30 -->
+
+针对Ascend 950PR&950DT系列产品，DataCopyExtParams结构体参数定义请参考[表3](#table_gm2ub_pad_3)。
+
+**表3**  DataCopyExtParams结构体参数定义<a name="table_gm2ub_pad_3"></a>
+
+| 参数名 | 描述 |
+| :--- | :--- |
+| blockCount | 搬运的数据块个数，数据类型为uint16_t，取值范围：blockCount∈[0, 65535]，默认值为1。 |
+| blockLen | 搬运的每个数据块长度，数据类型为uint32_t，取值范围：blockLen∈[0, $2^{21}−1$]，单位：1B。<br>**注：blockLen必须是sizeof(T)的整数倍，需要注意不要超过UB空间大小。** |
+| srcStride | 源操作数相邻数据块之间的间隔（即前一个数据块**结束地址**与后一个数据块**起始地址**的差值），数据类型为int64_t，取值范围：srcStride∈[-blockLen, $2^{40}−1$]，单位：1B。当srcStride = -blockLen时，表示每次传输的连续数据块均为同一块，即重复搬运第一个数据块。 |
+| dstStride | 目的操作数相邻数据块之间的间隔（即前一个数据块**结束地址**与后一个数据块**起始地址**的差值），数据类型为int64_t，取值范围：dstStride∈[0, 65535]，单位：dataBlock（32B）。若PaddingMode为Compact模式，该参数无效，默认值为0，取默认值即可。<br>**注：需要注意不要超过UB空间大小**。 |
+| rsv | 预留参数，当前需设置为0。 |
+
+<!-- end id30 -->
+
+<!-- npu="A3,910b,310b" id31 -->
+
+针对如下型号，DataCopyExtParams结构体参数定义请参考[表4](#table_gm2ub_pad_4)：
+
+<!-- npu="A3" id33 -->
+- Atlas A3系列产品
+<!-- end id33 -->
+<!-- npu="910b" id34 -->
+- Atlas A2系列产品
+<!-- end id34 -->
+<!-- npu="310b" id35 -->
+- Atlas 200I/500 A2推理产品
+<!-- end id35 -->
+
+**表4**  DataCopyExtParams结构体参数定义<a name="table_gm2ub_pad_4"></a>
+
+| 参数名 | 描述 |
+| :--- | :--- |
+| blockCount | 搬运的数据块个数，数据类型为uint16_t，取值范围：blockCount∈[0, 4095]，默认值为1。 |
+| blockLen | 搬运的每个数据块长度，数据类型为uint32_t，取值范围：blockLen∈[0, $2^{21}−1$]，单位：1B。<br>**注：blockLen必须是sizeof(T)的整数倍，需要注意不要超过UB空间大小。** |
+| srcStride | 源操作数相邻数据块之间的间隔（即前一个数据块**结束地址**与后一个数据块**起始地址**的差值），数据类型为uint32_t，取值范围：srcStride∈[0, $2^{32}−1$]，单位：1B。 |
+| dstStride | 目的操作数相邻数据块之间的间隔（即前一个数据块**结束地址**与后一个数据块**起始地址**的差值），数据类型为uint32_t，取值范围：dstStride∈[0, $2^{32}−1$]，单位：dataBlock（32B）。若PaddingMode为Compact模式，该参数无效，默认值为0，取默认值即可。<br>**注：需要注意不要超过UB空间大小**。 |
+| rsv | 预留参数，当前需设置为0。 |
+
+<!-- end id31 -->
+
+**表5**  DataCopyPadExtParams&lt;T&gt;结构体参数定义<a name="table_gm2ub_pad_5"></a>
+
+| 参数名 | 描述 |
+| :--- | :--- |
+| isPad | 是否通过DataCopyPadExtParams结构体中的paddingValue字段设置填充值。<br>true：使用paddingValue字段作为填充值。<br>false：不使用paddingValue字段，根据是否调用寄存器配置接口[SetPadValue](../data_move_aux_config/SetPadValue_ISASI.md)分为两种情况。<br>&bull;调用SetPadValue时，在接口外部配置需要填充的数据。<br>&bull;不调用SetPadValue时，硬件自动在**每个数据块右侧**填充dummy数据至32字节对齐。若PaddingMode为Compact模式，则只会在**最后一个数据块右侧**填充dummy数据至32字节对齐。 |
+| leftPadding | 连续搬运数据块左侧需要补充的数据范围，单位为元素个数。<br>若PaddingMode为Compact模式，该参数无效，只会在**最后一个数据块右侧**填充数据。<br>**leftPadding、rightPadding所占的字节数均不能超过32字节。** |
+| rightPadding | 连续搬运数据块右侧需要补充的数据范围，单位为元素个数。<br>若PaddingMode为Compact模式，该参数无效，只会在**最后一个数据块右侧**填充数据。<br>**leftPadding、rightPadding所占的字节数均不能超过32字节。** |
+| paddingValue | 左右两侧需要填充的数据值，需要保证在数据占用字节范围内。<br>数据类型和源操作数保持一致，数据类型为模板参数T。<br>**当数据类型长度为64位时，该参数只能设置为0。** |
+
+- GM -> VECIN/VECOUT配置示例<a name="li73127579197"></a>
+
+    下面通过三个示例展示DataCopyPad在GM -> VECIN/VECOUT通路上的不同配置场景。示例1演示32字节对齐场景下的数据搬运，示例2演示非32字节对齐时的dummy填充机制，示例3（仅Ascend 950PR&950DT系列产品支持）演示负stride实现重复搬运同一数据块的场景。
+
+    - 参数解释
+        - 当blockLen+leftPadding+rightPadding满足32字节对齐时，若isPad为false，左右两侧填充的数据值会默认为随机值；否则为paddingValue。
+        - 当blockLen+leftPadding+rightPadding不满足32字节对齐时，框架会填充一些假数据dummy，保证左右填充的数据和blockLen、假数据为32字节对齐。若leftPadding、rightPadding都为0：dummy会默认填充待搬运数据块的第一个元素值；若leftPadding/rightPadding不为0：isPad为false，左右两侧填充的数据值和dummy值均为随机值；否则为paddingValue。
+

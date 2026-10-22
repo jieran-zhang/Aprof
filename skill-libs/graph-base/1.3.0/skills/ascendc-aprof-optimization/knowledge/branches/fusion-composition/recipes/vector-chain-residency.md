@@ -51,7 +51,6 @@ references:
 - implementation.pipeline-sync.pipeline
 evidence_status: source_reviewed_not_benchmarked
 ---
-
 # Vector 算子链融合与 UB 中间值驻留
 
 ## 技术定义与适用条件
@@ -81,7 +80,7 @@ C2选择融合区间、任务与tile、输入输出别名、各步dtype/舍入/�
 
 1. 从原计算图标出所有中间消费者，选只有内部边的region；保留外部可见输出和原dtype边界。
 2. 对每tile列出每步读写集合和最后使用点，分配可复用槽；先实现一组输入/输出的正确基线。
-3. 用公开Vector API实现同等公式，在真实依赖处插入V内barrier或使用API规定的同步；以TQue建立搬入/计算/搬出边。
+3. 用公开Vector API实现同等公式，在真实依赖处插入V内barrier或使用API规定的同步；以目标支持的TQue、TBuf事件或静态租约建立搬入/计算/搬出及回收完成边，不能把管理形式固定为性能前提。
 4. 尾tile只计算合法有效元素或明确填充的padding，不读GM越界；广播stride由C2给定，不把尾补零当成任意算子的中性元。
 5. 在容量允许和timeline显示等待后，另行引入跨tile双缓冲；分别验证“少GM往返”和“有overlap”。
 

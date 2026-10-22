@@ -1,0 +1,61 @@
+{
+  "answer_id": "answer-08feff778566",
+  "case": "case-02",
+  "facts": [
+    {
+      "id": "CU02.A01",
+      "status": "correct",
+      "rationale": "明确说明从5×20的float输入逐行选择前13个值，写入5×18输出的对应行，数值为100r+c；后文明确有效值未经过类型转换或算术计算，符合分阶段行拷贝。",
+      "answer_span": "当前实现完成的是按行选择数据、在 UB 中补零并按指定间隔写回。输入按 float32 存储，物理形状为 5×20，input[r,c]=100r+c；每行只取前13个元素。输出物理形状为5×18，每行前13个 float 等于对应输入值，后5个 float 槽位的字节保持0xA5。因此输出第r行可描述为“100r至100r+12，共13个float，随后20B的0xA5”。这些尾部字节不属于写回的零填充数据。"
+    },
+    {
+      "id": "CU02.A02",
+      "status": "correct",
+      "rationale": "完整区分Duplicate初始化、每行13个有效float与3个补零float、保留初始零值的32B间隔，以及仅写出52B后保留0xA5的全部输出行尾，包括最后后缀。",
+      "answer_span": "输入每行尾部区间[80r+52,80r+80)的28B，即列13—19，不被本次搬运选取，最后一行也是如此。UB四个块间间隔分别是[64,96)、[160,192)、[256,288)、[352,384)，另外[448,480)是分配尾部余量。它们由最初Duplicate清零，CopyIn不写这些区间。CopyIn共写260B有效数据和60B显式padding，最后写到448B边界，未越过480B分配；其余160B保留初始零值。isPad=true的含义是使用paddingValue，本例显式设为0。\n\n写回参数为{5,52,1,20,0}（68—69行）。DataCopyPad_UBToGM.md规定，此方向UB源srcStride以32B计，GM目的dstStride以B计；非对齐块在UB侧按32B补齐处理，写入GM时丢弃dummy。因此UB源行跨度为ceil(52/32)×32+1×32=96B，正好匹配CopyIn的排布；GM目的行跨度则为52+20=72B，正好对应输出物理18个float。每块只向GM提交前52B有效数据，UB中的12B右补零及32B间隔都不写出。\n\n所以输出各行尾部[72r+52,72r+72)保持0xA5，具体为[52,72)、[124,144)、[196,216)、[268,288)、[340,360)。"
+    },
+    {
+      "id": "CU02.A03",
+      "status": "correct",
+      "rationale": "以当前scenario 2及其参数为分析对象，明确current相对upstream的变化，并排除其他场景分支。",
+      "answer_span": "scenario 1及其SetPadValue不执行，scenario 3—6的搬运代码受__NPU_ARCH__==3510保护，不属于本题2201路径。source/VARIANT.patch明确记录了当前参数、清零与分步写回相对于upstream的变化，实际行为应以current为准。"
+    },
+    {
+      "id": "CU02.E01",
+      "status": "correct",
+      "rationale": "给出52B块长、28B源间隔和80B行跨度；表中五个输入区间对应起点0、80、160、240、320，末端372B，结合明确给出的400B输入分配，完整满足范围判断。",
+      "answer_span": "| 行r | 输入GM有效区间 | UB有效数据区间 | UB右补零区间 | 输出GM写入区间 |\n| --- | --- | --- | --- | --- |\n| 0 | [0,52) | [0,52) | [52,64) | [0,52) |\n| 1 | [80,132) | [96,148) | [148,160) | [72,124) |\n| 2 | [160,212) | [192,244) | [244,256) | [144,196) |\n| 3 | [240,292) | [288,340) | [340,352) | [216,268) |\n| 4 | [320,372) | [384,436) | [436,448) | [288,340) |"
+    },
+    {
+      "id": "CU02.E02",
+      "status": "correct",
+      "rationale": "正确计算52B数据加12B右填充形成64B，再加32B间隔形成96B行跨度；表格与后续区间说明完整列出五行数据、填充和间隔，且明确UB分配120个float即480B。",
+      "answer_span": "以下地址均为相对各自缓冲区基址的字节偏移，区间采用左闭右开。CopyIn的参数为{5,52,28,1,0}（95—105行），padding参数为{true,0,3,0}。固定原文shared/rawdocs下的DataCopyPad_GMToUB.md“参数说明”规定：blockLen以B计，GM源srcStride以B计，UB目的dstStride以32B的dataBlock计；左右padding则以元素计。故每行有效长度13×4=52B，GM行跨度52+28=80B，恰好对应物理20个float。右侧补3×4=12B后，每个UB块长64B，已经32B对齐，无需额外dummy；再加dstStride=1对应的32B间隔，UB行跨度为96B。"
+    },
+    {
+      "id": "CU02.E03",
+      "status": "correct",
+      "rationale": "明确UB源按64B对齐块再加32B间隔，行跨度96B；GM目的间隔20B、行跨度72B。表格列出全部写区间，后文明示最后有效写入结束340B，处于360B输出分配内。",
+      "answer_span": "写回参数为{5,52,1,20,0}（68—69行）。DataCopyPad_UBToGM.md规定，此方向UB源srcStride以32B计，GM目的dstStride以B计；非对齐块在UB侧按32B补齐处理，写入GM时丢弃dummy。因此UB源行跨度为ceil(52/32)×32+1×32=96B，正好匹配CopyIn的排布；GM目的行跨度则为52+20=72B，正好对应输出物理18个float。每块只向GM提交前52B有效数据，UB中的12B右补零及32B间隔都不写出。"
+    },
+    {
+      "id": "CU02.H01",
+      "status": "correct",
+      "rationale": "完整说明blockLen以字节计、GM两方向stride为字节间隔、UB两方向stride以32B块计、padding以元素计；同时区分逻辑数据、GM物理行宽、UB填充行和总分配。",
+      "answer_span": "固定原文shared/rawdocs下的DataCopyPad_GMToUB.md“参数说明”规定：blockLen以B计，GM源srcStride以B计，UB目的dstStride以32B的dataBlock计；左右padding则以元素计。"
+    },
+    {
+      "id": "CU02.H02",
+      "status": "correct",
+      "rationale": "明确Duplicate由Vector流水执行，V_MTE2保护清零先于搬入覆盖，MTE2_MTE3保护搬入完成先于搬出读取；另明确有效值没有算术计算，未将两种依赖混同。",
+      "answer_span": "同步保护的是具体存储依赖。Process中的V_MTE2置位/等待（63—64行）使Vector对480B的清零完成后，MTE2才覆盖其中的数据及padding区域，避免两个写入者交错。MTE2_MTE3置位/等待（66—67行）使CopyIn写UB完成后，MTE3才能读取UB并写输出，保护写后读依赖。两组均使用EVENT_ID0，但事件方向不同；它们是核内流水同步。"
+    },
+    {
+      "id": "CU02.H03",
+      "status": "correct",
+      "rationale": "正确说明A3支持当前普通重载，排除3510的Compact和loop mode；完整核对各缓冲区范围，并明确结论来自静态源码与契约，未声称已证明设备构建、启动或具体运行时序。",
+      "answer_span": "A3支持当前不含mode模板参数的DataCopyPad重载和float类型；不能把3510的Compact、loop mode行为带入本分支。"
+    }
+  ],
+  "critical_errors": []
+}

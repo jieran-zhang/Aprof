@@ -1,0 +1,97 @@
+{
+  "task_id": "case-08",
+  "complete_directory_count": 28,
+  "directory_review": "全部28个轻目录均审读；按当前复制/坐标/分配/队列成本选正文。Cube、跨kernel融合、归约/merge等不属于当前主数据路径，不加载全部正文。",
+  "used": [
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+        "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+      },
+      "locator": "lines:297-344",
+      "effect_kind": "mechanism",
+      "before": "三个坐标load是主要可删工作",
+      "after": "同一(n,s)坐标变换和权重也与channel不变，因此选共享几何而非只缓存字段或原值。",
+      "applicability": "grid_sampler_3d当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+        "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+      },
+      "locator": "lines:85-126",
+      "effect_kind": "plan",
+      "before": "索引采样似乎需要原子或跨核共享",
+      "after": "采用输出唯一owner和只读源的原则；GridSampler带插值，不直接套GatherElements地址式；明确任务内扩展并保留原数值链。",
+      "applicability": "grid_sampler_3d当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+        "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+      },
+      "locator": "lines:57-104",
+      "effect_kind": "parameters",
+      "before": "可以把所有坐标量全局缓存",
+      "after": "缓存域必须限定batch/spatial/padding/align；在channel组外计算，跨组/空间重算，不能预乘浮点权重。",
+      "applicability": "grid_sampler_3d当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+        "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+      },
+      "locator": "lines:70-110",
+      "effect_kind": "applicability",
+      "before": "数学等价即可合并权重乘积",
+      "after": "保留原每项乘法及累加舍入，half最后Cast，NaN/Inf掩码和原oracle阈值不变。",
+      "applicability": "grid_sampler_3d当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    }
+  ],
+  "additional_problem_reading": [
+    {
+      "id": "problem.insufficient_input_reuse",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.insufficient_input_reuse.md",
+      "why": "grid坐标被所有channel重复读取；区分原输入驻留与派生坐标缓存"
+    },
+    {
+      "id": "problem.control_metadata_overhead",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+      "why": "空间坐标解码和padding/权重在各channel重复，能否跨通道共享"
+    },
+    {
+      "id": "problem.scalar_control_hot_loop",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+      "why": "每输出1或8次随机采样，向量化相对坐标共享的成本"
+    },
+    {
+      "id": "problem.register_spill",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.register_spill.md",
+      "why": "正文提出的替代解释/代价：结合当前grid_sampler_3d源码，进一步区分新增局部状态spill、地址控制或容量对流水的限制。"
+    }
+  ],
+  "selected_P": [
+    "planning.indexing.gather_output_owned"
+  ],
+  "selected_O": [
+    "implementation.scalar-control.hot_loop_address",
+    "implementation.precision-boundaries.numeric"
+  ],
+  "limits": "真正采用项单列，不把router自动复制全文或全部matches视为已读/已实施；P/O采用仅为条件分析。"
+}

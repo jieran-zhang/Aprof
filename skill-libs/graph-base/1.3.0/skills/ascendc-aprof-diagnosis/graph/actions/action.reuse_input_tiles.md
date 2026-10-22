@@ -2,7 +2,7 @@
 schema_version: aprof.diagnosis-record/v1
 id: action.reuse_input_tiles
 kind: action
-version: 1.1.0
+version: 1.2.0
 status: active
 title: 在容量允许时复用输入块
 scope:
@@ -80,7 +80,7 @@ invariants:
 - 完整语义和精度
 - 有效元素覆盖和唯一写回
 - 容量、同步与所有权合法
-expected_effect: 预期减少该机制的额外成本；具体方案由 C2 比较、C3 实施，统一计时核验。
+expected_effect: 驻留或改变tile顺序可减少重复装入；代价是更长存活、较小tile/较少流水buffer，L2提示不保证实际驻留。 是否作用于关键路径及实际收益由后继验证，不能由Action就绪推出。
 slots:
 - name: target
   kind: object
@@ -129,7 +129,7 @@ claims:
 - id: intervention
   text: 在有效复用窗口保留输入，或调整tile顺序增加合法局部复用
   basis: mechanism_inference
-  source_indexes: &id001
+  source_indexes:
   - 1
   - 2
   - 3
@@ -142,10 +142,24 @@ claims:
 - id: costs
   text: 增加常驻UB/L1容量；可能缩小tile或减少流水buffer并拉长生命周期
   basis: mechanism_inference
-  source_indexes: *id001
+  source_indexes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
   review_status: reviewed
   limitations:
   - 代价需要绑定具体候选量化，尚无本任务收益
+- id: condition_separation
+  text: 输入在明确窗口内地址和值不变，消费者、owner、生命周期及目标驻留/缓存路径由C2许可；容量与通路支持有依据。 重复读取同一切片是结构事实；insufficient名称不自动说明未命中cache或驻留可行。
+    驻留或改变tile顺序可减少重复装入；代价是更长存活、较小tile/较少流水buffer，L2提示不保证实际驻留。
+  basis: mechanism_inference
+  source_indexes: []
+  review_status: reviewed
+  limitations:
+  - 本次基于已有模板、包内来源和变换语义的条件分层归纳，不是上游新增性能结论。
+  - 性能证据不足不等于变换不安全；实施安全也不证明当前关键路径、收益或试验优先级。
 review:
   state: reviewed_with_limits
   source_credibility: 固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。
@@ -170,7 +184,7 @@ instantiation:
   costs:
   - 增加常驻UB/L1容量
   - 可能缩小tile或减少流水buffer并拉长生命周期
-  unknown_policy: 任一硬前提缺失、unknown或proxy则needs_evidence；明确不满足则blocked。C2可比较条件方案，C3须完成全部原前提及invariants核验。
+  unknown_policy: 实施前逐条满足本版本preconditions与invariants；安全/结构条件缺失则指出具体未证项，C2可继续条件分析，C3不得绕过。性能假设独立记录：来源与当前源码足以支持适用时，可在合法且有试验价值的条件下提出优化，不以尚无严格性能实测一律否决；不把未知写成确认。Action优先级由成本机会比较和补证据决策形成。
   replan_triggers:
   - 目标/阶段、owner或有效元素域变化
   - 算法、归并/同步拓扑、workspace owner、融合、通路或dispatch域超出已确认C2计划自由度
@@ -185,21 +199,31 @@ instantiation:
 
 跨tile/迭代保持不变的输入切片；阶段：host tile顺序与分核；kernel CopyIn及片上驻留期。
 
-## 实例绑定与原硬前提
+## 实例绑定与实施安全条件
 
-实例必须给出精确template_hash、task与parent实现、目标和阶段；参数逐项给单位、来源及有效域，关联已确认C2计划。未知信息不从样例常量或聊天推断。
+实例必须给出精确template_hash、task与parent实现、目标和阶段；参数逐项给单位、来源及有效域，关联已确认C2计划。来源/源码/合法API与资源公式可以证明安全，无需将每项伪装成硬件观测。
 
-- target
-- stage
-- workload
-- implementation
+输入在明确窗口内地址和值不变，消费者、owner、生命周期及目标驻留/缓存路径由C2许可；容量与通路支持有依据。
 
-- symptom.source.insufficient_input_reuse=true
-- constraint.reuse_domain=true
-- constraint.semantic_equivalence=true
-- constraint.capacity=true
+- `symptom.source.insufficient_input_reuse=true`：重复读取同一切片是结构事实；insufficient名称不自动说明未命中cache或驻留可行。
+- `constraint.reuse_domain=true`：同地址同值的复用窗口、owner和覆盖/更新边界可证明，驻留不能越过输入变化或外部写入。
+- `constraint.semantic_equivalence=true`：完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。
+- `constraint.capacity=true`：按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。
 
-原invariants：完整语义和精度；有效元素覆盖和唯一写回；容量、同步与所有权合法。
+不变量：完整语义和精度；有效元素覆盖和唯一写回；容量、同步与所有权合法。
+
+## 性能假设、比较与补证据
+
+重复读取同一切片是结构事实；insufficient名称不自动说明未命中cache或驻留可行。
+
+驻留或改变tile顺序可减少重复装入；代价是更长存活、较小tile/较少流水buffer，L2提示不保证实际驻留。
+
+1. 计算唯一切片字节、重复次数、复用距离、当前缓冲释放点和驻留后峰值，区分UB/L1保留与L2策略。
+2. 具体选择重复输入、矩阵块或坐标/trig表适用文档；无读流量计数仍可据明确复用结构提出方案，不能把假设当测量。
+
+已有来源说明该方法，并且当前源码形态、对象、目标API与约束匹配时，即可将其作为有依据的优化候选；不要求先完成严格性能实验。每个unknown只写具体缺失项、决策影响和是否值得补证据。若补充检查不会改变候选选择，就记录预测后进入获授权的试验，不把“信息不完备”当统一否决。反之，安全未知或明确不适用必须阻断实施。
+
+本Action能实施只是准入。选择前应与当前workload的主要字节、逐元素工作、任务/流水机会比较，说明预计改变何种成本、影响哪些case、可能代价及为何优先；不能以容易等价作为唯一理由。R2把R1实际patch与预测逐项对照，区分支持、削弱和无法判断；继续同一Action应有新证据、不同参数或尚未验证的预测，不要求机械换Action。
 
 ## 预期效果与代价
 
@@ -210,7 +234,7 @@ instantiation:
 
 ## 未知与返回规划
 
-任一硬前提缺失、unknown或proxy则needs_evidence；明确不满足则blocked。C2可比较条件方案，C3须完成全部原前提及invariants核验。
+实施前逐条满足本版本preconditions与invariants；安全/结构条件缺失则指出具体未证项，C2可继续条件分析，C3不得绕过。性能假设独立记录：来源与当前源码足以支持适用时，可在合法且有试验价值的条件下提出优化，不以尚无严格性能实测一律否决；不把未知写成确认。Action优先级由成本机会比较和补证据决策形成。
 
 - 目标/阶段、owner或有效元素域变化
 - 算法、归并/同步拓扑、workspace owner、融合、通路或dispatch域超出已确认C2计划自由度
@@ -252,3 +276,16 @@ arch22 MatMul文档要求先核算M/N任务与最长核，再比较Split-K归并
 增加常驻UB/L1容量；可能缩小tile或减少流水buffer并拉长生命周期
 
 来源索引：1, 2, 3, 4, 5。限制：代价需要绑定具体候选量化，尚无本任务收益
+
+
+### condition_separation [mechanism_inference]
+
+输入在明确窗口内地址和值不变，消费者、owner、生命周期及目标驻留/缓存路径由C2许可；容量与通路支持有依据。 重复读取同一切片是结构事实；insufficient名称不自动说明未命中cache或驻留可行。 驻留或改变tile顺序可减少重复装入；代价是更长存活、较小tile/较少流水buffer，L2提示不保证实际驻留。
+
+本次维护归纳；原来源与许可不变。旧条件逐项去向见包内 `workflows/references/action-condition-policy.json`，v0004前提仅在历史快照继续按原义回放。
+
+## v0006 选择与语义边界
+
+输入复用指同一输入切片在合法窗口的地址和值不变。保存新计算的坐标、权重或归约统计属于派生数据复用，需单独解释生成、依赖与数值可见性，不能把它标成输入已驻留。选择时比较减少装入、扩大的存活峰值、缩小 tile/流水槽位以及未覆盖消费者；来源方法适用但实际收益未测可试验，来源无关或窗口不合法不能采用。
+
+此段为基于既有变换语义的维护归纳，不新增上游性能声明、不放宽 preconditions，也不将当前任务的性能 unknown 改成 true。

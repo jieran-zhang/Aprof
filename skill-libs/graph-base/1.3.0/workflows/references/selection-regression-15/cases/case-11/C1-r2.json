@@ -1,0 +1,654 @@
+{
+  "schema_version": "aprof.handoff/v3",
+  "stage": "C1",
+  "task_id": "autonomy-c-11",
+  "candidate_id": null,
+  "parent_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+  "artifacts": [
+    {
+      "path": "decision-r2.json",
+      "sha256": "sha256:74b6747a8246de8d1d6a976fce7c0737a8867a7b8810851e9a22672be784fdde"
+    },
+    {
+      "path": "retrieval.json",
+      "sha256": "sha256:012896f2f06de63b107b9327b087cafb7c6e3c598521aa4517b5de41bcf56b89"
+    },
+    {
+      "path": "expansion.json",
+      "sha256": "sha256:def48c1910ed037c9752d322f0a19004d150ec914bc7e2b18257c6cb3fd2f537"
+    },
+    {
+      "path": "parallel-planning-consult-route.json",
+      "sha256": "sha256:6b8e63258a18c3a2ccf654bcea301b98970e3b9833945ea95741d5ffc9834095"
+    },
+    {
+      "path": "optimization-consult-route.json",
+      "sha256": "sha256:3a2158c37e12c0e00613e647e13ee02bc89695ded092a840e51f28ac973836a6"
+    },
+    {
+      "path": "parallel-planning-action-consult-r2.json",
+      "sha256": "sha256:59f5c5e0bde0d32f7baf34ebff69e9ae6d3050c97f1a8b885e1754a0c60b250d"
+    },
+    {
+      "path": "optimization-action-consult-r2.json",
+      "sha256": "sha256:8d4db5ae7b59f573abaabf22e3365feb5f2dc0e6ec3cfc020b507a408d6341ee"
+    }
+  ],
+  "reasoning": {
+    "schema_version": "aprof.diagnosis-reasoning/v1",
+    "task_id": "autonomy-c-11",
+    "context_hash": "sha256:96da771e6cd35be9953cce289b7aa5bc804ed930c12a946e44b3346fc6a70067",
+    "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+    "source_context_ref": {
+      "path": "authority.json",
+      "sha256": "sha256:df8323e1397fb5b5912ca78bf885ac0e41e16bf63e0e145ae8953758e2886240"
+    },
+    "context_snapshot": {
+      "schema_version": "aprof.evidence/v1",
+      "task_id": "autonomy-c-11",
+      "source_context_ref": {
+        "path": "authority.json",
+        "sha256": "sha256:df8323e1397fb5b5912ca78bf885ac0e41e16bf63e0e145ae8953758e2886240"
+      },
+      "attributes": {
+        "platform": "dav-2201",
+        "family": [
+          "elementwise"
+        ],
+        "dtype": [
+          "bfloat16",
+          "float16",
+          "float32"
+        ],
+        "features": [
+          "pipeline",
+          "memory-transfer",
+          "tiling-tail",
+          "vector-api",
+          "pipeline-sync"
+        ]
+      },
+      "facts": {}
+    },
+    "current": {
+      "implementation_ref": {
+        "path": "parent-source.json",
+        "sha256": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd"
+      },
+      "workload_ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc"
+      },
+      "objects": [
+        {
+          "object_id": "path",
+          "kind": "tensor",
+          "description": "host按TensorList成员及8M元素chunk逐次启动；每chunk按核连续分块，T=2048；每tile三输入DMA、Div/Muls/Add及输出DMA，窄dtype额外三次入FP32和一次回写Cast；无GM中间张量。"
+        },
+        {
+          "object_id": "stage",
+          "kind": "stage",
+          "description": "kernel complete compute/data path"
+        },
+        {
+          "object_id": "workload",
+          "kind": "workload",
+          "description": "20 cases matrix"
+        },
+        {
+          "object_id": "implementation",
+          "kind": "implementation",
+          "description": "frozen full source parent"
+        }
+      ],
+      "scope": {
+        "task_id": "autonomy-c-11",
+        "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+        "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      }
+    },
+    "facts": {
+      "source.kernel": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/foreach_addcdiv_scalar_kernel.asc@lines:1-116",
+        "ref": {
+          "path": "source/op_kernel/foreach_addcdiv_scalar_kernel.asc",
+          "sha256": "sha256:d54b511cbe97cadbcba0bb66a3ad3ddfab570f266b794272d299addcb80d600c",
+          "locator": "lines:1-116"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-11",
+          "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+          "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source"
+      },
+      "source.host": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_host/foreach_addcdiv_scalar.asc@lines:1-108",
+        "ref": {
+          "path": "source/op_host/foreach_addcdiv_scalar.asc",
+          "sha256": "sha256:e075214116b85080d5828537762255e0f8e912f0dae34ca507529a6af7ff9a16",
+          "locator": "lines:1-108"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-11",
+          "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+          "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source"
+      },
+      "source.tiling": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/foreach_addcdiv_scalar_tiling.h@lines:1-32",
+        "ref": {
+          "path": "source/op_kernel/foreach_addcdiv_scalar_tiling.h",
+          "sha256": "sha256:4feb20530a6ed3dbf58746cedf1f9fcc15fe21dab5718f41cbff05fe98bf5d81",
+          "locator": "lines:1-32"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-11",
+          "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+          "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source"
+      },
+      "source.workload": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/matrix-20.json@cases",
+        "ref": {
+          "path": "source/matrix-20.json",
+          "sha256": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "locator": "cases"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-11",
+          "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+          "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "workload"
+      },
+      "source.oracle": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/scripts/verify_result.py@main",
+        "ref": {
+          "path": "source/scripts/verify_result.py",
+          "sha256": "sha256:dcb5c59a05da0d1b553319b302dc5c308e64f676b392e9b5ccd053f6a11b1711",
+          "locator": "main"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-11",
+          "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+          "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source"
+      },
+      "primary.symptom.source.inner_loop_copy": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "primary.symptom.source.inner_loop_copy.component_1",
+          "primary.symptom.source.inner_loop_copy.component_2",
+          "primary.symptom.source.inner_loop_copy.component_3"
+        ],
+        "components": [
+          "primary.symptom.source.inner_loop_copy.component_1",
+          "primary.symptom.source.inner_loop_copy.component_2",
+          "primary.symptom.source.inner_loop_copy.component_3"
+        ],
+        "scope": {
+          "task_id": "autonomy-c-11",
+          "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+          "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.inner_loop_copy"
+      },
+      "primary.symptom.source.inner_loop_copy.component_1": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/foreach_addcdiv_scalar_kernel.asc@lines:1-116",
+        "ref": {
+          "path": "source/op_kernel/foreach_addcdiv_scalar_kernel.asc",
+          "sha256": "sha256:d54b511cbe97cadbcba0bb66a3ad3ddfab570f266b794272d299addcb80d600c",
+          "locator": "lines:1-116"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-11",
+          "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+          "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.inner_loop_copy.component_1"
+      },
+      "primary.symptom.source.inner_loop_copy.component_2": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/foreach_addcdiv_scalar_kernel.asc@lines:1-116",
+        "ref": {
+          "path": "source/op_kernel/foreach_addcdiv_scalar_kernel.asc",
+          "sha256": "sha256:d54b511cbe97cadbcba0bb66a3ad3ddfab570f266b794272d299addcb80d600c",
+          "locator": "lines:1-116"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-11",
+          "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+          "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.inner_loop_copy.component_2"
+      },
+      "primary.symptom.source.inner_loop_copy.component_3": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/foreach_addcdiv_scalar_kernel.asc@lines:1-116",
+        "ref": {
+          "path": "source/op_kernel/foreach_addcdiv_scalar_kernel.asc",
+          "sha256": "sha256:d54b511cbe97cadbcba0bb66a3ad3ddfab570f266b794272d299addcb80d600c",
+          "locator": "lines:1-116"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-11",
+          "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+          "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.inner_loop_copy.component_3"
+      },
+      "primary.constraint.semantic_equivalence": {
+        "state": "unknown",
+        "kind": "raw",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-11",
+          "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+          "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "constraint",
+        "predicate": "constraint.semantic_equivalence"
+      },
+      "primary.constraint.capacity": {
+        "state": "unknown",
+        "kind": "raw",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-11",
+          "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+          "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "constraint",
+        "predicate": "constraint.capacity"
+      },
+      "alternative.symptom.source.serial_queue_or_event_order": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "alternative.symptom.source.serial_queue_or_event_order.component_1",
+          "alternative.symptom.source.serial_queue_or_event_order.component_2",
+          "alternative.symptom.source.serial_queue_or_event_order.component_3"
+        ],
+        "components": [
+          "alternative.symptom.source.serial_queue_or_event_order.component_1",
+          "alternative.symptom.source.serial_queue_or_event_order.component_2",
+          "alternative.symptom.source.serial_queue_or_event_order.component_3"
+        ],
+        "scope": {
+          "task_id": "autonomy-c-11",
+          "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+          "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.serial_queue_or_event_order"
+      },
+      "alternative.symptom.source.serial_queue_or_event_order.component_1": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/foreach_addcdiv_scalar_kernel.asc@lines:1-116",
+        "ref": {
+          "path": "source/op_kernel/foreach_addcdiv_scalar_kernel.asc",
+          "sha256": "sha256:d54b511cbe97cadbcba0bb66a3ad3ddfab570f266b794272d299addcb80d600c",
+          "locator": "lines:1-116"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-11",
+          "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+          "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.serial_queue_or_event_order.component_1"
+      },
+      "alternative.symptom.source.serial_queue_or_event_order.component_2": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/foreach_addcdiv_scalar_kernel.asc@lines:1-116",
+        "ref": {
+          "path": "source/op_kernel/foreach_addcdiv_scalar_kernel.asc",
+          "sha256": "sha256:d54b511cbe97cadbcba0bb66a3ad3ddfab570f266b794272d299addcb80d600c",
+          "locator": "lines:1-116"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-11",
+          "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+          "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.serial_queue_or_event_order.component_2"
+      },
+      "alternative.symptom.source.serial_queue_or_event_order.component_3": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/foreach_addcdiv_scalar_kernel.asc@lines:1-116",
+        "ref": {
+          "path": "source/op_kernel/foreach_addcdiv_scalar_kernel.asc",
+          "sha256": "sha256:d54b511cbe97cadbcba0bb66a3ad3ddfab570f266b794272d299addcb80d600c",
+          "locator": "lines:1-116"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-11",
+          "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+          "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.serial_queue_or_event_order.component_3"
+      },
+      "alternative.constraint.dependency_lifetime": {
+        "state": "unknown",
+        "kind": "raw",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-11",
+          "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+          "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "constraint",
+        "predicate": "constraint.dependency_lifetime"
+      },
+      "source.r2": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "r2-new-static-evidence.json@finding",
+        "ref": {
+          "path": "r2-new-static-evidence.json",
+          "sha256": "sha256:a31375be390b85bd8046a1184c40cdf961c032d45a5f430bcab1e31f3fb0812f",
+          "locator": "finding"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-11",
+          "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+          "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source"
+      }
+    },
+    "candidates": [
+      {
+        "hypothesis_id": "H-primary",
+        "problem_id": "problem.tiny_transfer_setup_amplification",
+        "mechanism": "4*(L2048-LT) DMA发射及相同数量级tile控制，LT=sum ceil(Nc/T)，比较T=4096或8192；GM必要字节不变",
+        "targets": [
+          "path"
+        ],
+        "scope": {
+          "task_id": "autonomy-c-11",
+          "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+          "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "support": [
+          "source.kernel",
+          "source.tiling",
+          "source.workload"
+        ],
+        "counter": [],
+        "unknown": [
+          "primary.constraint.semantic_equivalence",
+          "primary.constraint.capacity"
+        ],
+        "alternatives": [
+          "H-alternative"
+        ],
+        "checks": [
+          "用源码地址/数值/API/物理容量闭合，再用编译/同协议Task测量区分逻辑工作和关键路径"
+        ],
+        "status": "plausible",
+        "reason": "先保留原owner及单槽生命周期，将2048固定tile改为容量/API允许的参数T，首选比较4096/8192；不跨host chunk或tensor边界；保持Div→Muls→Add和原Cast。",
+        "excluded_by": [],
+        "independent_evidence_groups": [
+          [
+            "source.kernel",
+            "source.tiling",
+            "source.workload"
+          ]
+        ]
+      },
+      {
+        "hypothesis_id": "H-alternative",
+        "problem_id": "problem.pipeline_serialization",
+        "mechanism": "可重叠独立tile的串行依赖等待窗口，从L串行阶段链变为稳态阶段交错；没有实测时间权重",
+        "targets": [
+          "path"
+        ],
+        "scope": {
+          "task_id": "autonomy-c-11",
+          "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+          "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "support": [
+          "source.kernel",
+          "source.tiling",
+          "source.workload"
+        ],
+        "counter": [],
+        "unknown": [
+          "primary.constraint.semantic_equivalence",
+          "primary.constraint.capacity",
+          "alternative.constraint.dependency_lifetime"
+        ],
+        "alternatives": [
+          "H-primary"
+        ],
+        "checks": [
+          "用源码地址/数值/API/物理容量闭合，再用编译/同协议Task测量区分逻辑工作和关键路径"
+        ],
+        "status": "plausible",
+        "reason": "双槽流水可隐藏部分搬运但不减少DMA次数，增加4*A(T*s)字节、预取/排空与事件；在小tile多轮且各阶段接近时可优于仅增T。",
+        "excluded_by": [],
+        "independent_evidence_groups": [
+          [
+            "source.kernel",
+            "source.tiling",
+            "source.workload"
+          ]
+        ]
+      }
+    ],
+    "action_instances": [
+      {
+        "instance_id": "I-primary",
+        "action_id": "action.coalesce_contiguous_transfers",
+        "template_hash": "sha256:eec8e2e49fa90290685f24038881b474a6a2e5e3747656e05f8269f19789f64a",
+        "hypothesis_id": "H-primary",
+        "targets": {
+          "target": "path",
+          "stage": "stage",
+          "workload": "workload",
+          "implementation": "implementation"
+        },
+        "scope": {
+          "task_id": "autonomy-c-11",
+          "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+          "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "parameters": {
+          "plan": "先保留原owner及单槽生命周期，将2048固定tile改为容量/API允许的参数T，首选比较4096/8192；不跨host chunk或tensor边界；保持Div→Muls→Add和原Cast。",
+          "capacity_formula": "单槽 U(T)=4*A(T*s)+[s=2]*4*A(4*T)+Bfixed；T=8192时FP32数据区131072B、窄dtype196608B，仍须加保留并满足Uavailable"
+        },
+        "evidence_bindings": {
+          "symptom.source.inner_loop_copy": "primary.symptom.source.inner_loop_copy",
+          "constraint.semantic_equivalence": "primary.constraint.semantic_equivalence",
+          "constraint.capacity": "primary.constraint.capacity"
+        },
+        "unknowns": [
+          "constraint.semantic_equivalence",
+          "constraint.capacity"
+        ],
+        "status": "conditional",
+        "reason": "已知源码支持具体假设；最终API、物理容量及实例等价证明未做，不能实施。",
+        "parent_plan_hash": null
+      },
+      {
+        "instance_id": "I-alternative",
+        "action_id": "action.software_pipeline_stages",
+        "template_hash": "sha256:6ba7dbcc167b4de02ba7faf6f9c86afff8b457fb2af57b5114486880788fcbe0",
+        "hypothesis_id": "H-alternative",
+        "targets": {
+          "target": "path",
+          "stage": "stage",
+          "workload": "workload",
+          "implementation": "implementation"
+        },
+        "scope": {
+          "task_id": "autonomy-c-11",
+          "parent_implementation_hash": "sha256:8d16c126b539fdad78efed40dfb936806b393b4b0471b274b6efa7480d17fefd",
+          "workload_hash": "sha256:ad24283db2ff951cd2ed47f72547a8f60f601c972f61a2b44bb1e2fbf93ee7bc",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "parameters": {
+          "plan": "双槽流水可隐藏部分搬运但不减少DMA次数，增加4*A(T*s)字节、预取/排空与事件；在小tile多轮且各阶段接近时可优于仅增T。",
+          "capacity_formula": "两槽数据区8*A(T*s)+[s=2]*4*A(4*T)+Bfixed；保持scratch单份需证明compute不重叠写入"
+        },
+        "evidence_bindings": {
+          "symptom.source.serial_queue_or_event_order": "alternative.symptom.source.serial_queue_or_event_order",
+          "constraint.semantic_equivalence": "primary.constraint.semantic_equivalence",
+          "constraint.capacity": "primary.constraint.capacity",
+          "constraint.dependency_lifetime": "alternative.constraint.dependency_lifetime"
+        },
+        "unknowns": [
+          "constraint.semantic_equivalence",
+          "constraint.capacity",
+          "constraint.dependency_lifetime"
+        ],
+        "status": "conditional",
+        "reason": "已知源码支持具体假设；最终API、物理容量及实例等价证明未做，不能实施。",
+        "parent_plan_hash": null
+      }
+    ],
+    "predecessor_ref": {
+      "path": "reasoning-r1.json",
+      "sha256": "sha256:493b1529a20db672fc5a38332b7ecec98b5b4c1e9ebc43e7be6602c2bf4cd7d9"
+    }
+  }
+}

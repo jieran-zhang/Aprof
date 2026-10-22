@@ -1,0 +1,1950 @@
+{
+  "schema": "aprof.blind-independent-review/v1",
+  "blind_review_root": "/dev/shm/aprof-understanding-no-tools-f00uxvk2/blind-review",
+  "selection_seed": 202610214,
+  "scope": {
+    "full_answer_count": 8,
+    "full_fact_count": 79,
+    "full_critical_cap_count": 24,
+    "same_fact_consistency_checks": 20,
+    "additional_fact_checks_outside_full_review": 9,
+    "additional_answer_count": 7,
+    "all_13_original_partial_facts_semantically_reviewed": true,
+    "annotation_structure_and_exact_span_checks_answer_count": 24,
+    "annotation_fact_count": 236,
+    "flagged_wrong_unsupported_or_critical_count": 0
+  },
+  "judgment_rules": [
+    "按具体解释和语义等价评分，不按字数、引用数或格式评分。",
+    "具体公式已代入本workload并给定单位/范围时，不要求重复最终数字。",
+    "遗漏只能影响fact覆盖，不触发显式critical cap。",
+    "源码非法请求或缺少依赖边不等于已观测设备异常。",
+    "物理布局、量纲、实际分派与平台具体契约不能仅由名称或笼统保留替代。"
+  ],
+  "full_reviews": [
+    {
+      "answer_id": "answer-db6886002780",
+      "case": "case-01",
+      "review_type": "full",
+      "gold_fact_count": 10,
+      "reviewed_fact_count": 10,
+      "all_gold_facts_reviewed": true,
+      "all_listed_critical_caps_reviewed": true,
+      "facts": [
+        {
+          "id": "CU01.A01",
+          "dimension": "algorithm_strategy",
+          "weight": 4,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：乘项和shift共同乘log(base)，非正底数走自然指数；本次2^(0.5x-1)及0.25/0.5/1理想值均正确，未承诺设备逐位值。",
+          "answer_span": "因此数学上，正底数时是 \\(base^{scale\\,x_i+shift}\\)；非正底数走自然指数语义，并不是计算负底数幂或直接报错（kernel:45–64）。\n\n本次 `base=2, scale=0.5, shift=-1`，故 \\(m\\approx0.34657359\\)、\\(s\\approx-0.69314718\\)，目标为 \\(2^{0.5x-1}\\)。代表值：\n\n| 输入 | 数学指数 \\(0.5x-1\\) | 理想输出 |\n|---|---:|---:|\n| -2 | -2 | 0.25 |\n| 0 | -1 | 0.5 |\n| 2 | 0 | 1 |",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 4,
+          "points_after": 4
+        },
+        {
+          "id": "CU01.A02",
+          "dimension": "algorithm_strategy",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：BF16原始存储先Cast到float，FP32完成乘加Exp，再用CAST_RINT返回BF16。",
+          "answer_span": "- `float16`、`bfloat16`：先 Cast 到 float，以上三步均在 float 临时区计算，再 Cast 回原 dtype；不是用低精度执行中间指数计算。\n- BF16 回写采用 `CAST_RINT`；FP16 回写采用 `CAST_NONE`，升精度也指定 `CAST_NONE`。不应把两种回写模式混称为同一显式舍入规则。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU01.A03",
+          "dimension": "algorithm_strategy",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：FP32直接运算；FP16/BF16有FP32临时区，FP16用CAST_NONE、BF16用CAST_RINT；逐元素且无Cube/归约。",
+          "answer_span": "**实际精度路径**（host:20–24；kernel:50–64、85–93）：\n- `float32`：直接在 float 输入/输出 UB tensor 上执行 `Muls→Adds→Exp`。\n- `float16`、`bfloat16`：先 Cast 到 float，以上三步均在 float 临时区计算，再 Cast 回原 dtype；不是用低精度执行中间指数计算。\n- BF16 回写采用 `CAST_RINT`；FP16 回写采用 `CAST_NONE`，升精度也指定 `CAST_NONE`。不应把两种回写模式混称为同一显式舍入规则。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU01.E01",
+          "dimension": "execution",
+          "weight": 4,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：查询核数、源码tiling、GM tiling记录、launch=3及8340/4096元素均明确。",
+          "answer_span": "设备默认编号为 0；按题设查询到的 Vector core 数为 3，而不是据此断言整颗 910C 只有 3 个物理核。\n\ntiling 推导（tiling:21–28）：\n- `useful=max(1,ceil(25019/4096))=7`；\n- `blockNum=max(1,min(3,7))=3`；\n- `blockLength=ceil(25019/3)=8340`，单位为**元素**；\n- `tileElements=4096`，固定，不随 dtype 改变；\n- 写入上述 dtype、multiplier 和变换后的 shift。\n\nhost 读取原始二进制输入，复制输入及 tiling 到 GM，再以 `<<<3,nullptr,stream>>>` 启动 `exp_kernel`（host:56–60）。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 4,
+          "points_after": 4
+        },
+        {
+          "id": "CU01.E02",
+          "dimension": "execution",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：表内半开区间给出0/8340/16680元素起点和8340/8340/8339有效长度；BF16字节起点0/16680/33360，连续覆盖至25019。",
+          "answer_span": "| block | GM 字节起点 | 有效元素区间 | 各轮全局元素起点 | 各轮 count |\n|---|---:|---|---|---|\n| 0 | 0 | [0,8340) | 0、4096、8192 | 4096、4096、148 |\n| 1 | 16680 | [8340,16680) | 8340、12436、16532 | 4096、4096、148 |\n| 2 | 33360 | [16680,25019) | 16680、20776、24872 | 4096、4096、147 |\n\n因此本次共有 **3 个 block、每 block 3 轮、共 6 个满 tile 和 3 个尾 tile**。三段不重叠、无遗漏，合计覆盖全部 25019 元素。元素 \\(i\\) 的 GM 字节地址为 `base+2*i`；block 起点不要求按完整 tile 或 32B 边界切分。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU01.E03",
+          "dimension": "execution",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：各block三次CopyIn→Compute→CopyOut，有效count及296/296/294字节尾搬运均明确，补齐不参与有效计算。",
+          "answer_span": "| 0 | 0 | [0,8340) | 0、4096、8192 | 4096、4096、148 |\n| 1 | 16680 | [8340,16680) | 8340、12436、16532 | 4096、4096、148 |\n| 2 | 33360 | [16680,25019) | 16680、20776、24872 | 4096、4096、147 |\n\n因此本次共有 **3 个 block、每 block 3 轮、共 6 个满 tile 和 3 个尾 tile**。三段不重叠、无遗漏，合计覆盖全部 25019 元素。元素 \\(i\\) 的 GM 字节地址为 `base+2*i`；block 起点不要求按完整 tile 或 32B 边界切分。\n\n每轮固定调用 `CopyIn→Compute→CopyOut`。搬运参数均为：\n- `blockCount=1`；\n- `blockLen=count*sizeof(T)`，单位为**字节**；\n- 两侧 stride 均为 0，无跨行或布局变换。\n\n故本次满 tile 有效搬运 8192B，三个尾 tile 分别为 296B、296B、294B，每个方向相同（kernel:37–42、69–73）。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU01.H01",
+          "dimension": "hardware",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：BF16两8192B槽加两16384B临时区=49152B；FP32两16384B槽=32768B；明确只算显式payload。",
+          "answer_span": "| 对象 | 本次 BF16 容量 | 作用 |\n|---|---:|---|\n| `inQ_`，1 个物理块 | 8192B | 接收 GM 输入 |\n| `outQ_`，1 个物理块 | 8192B | 保存 BF16 输出，供搬出 |\n| `fpIn_` | 16384B | 输入转换成 float |\n| `fpOut_` | 16384B | float 乘、加、指数及回转换源 |\n\n合计 **49152B，即 48KiB/执行 block**，末轮仍保留完整容量。FP16 相同；FP32 不分配两个 float 临时区，但输入、输出队列各为 16384B，合计 32768B。上述只统计显式数据分配，不含框架、编译器临时空间或预留。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU01.H02",
+          "dimension": "hardware",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：输入/输出Alloc、EnQue、DeQue、Free及MTE2→V→MTE3依赖均有说明，FP临时区循环复用。",
+          "answer_span": "输入队列从 Alloc、搬入、EnQue，到 Compute 中 DeQue、消费、Free；输出队列从 Alloc、计算、EnQue，到 CopyOut 中 DeQue、搬出、Free。两个 `TBuf` 在循环中反复复用。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU01.H03",
+          "dimension": "hardware",
+          "weight": 2,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：模板depth与InitBuffer物理数均1，未声称双缓冲或已证实流水重叠。",
+          "answer_span": "队列模板 depth 为 1，且 `InitBuffer` 的物理块数也确实为 1；这里没有双物理 buffer 或显式 ping-pong 地址。三步循环组织也没有展示预取下一 tile 的软件流水。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 2,
+          "points_after": 2
+        },
+        {
+          "id": "CU01.H04",
+          "dimension": "hardware",
+          "weight": 2,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：MTE2/V/MTE3路径明确；local尾块按32B占320B与GM有效长度/count分开，逻辑流量未当作实测带宽。",
+          "answer_span": "按题给 A3 `DataCopyPad` 契约，GM→UB 的普通路径在 local 侧按 32B 补齐，因此这些尾块各需容纳 320B。`isPad=false` **不表示补零**；但计算仅使用前 `count` 个元素，补齐部分不参与有效结果。UB→GM 仅写指定有效字节，不把 local 补齐区写出。逻辑有效流量为读 50038B、写 50038B，共 **100076B**；这不是实测 HBM 事务流量。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 2,
+          "points_after": 2
+        }
+      ],
+      "critical_caps": [
+        {
+          "id": "CU01.C01",
+          "dimension": "algorithm_strategy",
+          "cap": 2,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：公式含正确的变换后shift，非exp(base*scale*x+shift)或幂外加shift。",
+          "supporting_fact_ids": [
+            "CU01.A01"
+          ]
+        },
+        {
+          "id": "CU01.C02",
+          "dimension": "hardware",
+          "cap": 3,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：显式单槽/无双缓冲，且对异步重叠留有测量边界。",
+          "supporting_fact_ids": [
+            "CU01.H03"
+          ]
+        }
+      ],
+      "scores_before": {
+        "algorithm_strategy": 10,
+        "execution": 10,
+        "hardware": 10
+      },
+      "scores_after": {
+        "algorithm_strategy": 10,
+        "execution": 10,
+        "hardware": 10
+      },
+      "total_before": 30,
+      "total_after": 30,
+      "input_sha256": {
+        "candidate.md": "724c430473c0dbb796199eef7ad45f299e4994e9d54e2ba32cda9f9e1d692d13",
+        "annotation.json": "aac24625e6f9042b2bca5f77be24cc02854b0eee7244952c66bc7245519f840a",
+        "gold.json": "630165b1e9979e73b31a9c9802a966db5dd435e313fc587d9c72dca7e0752a0d"
+      }
+    },
+    {
+      "answer_id": "answer-7598a3e11e05",
+      "case": "case-02",
+      "review_type": "full",
+      "gold_fact_count": 9,
+      "reviewed_fact_count": 9,
+      "all_gold_facts_reviewed": true,
+      "all_listed_critical_caps_reviewed": true,
+      "facts": [
+        {
+          "id": "CU02.A01",
+          "dimension": "algorithm_strategy",
+          "weight": 4,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：当前scenario2抽取5个物理20列float行的前13列，写入物理18列输出；值100*r+c，无数值激活。",
+          "answer_span": "这是 **float32 分行抽取、经 UB 填充后按另一种行距写回**，没有加法、归约、类型转换或浮点舍入计算。\n\nworkload 的输入物理形状为 `[5,20]`，共400B；每行只抽取前13个 float，即 `100*r` 至 `100*r+12`。输出分配为 `[5,18]` 的360B空间，事先逐字节置为 `0xA5`（244–259行）。按下述 API 语义推导，最终：\n\n- `output[r,0:13] = input[r,0:13]`；\n- `output[r,13:18]` 不被 kernel 写入，仍为每个 float 槽四字节均为 `0xA5`，即位模式 `0xA5A5A5A5`，**不是零填充**。\n- UB 中确实生成每行3个零，但这些零不在最终写回有效范围内。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 4,
+          "points_after": 4
+        },
+        {
+          "id": "CU02.A02",
+          "dimension": "algorithm_strategy",
+          "weight": 4,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：Duplicate清零480B，13数据+3零pad+32B保留零间隔；五个输出5-float间隔及末后缀保持0xA5。",
+          "answer_span": "UB全部480B先清零，MTE2随后覆盖5段有效数据，并显式产生5段12B padding；32B间隔不是有效输入或显式 padding，其零值来自先前 `Duplicate`。最后的 `[448,480)` 是分配余区，没有第6行，不能据 stride 字段断言搬运额外写了这一段。\n\n| 行r | 输出GM写回 | 保持0xA5的范围 |\n|---|---|---|\n| 0 | `[0,52)` | `[52,72)` |\n| 1 | `[72,124)` | `[124,144)` |\n| 2 | `[144,196)` | `[196,216)` |\n| 3 | `[216,268)` | `[268,288)` |\n| 4 | `[288,340)` | `[340,360)` |\n\n所以 UB→GM 的源有效区与搬入产生的有效区逐行相同，右补零和32B间隔均不进入输出。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 4,
+          "points_after": 4
+        },
+        {
+          "id": "CU02.A03",
+          "dimension": "algorithm_strategy",
+          "weight": 2,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：使用current常量/stride/分行写回，明确不沿用upstream值且不执行其他scenario。",
+          "answer_span": "`DST_COLS=16` 决定显式右补数，`DST_TOTAL_LENGTH=120` 决定 UB 容量；二者均不表示输出 GM 的物理行长。当前变化在 `source/VARIANT.patch:18–49,70–96` 可追溯，不能沿用 upstream 的 `[32,59]→[32,64]` 描述。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 2,
+          "points_after": 2
+        },
+        {
+          "id": "CU02.E01",
+          "dimension": "execution",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：52B有效+28B GM gap形成80B行距，五次[0,52)…[320,372)读取位于400B分配内。",
+          "answer_span": "| 行r | 输入GM读取 | 输入未读取尾部 | UB有效数据 | UB显式补零 | UB间隔/末尾余区 |\n|---|---|---|---|---|---|\n| 0 | `[0,52)` | `[52,80)` | `[0,52)` | `[52,64)` | `[64,96)` |\n| 1 | `[80,132)` | `[132,160)` | `[96,148)` | `[148,160)` | `[160,192)` |\n| 2 | `[160,212)` | `[212,240)` | `[192,244)` | `[244,256)` | `[256,288)` |\n| 3 | `[240,292)` | `[292,320)` | `[288,340)` | `[340,352)` | `[352,384)` |\n| 4 | `[320,372)` | `[372,400)` | `[384,436)` | `[436,448)` | `[448,480)` |",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU02.E02",
+          "dimension": "execution",
+          "weight": 4,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：52B+3float/12B右pad=64B，再加1个32B gap，UB起点0/96/192/288/384及数据/pad/gap区间、480B容量齐全。",
+          "answer_span": "**搬入，`CopyIn:95–105`：**\n\n```text\ncopyParams = {5, 52B, 28B, 1个32B块, 0}\npadParams  = {isPad=true, left=0, right=3个float, value=0}\n```\n\n因此 GM 行起点跨度为 `52+28=80B`，恰为20个 float。UB 每行有效52B，右补12B后为64B，再留32B间隔，起点跨度为96B，即24个 float。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 4,
+          "points_after": 4
+        },
+        {
+          "id": "CU02.E03",
+          "dimension": "execution",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：UB源64B占位+32B gap，GM端52B+20B；五个输出起点及末端340B/360B边界均明确。",
+          "answer_span": "**搬出，`Process:68–69`：**\n\n```text\ncopyParams = {5, 52B, 1个32B块, 20B, 0}\n```\n\nUB源块按 `ceil(52/32)*32=64B` 占位，再加32B源间隔，起点跨度仍为96B；GM目标起点跨度为 `52+20=72B`，恰为18个 float。**每行只写52B，不会把 UB 的64B整块有效输出。**",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU02.H01",
+          "dimension": "hardware",
+          "weight": 4,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：blockLen按字节、GM gap按字节、UB gap按32B块、pad按元素；逻辑形状与物理pitch/分配区分。",
+          "answer_span": "- `blockLen` 以字节计；\n- GM侧 stride 是前块有效末尾到下一块开头的**字节间隔**；\n- UB侧 stride 是块间间隔，以**32B dataBlock**计；\n- UB普通模式每块按32B对齐；\n- 左右 padding 以 **T元素个数**计，而非字节。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 4,
+          "points_after": 4
+        },
+        {
+          "id": "CU02.H02",
+          "dimension": "hardware",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：V的Duplicate→V_MTE2→MTE2覆盖和MTE2_MTE3→MTE3读取是两条不同依赖；无Vector激活。",
+          "answer_span": "| 63–64行 `V_MTE2`，ID0 | V的 `Duplicate` → MTE2搬入。确保整区清零完成后才覆盖，避免晚完成的清零抹掉输入；同时保留间隔区初值。 |\n| 66–67行 `MTE2_MTE3`，ID0 | MTE2写入 UB → MTE3读取同一 UB有效区。保证有效输入就绪后才写回GM。 |",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU02.H03",
+          "dimension": "hardware",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：A3普通重载，2201不选3510的Compact/loop分支；具体区间均有界，未声称编译运行或时序已证实。",
+          "answer_span": "**适用边界：**以上结论以题设400B输入内容、成功分配及正常API执行为前提。host未检查ACL调用与文件读写的返回值；`ReadFile` 还会按引用改写 `inputByteSize`（`source/current/data_utils.h:25,59`），本题完整输入下仍为400B，不能据此推广到短文件或读取失败。材料没有设备编译、运行或结果校验记录；因此地址与输出语义是源码结合A3 API契约的推导，不是已观测执行结果。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        }
+      ],
+      "critical_caps": [
+        {
+          "id": "CU02.C01",
+          "dimension": "hardware",
+          "cap": 2,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：UB stride按32B块、blockLen按字节、padding按元素明确。",
+          "supporting_fact_ids": [
+            "CU02.H01"
+          ]
+        },
+        {
+          "id": "CU02.C02",
+          "dimension": "execution",
+          "cap": 2,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：实际UB行距96B=24float，额外32B stride未丢失。",
+          "supporting_fact_ids": [
+            "CU02.E02"
+          ]
+        },
+        {
+          "id": "CU02.C03",
+          "dimension": "algorithm_strategy",
+          "cap": 3,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：输出5float gap保持0xA5，未因UB清零声称GM gap为零。",
+          "supporting_fact_ids": [
+            "CU02.A02"
+          ]
+        }
+      ],
+      "scores_before": {
+        "algorithm_strategy": 10,
+        "execution": 10,
+        "hardware": 10
+      },
+      "scores_after": {
+        "algorithm_strategy": 10,
+        "execution": 10,
+        "hardware": 10
+      },
+      "total_before": 30,
+      "total_after": 30,
+      "input_sha256": {
+        "candidate.md": "3dd23ae3e041b4b0fae8fd2057b71d687393d3f20d79de360467ac14e8fc621b",
+        "annotation.json": "451b9d457fc1f4ff09c60b68b791f422d0653a2d36b2dda8494e58dffb0ce5b3",
+        "gold.json": "f9813eed0ab1eb35fd1326e182f9dde298e627b79e08a803ace954a28b2d3c15"
+      }
+    },
+    {
+      "answer_id": "answer-d04520e096b7",
+      "case": "case-03",
+      "review_type": "full",
+      "gold_fact_count": 10,
+      "reviewed_fact_count": 10,
+      "all_gold_facts_reviewed": true,
+      "all_listed_critical_caps_reviewed": true,
+      "facts": [
+        {
+          "id": "CU03.A01",
+          "dimension": "algorithm_strategy",
+          "weight": 4,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：右对齐广播maximum，P/Q和R数学结果及Q的索引映射给出；与实际half分支分开。",
+          "answer_span": "数学目标为逐元素广播 maximum。对本题有限整数值，理想输出为：\n- P、Q：`[[3,4,8],[7,7,9]]`\n- R：`[[3,7,8],[3,7,9]]`\n\n但实际 kernel 并非所有分支都实现通用广播，尤其 P 不能据此认定正确。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 4,
+          "points_after": 4
+        },
+        {
+          "id": "CU03.A02",
+          "dimension": "algorithm_strategy",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：P/R选择half非同shape专用类，Q选择MaximumScalar<float>；指出half分派未验证广播前提。",
+          "answer_span": "入口选择 `DispatchMaximum<half>`；因 `sameShape=0`，无条件进入 `KernelMaximumHalfLastAxisBroadcast`，**不检查输入是否确为末轴向量广播**（kernel 153–182 行）。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU03.A03",
+          "dimension": "algorithm_strategy",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：同shape非int64向量、BF16经float、int8经half/float、int64始终标量及其他broadcast标量均齐全。",
+          "answer_span": "- float16、float32、int32 同 shape：直接向量 `Max`。\n- bfloat16 同 shape：两个输入转 float，float Max，结果以 `CAST_RINT` 转回。\n- int8 同 shape：分别经 half 转 float，Max 后经 half 转回 int8；int8 数值在中间格式中可精确表示。\n- int64 无论 shape 是否相同都走标量。\n- 非 half 的不同 shape 都走通用标量广播；bfloat16 标量先转 float 比较，再选择原输入值。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU03.E01",
+          "dimension": "execution",
+          "weight": 4,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：三次[2,3]、rank2、total6、sameShape0、block1/length6、tile4096及两组stride均正确，分配按实际元素数。",
+          "answer_span": "| 字段 | P、Q、R |\n|---|---|\n| `rank / outShape / totalLength` | `2 / [2,3] / 6` |\n| `x1Stride` | `[3,1]` |\n| `sameShape` | `0` |\n| `tileElements` | `4096` |\n| `useful` | `max(1,ceil(6/4096))=1` |\n| `blockNum / blockLength` | `min(4,1)=1 / 6` |\n\nP、Q 的 `x2Stride=[1,0]`；R 将 `[3]` 补成 `[1,3]`，得到 `[0,1]`。依据为 tiling 文件 35–54 行。**固定查询到 4 个 Vector 核不等于启动 4 个任务**：host 第 58 行实际只启动一个 block，block 0 处理输出元素区间 `[0,6)`。\n\n分配字节数：\n\n| 调用 | x1 | x2 | y |\n|---|---:|---:|---:|\n| P | 12 B | 4 B | 12 B |\n| Q | 24 B | 8 B | 24 B |\n| R | 12 B | 6 B | 12 B |",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 4,
+          "points_after": 4
+        },
+        {
+          "id": "CU03.E02",
+          "dimension": "execution",
+          "weight": 4,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：P的row3、off0/3、count3、x2_[0]两次均读索引0/1/2；6B请求的[4,6)超出4B宿主分配明确。",
+          "answer_span": "| `off` | `count` | x1/y 元素起点、字节偏移 | x2 元素起点 |\n|---:|---:|---|---:|\n| 0 | 3 | 0，0 B | `0%3=0` |\n| 3 | 3 | 3，6 B | `3%3=0` |\n\n每轮两个输入各搬 `3×2=6 B`，做 3 个 half 的向量 Max，再写回 6 B。x2 每轮均请求元素 `[0,1,2]`，而实际只有 `[3,7]`：\n- 元素 2 对应字节 `[4,6)`，超出 4 B 分配；\n- 它不是每行复制一个标量，而是两行都拿 `[3,7,越界值]` 比较。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 4,
+          "points_after": 4
+        },
+        {
+          "id": "CU03.E03",
+          "dimension": "execution",
+          "weight": 2,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：Q反解坐标使用零stride得到目标映射；R三half合法重复每行并得到指定结果。",
+          "answer_span": "分派及两轮循环与 P 完全相同；kernel 没有读取 R 的广播 stride。区别是 x2 实际恰有 3 个 half，即 6 B，重复读取 `[3,7,6]` 合法，也恰好符合按行重复末轴向量的数学广播。\n\n两轮分别比较 `[1,4,8]`、`[2,5,9]` 与 `[3,7,6]`，**静态结果为** `[[3,7,8],[3,7,9]]`。每轮的 6 B 搬运和 3 元素计算都是短段，且不会跨行；不是执行 4096 个有效元素。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 2,
+          "points_after": 2
+        },
+        {
+          "id": "CU03.H01",
+          "dimension": "hardware",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：P/R队列MTE2→UB→V Max→MTE3，Q为源码标量GM读取、比较和写回。",
+          "answer_span": "**平台/API知识：**目标 device 为 `__NPU_ARCH__=2201`。这些向量类体现 GM→UB 搬运、Vector 计算、UB→GM 写回，通常分别由 MTE2、Vector、MTE3 执行；队列 API 提供相应生产者/消费者依赖管理。`DataCopyPad` 用于支持这里不足普通搬运对齐长度的有效字节传输，不能据短传输本身断言越界。Q 则是标量控制、整数坐标运算及 GM 标量访问，不会因为启动在 AI Core 上就自动变成源码中的向量 Max 路径。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU03.H02",
+          "dimension": "hardware",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：SetGlobalBuffer长度不扩容也不物化广播，问题建立在具体请求地址与物理4B分配，不以可见设备错误为前提。",
+          "answer_span": "该类设置 `begin=0,end=6,row=3`，把 x1、y 声明为 6 个 half，把 x2 的 GlobalTensor 长度声明为 `row=3`（84–97 行）。声明长度不会扩充实际仅 2 个 half 的 x2 分配。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU03.H03",
+          "dimension": "hardware",
+          "weight": 2,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：三槽各4096*2=8192B、总24KiB及count3明确；与物理GM分配分开，未用UB大槽或padding修复broadcast。",
+          "answer_span": "向量类使用两个深度为 1 的 `VECIN` 队列和一个深度为 1 的 `VECOUT` 队列。P/R 各队列分配 `4096×2=8192 B`，合计 24 KiB UB，虽每轮仅使用 3 个有效元素。`DataCopyExtParams.blockLen` 使用**字节**，`Max` 的 count 使用**元素**。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 2,
+          "points_after": 2
+        },
+        {
+          "id": "CU03.H04",
+          "dimension": "hardware",
+          "weight": 2,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：完整P输出和成功执行不能保证。局部已知比较附显式条件，未宣称确定完整结果或已测crash/hang。",
+          "answer_span": "**可支持的结论：**P 存在确定的越界读，完整输出及是否成功执行不可保证。若越界没有中断执行且其他有效通道正常，已知比较将给出第一行前两项 `[3,7]`、第二行前两项 `[3,7]`，已不符合目标广播。这不能作为整个非法访问调用的保证输出。问题来自明确请求过多有效字节，不是仅因 DMA 对齐而猜测的越界。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 2,
+          "points_after": 2
+        }
+      ],
+      "critical_caps": [
+        {
+          "id": "CU03.C01",
+          "dimension": "algorithm_strategy",
+          "cap": 2,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：沿所选half实现追踪P且指出与广播目标不符。",
+          "supporting_fact_ids": [
+            "CU03.A02",
+            "CU03.E02"
+          ]
+        },
+        {
+          "id": "CU03.C02",
+          "dimension": "execution",
+          "cap": 2,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：将[0,0,0,1,1,1]作为Q/目标映射，P实际两次[0,1,2]明确分开。",
+          "supporting_fact_ids": [
+            "CU03.E02"
+          ]
+        },
+        {
+          "id": "CU03.C03",
+          "dimension": "hardware",
+          "cap": 2,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：未给确定的完整P输出，也未报已测异常；局部结果带条件且否定整调用保证。",
+          "supporting_fact_ids": [
+            "CU03.H04"
+          ]
+        }
+      ],
+      "scores_before": {
+        "algorithm_strategy": 10,
+        "execution": 10,
+        "hardware": 10
+      },
+      "scores_after": {
+        "algorithm_strategy": 10,
+        "execution": 10,
+        "hardware": 10
+      },
+      "total_before": 30,
+      "total_after": 30,
+      "input_sha256": {
+        "candidate.md": "0f0ae7ef89b2b08446e7a811df3d447d4a2d476134ed74e87725e61a39ce0e9b",
+        "annotation.json": "1d833ea12ea9f73b11caa3b1749c082914a52d149e417e15b3c0907c68b7a84c",
+        "gold.json": "e1b10041c631302072abba766667ae908ffad7a95d09e54d982ebb400feba59b"
+      }
+    },
+    {
+      "answer_id": "answer-ff6063e966a6",
+      "case": "case-04",
+      "review_type": "full",
+      "gold_fact_count": 10,
+      "reviewed_fact_count": 10,
+      "all_gold_facts_reviewed": true,
+      "all_listed_critical_caps_reviewed": true,
+      "facts": [
+        {
+          "id": "CU04.A01",
+          "dimension": "algorithm_strategy",
+          "weight": 4,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：无bias的AB后LeakyRelu；half输入float L0C，Fixpipe转half落GM再half激活，斜率half(0.001)，无全FP32激活误读。",
+          "answer_span": "对每个输出元素，算法为矩阵乘后接 LeakyReLU，但**中间存在一次 half 落地**：\n\n1. `Mmad` 用 half 输入，在 float 类型 L0C 中产生矩阵乘结果 \\(s_{ij}=\\sum_{k=0}^{127}A_{ik}B_{kj}\\)（115行）。\n2. `Fixpipe` 将结果转换成 half，记为 \\(h_{ij}\\)，写到 C 的 GM 地址；这里 `reluEn=false`（125–127行）。\n3. Vector 再读取 \\(h_{ij}\\)，原地执行 LeakyReLU：非负部分保留，负值部分乘 `(half)0.001`，结果仍为 half（155–176行）。\n\n因此不能将它等同于“float 累加结果直接激活后只舍入一次”。斜率也是 half 表示的近似值。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 4,
+          "points_after": 4
+        },
+        {
+          "id": "CU04.A02",
+          "dimension": "algorithm_strategy",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：__mix__(1,2)为2AIC/4AIV，沿M分成256x128且覆盖完整K128，每AIV处理对应AIC半块。",
+          "answer_span": "启动块数为 `(512/256)*(128/128)=2`（215、242–243行）。入口 `mmad_vec_custom` 使用 `__mix__(1,2)`（188行）；按本题混合核语义及文件注释，实际为 **2 个 AIC/Cube、4 个 AIV/Vector**，每个 Cube 对应两个 Vector，而非只启动两个 Vector。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU04.A03",
+          "dimension": "algorithm_strategy",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：每AIC一个M/N/K tile，无隐藏K循环；LoadData循环与矩阵计算区分，cmatrixInitVal=true初始化float C。",
+          "answer_span": "随后一次 `Mmad({256,128,128,0,false,true})` 完成全部 K；`cmatrixInitVal=true` 表示初始化当前累加结果，不依赖未初始化的 L0C 或原 C。`Fixpipe` 按 `nSize=128,mSize=256` 将 float 分形结果转为 half ND，GM 行距为 N=128个 half，并写回对应 C tile（113–127行）。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU04.E01",
+          "dimension": "execution",
+          "weight": 4,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：launch2对应2AIC/4AIV，A/C起点q*32768half、B不偏移，各256完整行。",
+          "answer_span": "- AIC 索引 \\(q=0,1\\)：A 和 C 分别偏移 `q*256*128=q*32768` 个 half，即 `q*65536` 字节；B 不偏移。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 4,
+          "points_after": 4
+        },
+        {
+          "id": "CU04.E02",
+          "dimension": "execution",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：floor(v/2)及(v%2)*16384映射、四起点与每AIV16384元素齐全；不重叠覆盖65536元素。",
+          "answer_span": "- AIV 索引 \\(v=0,1,2,3\\)：先把 C 定位到 `floor(v/2)*32768`，再由150行加上 `(v%2)*16384` 个 half。\n\n| 执行者 | 完整输出行范围，列均为0–127 |\n|---|---|\n| AIC 0 / AIC 1 | 0–255 / 256–511 |\n| AIV 0、1、2、3 | 分别为0–127、128–255、256–383、384–511 |\n\n四个 Vector 的绝对输出起点分别是 **0、16384、32768、49152 个 half**，即 **0、32768、65536、98304 字节**。它们彼此不重叠。\n\n本 workload 下，每个 Cube 只执行一个完整的 **256×128×128** 矩阵乘 tile；每个 Vector 只调用一次激活，处理 **128×128=16384** 个 half。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU04.E03",
+          "dimension": "execution",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：L1 A/B 64/32KiB，L0A/B 64/32KiB，float L0C 128KiB，每AIV UB32KiB；128行*256B且两侧gap0。",
+          "answer_span": "每个 AIV 申请 **16384个 half，即32 KiB UB**（133–134行），以连续 ND 半块存放。\n\n`LeakyReluCompute` 本次 `mIndex=nIndex=0`。两次 `DataCopyPad` 均为128行，每行 `blockLen=128*2=256` **字节**；GM 行间跳过量 `(N-baseN)*2=0` 字节，UB 侧间隔也为0。虽开启输入 padding 参数，但左右 padding 都是0，本例没有实际补齐或尾部屏蔽。激活在同一 UB tensor 上原地完成，再写回原 GM 区域（143–176行）。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU04.H01",
+          "dimension": "hardware",
+          "weight": 4,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：2201 ND GM→NZ L1→A Zz/B Zn L0（B内部转置）→float NZ L0C→Fixpipe half ND GM→UB→GM。明确非L0C直达UB。",
+          "answer_span": "65、68行的 `DataCopy + Nd2NzParams` 把 GM 中 A 的256行、B的128行从 ND 转为 NZ；源行距均为128个 half，即256字节。A 分核读取不同的半矩阵；两个 Cube 都读取完整 B，但各自有片上副本。\n\n**实际 device 宏为2201**，因此执行75–91行：\n\n- A：16次 `LoadData`，每次搬8个16×16 half 子块。目标起点每次增加 `128*16=2048` 个 half，即4096字节；源起点每次增加 `512/sizeof(half)=256` 个 half，即512字节。`srcStride=16` 按 API 的分形块单位跨越 L1 中不同 K 块，形成 NZ→ZZ。\n- B：8次 `LoadData`，每次也搬8个16×16子块；目标步长同为4096字节，源起点步长512字节，`srcStride=8`。`ifTranspose=true` 配合布局转换形成 NZ→ZN；这是供 Cube 使用的内部重排，**不是把数学运算改成 \\(AB^T\\)**。\n\n这里一个16×16 half 子块是512字节；它不同于其他搬运接口可能使用的32字节块单位。\n\n随后一次 `Mmad({256,128,128,0,false,true})` 完成全部 K；`cmatrixInitVal=true` 表示初始化当前累加结果，不依赖未初始化的 L0C 或原 C。`Fixpipe` 按 `nSize=128,mSize=256` 将 float 分形结果转为 half ND，GM 行距为 N=128个 half，并写回对应 C tile（113–127行）。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 4,
+          "points_after": 4
+        },
+        {
+          "id": "CU04.H02",
+          "dimension": "hardware",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：MTE2_MTE1、MTE1_M、M_FIX、PIPE_FIX mode2/flag0到配对AIV等待以及MTE2_V/V_MTE3均按生产消费解释。",
+          "answer_span": "1. **MTE2→MTE1**：GM→L1 的两次搬运后，72–73行事件保证 LoadData 不提前读取 L1。\n2. **MTE1→M**：110–111行保证所有 L0A/L0B 装载完成后，Cube 才执行 `Mmad`。\n3. **M→FIX**：119–120行保证 Fixpipe 读取已完成的 L0C。\n4. **Cube→对应两个Vector**：`CrossCoreSetFlag<0x2,PIPE_FIX>(0)` 位于 Fixpipe 之后，AIV 在136行等待同一模式和标志；按该 API 的配对同步语义，Vector 的 GM 读取不会早于对应 tile 写回。\n5. **MTE2→V→MTE3**：162–171行的事件依次保证 GM→UB 完成、激活完成，再将 UB 写回 GM。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU04.H03",
+          "dimension": "hardware",
+          "weight": 2,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：GM是显式中间结果，AIV原GM区域回写；跨核同步只保证就绪，不消除GM或共享UB。",
+          "answer_span": "`LeakyReluCompute` 本次 `mIndex=nIndex=0`。两次 `DataCopyPad` 均为128行，每行 `blockLen=128*2=256` **字节**；GM 行间跳过量 `(N-baseN)*2=0` 字节，UB 侧间隔也为0。虽开启输入 padding 参数，但左右 padding 都是0，本例没有实际补齐或尾部屏蔽。激活在同一 UB tensor 上原地完成，再写回原 GM 区域（143–176行）。\n\n因此融合发生在同一混合 kernel 内，**Cube 与 Vector 间仍经 GM 中转**，不是直接共享 L0C/UB。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 2,
+          "points_after": 2
+        },
+        {
+          "id": "CU04.H04",
+          "dimension": "hardware",
+          "weight": 1,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：3510独立编译分支使用V2、L0A NZ，实际2201不执行；无跨平台编译或性能保证。",
+          "answer_span": "3510 的92–106行是编译期另一平台实现：使用 `LoadData2DParamsV2`，A 的 L0A 排布为 NZ；**本次2201不执行它**。源码没有 host `NPU_ARCH` 分派，不能将 host 架构值与 device `__NPU_ARCH__` 混用。若 device 宏两者均不匹配，这段代码也没有其他 LoadData 后备路径。\n\n本次尺寸均为16的整数倍且整除分核大小，无边界判定需求；源码并非通用尾块实现。host 未检查 ACL 或文件函数返回值；`data_utils.h:25–61` 也不强制文件大小等于期望大小。因此完整算法成立还以输入文件完整、运行时调用成功为前提。没有编译、运行或 profiling 证据，不能进一步确认精确指令展开、资源驻留、带宽利用率或耗时。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 1,
+          "points_after": 1
+        }
+      ],
+      "critical_caps": [
+        {
+          "id": "CU04.C01",
+          "dimension": "hardware",
+          "cap": 2,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：Cube/Vector通过GM，2201的A为Zz，3510 NZ只归属非活动分支。",
+          "supporting_fact_ids": [
+            "CU04.H01",
+            "CU04.H04"
+          ]
+        },
+        {
+          "id": "CU04.C02",
+          "dimension": "algorithm_strategy",
+          "cap": 3,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：明确Fixpipe转换half在激活之前。",
+          "supporting_fact_ids": [
+            "CU04.A01"
+          ]
+        },
+        {
+          "id": "CU04.C03",
+          "dimension": "execution",
+          "cap": 3,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：每AIC两个AIV且各自处理互不重叠半块。",
+          "supporting_fact_ids": [
+            "CU04.E02"
+          ]
+        }
+      ],
+      "scores_before": {
+        "algorithm_strategy": 10,
+        "execution": 10,
+        "hardware": 10
+      },
+      "scores_after": {
+        "algorithm_strategy": 10,
+        "execution": 10,
+        "hardware": 10
+      },
+      "total_before": 30,
+      "total_after": 30,
+      "input_sha256": {
+        "candidate.md": "d7f9f77cae9e56a9a9e57de2557bd454d8819a0be9fb356debb85c1ab98ea4a9",
+        "annotation.json": "b3ca3e268719a5d8e41c28ad57a101095e1becb760b2f101f816393eb2e1b8bd",
+        "gold.json": "1a4f5251b33e1b202af53a3667a85f9dcf63ff8e076ed6f2d8c7c1e6dba59f9b"
+      }
+    },
+    {
+      "answer_id": "answer-5bde3bbae7a7",
+      "case": "case-05",
+      "review_type": "full",
+      "gold_fact_count": 10,
+      "reviewed_fact_count": 10,
+      "all_gold_facts_reviewed": true,
+      "all_listed_critical_caps_reviewed": true,
+      "facts": [
+        {
+          "id": "CU05.A01",
+          "dimension": "algorithm_strategy",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：scenario1的half输入/输出矩阵乘和float L0C；B_file[N,K]是逻辑[K,N]转置存储，无激活。",
+          "answer_span": "输入 A 为连续 `[8192,8192]` half；B 文件为连续 `[N,K]` half，是逻辑 `[K,N]` 矩阵的转置存储。目标为：\n\n\\[\nC[m,n]=\\operatorname{half}\\left(\\sum_{k=0}^{8191}A[m,k]B_{\\rm file}[n,k]\\right).\n\\]\n\nC 为连续 `[M,N]` half，无 bias、激活或旧 C 累加。`Init` 将三个 GM 指针解释为 half（L36–40）；host 用 `sizeof(int16_t)` 计算文件大小只是按两字节分配，并非整数计算。A/B/C 各占 128 MiB。\n\n每次 `Mmad` 计算 `128×64` 与逻辑 `64×256` 的乘积，累加到 float L0C；K 首轮 `cmatrixInitVal=true`，后续累加，共128轮。最后 Fixpipe 用 `F322F16` 转换输出（`Compute` L501–520、`CopyOut` L525–541）。这是 half 输入、float 累加、half 输出的计算路径，不应视为实数精确求和；Cube 内部归约次序、特殊值及舍入细节不能仅由本源码确定。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU05.A02",
+          "dimension": "algorithm_strategy",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：8192尺寸、2048/8192/1536单核、128/64/256基块、24block映射、M16/N6或2/K128均具体；引文仅多一空格，得分无误。",
+          "answer_span": "本题 host `NPU_ARCH=2201` 选择：\n- `baseM/baseK/baseN=128/64/256`；\n- `singleCoreM/K/N=2048/8192/1536`；\n- `stepKa/Kb=8/4`，launch 24 个 Cube block。\n\ndevice `__NPU_ARCH__=2201` 决定 LoadData API 分支，不能与 host 宏混用。`SCENARIO_NUM=1` 只走 `Process()`；`ProcessL2Cache()` 不执行（L562–572），因此没有该函数的外层分批调度。\n\n`InitComputeParams`（L273–306）将 block \\(q\\) 映射为：\n- \\(i=q\\bmod4\\)，M 起点 `i*2048`；\n- \\(j=\\lfloor q/4\\rfloor\\)，N 起点 `j*1536`。\n\nq=0…19 各负责 `2048×1536`；q=20…23 各负责 `2048×512`。每个 block 都独立完成全部 K，无 split-K 或跨核归约。\n\n循环次序为 **N tile → M tile → K tile**（L170–192）：\n- M 循环16次；\n- 前20个 block 的 N 循环6次，后4个为2次；\n- 每个输出 tile 的 K 循环128次。\n\n全矩阵共 `64×32=2048` 个 `128×256` 输出 tile。末组 block 的512列仍是两个完整 baseN tile；M/N 的 `tail` 和对齐尾长均为0，循环不会进入零长度尾块分支。K 同样无尾块。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU05.A03",
+          "dimension": "algorithm_strategy",
+          "weight": 4,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：L1的8/4个baseK大包、L0单baseK，首K初始化后累加；Mmad前127轮2/末轮3、Fixpipe3解释UnitFlag，未误判缺M_FIX。",
+          "answer_span": "Mmad 的 UnitFlag 为前127轮2、末轮3，Fixpipe为3；按平台API语义，承担 Cube/Fixpipe 间的 L0C交接同步，而非显式 `M_FIX` 事件。末尾还有事件回收等待和 `PIPE_ALL` barrier（L265–270、572）。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 4,
+          "points_after": 4
+        },
+        {
+          "id": "CU05.E01",
+          "dimension": "execution",
+          "weight": 4,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：A1起点0/128KiB与B1起点256/384KiB，每份128KiB，单位和同L1明确；等价于四段精确字节区间，A/B大包16/32。",
+          "answer_span": "`Process` 的 LocalTensor 构造（L52–72）指定的是各本地存储空间内的字节偏移；张量长度、下标则以元素计。\n\n| buffer | 所在空间 | Ping/Pong 起点 | 每份有效大小 |\n|---|---|---|---|\n| A1 | 共享 L1 地址空间 | 0 / 128 KiB | 128 KiB |\n| B1 | 同一 L1 | 256 / 384 KiB | 128 KiB |\n| A2 | 独立 L0A | 0 / 32 KiB | 16 KiB |\n| B2 | 独立 L0B | 0 / 32 KiB | 32 KiB |\n| C | L0C | 0 | 128 KiB，float |\n\n因此 L1 恰覆盖512 KiB；L0A 两份之间有空隙。A2/B2 同为偏移0不表示物理别名，它们属于不同存储体。\n\n平台/API层面，执行路径为：\n\n**GM → MTE2 的 ND-to-NZ 搬运 → L1 → MTE1 LoadData → L0A/B → Cube Mmad → L0C → Fixpipe → GM。**\n\n`DataCopyInA/B`（L343–388）分别搬入 `128×512`、`256×256` 的大包，GM 行距8192元素，转换为 NZ 分块布局，不是连续 memcpy。\n\n2201 上：\n- A 每轮用 `LoadData3DParamsV2` 取 `128×64`（L399–411）。\n- B 已转置存储，走 L459–469：每轮4次 LoadData2D，每次搬16个 `16×16` half块，`ifTranspose=false`。源、目的子段步长均4096 half，即8 KiB，总计32 KiB。\n\n每个输出 tile 搬16个 A 大包、32个 B 大包。大包内分别复用8/4个K切片；输出 tile 切换后搬运进度归零，源码没有跨输出 tile 保留输入的策略。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 4,
+          "points_after": 4
+        },
+        {
+          "id": "CU05.E02",
+          "dimension": "execution",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：A2起点0/32KiB长度16KiB，B2起点0/32KiB长度32KiB，独立L0A/B不别名；float L0C128KiB。",
+          "answer_span": "`Process` 的 LocalTensor 构造（L52–72）指定的是各本地存储空间内的字节偏移；张量长度、下标则以元素计。\n\n| buffer | 所在空间 | Ping/Pong 起点 | 每份有效大小 |\n|---|---|---|---|\n| A1 | 共享 L1 地址空间 | 0 / 128 KiB | 128 KiB |\n| B1 | 同一 L1 | 256 / 384 KiB | 128 KiB |\n| A2 | 独立 L0A | 0 / 32 KiB | 16 KiB |\n| B2 | 独立 L0B | 0 / 32 KiB | 32 KiB |\n| C | L0C | 0 | 128 KiB，float |\n\n因此 L1 恰覆盖512 KiB；L0A 两份之间有空隙。A2/B2 同为偏移0不表示物理别名，它们属于不同存储体。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU05.E03",
+          "dimension": "execution",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：前10轮L1切片物理起点表等价给出A/B槽序列，L0交替；k0预取、k3/k7释放及A1 ids0/1、B1 ids2/3均说明。",
+          "answer_span": "下表为读取的 **L1切片起点** 和写入的 **L0起点**，单位 KiB。A切片长16 KiB，B切片长32 KiB；L0A/B地址分别解释。\n\n| t | A1起点 | B1起点 | A2/B2起点 |\n|---:|---:|---:|---:|\n| 0 | 0 | 256 | 0 |\n| 1 | 16 | 288 | 32 |\n| 2 | 32 | 320 | 0 |\n| 3 | 48 | 352 | 32 |\n| 4 | 64 | 384 | 0 |\n| 5 | 80 | 416 | 32 |\n| 6 | 96 | 448 | 0 |\n| 7 | 112 | 480 | 32 |\n| 8 | 128 | 256 | 0 |\n| 9 | 144 | 288 | 32 |\n\n这些是 NZ 分块数据的起点，不代表 GM 行主序布局。C 始终累加到 L0C 起点0。\n\n按源码发起顺序（L178–255）：\n1. 循环前预装 A Ping 的 t=0…7、B Ping 的 t=0…3。\n2. t=0 的 Compute 发起后，先预取 B Pong 的 t=4…7，再预取 A Pong 的 t=8…15。\n3. t=3 消费完 B Ping，随后复用它装 t=8…11。\n4. t=7 消费完 B Pong 和 A Ping，随后分别装 B t=12…15、A t=16…23。\n\n这些是流水提交及依赖关系，不意味着各引擎完成时间等于源码调用时间。\n\n**baseline 的事件协议：**\n- `MTE1_MTE2`：ID0/1对应 A1 Ping/Pong，ID2/3对应 B1 Ping/Pong；预置“可写”，MTE2 覆盖前等待；大包最后一次 LoadData 后由 MTE1 释放。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU05.H01",
+          "dimension": "hardware",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：MTE2_MTE1在大包首片保护就绪，MTE1_M保护L0到Mmad；后文具体解释这些正向边不能授权覆盖。",
+          "answer_span": "- `MTE2_MTE1`：同样ID对应“搬入完成”；只在大包首切片等待。后续切片依赖同流水有序执行。\n- `MTE1_M`：每轮 LoadData 后 Set、Cube侧 Wait，保证本轮 L0 输入就绪。\n- `M_MTE1`：ID0/1对应两份 L0；预置允许首次装载，每轮 Mmad 后 Set，下次复用前 Wait（L159–165、209、506–519）。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU05.H02",
+          "dimension": "hardware",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：MTE1_MTE2等最后LoadData完成，M_MTE1等旧Mmad消费完成；初始可写预置与末等待回收，ready/reusable区分。",
+          "answer_span": "**baseline 的事件协议：**\n- `MTE1_MTE2`：ID0/1对应 A1 Ping/Pong，ID2/3对应 B1 Ping/Pong；预置“可写”，MTE2 覆盖前等待；大包最后一次 LoadData 后由 MTE1 释放。\n- `MTE2_MTE1`：同样ID对应“搬入完成”；只在大包首切片等待。后续切片依赖同流水有序执行。\n- `MTE1_M`：每轮 LoadData 后 Set、Cube侧 Wait，保证本轮 L0 输入就绪。\n- `M_MTE1`：ID0/1对应两份 L0；预置允许首次装载，每轮 Mmad 后 Set，下次复用前 Wait（L159–165、209、506–519）。\n\n由此，对同一 L0份建立：\n`Load(t) → Mmad(t)完成 → Load(t+2)`。\n双缓冲允许另一份搬运与计算重叠，但不保证实际达到某个重叠比例。\n\nMmad 的 UnitFlag 为前127轮2、末轮3，Fixpipe为3；按平台API语义，承担 Cube/Fixpipe 间的 L0C交接同步，而非显式 `M_FIX` 事件。末尾还有事件回收等待和 `PIPE_ALL` barrier（L265–270、572）。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU05.H03",
+          "dimension": "hardware",
+          "weight": 2,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：variant仅删循环M_MTE1等待，t2可能覆盖t0 L0槽，Mmad(t)→Load(t+2)反向保证丢失，正向或L1事件不补足。",
+          "answer_span": "variant **仅删除每轮 L209 的 `WaitFlag<M_MTE1>`**。布局、选择、计算参数、所有 SetFlag 和末尾 Wait 均未变。\n\n因此正向 `Load(t)→Mmad(t)`、L1大包的读写保护仍存在，但无法再由该协议证明 `Mmad(t)完成→Load(t+2)`。最早在 t=2 就复用 t=0 的 L0 Ping；此时不需要新的 L1大包等待，不能用 L1事件补足这条反向依赖。MTE1_M 的 Wait约束消费者 Cube，不会反向阻止 MTE1继续覆盖。\n\n这是明确的 **L0覆盖先于旧操作数消费完成的潜在风险**，不是静态证明“必定输出错误”。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 2,
+          "points_after": 2
+        },
+        {
+          "id": "CU05.H04",
+          "dimension": "hardware",
+          "weight": 2,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：指出配对/单bit生命周期问题和潜在覆盖，但不确定损坏、hang或性能；不把静态依赖缺失转成已测后果。",
+          "answer_span": "这是明确的 **L0覆盖先于旧操作数消费完成的潜在风险**，不是静态证明“必定输出错误”。初始及每轮 `M_MTE1` Set仍保留，形成未逐轮配对的事件使用；不能把事件当无限计数器，也不能凭材料确定重复置位会合并、阻塞或产生何种设备表现。末尾等待/barrier不能修复已经发生的覆盖。\n\n910C 上 Cube、MTE1、MTE2、Fixpipe 是可异步推进的流水，C++调用先后本身不等于跨流水完成顺序。静态材料支持依赖缺失的判断，但不足以断言具体竞态是否触发、是否挂起、误差大小或性能变化。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 2,
+          "points_after": 2
+        }
+      ],
+      "critical_caps": [
+        {
+          "id": "CU05.C01",
+          "dimension": "hardware",
+          "cap": 2,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：双槽和源码顺序均未被当作反向复用保证，反向等待的作用有明确分析。",
+          "supporting_fact_ids": [
+            "CU05.H03"
+          ]
+        },
+        {
+          "id": "CU05.C02",
+          "dimension": "execution",
+          "cap": 2,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：A1/B1同L1但偏移分离，L0A/B物理独立；构造地址按字节、索引按元素。",
+          "supporting_fact_ids": [
+            "CU05.E01",
+            "CU05.E02"
+          ]
+        },
+        {
+          "id": "CU05.C03",
+          "dimension": "hardware",
+          "cap": 2,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：仅称潜在风险和静态保证缺失，没有声称已测损坏、超时、hang或减速。",
+          "supporting_fact_ids": [
+            "CU05.H04"
+          ]
+        },
+        {
+          "id": "CU05.C04",
+          "dimension": "algorithm_strategy",
+          "cap": 3,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：正确解释活跃的UnitFlag2/3协议，没有误判缺M_FIX。",
+          "supporting_fact_ids": [
+            "CU05.A03"
+          ]
+        }
+      ],
+      "scores_before": {
+        "algorithm_strategy": 10,
+        "execution": 10,
+        "hardware": 10
+      },
+      "scores_after": {
+        "algorithm_strategy": 10,
+        "execution": 10,
+        "hardware": 10
+      },
+      "total_before": 30,
+      "total_after": 30,
+      "input_sha256": {
+        "candidate.md": "dca7bc9fa8c02f0779ec8d24aeba423660d01f1370119adfb52b942ba89e4c59",
+        "annotation.json": "e33b921742bfc0a5f68ecc8e85487575bea5f8d307e85162a21dfc8bb6d8fc1f",
+        "gold.json": "0a82433bff2343de71a8d827a36322a4a71f0008eb7266e02eab5a8fe907f64c"
+      }
+    },
+    {
+      "answer_id": "answer-bd2e07a9a34e",
+      "case": "case-06",
+      "review_type": "full",
+      "gold_fact_count": 10,
+      "reviewed_fact_count": 10,
+      "all_gold_facts_reviewed": true,
+      "all_listed_critical_caps_reviewed": true,
+      "facts": [
+        {
+          "id": "CU06.A01",
+          "dimension": "algorithm_strategy",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：同一2^(0.5x-1)，BF16→FP32的Muls/Adds/Exp→CAST_RINT BF16；更名未改变操作。",
+          "answer_span": "理想实数关系是 \\(2^{0.5x-1}\\)。实现先将 BF16 转 FP32，依次执行独立的 `Muls→Adds→Exp`，再以 `CAST_RINT` 转回 BF16（V-kernel:55–63）；不能当作无限精度幂运算或一次融合乘加。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU06.A02",
+          "dimension": "algorithm_strategy",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：half输入矩阵乘、float L0C、先half Fixpipe落GM后half LeakyRelu(约0.001)；每AIC一次tile，配对AIV半块。",
+          "answer_span": "每元素先进行完整 K=128 的矩阵乘，L0C 使用 float；Fixpipe 转成 half 写入 C，再由 Vector 读回，执行 half `LeakyRelu` 并原位覆盖：\n\\[\nh=\\operatorname{half}(\\operatorname{Mmad}(A,B)),\\qquad\nC=\\operatorname{LeakyRelu}(h,\\operatorname{half}(0.001)).\n\\]\n因此 half 舍入发生在激活**之前**，负斜率本身也先转换为 half；不是对未舍入 float 累加值直接激活后才转换。无 bias，Fixpipe 的 ReLU 开关为 false（C:113–127、165–166）。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU06.A03",
+          "dimension": "algorithm_strategy",
+          "weight": 4,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：DELTA仅标识符/include更名，不改常量/API与原控制/缓冲/同步语义；V/C分别说明独立输入输出，未引入串联或新算法。",
+          "answer_span": "两个入口独立运行，不构成前后级。`source/DELTA.json:1–42` 仅记录测试标识符和 include 文件名更改，明确没有改变数值常量、API 或生产源码。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 4,
+          "points_after": 4
+        },
+        {
+          "id": "CU06.E01",
+          "dimension": "execution",
+          "weight": 4,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：V为3block、8340/4096元素，起点/长度/尾148/148/147；两单槽加FP32scratch=49152B明确。",
+          "answer_span": "由 V-plan:22–25：\n- `useful=ceil(25019/4096)=7`，查询核数为 3，故启动 **3 个 block**；\n- `laneExtent=ceil(25019/3)=8340`，窗口固定为4096元素。\n\n结合 V-kernel:11–15、26–33，得到半开区间：\n\n| block | GM 元素区间 | 输入/输出起始字节偏移 | 各轮有效元素数 |\n|---|---|---:|---|\n| 0 | `[0,8340)` | 0 | 4096、4096、148 |\n| 1 | `[8340,16680)` | 16680 | 4096、4096、148 |\n| 2 | `[16680,25019)` | 33360 | 4096、4096、147 |\n\n共9个窗口，互不重叠且覆盖全部元素，无归约、广播或核间通信。\n\n### 数据、存储和同步\n\n每核分配输入/输出队列各一个8192B槽，以及两个16384B FP32计算缓冲，显式 UB 数据区共 **49152B**（V-kernel:16–23、76–82）。`VECIN/VECCALC/VECOUT` 均是 UB 逻辑角色，不是不同物理存储层。这里队列深度和物理槽数都为1，没有双缓冲证据。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 4,
+          "points_after": 4
+        },
+        {
+          "id": "CU06.E02",
+          "dimension": "execution",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：2AIC/4AIV，AIC p*32768half，AIV四起点及每AIV128行*128列=16384元素可无歧义确定。",
+          "answer_span": "`numBlocks=(512/256)*(128/128)=2`，入口为 `__mix__(1,2)`（C:188）。在2201混合执行契约下，对应 **2个 AIC 与4个 AIV任务**，不表示设备总核数。\n\n- AIC 0/1 分别处理 C 的行 `[0,256)`、`[256,512)`；A/C基址偏移为0、32768个half，即0、65536B；各读完整B（C:33–44）。\n- AIV编号v以 `v/2` 选择对应AIC输出，再以 `v%2` 选择其中128行（C:150）。四个任务最终分别处理行 `[0,128)`、`[128,256)`、`[256,384)`、`[384,512)`；全局起点为0、16384、32768、49152个half。\n- 每AIC仅一个 `256×128` 输出tile、一次完整K的 Mmad；没有 M/N tile遍历、K分段累加或尾块。LoadData循环仅用于布局搬运。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU06.E03",
+          "dimension": "execution",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：C的各层half/float及NZ/ND物理路径、GM中转和原区域覆盖明确；V的BF16队列与FP32scratch亦明确。",
+          "answer_span": "C:52–68、113–138 的数据流是：\n\n`GM ND → L1 NZ → L0A ZZ / L0B ZN → L0C float NZ → GM half ND → AIV UB → GM`\n\n依次由 MTE2、MTE1、M、FIX、MTE2/V/MTE3承担。AIC/AIV具有独立片上存储，本实现通过**同一输出GM区域**交接，不是L0C直接进入AIV UB。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU06.H01",
+          "dimension": "hardware",
+          "weight": 3,
+          "original_status": "partial",
+          "suggested_status": "partial",
+          "coverage": "partial",
+          "reviewed": true,
+          "rationale": "部分：明确910C实际2201，3510静态对照、宏/相同API不能证明已执行；全文未给3510=950PR/950DT映射。不能用“另一平台”替代具体映射，也不因遗漏触发cap。",
+          "answer_span": "硬件解释依据所给 `910c-hardware.md` 的 A3/2201 内容，不代表编译或实测结果。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 1.5,
+          "points_after": 1.5
+        },
+        {
+          "id": "CU06.H02",
+          "dimension": "hardware",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：2201循环LoadData2DParams为NZ→Zz L0A；3510单次V2为NZ→NZ，参数结构和packed A不同。",
+          "answer_span": "| L1→L0A | 2201为16次旧版2D LoadData、NZ→ZZ；3510为一次V2，参数 `{0,0,16,8,16,16,false,0}`，源码声明NZ→NZ |",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU06.H03",
+          "dimension": "hardware",
+          "weight": 2,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：两分支B均NZ→Zn且transpose=true，2201循环旧2D、3510单次V2；Mmad/Fixpipe/GM中转/混合激活在分支外。",
+          "answer_span": "| GM→L1、Mmad、Fixpipe、激活、事件和混合入口 | 调用文本及参数相同；不自动证明底层硬件契约相同 |\n| L1→L0A | 2201为16次旧版2D LoadData、NZ→ZZ；3510为一次V2，参数 `{0,0,16,8,16,16,false,0}`，源码声明NZ→NZ |\n| L1→L0B | 两者声明NZ→ZN；3510一次V2，参数 `{0,0,8,8,8,8,true,0}`，区别于2201的8次调用 |",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 2,
+          "points_after": 2
+        },
+        {
+          "id": "CU06.H04",
+          "dimension": "hardware",
+          "weight": 2,
+          "original_status": "partial",
+          "suggested_status": "partial",
+          "coverage": "partial",
+          "reviewed": true,
+          "rationale": "部分：未编译/运行/比较性能的证据边界明确；缺A3/A2全后续流水阻塞与950按pipe阻塞差异，亦无同等精确的其他额外契约边界，不能将一般保留重复当具体平台知识。",
+          "answer_span": "反过来，A3资料也不能证明3510上的混合任务映射、跨核flag、Fixpipe重载、容量与padding契约均获支持。相同调用不意味着相同指令或性能，本题没有3510编译/运行结果。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 1.0,
+          "points_after": 1.0
+        }
+      ],
+      "critical_caps": [
+        {
+          "id": "CU06.C01",
+          "dimension": "hardware",
+          "cap": 2,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：实际目标2201与3510静态条件区分，A的Zz/NZ区别明确。缺950名称属于遗漏，不触发cap。",
+          "supporting_fact_ids": [
+            "CU06.H02"
+          ]
+        },
+        {
+          "id": "CU06.C02",
+          "dimension": "algorithm_strategy",
+          "cap": 2,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：更名保持计算，无新增融合、归约或其他数学运算。",
+          "supporting_fact_ids": [
+            "CU06.A03"
+          ]
+        },
+        {
+          "id": "CU06.C03",
+          "dimension": "hardware",
+          "cap": 2,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：明确相同代码/宏/API不证明新平台编译、运行或性能。",
+          "supporting_fact_ids": [
+            "CU06.H04"
+          ]
+        }
+      ],
+      "scores_before": {
+        "algorithm_strategy": 10,
+        "execution": 10,
+        "hardware": 7.5
+      },
+      "scores_after": {
+        "algorithm_strategy": 10,
+        "execution": 10,
+        "hardware": 7.5
+      },
+      "total_before": 27.5,
+      "total_after": 27.5,
+      "input_sha256": {
+        "candidate.md": "4d89d9b0c4fb60d3cb3b60fab5dbb76d5938163f17c5864f56a25cae80baccf6",
+        "annotation.json": "e2023d1b0d20fae8b55255d5f00b21b79dc3246662b2c05a13dda3d14b2275d6",
+        "gold.json": "d88ea8b18f6c19a453eab54d0fe756aac743c14c201456ec88278aec5bb07347"
+      }
+    },
+    {
+      "answer_id": "answer-0a4165fcbbeb",
+      "case": "case-06",
+      "review_type": "full",
+      "gold_fact_count": 10,
+      "reviewed_fact_count": 10,
+      "all_gold_facts_reviewed": true,
+      "all_listed_critical_caps_reviewed": true,
+      "facts": [
+        {
+          "id": "CU06.A01",
+          "dimension": "algorithm_strategy",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：同一2^(0.5x-1)，BF16→FP32的Muls/Adds/Exp→CAST_RINT BF16；更名未改变操作。",
+          "answer_span": "y_i\\approx\\exp(x_i\\,gain+bias)=2^{0.5x_i-1}.\n\\]\n这是实数层面的等价式，不代表逐位等价。实际路径为BF16输入转FP32，依次执行FP32 `Muls→Adds→Exp`，最后以`CAST_RINT`转回BF16（`nacre_stage.asc:45–64`）；中间不是源码显式融合的乘加。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU06.A02",
+          "dimension": "algorithm_strategy",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：half输入矩阵乘、float L0C、先half Fixpipe落GM后half LeakyRelu(约0.001)；每AIC一次tile，配对AIV半块。",
+          "answer_span": "每个AIC计算256行的完整矩阵乘，FP32结果放L0C，Fixpipe先转为half写入GM；两个AIV再读取各128行，在half上执行LeakyReLU并原地写回：\n\\[\nS=AB,\\quad H=\\mathrm{half}(S),\\quad\nC_{ij}=\\mathrm{LeakyReLU}_{half}(H_{ij},\\mathrm{half}(0.001)).\n\\]\n因此激活之前已发生一次FP32→FP16转换，不等价于始终在FP32中激活后再转换。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU06.A03",
+          "dimension": "algorithm_strategy",
+          "weight": 4,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：DELTA仅标识符/include更名，不改常量/API与原控制/缓冲/同步语义；V/C分别说明独立输入输出，未引入串联或新算法。",
+          "answer_span": "`source/DELTA.json:2–42`仅记录测试标识符和头文件更名，未改变常量或API，不能据名称推导另一套算法。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 4,
+          "points_after": 4
+        },
+        {
+          "id": "CU06.E01",
+          "dimension": "execution",
+          "weight": 4,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：V为3block、8340/4096元素，起点/长度/尾148/148/147；两单槽加FP32scratch=49152B明确。",
+          "answer_span": "计划计算`useful=ceil(25019/4096)=7`，查询核数为3，故：\n- `laneCount=3`；\n- `laneExtent=ceil(25019/3)=8340`元素；\n- `windowElements=4096`元素。\n\n`StageNacre::Init/Process`（`nacre_stage.asc:9–33`）按块号切分：\n\n| 块号 | GM起点，元素／字节 | 有效元素 | 三轮count |\n|---|---:|---:|---|\n| 0 | 0／0 | 8340 | 4096、4096、148 |\n| 1 | 8340／16680 | 8340 | 4096、4096、148 |\n| 2 | 16680／33360 | 8339 | 4096、4096、147 |\n\n每核循环局部`off=0,4096,8192`。两个整窗各搬8192字节，尾窗分别296、296、294字节，覆盖恰好25019元素，无核间重叠。GM索引以元素计，`DataCopyExtParams.blockLen`以字节计；核起点和尾长并不全为32字节对齐，源码使用`DataCopyPad`而非要求整块对齐的普通搬运（37–42、69–73行）。未请求显式左右填充，计算count也仅覆盖有效元素。\n\n### 存储、依赖与910C执行\n\n`nacre_entry:85–93`运行时按标签选择模板，本题进入`StageNacre<bfloat16_t>`。每核UB申请输入、输出队列各8192字节，FP32临时区各16384字节，总计49152字节，即48 KiB，不含实现元数据（16–23行）。\n\n在910C上，此路径主要使用MTE2搬GM→UB、Vector进行转换和算术、MTE3搬UB→GM，不使用Cube矩阵乘。队列入队/出队及释放承担搬运—计算—复用的依赖管理；源码没有显式硬事件，也没有手工双缓冲。每轮按`CopyIn→Compute→CopyOut`发起，队列深度为1，不能仅凭存在队列便断言形成了跨窗重叠流水。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 4,
+          "points_after": 4
+        },
+        {
+          "id": "CU06.E02",
+          "dimension": "execution",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：2AIC/4AIV，AIC p*32768half，AIV四起点及每AIV128行*128列=16384元素可无歧义确定。",
+          "answer_span": "`mica_entry`声明`__mix__(1,2)`（185–194行）。按此混合执行契约，每组1个AIC配2个AIV，本题为2个Cube任务、4个Vector任务；不是把启动参数2直接当作全部物理核数。\n\n每个AIC计算256行的完整矩阵乘，FP32结果放L0C，Fixpipe先转为half写入GM；两个AIV再读取各128行，在half上执行LeakyReLU并原地写回：\n\\[\nS=AB,\\quad H=\\mathrm{half}(S),\\quad\nC_{ij}=\\mathrm{LeakyReLU}_{half}(H_{ij},\\mathrm{half}(0.001)).\n\\]\n因此激活之前已发生一次FP32→FP16转换，不等价于始终在FP32中激活后再转换。`Mmad`的具体内部累加次序、精度模式和特殊值行为不能仅由输出张量类型完全确定。\n\n`Init:33–45`中，AIC编号q的A、C基址均偏移`q×32768`个half，即`q×65536`字节；B基址不变。AIV编号v先映射到`v/2`对应的Cube块，再由`v%2`选择半块（143–158行）。四个AIV最终负责C起始行0、128、256、384，各16384元素／32768字节，互不重叠。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU06.E03",
+          "dimension": "execution",
+          "weight": 3,
+          "original_status": "partial",
+          "suggested_status": "partial",
+          "coverage": "partial",
+          "reviewed": true,
+          "rationale": "部分：算术类型、层级、GM中转和V的BF16队列/FP32临时区有实质说明；全文没有L0C NZ或Fixpipe NZ→ND物理格式链，不能由float或GM名推断出这些格式。保留partial，无cap。",
+          "answer_span": "AIC侧（50–68行）每核分配：\n- L1：A 64 KiB、B 32 KiB，共96 KiB；\n- L0A 64 KiB、L0B 32 KiB；\n- L0C：32768个float，共128 KiB。\n\nMTE2将A、B从ND转NZ搬入L1。两核读取不同A行，但各自读取完整B；逻辑B仍是`[K,N]`，后续转置参数服务于硬件布局，不是将数学表达式改成`ABᵀ`。\n\n依赖链由明确事件建立：\n1. `MTE2_MTE1`：L1数据就绪后才能LoadData；\n2. `MTE1_M`：L0A/L0B就绪后才能Mmad；\n3. `M_FIX`：L0C计算完成后才能Fixpipe；\n4. `CrossCoreSetFlag<0x2,PIPE_FIX>(0)`与AIV等待配对，令AIV在对应结果写回后读取。\n\n定位分别为70–73、108–129、131–138行。这是经GM中转的Cube/Vector协作，不是直接共享L0C或UB。\n\n每AIV申请32 KiB UB。`ApplyGate`搬128行，每行256字节，GM和UB行间额外间隔均为0；`srcStride=(N-baseN)×2=0`（143–176行）。之后用`MTE2_V`和`V_MTE3`保证读入→激活→写回顺序。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 1.5,
+          "points_after": 1.5
+        },
+        {
+          "id": "CU06.H01",
+          "dimension": "hardware",
+          "weight": 3,
+          "original_status": "partial",
+          "suggested_status": "partial",
+          "coverage": "partial",
+          "reviewed": true,
+          "rationale": "部分：明确910C实际2201，3510静态对照、宏/相同API不能证明已执行；全文未给3510=950PR/950DT映射。不能用“另一平台”替代具体映射，也不因遗漏触发cap。",
+          "answer_span": "尤其A的L0布局契约明确不同，不能认为两分支产生相同字节排列，或通过修改宏就在910C上模拟另一架构。\n\n## 四、可确认范围\n\n实际设备宏2201选择上述循环加载路径；host核数查询与device架构宏是不同信息，本题也没有可据以混用的host架构分支。3510仅能作源码静态对照：相同的API名称、`__mix__`声明、`FixpipeParamsV220`结构体并不能证明它们在该目标上的全部支持条件、布局解释和同步契约已通过验证，更不能证明数值或性能相同。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 1.5,
+          "points_after": 1.5
+        },
+        {
+          "id": "CU06.H02",
+          "dimension": "hardware",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：2201循环LoadData2DParams为NZ→Zz L0A；3510单次V2为NZ→NZ，参数结构和packed A不同。",
+          "answer_span": "| 项目 | 实际2201 | 静态3510条件 |\n|---|---|---|\n| A加载API及布局 | `LoadData2DParams`，NZ→ZZ | `LoadData2DParamsV2`，NZ→NZ |\n| B加载API及布局 | `LoadData2DParams`，NZ→ZN | `LoadData2DParamsV2`，NZ→ZN |\n| 源码调用数／每AIC | A循环16次，B循环8次 | A、B各1次 |\n\n2201中，A每次加载repeat=8、srcStride=16；B每次repeat=8、srcStride=8且转置。两者第i次的L1源起点都是`i×256`个half，即`i×512`字节；L0目的起点均为`i×2048`个half，即`i×4096`字节。512字节对应一个16×16 half基础块，参数中的repeat/stride是块级单位，而不是普通ND行跨度。\n\n3510的V2参数分别为：\n- A：`{0,0,16,8,16,16,false,0}`；\n- B：`{0,0,8,8,8,8,true,0}`。\n\n它们用二维步数描述整块装载；API调用更少不等于底层搬运指令更少或耗时更短。尤其A的L0布局契约明确不同，不能认为两分支产生相同字节排列，或通过修改宏就在910C上模拟另一架构。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU06.H03",
+          "dimension": "hardware",
+          "weight": 2,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：两分支B均NZ→Zn且transpose=true，2201循环旧2D、3510单次V2；Mmad/Fixpipe/GM中转/混合激活在分支外。",
+          "answer_span": "两种条件下，源码的shape、混合启动声明、核地址映射、分配大小、ND→NZ搬运、Mmad参数、Fixpipe调用、跨核通知及AIV激活均相同；唯一显式架构分支是L1→L0加载（75–107行）。\n\n| 项目 | 实际2201 | 静态3510条件 |\n|---|---|---|\n| A加载API及布局 | `LoadData2DParams`，NZ→ZZ | `LoadData2DParamsV2`，NZ→NZ |\n| B加载API及布局 | `LoadData2DParams`，NZ→ZN | `LoadData2DParamsV2`，NZ→ZN |\n| 源码调用数／每AIC | A循环16次，B循环8次 | A、B各1次 |\n\n2201中，A每次加载repeat=8、srcStride=16；B每次repeat=8、srcStride=8且转置。两者第i次的L1源起点都是`i×256`个half，即`i×512`字节；L0目的起点均为`i×2048`个half，即`i×4096`字节。512字节对应一个16×16 half基础块，参数中的repeat/stride是块级单位，而不是普通ND行跨度。\n\n3510的V2参数分别为：\n- A：`{0,0,16,8,16,16,false,0}`；\n- B：`{0,0,8,8,8,8,true,0}`。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 2,
+          "points_after": 2
+        },
+        {
+          "id": "CU06.H04",
+          "dimension": "hardware",
+          "weight": 2,
+          "original_status": "partial",
+          "suggested_status": "partial",
+          "coverage": "partial",
+          "reviewed": true,
+          "rationale": "部分：未编译/运行/比较性能的证据边界明确；缺A3/A2全后续流水阻塞与950按pipe阻塞差异，亦无同等精确的其他额外契约边界，不能将一般保留重复当具体平台知识。",
+          "answer_span": "3510仅能作源码静态对照：相同的API名称、`__mix__`声明、`FixpipeParamsV220`结构体并不能证明它们在该目标上的全部支持条件、布局解释和同步契约已通过验证，更不能证明数值或性能相同。\n\n静态上可确认两入口的数据覆盖、显式分工和依赖；无法确认实际带宽、缓存命中、流水重叠、占用率或瓶颈。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 1.0,
+          "points_after": 1.0
+        }
+      ],
+      "critical_caps": [
+        {
+          "id": "CU06.C01",
+          "dimension": "hardware",
+          "cap": 2,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：实际目标2201与3510静态条件区分，A的Zz/NZ区别明确。缺950名称属于遗漏，不触发cap。",
+          "supporting_fact_ids": [
+            "CU06.H02"
+          ]
+        },
+        {
+          "id": "CU06.C02",
+          "dimension": "algorithm_strategy",
+          "cap": 2,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：更名保持计算，无新增融合、归约或其他数学运算。",
+          "supporting_fact_ids": [
+            "CU06.A03"
+          ]
+        },
+        {
+          "id": "CU06.C03",
+          "dimension": "hardware",
+          "cap": 2,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：明确相同代码/宏/API不证明新平台编译、运行或性能。",
+          "supporting_fact_ids": [
+            "CU06.H04"
+          ]
+        }
+      ],
+      "scores_before": {
+        "algorithm_strategy": 10,
+        "execution": 8.5,
+        "hardware": 7.5
+      },
+      "scores_after": {
+        "algorithm_strategy": 10,
+        "execution": 8.5,
+        "hardware": 7.5
+      },
+      "total_before": 26.0,
+      "total_after": 26.0,
+      "input_sha256": {
+        "candidate.md": "03b41929c91f8ded3fc1f6f5c395d232efce0e95466d08e7343ab2e5473cdbe7",
+        "annotation.json": "57fe3f9dbc4c108f1553e3bedc6cd14d7b1782211ade32495f453bcc905b6aac",
+        "gold.json": "d88ea8b18f6c19a453eab54d0fe756aac743c14c201456ec88278aec5bb07347"
+      }
+    },
+    {
+      "answer_id": "answer-426d84c805bd",
+      "case": "case-06",
+      "review_type": "full",
+      "gold_fact_count": 10,
+      "reviewed_fact_count": 10,
+      "all_gold_facts_reviewed": true,
+      "all_listed_critical_caps_reviewed": true,
+      "facts": [
+        {
+          "id": "CU06.A01",
+          "dimension": "algorithm_strategy",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：同一2^(0.5x-1)，BF16→FP32的Muls/Adds/Exp→CAST_RINT BF16；更名未改变操作。",
+          "answer_span": "实数意义即 \\(2^{0.5x_i-1}\\)。实际路径是BF16转FP32，依次执行FP32 `Muls→Adds→Exp`，再以`CAST_RINT`转BF16；不是直接用BF16计算，也不是无限精度幂函数（`nacre_stage.asc:45–63`）。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU06.A02",
+          "dimension": "algorithm_strategy",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：half输入矩阵乘、float L0C、先half Fixpipe落GM后half LeakyRelu(约0.001)；每AIC一次tile，配对AIV半块。",
+          "answer_span": "数学目标是 \\(C=\\operatorname{LeakyReLU}(AB)\\)，负支斜率0.001。实际数值路径更具体：\n1. half输入经`Mmad`产生float L0C结果，初始化累加器；\n2. `Fixpipe`先转half写GM；\n3. AIV读取该half结果，用half表示的0.001执行half LeakyReLU，再写回。\n\n因此激活发生在中间结果已转half之后，并非对未舍入FP32结果激活后仅转一次half（115–127、155–176）。Cube内部累加细节、Fixpipe默认舍入及特殊值细则，不能仅凭参数表完整确定。\n\n### 分工、地址和数据路径\n`Init:33–44`使AIC \\(p=0,1\\)分别处理A/C的256行，偏移均为`p*32768`个half，即`p*65536`字节；B不偏移，两个AIC各加载完整B。\n\n这里没有M/N/K分块遍历：每AIC只执行一次完整tile的搬运、一次`Mmad`和一次`Fixpipe`。K=baseK=128，不存在跨轮K累加；所有维度整除，无矩阵尾块。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU06.A03",
+          "dimension": "algorithm_strategy",
+          "weight": 4,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：DELTA仅标识符/include更名，不改常量/API与原控制/缓冲/同步语义；V/C分别说明独立输入输出，未引入串联或新算法。",
+          "answer_span": "`source/DELTA.json:2–42`表明仅测试标识符、文件名更名，未改变常量或API语义。两个入口独立执行。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 4,
+          "points_after": 4
+        },
+        {
+          "id": "CU06.E01",
+          "dimension": "execution",
+          "weight": 4,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：V为3block、8340/4096元素，起点/长度/尾148/148/147；两单槽加FP32scratch=49152B明确。",
+          "answer_span": "- `laneExtent=ceil(25019/3)=8340`，窗口4096元素。\n\n由`Init/Process`（9–33）推导：\n\n| blockIdx | GM起点，元素/字节 | 有效长度 | 三次循环的count |\n|---|---:|---:|---|\n| 0 | 0 / 0 | 8340 | 4096、4096、148 |\n| 1 | 8340 / 16680 | 8340 | 4096、4096、148 |\n| 2 | 16680 / 33360 | 8339 | 4096、4096、147 |\n\n循环局部偏移为0、4096、8192元素。共9次窗口处理，6个整窗、3个尾窗。每个整窗搬8192字节，尾窗分别296、296、294字节；核间区间不重叠且完整覆盖输入输出。\n\n### 存储、同步及910C行为\n`Init:16–23`为每核分配单槽输入/输出队列，各8192字节，以及两个FP32临时区，各16384字节；显式数据缓冲合计49152字节，即48 KiB，不含实现内部开销。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 4,
+          "points_after": 4
+        },
+        {
+          "id": "CU06.E02",
+          "dimension": "execution",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：2AIC/4AIV，AIC p*32768half，AIV四起点及每AIV128行*128列=16384元素可无歧义确定。",
+          "answer_span": "AIV \\(v=0…3\\)通过`v/2`定位所属AIC输出，再由`v%2`选择128行半块（134–158）。全局起点为0、16384、32768、49152个half，即0、32768、65536、98304字节。每AIV使用32 KiB UB；搬运参数为128行、每行256字节、GM行间跳过0字节，因此本次半块连续。四个AIV原位更新互不重叠的区域，Cube与Vector之间通过GM传递结果，不是直接传到UB。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU06.E03",
+          "dimension": "execution",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：C的各层half/float及NZ/ND物理路径、GM中转和原区域覆盖明确；V的BF16队列与FP32scratch亦明确。",
+          "answer_span": "每AIC显式片上分配（52–61）：\n- L1：A 64 KiB、B 32 KiB；\n- L0A：64 KiB；L0B：32 KiB；\n- L0C：float结果128 KiB。\n\nGM连续ND经`Nd2NzParams`转NZ存入L1，源行距A为K=128、B为N=128个half（65–68）。随后L1→L0，经矩阵流水计算，再由FIX完成L0C→GM、NZ→ND及FP32→half转换；Fixpipe关闭ReLU。\n\nAIV \\(v=0…3\\)通过`v/2`定位所属AIC输出，再由`v%2`选择128行半块（134–158）。全局起点为0、16384、32768、49152个half，即0、32768、65536、98304字节。每AIV使用32 KiB UB；搬运参数为128行、每行256字节、GM行间跳过0字节，因此本次半块连续。四个AIV原位更新互不重叠的区域，Cube与Vector之间通过GM传递结果，不是直接传到UB。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU06.H01",
+          "dimension": "hardware",
+          "weight": 3,
+          "original_status": "partial",
+          "suggested_status": "partial",
+          "coverage": "partial",
+          "reviewed": true,
+          "rationale": "部分：明确910C实际2201，3510静态对照、宏/相同API不能证明已执行；全文未给3510=950PR/950DT映射。不能用“另一平台”替代具体映射，也不因遗漏触发cap。",
+          "answer_span": "## C的2201实际路径与3510静态对照\n\n条件差异仅位于`mica.asc:75–107`的L1→L0装载：\n\n| 项目 | 实际2201 | 静态3510 |",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 1.5,
+          "points_after": 1.5
+        },
+        {
+          "id": "CU06.H02",
+          "dimension": "hardware",
+          "weight": 3,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：2201循环LoadData2DParams为NZ→Zz L0A；3510单次V2为NZ→NZ，参数结构和packed A不同。",
+          "answer_span": "| A目标布局 | NZ→ZZ | NZ→NZ |\n| A API | `LoadData2DParams` | `LoadData2DParamsV2` |\n| A调用结构 | 16次，每次8个16×16块，源stride=16 | 一次二维调用：step=(16,8)，src/dst stride=(16,16) |",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 3,
+          "points_after": 3
+        },
+        {
+          "id": "CU06.H03",
+          "dimension": "hardware",
+          "weight": 2,
+          "original_status": "correct",
+          "suggested_status": "correct",
+          "coverage": "complete",
+          "reviewed": true,
+          "rationale": "完整：两分支B均NZ→Zn且transpose=true，2201循环旧2D、3510单次V2；Mmad/Fixpipe/GM中转/混合激活在分支外。",
+          "answer_span": "| B目标布局 | NZ→ZN，转置标志true | 同为NZ→ZN，转置标志true |\n| B调用结构 | 8次，每次8块，源stride=8 | 一次V2调用：step=(8,8)，src/dst stride=(8,8) |\n\n2201中A、B各循环的源起点均每次增加256个half，即512字节；目标起点均增加2048个half，即4096字节（79–90）。这是NZ物理块寻址，不是直接按原ND行偏移。A共装载128个512字节块，B共64块。\n\n两条件下，其余源码相同：混合核声明、任务划分、GM/L1格式转换、缓冲大小、`Mmad`参数、`FixpipeParamsV220`、激活和同步调用均不变。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 2,
+          "points_after": 2
+        },
+        {
+          "id": "CU06.H04",
+          "dimension": "hardware",
+          "weight": 2,
+          "original_status": "partial",
+          "suggested_status": "partial",
+          "coverage": "partial",
+          "reviewed": true,
+          "rationale": "部分：未编译/运行/比较性能的证据边界明确；缺A3/A2全后续流水阻塞与950按pipe阻塞差异，亦无同等精确的其他额外契约边界，不能将一般保留重复当具体平台知识。",
+          "answer_span": "**相同API调用不等于相同底层指令或性能**：不同装载方式满足各自L0布局契约；3510的API可用性、混合核映射、FIX及跨核同步支持，仍需相应平台编译和运行验证。尤其不能因类型名含“V220”就自行确认或否定3510兼容性。",
+          "answer_span_is_verbatim_contiguous": true,
+          "points_before": 1.0,
+          "points_after": 1.0
+        }
+      ],
+      "critical_caps": [
+        {
+          "id": "CU06.C01",
+          "dimension": "hardware",
+          "cap": 2,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：实际目标2201与3510静态条件区分，A的Zz/NZ区别明确。缺950名称属于遗漏，不触发cap。",
+          "supporting_fact_ids": [
+            "CU06.H02"
+          ]
+        },
+        {
+          "id": "CU06.C02",
+          "dimension": "algorithm_strategy",
+          "cap": 2,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：更名保持计算，无新增融合、归约或其他数学运算。",
+          "supporting_fact_ids": [
+            "CU06.A03"
+          ]
+        },
+        {
+          "id": "CU06.C03",
+          "dimension": "hardware",
+          "cap": 2,
+          "reviewed": true,
+          "original_triggered": false,
+          "suggested_triggered": false,
+          "omission_does_not_trigger": true,
+          "rationale": "未触发：明确相同代码/宏/API不证明新平台编译、运行或性能。",
+          "supporting_fact_ids": [
+            "CU06.H04"
+          ]
+        }
+      ],
+      "scores_before": {
+        "algorithm_strategy": 10,
+        "execution": 10,
+        "hardware": 7.5
+      },
+      "scores_after": {
+        "algorithm_strategy": 10,
+        "execution": 10,
+        "hardware": 7.5
+      },
+      "total_before": 27.5,
+      "total_after": 27.5,
+      "input_sha256": {
+        "candidate.md": "fdb1e381c2ec4b038d014e006733e3c49f6b1dda14bef75bee6cc2c89a7096ea",
+        "annotation.json": "6b29401aaa38d2376166f2a8730ef1a88be2be3ac98796301a028eb1290ac060",
+        "gold.json": "d88ea8b18f6c19a453eab54d0fe756aac743c14c201456ec88278aec5bb07347"
+      }
+    }
+  ],
+  "consistency_checks": [
+    {
+      "answer_id": "answer-0a4165fcbbeb",
+      "case": "case-06",
+      "id": "CU06.E03",
+      "review_type": "same_fact_consistency",
+      "also_in_full_review": true,
+      "original_status": "partial",
+      "suggested_status": "partial",
+      "rationale": "部分：算术类型、层级、GM中转和V的BF16队列/FP32临时区有实质说明；全文没有L0C NZ或Fixpipe NZ→ND物理格式链，不能由float或GM名推断出这些格式。保留partial，无cap。",
+      "answer_span": "AIC侧（50–68行）每核分配：\n- L1：A 64 KiB、B 32 KiB，共96 KiB；\n- L0A 64 KiB、L0B 32 KiB；\n- L0C：32768个float，共128 KiB。\n\nMTE2将A、B从ND转NZ搬入L1。两核读取不同A行，但各自读取完整B；逻辑B仍是`[K,N]`，后续转置参数服务于硬件布局，不是将数学表达式改成`ABᵀ`。\n\n依赖链由明确事件建立：\n1. `MTE2_MTE1`：L1数据就绪后才能LoadData；\n2. `MTE1_M`：L0A/L0B就绪后才能Mmad；\n3. `M_FIX`：L0C计算完成后才能Fixpipe；\n4. `CrossCoreSetFlag<0x2,PIPE_FIX>(0)`与AIV等待配对，令AIV在对应结果写回后读取。\n\n定位分别为70–73、108–129、131–138行。这是经GM中转的Cube/Vector协作，不是直接共享L0C或UB。\n\n每AIV申请32 KiB UB。`ApplyGate`搬128行，每行256字节，GM和UB行间额外间隔均为0；`srcStride=(N-baseN)×2=0`（143–176行）。之后用`MTE2_V`和`V_MTE3`保证读入→激活→写回顺序。",
+      "answer_span_is_verbatim_contiguous": true
+    },
+    {
+      "answer_id": "answer-0a4165fcbbeb",
+      "case": "case-06",
+      "id": "CU06.H01",
+      "review_type": "same_fact_consistency",
+      "also_in_full_review": true,
+      "original_status": "partial",
+      "suggested_status": "partial",
+      "rationale": "部分：明确910C实际2201，3510静态对照、宏/相同API不能证明已执行；全文未给3510=950PR/950DT映射。不能用“另一平台”替代具体映射，也不因遗漏触发cap。",
+      "answer_span": "尤其A的L0布局契约明确不同，不能认为两分支产生相同字节排列，或通过修改宏就在910C上模拟另一架构。\n\n## 四、可确认范围\n\n实际设备宏2201选择上述循环加载路径；host核数查询与device架构宏是不同信息，本题也没有可据以混用的host架构分支。3510仅能作源码静态对照：相同的API名称、`__mix__`声明、`FixpipeParamsV220`结构体并不能证明它们在该目标上的全部支持条件、布局解释和同步契约已通过验证，更不能证明数值或性能相同。",
+      "answer_span_is_verbatim_contiguous": true
+    },
+    {
+      "answer_id": "answer-0a4165fcbbeb",
+      "case": "case-06",
+      "id": "CU06.H04",
+      "review_type": "same_fact_consistency",
+      "also_in_full_review": true,
+      "original_status": "partial",
+      "suggested_status": "partial",
+      "rationale": "部分：未编译/运行/比较性能的证据边界明确；缺A3/A2全后续流水阻塞与950按pipe阻塞差异，亦无同等精确的其他额外契约边界，不能将一般保留重复当具体平台知识。",
+      "answer_span": "3510仅能作源码静态对照：相同的API名称、`__mix__`声明、`FixpipeParamsV220`结构体并不能证明它们在该目标上的全部支持条件、布局解释和同步契约已通过验证，更不能证明数值或性能相同。\n\n静态上可确认两入口的数据覆盖、显式分工和依赖；无法确认实际带宽、缓存命中、流水重叠、占用率或瓶颈。",
+      "answer_span_is_verbatim_contiguous": true
+    },
+    {
+      "answer_id": "answer-157b13d4afab",
+      "case": "case-04",
+      "id": "CU04.H04",
+      "review_type": "same_fact_consistency",
+      "also_in_full_review": false,
+      "original_status": "correct",
+      "suggested_status": "correct",
+      "rationale": "完整：3510独立编译分支使用V2、L0A NZ，实际2201不执行；无跨平台编译或性能保证。",
+      "answer_span": "`asc:92–106` 的 3510 分支本次不执行；它使用 V2 LoadData，A 在 L0A 为 NZ，而不是 2201 的 ZZ。它仅是其他架构的源码分支，不能据此解释本次硬件行为。源码没有 host `NPU_ARCH` 分派，不应把 host 配置与 device 宏混用。",
+      "answer_span_is_verbatim_contiguous": true
+    },
+    {
+      "answer_id": "answer-189b02c6749e",
+      "case": "case-01",
+      "id": "CU01.H04",
+      "review_type": "same_fact_consistency",
+      "also_in_full_review": false,
+      "original_status": "correct",
+      "suggested_status": "correct",
+      "rationale": "完整：MTE2/V/MTE3路径明确；local尾块按32B占320B与GM有效长度/count分开，逻辑流量未当作实测带宽。",
+      "answer_span": "每轮源码顺序为 `CopyIn→Compute→CopyOut`。在 A3/2201 上，数据流为：\n\n```text\nGM 输入 → MTE2 → UB 输入 → Vector Cast/乘/加/Exp/Cast\n                              ↓\nGM 输出 ← MTE3 ← UB 输出\n```\n\n`VECIN`、`VECOUT`、`VECCALC` 都映射 **UB**，不是三层物理存储；本算子没有 Cube、L1/L0 或 AIC/AIV 间协作路径（平台资料 H02–H04）。\n\n### 搬运与尾部\n\n`CopyIn/CopyOut` 的 `DataCopyExtParams` 都是单块，`blockLen=count*sizeof(T)` 为有效**字节数**，两侧 stride 为零（`exp_kernel.asc:37–42,69–73`）。本次不存在跨行、格式转换或 ND→NZ 重排。\n\n按给定 A3 API 规则 H05/H06，GM→UB 的普通路径将局部块补齐到 32B 边界；三份尾块各需要 **320B 局部跨度**。`isPad=false` 不表示补零，也不取消对齐空间要求。有效计算只传入 count，补齐部分不是数学输入；写回只输出有效的 296/294B，不把补齐内容写到相邻元素或分配范围外。",
+      "answer_span_is_verbatim_contiguous": true
+    },
+    {
+      "answer_id": "answer-19befff90a1d",
+      "case": "case-04",
+      "id": "CU04.H04",
+      "review_type": "same_fact_consistency",
+      "also_in_full_review": false,
+      "original_status": "partial",
+      "suggested_status": "partial",
+      "rationale": "部分：非活动3510分支、V2以及未测边界有说明；全文未给该分支L0A的NZ格式。“排布不同”或“不能套用”不能替代NZ这一具体格式。无遗漏触发cap。",
+      "answer_span": "- L92–106 的 **3510 分支本次不执行**；它使用 V2 LoadData，且 A 的 L0A 排布不同，不能把其路径套到 910C。当前源码没有 host `NPU_ARCH` 分派，不能混同 device 宏。",
+      "answer_span_is_verbatim_contiguous": true
+    },
+    {
+      "answer_id": "answer-356b1c211015",
+      "case": "case-01",
+      "id": "CU01.H04",
+      "review_type": "same_fact_consistency",
+      "also_in_full_review": false,
+      "original_status": "partial",
+      "suggested_status": "partial",
+      "rationale": "部分：有效GM尾字节/count、向量路径和未测性能边界已有；仅提可能UB对齐空间或保留内部补齐，不明确local物理块按32B补齐，邻近GM起点的32B余数不能替代UB布局。无完整语义等价遗漏。",
+      "answer_span": "**平台/API 层面：**目标 device 架构为 `__NPU_ARCH__=2201`。上述本地向量数据位于 UB 类存储路径，GM 与 UB 间搬运通常由输入/输出搬运流水线承担，Cast、标量乘加和 Exp 由向量流水线执行；这里的标量乘数是逐元素向量指令参数，并非 host 逐元素参与。源码没有矩阵乘法、Cube 计算、L1 矩阵复用或核间通信。",
+      "answer_span_is_verbatim_contiguous": true
+    },
+    {
+      "answer_id": "answer-426d84c805bd",
+      "case": "case-06",
+      "id": "CU06.E03",
+      "review_type": "same_fact_consistency",
+      "also_in_full_review": true,
+      "original_status": "correct",
+      "suggested_status": "correct",
+      "rationale": "完整：C的各层half/float及NZ/ND物理路径、GM中转和原区域覆盖明确；V的BF16队列与FP32scratch亦明确。",
+      "answer_span": "每AIC显式片上分配（52–61）：\n- L1：A 64 KiB、B 32 KiB；\n- L0A：64 KiB；L0B：32 KiB；\n- L0C：float结果128 KiB。\n\nGM连续ND经`Nd2NzParams`转NZ存入L1，源行距A为K=128、B为N=128个half（65–68）。随后L1→L0，经矩阵流水计算，再由FIX完成L0C→GM、NZ→ND及FP32→half转换；Fixpipe关闭ReLU。\n\nAIV \\(v=0…3\\)通过`v/2`定位所属AIC输出，再由`v%2`选择128行半块（134–158）。全局起点为0、16384、32768、49152个half，即0、32768、65536、98304字节。每AIV使用32 KiB UB；搬运参数为128行、每行256字节、GM行间跳过0字节，因此本次半块连续。四个AIV原位更新互不重叠的区域，Cube与Vector之间通过GM传递结果，不是直接传到UB。",
+      "answer_span_is_verbatim_contiguous": true
+    },
+    {
+      "answer_id": "answer-426d84c805bd",
+      "case": "case-06",
+      "id": "CU06.H01",
+      "review_type": "same_fact_consistency",
+      "also_in_full_review": true,
+      "original_status": "partial",
+      "suggested_status": "partial",
+      "rationale": "部分：明确910C实际2201，3510静态对照、宏/相同API不能证明已执行；全文未给3510=950PR/950DT映射。不能用“另一平台”替代具体映射，也不因遗漏触发cap。",
+      "answer_span": "## C的2201实际路径与3510静态对照\n\n条件差异仅位于`mica.asc:75–107`的L1→L0装载：\n\n| 项目 | 实际2201 | 静态3510 |",
+      "answer_span_is_verbatim_contiguous": true
+    },
+    {
+      "answer_id": "answer-426d84c805bd",
+      "case": "case-06",
+      "id": "CU06.H04",
+      "review_type": "same_fact_consistency",
+      "also_in_full_review": true,
+      "original_status": "partial",
+      "suggested_status": "partial",
+      "rationale": "部分：未编译/运行/比较性能的证据边界明确；缺A3/A2全后续流水阻塞与950按pipe阻塞差异，亦无同等精确的其他额外契约边界，不能将一般保留重复当具体平台知识。",
+      "answer_span": "**相同API调用不等于相同底层指令或性能**：不同装载方式满足各自L0布局契约；3510的API可用性、混合核映射、FIX及跨核同步支持，仍需相应平台编译和运行验证。尤其不能因类型名含“V220”就自行确认或否定3510兼容性。",
+      "answer_span_is_verbatim_contiguous": true
+    },
+    {
+      "answer_id": "answer-6d085180ba56",
+      "case": "case-04",
+      "id": "CU04.H04",
+      "review_type": "same_fact_consistency",
+      "also_in_full_review": false,
+      "original_status": "partial",
+      "suggested_status": "partial",
+      "rationale": "部分：非活动3510分支、V2以及未测边界有说明；全文未给该分支L0A的NZ格式。“排布不同”或“不能套用”不能替代NZ这一具体格式。无遗漏触发cap。",
+      "answer_span": "- 实际 device 宏为 `__NPU_ARCH__=2201`，执行上述两组 `LoadData2DParams` 循环。L92–106 的 3510/V2 分支只是非活动源码对照，不能用于解释本次 L0A 排布或调用次数；host 代码没有相应 `NPU_ARCH` 分派。",
+      "answer_span_is_verbatim_contiguous": true
+    },
+    {
+      "answer_id": "answer-90a9efe23907",
+      "case": "case-06",
+      "id": "CU06.E03",
+      "review_type": "same_fact_consistency",
+      "also_in_full_review": false,
+      "original_status": "correct",
+      "suggested_status": "correct",
+      "rationale": "完整：C的各层half/float及NZ/ND物理路径、GM中转和原区域覆盖明确；V的BF16队列与FP32scratch亦明确。",
+      "answer_span": "A3/2201 路径为：\n\n`GM ND → MTE2/L1 NZ → MTE1/L0A ZZ及L0B ZN → M/Mmad/L0C NZ(float) → FIX/GM ND(half) → MTE2/UB → V激活 → MTE3/原GM区域`",
+      "answer_span_is_verbatim_contiguous": true
+    },
+    {
+      "answer_id": "answer-90a9efe23907",
+      "case": "case-06",
+      "id": "CU06.H01",
+      "review_type": "same_fact_consistency",
+      "also_in_full_review": false,
+      "original_status": "partial",
+      "suggested_status": "partial",
+      "rationale": "部分：明确910C实际2201，3510静态对照、宏/相同API不能证明已执行；全文未给3510=950PR/950DT映射。不能用“另一平台”替代具体映射，也不因遗漏触发cap。",
+      "answer_span": "实际 device 条件为 **2201**；3510 仅作静态对照，不代表编译或运行成功。源码没有使用 host `NPU_ARCH` 选择这些 device 分支。",
+      "answer_span_is_verbatim_contiguous": true
+    },
+    {
+      "answer_id": "answer-90a9efe23907",
+      "case": "case-06",
+      "id": "CU06.H04",
+      "review_type": "same_fact_consistency",
+      "also_in_full_review": false,
+      "original_status": "partial",
+      "suggested_status": "partial",
+      "rationale": "部分：未编译/运行/比较性能的证据边界明确；缺A3/A2全后续流水阻塞与950按pipe阻塞差异，亦无同等精确的其他额外契约边界，不能将一般保留重复当具体平台知识。",
+      "answer_span": "因此能确认 3510 **预处理选中的源码及其意图**，不能确认该混合核声明、V220 Fixpipe、flag 模式和所有 API 在该目标上的合法性、完整执行语义或结果正确性，更不能声称已有性能对照。",
+      "answer_span_is_verbatim_contiguous": true
+    },
+    {
+      "answer_id": "answer-bd2e07a9a34e",
+      "case": "case-06",
+      "id": "CU06.E03",
+      "review_type": "same_fact_consistency",
+      "also_in_full_review": true,
+      "original_status": "correct",
+      "suggested_status": "correct",
+      "rationale": "完整：C的各层half/float及NZ/ND物理路径、GM中转和原区域覆盖明确；V的BF16队列与FP32scratch亦明确。",
+      "answer_span": "C:52–68、113–138 的数据流是：\n\n`GM ND → L1 NZ → L0A ZZ / L0B ZN → L0C float NZ → GM half ND → AIV UB → GM`\n\n依次由 MTE2、MTE1、M、FIX、MTE2/V/MTE3承担。AIC/AIV具有独立片上存储，本实现通过**同一输出GM区域**交接，不是L0C直接进入AIV UB。",
+      "answer_span_is_verbatim_contiguous": true
+    },
+    {
+      "answer_id": "answer-bd2e07a9a34e",
+      "case": "case-06",
+      "id": "CU06.H01",
+      "review_type": "same_fact_consistency",
+      "also_in_full_review": true,
+      "original_status": "partial",
+      "suggested_status": "partial",
+      "rationale": "部分：明确910C实际2201，3510静态对照、宏/相同API不能证明已执行；全文未给3510=950PR/950DT映射。不能用“另一平台”替代具体映射，也不因遗漏触发cap。",
+      "answer_span": "硬件解释依据所给 `910c-hardware.md` 的 A3/2201 内容，不代表编译或实测结果。",
+      "answer_span_is_verbatim_contiguous": true
+    },
+    {
+      "answer_id": "answer-bd2e07a9a34e",
+      "case": "case-06",
+      "id": "CU06.H04",
+      "review_type": "same_fact_consistency",
+      "also_in_full_review": true,
+      "original_status": "partial",
+      "suggested_status": "partial",
+      "rationale": "部分：未编译/运行/比较性能的证据边界明确；缺A3/A2全后续流水阻塞与950按pipe阻塞差异，亦无同等精确的其他额外契约边界，不能将一般保留重复当具体平台知识。",
+      "answer_span": "反过来，A3资料也不能证明3510上的混合任务映射、跨核flag、Fixpipe重载、容量与padding契约均获支持。相同调用不意味着相同指令或性能，本题没有3510编译/运行结果。",
+      "answer_span_is_verbatim_contiguous": true
+    },
+    {
+      "answer_id": "answer-c49096d4e7ad",
+      "case": "case-01",
+      "id": "CU01.H04",
+      "review_type": "same_fact_consistency",
+      "also_in_full_review": false,
+      "original_status": "partial",
+      "suggested_status": "partial",
+      "rationale": "部分：有效GM尾字节/count、向量路径和未测性能边界已有；仅提可能UB对齐空间或保留内部补齐，不明确local物理块按32B补齐，邻近GM起点的32B余数不能替代UB布局。无完整语义等价遗漏。",
+      "answer_span": "算子以向量计算为主：GM↔本地 UB 搬运通常分别由 MTE2/MTE3 路径承担，Cast/Muls/Adds/Exp 使用向量计算资源；没有矩阵计算或 Cube 数据路径。\n\n`DataCopyPad` 是处理此类非整块字节长度的接口。本次后两个 block 的 GM 起点分别相对 32 字节边界偏移 8、16 字节，尾搬运长度也不是 32 字节整数倍；不能把它等同于只适用于对齐整块的普通拷贝。API 的内部补齐、事务拆分与实际指令数不能仅由源码确定。",
+      "answer_span_is_verbatim_contiguous": true
+    },
+    {
+      "answer_id": "answer-db6886002780",
+      "case": "case-01",
+      "id": "CU01.H04",
+      "review_type": "same_fact_consistency",
+      "also_in_full_review": true,
+      "original_status": "correct",
+      "suggested_status": "correct",
+      "rationale": "完整：MTE2/V/MTE3路径明确；local尾块按32B占320B与GM有效长度/count分开，逻辑流量未当作实测带宽。",
+      "answer_span": "按题给 A3 `DataCopyPad` 契约，GM→UB 的普通路径在 local 侧按 32B 补齐，因此这些尾块各需容纳 320B。`isPad=false` **不表示补零**；但计算仅使用前 `count` 个元素，补齐部分不参与有效结果。UB→GM 仅写指定有效字节，不把 local 补齐区写出。逻辑有效流量为读 50038B、写 50038B，共 **100076B**；这不是实测 HBM 事务流量。",
+      "answer_span_is_verbatim_contiguous": true
+    },
+    {
+      "answer_id": "answer-ff6063e966a6",
+      "case": "case-04",
+      "id": "CU04.H04",
+      "review_type": "same_fact_consistency",
+      "also_in_full_review": true,
+      "original_status": "correct",
+      "suggested_status": "correct",
+      "rationale": "完整：3510独立编译分支使用V2、L0A NZ，实际2201不执行；无跨平台编译或性能保证。",
+      "answer_span": "3510 的92–106行是编译期另一平台实现：使用 `LoadData2DParamsV2`，A 的 L0A 排布为 NZ；**本次2201不执行它**。源码没有 host `NPU_ARCH` 分派，不能将 host 架构值与 device `__NPU_ARCH__` 混用。若 device 宏两者均不匹配，这段代码也没有其他 LoadData 后备路径。\n\n本次尺寸均为16的整数倍且整除分核大小，无边界判定需求；源码并非通用尾块实现。host 未检查 ACL 或文件函数返回值；`data_utils.h:25–61` 也不强制文件大小等于期望大小。因此完整算法成立还以输入文件完整、运行时调用成功为前提。没有编译、运行或 profiling 证据，不能进一步确认精确指令展开、资源驻留、带宽利用率或耗时。",
+      "answer_span_is_verbatim_contiguous": true
+    }
+  ],
+  "annotation_audit": {
+    "status_counts": {
+      "correct": 223,
+      "partial": 13
+    },
+    "every_gold_fact_appears_exactly_once": true,
+    "all_dimensions_in_range": true,
+    "non_verbatim_original_spans": [
+      {
+        "answer_id": "answer-5bde3bbae7a7",
+        "id": "CU05.A02"
+      }
+    ],
+    "all_other_nonempty_original_spans_are_verbatim_contiguous": true
+  },
+  "findings": {
+    "score_changes": 0,
+    "cap_changes": 0,
+    "quote_only_corrections": 1,
+    "unresolved_adjudications": []
+  }
+}

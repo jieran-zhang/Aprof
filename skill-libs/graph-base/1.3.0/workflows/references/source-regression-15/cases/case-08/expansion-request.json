@@ -1,0 +1,52 @@
+{
+  "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+  "task_id": "case-08",
+  "context_hash": "sha256:8f6c8434a7ea0a4c5e6fa41b6575356c6e7688d00f64a2bbb54859861e2d685c",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "graph_version": "v0005",
+  "source_context_ref": {
+    "path": "authority.json",
+    "sha256": "sha256:5fbb3a4192153cc70034fe211087906fb6b8ceeb28f7401dc0917b069d71dfce"
+  },
+  "retrieval_hash": "sha256:95c23de3ed3a0ba0ab55bee12b19c2ba9185591832294a006168d306080715de",
+  "selections": [
+    {
+      "problem_id": "problem.insufficient_input_reuse",
+      "reason": "grid坐标被所有channel重复读取；区分原输入驻留与派生坐标缓存",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "grid坐标被所有channel重复读取；区分原输入驻留与派生坐标缓存"
+      ]
+    },
+    {
+      "problem_id": "problem.control_metadata_overhead",
+      "reason": "空间坐标解码和padding/权重在各channel重复，能否跨通道共享",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "空间坐标解码和padding/权重在各channel重复，能否跨通道共享"
+      ]
+    },
+    {
+      "problem_id": "problem.scalar_control_hot_loop",
+      "reason": "每输出1或8次随机采样，向量化相对坐标共享的成本",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "每输出1或8次随机采样，向量化相对坐标共享的成本"
+      ]
+    },
+    {
+      "problem_id": "problem.register_spill",
+      "reason": "正文提出的替代解释/代价：结合当前grid_sampler_3d源码，进一步区分新增局部状态spill、地址控制或容量对流水的限制。",
+      "trigger": "alternative_mechanism",
+      "related_problem_ids": [
+        "problem.control_metadata_overhead"
+      ],
+      "unexplained_observations": [
+        "源码预测是否被该替代机制抵消尚待判别，不能凭没有profile排除"
+      ]
+    }
+  ]
+}

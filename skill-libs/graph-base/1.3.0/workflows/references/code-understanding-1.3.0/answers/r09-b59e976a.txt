@@ -1,0 +1,27 @@
+该算子的数学目标是将两个同dtype、连续ND输入按尾轴对齐广播，再逐元素取最大值，输出dtype保持不变。P、Q的数学期望均为[[3,4,8],[7,7,9]]；R为[[3,7,8],[3,7,9]]。但当前FP16广播实现并不覆盖host接受的全部广播形状，因此必须区分数学期望与实际执行路径。
+
+[maximum.asc](/tmp/eval/source/op_host/maximum.asc:42)根据原始shape乘积计算输入字节数，查询Vector核数，调用ComputeMaximumTiling，然后按totalLength分配输出。输入及tiling复制到GM后，以tiling.blockNum启动kernel，等待stream完成，再复制并写出结果（48—60行）。本题没有额外分配余量，不能以底层分配可能对齐为越界访问辩护。
+
+[maximum_tiling.h](/tmp/eval/source/op_kernel/maximum_tiling.h:29)要求输入rank在1—8之间；较短shape在左侧补1。逐维检查两维相等或至少一维为1，输出维度取较大者。输入维度为1时，该维stride设0，否则保留连续ND的元素跨度。因此广播通过“输出坐标乘输入stride”表达，而不是实际扩展输入。sameShape判断的是原始shape向量是否完全相等。
+
+三次调用均得到rank=2、outShape=[2,3]、totalLength=6、tileElements=4096、sameShape=0。useful=max(1,ceil(6/4096))=1，故查询虽得到4个Vector核，blockNum=min(4,1)=1，blockLength=ceil(6/1)=6；只有block 0处理元素区间[0,6)。这不表示910C只有4个物理核。P、Q的x1Stride=[3,1]、x2Stride=[1,0]；R将x2视作[1,3]，得到x2Stride=[0,1]。未使用的数组项由零初始化保持为0。
+
+[maximum_kernel.asc](/tmp/eval/source/op_kernel/maximum_kernel.asc:153)先按dtype分派，再按类型和sameShape选择实现。int64始终走MaximumScalar；FP16只要shape不同，就进入KernelMaximumHalfLastAxisBroadcast，没有检查是否符合该类假定的广播形式；其他类型在shape不同时走通用标量广播。这是P与Q执行不同的直接原因。
+
+P的dtype编码为0，输入x1、x2和输出分别分配12、4、12字节。FP16专用类把row_设为输出末轴长度3，begin_=0、end_=6（84—97行）。它把x1、y视作6个half，却把x2视作3个half；实际x2只有2个half。SetGlobalBuffer只是建立视图，其bufferSize以元素计，契约要求调用者保证不超过真实数据长度；它不会扩展分配。
+
+P循环的count=min(end−off,4096,3−off%3)，因此两轮均为3，off依次为0、3。每轮参数p={1,6,0,0,0}，其中6是3×sizeof(half)字节。x1分别读取元素[0,3)、[3,6)，即相对基址的字节区间[0,6)、[6,12)；输出写相同区间。两轮x2都从off%3=0读取3个half，即字节[0,6)，而真实有效区间仅为[0,4)，故每轮都请求越界的[4,6)。该路径完全没有使用host算出的x2Stride=[1,0]，实际将[3,7,未知值]作为一行反复比较，而非每行广播3或7。
+
+因此P不能保证成功执行，也不能给出确定的完整输出。若越界读取后仍继续，且有效输入正常读到，前两列的比较会形成[3,7]、[3,7]，第三列依赖越界值；这只能解释错误地址对应的比较关系，不能作为可保证的返回结果，也无法静态确定具体报错形式。
+
+Q的dtype编码为1，输入x1、x2及输出分别为24、8、24字节。它进入MaximumScalar<float>（125—150行）。对linear=0…5，从末维开始用余数和整除还原坐标，再按stride累加地址。由此ai依次为0、1、2、3、4、5，bi依次为0、0、0、1、1、1；对应字节地址为x1+4×linear、x2+4×floor(linear/3)，输出为y+4×linear。所有逻辑访问均在分配范围内。源码逐元素读取GM中的float，用av>bv?av:bv选择并直接写回GM，没有显式UB队列和Vector Max；本题数值可精确表示，得到[[3,4,8],[7,7,9]]。
+
+R的dtype编码也为0，输入及输出分别为12、6、12字节，进入与P相同的FP16专用类。仍是off=0、3两轮，每轮count=3、blockLen=6字节；x1和输出地址同P，x2每轮均读取完整的[0,6)字节，即[3,7,6]。这次x2确有3个half，视图与搬运范围均成立，所以按Vector Max契约得到[[3,7,8],[3,7,9]]。该类适用于本例这种x1已经具有输出的连续布局、x2完整末轴向量可在外层重复使用的情形；host接受更一般广播，不等于该类实现了那些广播。
+
+P、R的搬运和计算见kernel 99—114行：先分配两个输入LocalTensor，经DataCopyPad从GM搬到UB，EnQue后DeQue供Vector读取；分配输出LocalTensor，执行Max(out,a,b,3)，再将输出入队、出队并搬回GM，最后释放各队列槽。三条队列深度均为1，各分配1块4096×2=8192字节，总显式UB容量24576字节，即24KiB；每轮有效数据只有6字节，容量与有效长度不能混同，也没有双缓冲。
+
+固定rawdocs中DataCopyPad_GMToUB.md的A3普通重载规定：blockLen以字节计，GM源地址允许1字节对齐，UB目的地址要求32字节对齐。这里isPad=false、左右padding均为0，未调用SetPadValue，6字节块在UB右侧补26字节dummy至32字节；文档规定此情形dummy取首元素值。Max的count=3按元素计，只计算有效的三个half。DataCopyPad_UBToGM.md规定写出时丢弃非有效部分，因此每轮仅向GM写6字节，第二行从字节偏移6开始合法。UB补齐不会把P请求的第三个输入元素变成padding：它属于blockLen指定的有效读取范围，已经越界。
+
+其他分支中，KernelMaximumSame（6—77行）把各核任务起点设为blockIdx×blockLength，实际长度截到totalLength；核内按最多4096元素分块，尾块用实际count计算搬运字节数。half、float、int32直接调用同类型Vector Max，均属于rawdocs Max.md列出的A3支持类型。bfloat16先将两输入转float，执行Max，再以CAST_RINT转回；int8依次经half、float比较，结果再经half转回int8，复用同一half临时区。这些转换避免直接调用A3不支持的bfloat16/int8 Max。int8值可被中间浮点格式精确表示。非FP16异形输入使用通用stride索引；bfloat16标量比较先转float，再选择原始输入值。int64即使同形也使用标量比较。标量条件相等时选择第二输入；不能仅凭算子名称断言其NaN、正负零行为与Vector Max完全一致。
+
+按workload/sdk-contract.md，目标为910C、Atlas A3、__NPU_ARCH__=2201。这里的Vector数据流为GM经MTE2进入UB，Vector比较后由MTE3写回GM；VECIN、VECOUT、VECCALC均是UB逻辑位置，没有ND到NZ转换，也没有Cube或跨核归约。TPipe/TQue及编译器自动同步负责表达搬入完成后计算、计算完成后搬出，以及输入和输出槽再次使用前的依赖；无手写flag不能解释成无同步。各核输出区间独立，不需跨核交换结果；host的stream同步则保护最终回读。队列与异步流水的存在不能证明实际重叠或性能。本结论来自静态源码及固定API契约，没有构建或设备运行证据；P的越界后果、具体生成指令及实际耗时均不在现有材料可确定的范围内。

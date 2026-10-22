@@ -113,8 +113,8 @@ def plan(scope, *, algorithm="paper-current"):
 _FIXTURE_CACHE = {}
 
 
-def chain_fixture(root, artifact, task, *, action_id="action.coalesce_contiguous_transfers", p_mode="KEEP", o_mode="CHANGE"):
-    cache_key = (str(root), content_hash(artifact), file_hash(root / bindings.CONFIG), action_id, p_mode, o_mode)
+def chain_fixture(root, artifact, task, *, action_id="action.coalesce_contiguous_transfers", p_mode="KEEP", o_mode="CHANGE", workload=None, routing_features=None, routing_structure=None):
+    cache_key = (str(root), content_hash(artifact), file_hash(root / bindings.CONFIG), action_id, p_mode, o_mode, content_hash(workload), content_hash(routing_features), content_hash(routing_structure))
     task.mkdir()
     if cache_key in _FIXTURE_CACHE:
         cached, files = _FIXTURE_CACHE[cache_key]
@@ -123,10 +123,13 @@ def chain_fixture(root, artifact, task, *, action_id="action.coalesce_contiguous
         return deepcopy(cached)
     parent_ref = {"path": "parent.cpp", "sha256": digest(b"paper parent\n")}
     (task / parent_ref["path"]).write_bytes(b"paper parent\n")
-    workload_ref = write_json(task / "workload.json", {"shape": [64], "dtype": "float32", "layout": "ND", "attributes": {}})
-    attrs = {"platform": "dav-2201", "family": ["elementwise"], "dtype": "float32", "features": ["memory-transfer", "tiling-tail"]}
+    workload_ref = write_json(task / "workload.json", workload if workload is not None else {"shape": [64], "dtype": "float32", "layout": "ND", "attributes": {}})
+    structure_ref = None
+    if routing_structure is not None:
+        structure_ref = write_json(task / 'routing-structure.json', dict(routing_structure, parent_ref=parent_ref, workload_ref=workload_ref))
+    attrs = {"platform": "dav-2201", "family": ["elementwise"], "dtype": "float32", "features": ["memory-transfer", "tiling-tail"] + (routing_features or [])}
     origin_ref = write_json(task / "context.json", {"schema_version": "1.0.0", "task_id": "paper-task", "operator": "paper",
-        "hardware_fingerprint": "paper-only", "workload": {}, "budget": {}, "evidence": {"routing_attributes": attrs}})
+        "hardware_fingerprint": "paper-only", "workload": {}, "budget": {}, "evidence": {"routing_attributes": attrs, **({"routing_feature_source_ref": structure_ref} if structure_ref else {})}})
     context = {"schema_version": "aprof.evidence/v1", "task_id": "paper-task", "source_context_ref": origin_ref, "attributes": attrs, "facts": {}}
     scope = {"task_id": "paper-task", "parent_implementation_hash": parent_ref["sha256"], "workload_hash": workload_ref["sha256"],
              "target_ids": ["tensor.x"], "stage": "kernel.main"}
@@ -705,6 +708,8 @@ def test_real_v5_metadata_additions_keep_v4_handoffs_replayable_and_fixture_gene
             header["observation"]["required_components"] = [{"id": "paper.component.one", "description": "第一项联合观察"}, {"id": "paper.component.two", "description": "第二项联合观察"}]
         path.write_text("---\n" + yaml.safe_dump(header, allow_unicode=True, sort_keys=False) + "---\n" + body)
     write_json(root / diagnosis.REGION / "REGION.json", {"schema_version": "aprof.diagnosis-region/v1", "owner": "diagnosis", "version": "v0005"})
+    from test_diagnosis_v4 import copy_condition_policy
+    copy_condition_policy(root, v4)
     v5 = diagnosis.build(root, Path(diagnosis.REGION) / "versions/v0004")
     bindings.freeze_bases(root)
     new_task = tmp_path / "new-task"
@@ -713,7 +718,9 @@ def test_real_v5_metadata_additions_keep_v4_handoffs_replayable_and_fixture_gene
     assert {"producer", "consumer", "stage", "implementation", "workload"} <= set(instance["targets"])
     composite = new_chain[0]["reasoning"]["facts"][symptom_id]
     assert composite["kind"] == "derived" and set(composite["components"]) == {"paper.component.one", "paper.component.two"}
-    assert bindings.validate_chain(root, *new_chain, task_root=new_task)["status"] == "implemented"
+    # 新版本新增选择记录，旧链仍按冻结 v4 原义回放。
+    with pytest.raises(GraphError, match="唯一 action-decision"):
+        bindings.validate_chain(root, *new_chain, task_root=new_task)
     artifacts, config = bindings.load_frozen_bundle(root, old_ref)
     assert artifacts["diagnosis"]["version"] == "v0004"
     assert bindings.validate_chain(root, *old_chain, task_root=old_task, artifacts=artifacts, routing_config=config)["status"] == "implemented"

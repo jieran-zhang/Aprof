@@ -1,0 +1,105 @@
+{
+  "task_id": "raw-case-15",
+  "known_conditions": [
+    {
+      "predicate": "constraint.task_ownership",
+      "state": true,
+      "basis": "原host为输入/输出各自分配GM；每核begin=c*blockLength，end=min(begin+blockLength,total)，或RoPE以rowPerBlock分完整row。条件方案在每个输出有效片上只设置唯一owner，不引入写共享、原子或跨核归约。若改任务分解，必须在C2重新冻结实现；这里是数学所有权证明。",
+      "scope": "本项精确静态证明；没有把尚未核验的API、资源、完整精度或物理写许可默认置true。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/resize_bilinear_kernel.asc",
+          "sha256": "sha256:19cf99df77bb39be99c1f7e23848c8a0e9648f80178b40dba0c8ab84daad5863",
+          "locator": "lines:15-17"
+        },
+        {
+          "path": "source/op_kernel/resize_bilinear_tiling.h",
+          "sha256": "sha256:fae2d2a88ae73aecfc7a7140db95c3103777a24c8a045ed981e24cebe8e44f38",
+          "locator": "lines:8-15"
+        },
+        {
+          "path": "source/op_host/resize_bilinear.asc",
+          "sha256": "sha256:a604c9ada83e33c67de6aa4de5c9e5ccf60c794a8327e2813a8662a2256f906e",
+          "locator": "lines:13-13"
+        }
+      ]
+    },
+    {
+      "predicate": "constraint.output_ownership",
+      "state": true,
+      "basis": "原host为输入/输出各自分配GM；每核begin=c*blockLength，end=min(begin+blockLength,total)，或RoPE以rowPerBlock分完整row。条件方案在每个输出有效片上只设置唯一owner，不引入写共享、原子或跨核归约。若改任务分解，必须在C2重新冻结实现；这里是数学所有权证明。",
+      "scope": "本项精确静态证明；没有把尚未核验的API、资源、完整精度或物理写许可默认置true。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/resize_bilinear_kernel.asc",
+          "sha256": "sha256:19cf99df77bb39be99c1f7e23848c8a0e9648f80178b40dba0c8ab84daad5863",
+          "locator": "lines:15-17"
+        },
+        {
+          "path": "source/op_kernel/resize_bilinear_tiling.h",
+          "sha256": "sha256:fae2d2a88ae73aecfc7a7140db95c3103777a24c8a045ed981e24cebe8e44f38",
+          "locator": "lines:8-15"
+        },
+        {
+          "path": "source/op_host/resize_bilinear.asc",
+          "sha256": "sha256:a604c9ada83e33c67de6aa4de5c9e5ccf60c794a8327e2813a8662a2256f906e",
+          "locator": "lines:13-13"
+        }
+      ]
+    },
+    {
+      "predicate": "constraint.valid_lengths",
+      "state": true,
+      "basis": "全部20case非空；尾段定义valid=min(U,end-off)>0；每次GM只读写valid，不把padding当有效元素。Transpose矩形同时裁剪有效行列，RoPE完整row，Resize列片止于row末。原host与tiling形状上界给出地址域；R2矩阵/索引公式逐组复核。",
+      "scope": "本项精确静态证明；没有把尚未核验的API、资源、完整精度或物理写许可默认置true。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/resize_bilinear_kernel.asc",
+          "sha256": "sha256:19cf99df77bb39be99c1f7e23848c8a0e9648f80178b40dba0c8ab84daad5863",
+          "locator": "lines:15-17"
+        },
+        {
+          "path": "source/op_kernel/resize_bilinear_tiling.h",
+          "sha256": "sha256:fae2d2a88ae73aecfc7a7140db95c3103777a24c8a045ed981e24cebe8e44f38",
+          "locator": "lines:8-15"
+        },
+        {
+          "path": "source/op_host/resize_bilinear.asc",
+          "sha256": "sha256:a604c9ada83e33c67de6aa4de5c9e5ccf60c794a8327e2813a8662a2256f906e",
+          "locator": "lines:13-13"
+        }
+      ]
+    }
+  ],
+  "unknown_action_conditions": [
+    "constraint.capacity",
+    "constraint.semantic_equivalence"
+  ],
+  "implementation_note": "任何API/容量/numeric unknown未补齐前不得成为C3实施授权。所有true条件逐项有源码或数学依据，未按前提名称默认认定。",
+  "mathematical_facts": [
+    {
+      "predicate": "source.element_mapping_equivalence",
+      "state": true,
+      "basis": "固定原ResizeCoord的FP32直接计算、clamp、h/w边界和四项乘加顺序；共享只读源点不改变输入值，仍计算四项，包括0*Inf/NaN。 此事实只证明地址/目标表达式关系，不证明完整浮点语义。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/resize_bilinear_kernel.asc",
+          "sha256": "sha256:19cf99df77bb39be99c1f7e23848c8a0e9648f80178b40dba0c8ab84daad5863",
+          "locator": "lines:15-17"
+        },
+        {
+          "path": "source/op_kernel/resize_bilinear_tiling.h",
+          "sha256": "sha256:fae2d2a88ae73aecfc7a7140db95c3103777a24c8a045ed981e24cebe8e44f38",
+          "locator": "lines:8-15"
+        }
+      ],
+      "limits": "ResizeCoord索引域和四项插值表达式可由源码恢复，但手写half/BF16解码的次正规数/NaN处理与目标Cast、Vector乘加舍入/融合、正负零和Inf传播的全域等价尚未核验。完整constraint.semantic_equivalence保持unknown，不由clamp/地址证明推成true。"
+    }
+  ],
+  "unknown_condition_details": {
+    "constraint.capacity": "连续源span随缩放比变化，实际UB及Gather临时区未知，需逐tile而非只按Wtile预算。",
+    "constraint.target_api": "目标SDK的UB Gather/index单位、half/bf16输入Cast、count乘加及特殊值行为未核验。",
+    "constraint.numeric_order": "原四项FP32累加顺序与源手工解码特殊值必须保留，Vector Cast/融合对NaN/Inf和bf16 round的等价需要核验。",
+    "constraint.semantic_equivalence": "ResizeCoord索引域和四项插值表达式可由源码恢复，但手写half/BF16解码的次正规数/NaN处理与目标Cast、Vector乘加舍入/融合、正负零和Inf传播的全域等价尚未核验。完整constraint.semantic_equivalence保持unknown，不由clamp/地址证明推成true。"
+  }
+}

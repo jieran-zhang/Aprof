@@ -2,7 +2,7 @@
 schema_version: aprof.diagnosis-record/v1
 id: action.reuse_disjoint_onchip_buffers
 kind: action
-version: 1.1.0
+version: 1.2.0
 status: active
 title: 复用不重叠存活期的 buffer
 scope:
@@ -101,8 +101,6 @@ tags:
 seed_reason: 独立可核验证据匹配增益为 1；机制与动作不加先验偏置。
 transformation: 复用不重叠存活期的 buffer
 preconditions:
-- fact: symptom.source.ub_live_bytes_near_capacity
-  state: true
 - fact: constraint.semantic_equivalence
   state: true
 - fact: constraint.capacity
@@ -113,7 +111,7 @@ invariants:
 - 算子语义与精度要求保持
 - 有效写回无重叠且覆盖完整
 - 资源与依赖约束经核验
-expected_effect: 由机制相关指标和统一计时共同核验；不承诺收益。
+expected_effect: 复用可降低物理峰值，并可能使更合适tile或流水深度可行；若释放容量无用途，时延可能不变。 是否作用于关键路径及实际收益由后继验证，不能由Action就绪推出。
 slots:
 - name: target
   kind: object
@@ -180,7 +178,7 @@ claims:
 - id: intervention
   text: 让生命周期确实不重叠的片上临时区共享物理空间
   basis: mechanism_inference
-  source_indexes: &id001
+  source_indexes:
   - 1
   - 2
   - 3
@@ -197,10 +195,28 @@ claims:
 - id: costs
   text: 增加alias、阶段完成与所有权审计成本；将来增加跨阶段重叠会使原复用失效并需重规划
   basis: mechanism_inference
-  source_indexes: *id001
+  source_indexes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
   review_status: reviewed
   limitations:
   - 代价需要绑定具体候选量化，尚无本任务收益
+- id: condition_separation
+  text: 候选buffer的完整生产消费/异步完成生命周期经证明不重叠，alias对齐、地址空间、有效长度及容量合法；并不要求原峰值已接近上限。 近容量是资源压力线索；复用是否合法由生命周期决定，是否值得做由释放容量用途与管理成本决定。
+    复用可降低物理峰值，并可能使更合适tile或流水深度可行；若释放容量无用途，时延可能不变。
+  basis: mechanism_inference
+  source_indexes: []
+  review_status: reviewed
+  limitations:
+  - 本次基于已有模板、包内来源和变换语义的条件分层归纳，不是上游新增性能结论。
+  - 性能证据不足不等于变换不安全；实施安全也不证明当前关键路径、收益或试验优先级。
 review:
   state: reviewed_with_limits
   source_credibility: 固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。
@@ -225,7 +241,7 @@ instantiation:
   costs:
   - 增加alias、阶段完成与所有权审计成本
   - 将来增加跨阶段重叠会使原复用失效并需重规划
-  unknown_policy: 任一硬前提缺失、unknown或proxy则needs_evidence；明确不满足则blocked。C2可比较条件方案，C3须完成全部原前提及invariants核验。
+  unknown_policy: 实施前逐条满足本版本preconditions与invariants；安全/结构条件缺失则指出具体未证项，C2可继续条件分析，C3不得绕过。性能假设独立记录：来源与当前源码足以支持适用时，可在合法且有试验价值的条件下提出优化，不以尚无严格性能实测一律否决；不把未知写成确认。Action优先级由成本机会比较和补证据决策形成。
   replan_triggers:
   - 目标/阶段、owner或有效元素域变化
   - 算法、归并/同步拓扑、workspace owner、融合、通路或dispatch域超出已确认C2计划自由度
@@ -240,21 +256,34 @@ instantiation:
 
 同时存活的UB/L1/L0 buffer集合及其分配阶段；阶段：host容量预算；kernel分配、重叠与释放。
 
-## 实例绑定与原硬前提
+## 实例绑定与实施安全条件
 
-实例必须给出精确template_hash、task与parent实现、目标和阶段；参数逐项给单位、来源及有效域，关联已确认C2计划。未知信息不从样例常量或聊天推断。
+实例必须给出精确template_hash、task与parent实现、目标和阶段；参数逐项给单位、来源及有效域，关联已确认C2计划。来源/源码/合法API与资源公式可以证明安全，无需将每项伪装成硬件观测。
 
-- target
-- stage
-- workload
-- implementation
+候选buffer的完整生产消费/异步完成生命周期经证明不重叠，alias对齐、地址空间、有效长度及容量合法；并不要求原峰值已接近上限。
 
-- symptom.source.ub_live_bytes_near_capacity=true
-- constraint.semantic_equivalence=true
-- constraint.capacity=true
-- constraint.dependency_lifetime=true
+- `constraint.semantic_equivalence=true`：完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。
+- `constraint.capacity=true`：按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。
+- `constraint.dependency_lifetime=true`：所有producer/consumer、异步完成、释放/覆盖/复用边界真实合法；不能把等待可能慢当成可删依赖。
 
-原invariants：算子语义与精度要求保持；有效写回无重叠且覆盖完整；资源与依赖约束经核验。
+不变量：算子语义与精度要求保持；有效写回无重叠且覆盖完整；资源与依赖约束经核验。
+
+## 性能假设、比较与补证据
+
+近容量是资源压力线索；复用是否合法由生命周期决定，是否值得做由释放容量用途与管理成本决定。
+
+复用可降低物理峰值，并可能使更合适tile或流水深度可行；若释放容量无用途，时延可能不变。
+
+以下旧门槛作为性能/选择线索保留，不再与实施安全混用；期望false也原样保留：
+
+- `symptom.source.ub_live_bytes_near_capacity=true`：接近容量上限影响收益与选择，不决定不重叠buffer复用是否合法；安全由生命周期、容量和语义约束负责。
+
+1. 画每个buffer的定义、异步消费完成和最后释放区间，按实际深度/对齐计算旧新峰值。
+2. 明确释放字节将支持哪项计划或减少哪项成本；仅减少分配大小不能自动声称加速。
+
+已有来源说明该方法，并且当前源码形态、对象、目标API与约束匹配时，即可将其作为有依据的优化候选；不要求先完成严格性能实验。每个unknown只写具体缺失项、决策影响和是否值得补证据。若补充检查不会改变候选选择，就记录预测后进入获授权的试验，不把“信息不完备”当统一否决。反之，安全未知或明确不适用必须阻断实施。
+
+本Action能实施只是准入。选择前应与当前workload的主要字节、逐元素工作、任务/流水机会比较，说明预计改变何种成本、影响哪些case、可能代价及为何优先；不能以容易等价作为唯一理由。R2把R1实际patch与预测逐项对照，区分支持、削弱和无法判断；继续同一Action应有新证据、不同参数或尚未验证的预测，不要求机械换Action。
 
 ## 预期效果与代价
 
@@ -265,7 +294,7 @@ instantiation:
 
 ## 未知与返回规划
 
-任一硬前提缺失、unknown或proxy则needs_evidence；明确不满足则blocked。C2可比较条件方案，C3须完成全部原前提及invariants核验。
+实施前逐条满足本版本preconditions与invariants；安全/结构条件缺失则指出具体未证项，C2可继续条件分析，C3不得绕过。性能假设独立记录：来源与当前源码足以支持适用时，可在合法且有试验价值的条件下提出优化，不以尚无严格性能实测一律否决；不把未知写成确认。Action优先级由成本机会比较和补证据决策形成。
 
 - 目标/阶段、owner或有效元素域变化
 - 算法、归并/同步拓扑、workspace owner、融合、通路或dispatch域超出已确认C2计划自由度
@@ -319,3 +348,10 @@ InitBuffer文档定义num为物理内存块数、len以字节计且内部按32�
 增加alias、阶段完成与所有权审计成本；将来增加跨阶段重叠会使原复用失效并需重规划
 
 来源索引：1, 2, 3, 4, 5, 6, 7, 8, 9。限制：代价需要绑定具体候选量化，尚无本任务收益
+
+
+### condition_separation [mechanism_inference]
+
+候选buffer的完整生产消费/异步完成生命周期经证明不重叠，alias对齐、地址空间、有效长度及容量合法；并不要求原峰值已接近上限。 近容量是资源压力线索；复用是否合法由生命周期决定，是否值得做由释放容量用途与管理成本决定。 复用可降低物理峰值，并可能使更合适tile或流水深度可行；若释放容量无用途，时延可能不变。
+
+本次维护归纳；原来源与许可不变。旧条件逐项去向见包内 `workflows/references/action-condition-policy.json`，v0004前提仅在历史快照继续按原义回放。

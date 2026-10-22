@@ -55,3 +55,15 @@ tools/aprofctl knowledge validate-chain --root <完整包> --task-root <任务�
 ```
 
 当前诊断不走 `knowledge build/validate --owner diagnosis`。历史 v0003 需通过显式快照路径回放；新交接链校验无需 timing，不能替代实施后的正确性与性能验收。
+
+## Action 选择与条件分层
+
+诊断 v0005 起使用 [action-condition-policy](action-condition-policy.schema.json) 将各旧前提逐项归入实施条件或性能假设；冻结策略被诊断图 source_hashes 绑定。[action-decision](action-decision.schema.json) 记录候选比较、来源知识的具体影响、补证据与前轮反馈，作为 handoff/v3 C1.artifacts 的独立文件。旧 schema 不加字段，旧图与旧交接保持原义。命令及语义见[选择规则](../workflows/references/action-selection.md)。
+
+## 完整优化方案
+
+新增 `aprof.action-decision/v3`（action-decision-v3）和 `aprof.handoff/v4`（knowledge-handoff-v4），运行时 0.8.0 按显式版本分派。一个方案可以引用多个机会及注册 Action 实例，经共同计划与逐实例路由后记录实际组合。旧 schema 与冻结快照保持原义，交接链不混装版本。详情见[完整方案](../workflows/references/optimization-schemes.md)；任务内跨轮摘要使用 Markdown，不新增机器 contract。
+
+字段、显式版本分派与回放入口见[完整方案格式](../workflows/references/action-decision-v3.md)。
+
+当前 runtime 0.8.1 沿用上述 v3/v4 schema。D v0007 新任务测前冻结完整 workload case payload，历史身份和回放不追认；见[映射说明](../workflows/references/action-decision-v3.md#完整-workload-的测前映射)。

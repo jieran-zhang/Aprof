@@ -2,7 +2,7 @@
 schema_version: aprof.diagnosis-record/v1
 id: action.software_pipeline_stages
 kind: action
-version: 1.1.0
+version: 1.2.0
 status: active
 title: 重排软件流水阶段
 scope:
@@ -76,8 +76,6 @@ tags:
 seed_reason: 独立可核验证据匹配增益为 1；机制与动作不加先验偏置。
 transformation: 重排软件流水阶段
 preconditions:
-- fact: symptom.profile.overlap_low
-  state: true
 - fact: symptom.source.serial_queue_or_event_order
   state: true
 - fact: constraint.semantic_equivalence
@@ -90,7 +88,7 @@ invariants:
 - 算子语义与精度要求保持
 - 有效写回无重叠且覆盖完整
 - 资源与依赖约束经核验
-expected_effect: 由机制相关指标和统一计时共同核验；不承诺收益。
+expected_effect: 合法预取/计算/写回重排可能缩短稳态关键路径；短任务、单tile、最慢阶段不变或额外buffer成本会限制收益。 是否作用于关键路径及实际收益由后继验证，不能由Action就绪推出。
 slots:
 - name: target
   kind: object
@@ -147,7 +145,7 @@ claims:
 - id: intervention
   text: 为合法独立tile建立预取/计算/写回软件流水并配齐事件闭环
   basis: mechanism_inference
-  source_indexes: &id001
+  source_indexes:
   - 1
   - 2
   - 3
@@ -161,10 +159,25 @@ claims:
 - id: costs
   text: 更多物理buffer和事件ID；增加序言/尾声与尾块分支复杂度，短任务可能付不起成本
   basis: mechanism_inference
-  source_indexes: *id001
+  source_indexes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
   review_status: reviewed
   limitations:
   - 代价需要绑定具体候选量化，尚无本任务收益
+- id: condition_separation
+  text: 多个tile/阶段之间存在可重叠的独立工作，producer/consumer事件与buffer生命周期已完整证明；新增深度/序言尾声与容量合法。 当前队列或事件的顺序是结构事实，不说明真实硬件上完全无重叠；高阶API内部流水需单独考虑。
+    合法预取/计算/写回重排可能缩短稳态关键路径；短任务、单tile、最慢阶段不变或额外buffer成本会限制收益。
+  basis: mechanism_inference
+  source_indexes: []
+  review_status: reviewed
+  limitations:
+  - 本次基于已有模板、包内来源和变换语义的条件分层归纳，不是上游新增性能结论。
+  - 性能证据不足不等于变换不安全；实施安全也不证明当前关键路径、收益或试验优先级。
 review:
   state: reviewed_with_limits
   source_credibility: 固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。
@@ -189,7 +202,7 @@ instantiation:
   costs:
   - 更多物理buffer和事件ID
   - 增加序言/尾声与尾块分支复杂度，短任务可能付不起成本
-  unknown_policy: 任一硬前提缺失、unknown或proxy则needs_evidence；明确不满足则blocked。C2可比较条件方案，C3须完成全部原前提及invariants核验。
+  unknown_policy: 实施前逐条满足本版本preconditions与invariants；安全/结构条件缺失则指出具体未证项，C2可继续条件分析，C3不得绕过。性能假设独立记录：来源与当前源码足以支持适用时，可在合法且有试验价值的条件下提出优化，不以尚无严格性能实测一律否决；不把未知写成确认。Action优先级由成本机会比较和补证据决策形成。
   replan_triggers:
   - 目标/阶段、owner或有效元素域变化
   - 算法、归并/同步拓扑、workspace owner、融合、通路或dispatch域超出已确认C2计划自由度
@@ -204,22 +217,35 @@ instantiation:
 
 多个tile的CopyIn/Compute/CopyOut及其buffer事件链；阶段：kernel预取序言；稳态tile循环；排空尾声。
 
-## 实例绑定与原硬前提
+## 实例绑定与实施安全条件
 
-实例必须给出精确template_hash、task与parent实现、目标和阶段；参数逐项给单位、来源及有效域，关联已确认C2计划。未知信息不从样例常量或聊天推断。
+实例必须给出精确template_hash、task与parent实现、目标和阶段；参数逐项给单位、来源及有效域，关联已确认C2计划。来源/源码/合法API与资源公式可以证明安全，无需将每项伪装成硬件观测。
 
-- target
-- stage
-- workload
-- implementation
+多个tile/阶段之间存在可重叠的独立工作，producer/consumer事件与buffer生命周期已完整证明；新增深度/序言尾声与容量合法。
 
-- symptom.profile.overlap_low=true
-- symptom.source.serial_queue_or_event_order=true
-- constraint.semantic_equivalence=true
-- constraint.capacity=true
-- constraint.dependency_lifetime=true
+- `symptom.source.serial_queue_or_event_order=true`：当前队列或事件的顺序是结构事实，不说明真实硬件上完全无重叠；高阶API内部流水需单独考虑。
+- `constraint.semantic_equivalence=true`：完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。
+- `constraint.capacity=true`：按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。
+- `constraint.dependency_lifetime=true`：所有producer/consumer、异步完成、释放/覆盖/复用边界真实合法；不能把等待可能慢当成可删依赖。
 
-原invariants：算子语义与精度要求保持；有效写回无重叠且覆盖完整；资源与依赖约束经核验。
+不变量：算子语义与精度要求保持；有效写回无重叠且覆盖完整；资源与依赖约束经核验。
+
+## 性能假设、比较与补证据
+
+当前队列或事件的顺序是结构事实，不说明真实硬件上完全无重叠；高阶API内部流水需单独考虑。
+
+合法预取/计算/写回重排可能缩短稳态关键路径；短任务、单tile、最慢阶段不变或额外buffer成本会限制收益。
+
+以下旧门槛作为性能/选择线索保留，不再与实施安全混用；期望false也原样保留：
+
+- `symptom.profile.overlap_low=true`：低重叠是性能假设/判别依据，依赖及生命周期正确才是重排的实施安全条件。
+
+1. 画原事件DAG并统计tile数、每阶段工作量与buffer峰值，推导至少一个合法重叠窗口和序言/尾声成本。
+2. 已有trace可验证空洞；无trace时可据明确串行依赖提出试验，不能把double buffer声明等同重叠已发生。
+
+已有来源说明该方法，并且当前源码形态、对象、目标API与约束匹配时，即可将其作为有依据的优化候选；不要求先完成严格性能实验。每个unknown只写具体缺失项、决策影响和是否值得补证据。若补充检查不会改变候选选择，就记录预测后进入获授权的试验，不把“信息不完备”当统一否决。反之，安全未知或明确不适用必须阻断实施。
+
+本Action能实施只是准入。选择前应与当前workload的主要字节、逐元素工作、任务/流水机会比较，说明预计改变何种成本、影响哪些case、可能代价及为何优先；不能以容易等价作为唯一理由。R2把R1实际patch与预测逐项对照，区分支持、削弱和无法判断；继续同一Action应有新证据、不同参数或尚未验证的预测，不要求机械换Action。
 
 ## 预期效果与代价
 
@@ -230,7 +256,7 @@ instantiation:
 
 ## 未知与返回规划
 
-任一硬前提缺失、unknown或proxy则needs_evidence；明确不满足则blocked。C2可比较条件方案，C3须完成全部原前提及invariants核验。
+实施前逐条满足本版本preconditions与invariants；安全/结构条件缺失则指出具体未证项，C2可继续条件分析，C3不得绕过。性能假设独立记录：来源与当前源码足以支持适用时，可在合法且有试验价值的条件下提出优化，不以尚无严格性能实测一律否决；不把未知写成确认。Action优先级由成本机会比较和补证据决策形成。
 
 - 目标/阶段、owner或有效元素域变化
 - 算法、归并/同步拓扑、workspace owner、融合、通路或dispatch域超出已确认C2计划自由度
@@ -278,3 +304,16 @@ InitBuffer文档定义num为物理内存块数、len以字节计且内部按32�
 更多物理buffer和事件ID；增加序言/尾声与尾块分支复杂度，短任务可能付不起成本
 
 来源索引：1, 2, 3, 4, 5, 6。限制：代价需要绑定具体候选量化，尚无本任务收益
+
+
+### condition_separation [mechanism_inference]
+
+多个tile/阶段之间存在可重叠的独立工作，producer/consumer事件与buffer生命周期已完整证明；新增深度/序言尾声与容量合法。 当前队列或事件的顺序是结构事实，不说明真实硬件上完全无重叠；高阶API内部流水需单独考虑。 合法预取/计算/写回重排可能缩短稳态关键路径；短任务、单tile、最慢阶段不变或额外buffer成本会限制收益。
+
+本次维护归纳；原来源与许可不变。旧条件逐项去向见包内 `workflows/references/action-condition-policy.json`，v0004前提仅在历史快照继续按原义回放。
+
+## v0006 选择与语义边界
+
+有队列或多个 buffer 不等于已形成可重叠的 producer/consumer 时间区间。选择时指出当前实际搬入、计算、搬出、等待及释放的顺序，比较 tile×槽位的峰值容量和尾部成本。缺时间数据可据源码依赖提出假设，但不得宣称已经重叠或处于关键路径；跨 owner/同步拓扑变更仍需 C2。
+
+此段为基于既有变换语义的维护归纳，不新增上游性能声明、不放宽 preconditions，也不将当前任务的性能 unknown 改成 true。

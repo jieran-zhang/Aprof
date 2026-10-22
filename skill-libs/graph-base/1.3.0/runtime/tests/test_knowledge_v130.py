@@ -130,7 +130,7 @@ trees = {owner: build(root, owner) for owner in owners}
 assert all(verify(root, owner) == trees[owner] for owner in owners)
 from aprof_runtime.graph import load_snapshot
 from aprof_runtime.diagnosis import verify as verify_diagnosis
-assert verify_diagnosis(root)['graph_version'] == 'v0004'
+assert verify_diagnosis(root)['graph_version'] == 'v0007'
 graph = load_snapshot(root / 'skills/ascendc-aprof-diagnosis/graph/versions/v0003')[0]
 facts = {}
 for artifact in [graph, *trees.values()]:
@@ -195,5 +195,5 @@ print(json.dumps(dict(standalone=True, network='blocked', upstream='blocked',
     assert result.returncode == 0, result.stderr
     checked = json.loads(result.stdout)
     assert checked['standalone'] and checked['upstream'] == checked['network'] == 'blocked'
-    assert checked['planning_version'] == 'v0002'
-    assert checked['optimization_version'] == 'v0004'
+    assert checked['planning_version'] == 'v0004'
+    assert checked['optimization_version'] == 'v0007'

@@ -12,6 +12,7 @@
     "dependencies": [],
     "agents": [
       "workflows/agents/coordinator.md",
+      "workflows/agents/code-understanding.md",
       "workflows/agents/diagnosis.md",
       "workflows/agents/parallel-planning.md",
       "workflows/agents/optimization.md",
@@ -41,17 +42,22 @@
       {
         "name": "ascendc-aprof-coordinator",
         "source": "skills/ascendc-aprof-coordinator",
-        "purpose": "优化会话的统一用户入口。"
+        "purpose": "完整优化方案与跨轮摘要的统一用户入口。"
+      },
+      {
+        "name": "ascendc-code-understanding",
+        "source": "skills/ascendc-code-understanding",
+        "purpose": "诊断前解释当前算法、分派、数据依赖与910C行为，供诊断、P/O及后续轮次复用。"
       },
       {
         "name": "ascendc-aprof-parallel-planning",
         "source": "skills/ascendc-aprof-parallel-planning",
-        "purpose": "执行调优前的架构、算法/任务规划与 workload 派发。"
+        "purpose": "面向方案成员的共同架构、算法/任务规划与 workload 派发。"
       },
       {
         "name": "ascendc-aprof-diagnosis",
         "source": "skills/ascendc-aprof-diagnosis",
-        "purpose": "源码、workload 与采集证据诊断。",
+        "purpose": "基于源码、workload 与证据比较机制，选择完整优化方案。",
         "legacy_names": [
           "aprof-ascendc-diagnosis"
         ]
@@ -67,7 +73,7 @@
       {
         "name": "ascendc-aprof-optimization",
         "source": "skills/ascendc-aprof-optimization",
-        "purpose": "预算内候选实现与完整正确性。",
+        "purpose": "在共同计划内实施完整候选方案并验证完整正确性。",
         "legacy_names": [
           "aprof-ascendc-optimization"
         ]
@@ -87,20 +93,22 @@
       "name": "ascendc-api-best-practices",
       "source": "skills/ascendc-api-best-practices",
       "roles": [
+        "code-understanding",
         "parallel-planning",
         "optimization"
       ],
-      "trigger": "C2/C3；API、平台、单位或参数边界需要核实"
+      "trigger": "code-understanding/C2/C3；关键API语义、平台、单位或参数边界需要核实"
     },
     {
       "name": "ascendc-docs-search",
       "source": "skills/ascendc-docs-search",
       "roles": [
+        "code-understanding",
         "diagnosis",
         "parallel-planning",
         "optimization"
       ],
-      "trigger": "C1/C2/C3；本地 API/硬件依据不足"
+      "trigger": "code-understanding/C1/C2/C3；本地 API/硬件依据不足"
     },
     {
       "name": "ascendc-code-review",
@@ -157,9 +165,10 @@
       "source": "skills/npu-arch",
       "roles": [
         "coordinator",
+        "code-understanding",
         "parallel-planning"
       ],
-      "trigger": "C0/C2；架构变化、容量或硬件分母未知"
+      "trigger": "C0/code-understanding/C2；架构变化、硬件行为、容量或硬件分母需要核实"
     },
     {
       "name": "tool-npu-compute",
@@ -192,6 +201,10 @@
     {
       "name": "aprof-coordinator",
       "source": "workflows/agents/coordinator.md"
+    },
+    {
+      "name": "aprof-code-understanding-agent",
+      "source": "workflows/agents/code-understanding.md"
     },
     {
       "name": "aprof-diagnosis-agent",

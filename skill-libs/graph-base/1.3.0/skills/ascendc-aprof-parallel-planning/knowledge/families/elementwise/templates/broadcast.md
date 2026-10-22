@@ -2,7 +2,7 @@
 schema_version: aprof.knowledge-record/v1
 id: planning.elementwise.broadcast
 kind: template
-version: 1.1.0
+version: 1.2.0
 status: active
 title: 广播复用与容量分块
 scope:
@@ -77,6 +77,46 @@ sources:
   - 18
   sha256: sha256:14f2219ba48fdf536ac5cf018c2f70b6fd4a0a074d2dede49c9a6ca187d8e9dd
   excerpt_sha256: sha256:accaf93a389515058582a1b86c73fddc763155871b2f09255a4a08212d7541de
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/README.md
+  original_path: posembedding/rotary_position_embedding/README.md
+  revision: d7e6a7c6c1450c040049486845336c77f3100406
+  lines:
+  - 1
+  - 51
+  sha256: sha256:5c367eaca3ad1b7008afd6804ccc997be9cde35a76bb03d23df2a931d810a784
+  excerpt_sha256: sha256:0584361aaf5de66a2e5290e73880764867c112b65192db8fdd2a8a545b4e5f7f
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_host/rope_interleaved_tiling.cpp
+  original_path: posembedding/rotary_position_embedding/op_host/rope_interleaved_tiling.cpp
+  revision: d7e6a7c6c1450c040049486845336c77f3100406
+  lines:
+  - 151
+  - 348
+  sha256: sha256:0f2bac0d6cd52e57ef38976b7fb8205e3104f2e0ea26f3689f0be1dd0a09cec6
+  excerpt_sha256: sha256:43e2749e99d4ff0e456b7039f18af6a7645511e6d6cbdcbcd6d8d0e58a3b3e85
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_kernel/rotary_position_embedding.cpp
+  original_path: posembedding/rotary_position_embedding/op_kernel/rotary_position_embedding.cpp
+  revision: d7e6a7c6c1450c040049486845336c77f3100406
+  lines:
+  - 145
+  - 200
+  sha256: sha256:5160d08c053ba32694df0c699d31ddc9b67a26d3ae4545f4fb9d6122efc3400e
+  excerpt_sha256: sha256:24d59f53fadba324ba0346704b8fbaff23d6de81b93fd9f8282d5e9d15e28f28
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bsn.h
+  original_path: posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bsn.h
+  revision: d7e6a7c6c1450c040049486845336c77f3100406
+  lines:
+  - 80
+  - 195
+  sha256: sha256:1b9db64d84e6abf43eda6f65ca706df6d5219e8b73ebeec794c5ff106fa2434b
+  excerpt_sha256: sha256:aee09fcfd96fbd9fa8fd9dee7eee943d5d9f288672ae0c74f2ee4759e5c7f18b
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/broadcast/patterns.md
+  original_path: ops/ascendc-tiling-design/references/broadcast/patterns.md
+  revision: 41377d0a442cd5b1c2356874873a3dda591c6633
+  lines:
+  - 1
+  - 165
+  sha256: sha256:8b118ddbc4e70ada3debaf013838c8690abc85bb5f9d847d113ed2db40208830
+  excerpt_sha256: sha256:8b118ddbc4e70ada3debaf013838c8690abc85bb5f9d847d113ed2db40208830
 learning: {}
 tags:
 - broadcast
@@ -182,3 +222,23 @@ AscendC::Broadcast<float>(expanded, src, dstShape, srcShape, &brTiling);
 ## 验证与来源范围
 
 覆盖前补维、标量、交替广播轴、仅尾轴广播、仅非尾轴广播、维度 1/0、合轴前后索引等价、切分轴广播和非广播、最末 u_valid、每核最后一个 task。对比所有输出坐标的输入 offset，验证每个输出恰写一次，并检查最大工作集与额外分配。来源事实是维度塌缩、零 stride、UB/NDDMA 路径与固定 API 限制；字节账、合法切片说明和候选比较为工程推导。来源审读完成，未在 NPU 上验证性能。
+
+## 按复用域比较三种骨架，而非一见广播就扩展张量
+
+固定 RoPE 来源的 interleaved host 按 sequence/batch/head 和实际 UB、dtype 临时区选择切分；对应 kernel 每次搬入一段 headDim 的 cos/sin，再向当前 head 片广播。这直接说明“源块大小”和“使用该源块的输出大小”不同，也说明更大复用域受容量与任务数约束。RoPE 是组合依据，不是任意广播算子的 API 或数值合同。
+
+令一个复用组输出为 `[R,H]`，源 B 为 `[1,H]`，另一个输入 A 为 `[R,H]`；元素宽分别 sB/sA/sY 字节。比较下列候选时，保持同一数值函数与输出所有权：
+
+| 骨架 | 明确减少的工作 | 新增/保留代价及适用条件 |
+| --- | --- | --- |
+| 每元素通用零 stride 解码 | 无；覆盖任意合法位图，是比较基准 | 每输出 rank 级解码，逻辑源取数 RH 次；缓存命中未知，不能声称实际读取 RHsB 字节 DRAM |
+| 每行/连续段解码＋局部广播 | 把解码从 RH 次降至每行或每段一次；在段内使用固定步长 | R 次源段装载，段尾和 Broadcast/标量指令限制；H 短时调用/同步仍可能多 |
+| 同 owner 保留 B，连续处理 r 行 | 每组 B 逻辑 GM→UB 读取由 rH 降至 H 元素；不改变 A/Y 的必要字节 | B 驻留期跨 r 行；若展开 B 为 rHa 个元素会新增本地写入及存储；任务数可能减少，需足够独立组 |
+
+第三种不必物化完整广播输入。可保留 B[H]，依次计算 A[row,H]；或根据合法 API 同时计算 r 行。按行实现的保守 UB 为 `A(Ha*sB)+dA*A(Ha*sA)+dY*A(Ha*sY)+Tmp+F`，A(z) 是字节对齐；r 行并行实现应把对应 A/Y 与展开区长度乘 r，不能仍套用逐行预算。B 若与其他队列共享物理区，最后一个消费完成前不能覆盖。
+
+真实源重读次数由每个核、每个外层域与每个 tile 是否重新搬入决定，不能把跨核只读共享当片上共享。源码只证明同一 owner 内可复用时，跨核缓存命中和带宽效果仍是待测预测。扩大 r 导致核心不足时，比较保留较小 r、每核重读 B 的方案；允许有依据地选择重读。
+
+短内轴 H 可将若干行组合，但只有所有输入广播位图一致的相邻轴才能合轴。`A=[P,1,H]、B=[P,R,1]` 的两类广播轴不同，不能错误合并成连续 RH 源。每行边界、部分尾行和输出物理搬出边界都应归同一 owner 或采用已经证明的非重叠写法。
+
+**影响选择的结论**：记录保留源块、展开值、派生中间量三者的对象/生命周期；连续段处理未解决的昂贵函数、其他 dtype 和不规则 stride 作为残余范围。来源知识足以提出条件方案，不要求先测出 bandwidth；但 API、别名、容量与精度未知不能用性能假设代替。若现有 Action 只承载输入值驻留，不能用它隐含授权重排派生几何计算。

@@ -1,0 +1,26 @@
+{
+  "task_id": "case-10",
+  "status": "conditional_analysis_only",
+  "strict_C2_constructed": false,
+  "selected_P": [
+    "planning.elementwise.continuous"
+  ],
+  "selected_O": [
+    "implementation.pipeline-sync.pipeline",
+    "implementation.tiling-tail.valid-length"
+  ],
+  "plan": "保留每元素Sigmoid/Cast与原任务输出区间。对至少2个tile的owner，输入/输出各2个物理槽；队列模板depth仍1，每次Compute先DeQue当前输入，再发下一tile的CopyIn，最多1个未DeQue，随后CopyOut当前；最后drain。FP32中间计算仅半精度需要，Vector按tile顺序复用fpIn/fpOut，必须保持最后读完成再覆盖。T∈{2048,4096,8192}但首选容量允许时维持4096；U=4*Align32(b*T)+(dtype!=fp32 ? 2*Align32(4*T):0)+SigmoidTmp(T)+reserve≤actualUB。0/1tile或容量不足走原单槽。",
+  "missing": [
+    "实际device/SKU/hardware_fingerprint及CANN/compiler身份",
+    "真实可见AIV与可用UB及API预留（影响最终核数/tile/槽域）",
+    "有来源的architecture_profile与冻结parallel_plan/dispatch_plan及其能力/容量回执",
+    "新实现真实入口/dispatch源码绑定；本轮只有计划没有C3"
+  ],
+  "not_claimed": [
+    "C2实施就绪",
+    "C3 implemented",
+    "正确性passed",
+    "性能加速比"
+  ],
+  "reason": "不以占位hardware facts或书面参数替代严格计划；target-provenance仅目标适用域。"
+}

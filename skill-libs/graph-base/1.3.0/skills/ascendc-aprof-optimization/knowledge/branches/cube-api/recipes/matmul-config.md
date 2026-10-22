@@ -88,7 +88,6 @@ references:
 - implementation.scalar-control.constant_lifetime
 evidence_status: source_reviewed_not_benchmarked
 ---
-
 # Matmul API 模板与常量 Tiling 配置
 
 ## 原理与进入条件
@@ -104,7 +103,7 @@ evidence_status: source_reviewed_not_benchmarked
 3. 按 API 文档选择常量化范围：仅 base 三元组为常量是部分常量化，singleCore 三元组保留默认 0，注册对象仍需运行时 tiling；base 与 singleCore 六个值都常量是全量常量化，普通 Matmul 可在规定情况下用空 Tiling 指针。Batch Matmul 即使全量常量化也不能把注册参数 Tiling 换成 nullptr。
 4. 当常量配置表达运行时最大单核 shape 时，实际计算必须在支持边界内，原 shape 和 SetTail 仍需正确设置；可用 `SetSingleShape` 的语义以具体 SDK 为准。不把样例中的 MAX 值看作 API 自动保护或全输入支持证明。对于动态尾，保留尾配置；无尾 BasicBlock/SpecialBasicBlock 仅在全部被路由 shape 真正无尾时使用。
 5. 可按实际调用关闭未用功能、限定 iterateMode；例如只调用 IterateAll 才能将其余 Iterate 代码裁剪。仍调用 SetTail/SetBias/End 的代码不能相应关闭 enable 开关；异步 End、消息与 workspace 需遵循当前 API，不为消 Scalar 删除资源释放与同步。
-6. 一次只改变一个机制：动态 Norm、动态 MDL、常量 MDL、UnitFlag 分别留可编译候选。把参数变化和 C2 符合性写入 C3；若需要改变 tiling 方案或 reduction 顺序，返回重规划。
+6. 动态Norm、动态MDL、常量MDL、UnitFlag按适用机制比较并保留可编译候选；单因素可用于归因，完整合法方案存在交互时允许联合比较并说明。把参数变化和 C2 符合性写入 C3；若需要改变 tiling 方案或 reduction 顺序，返回重规划。
 
 ## 有上下文的常量配置
 

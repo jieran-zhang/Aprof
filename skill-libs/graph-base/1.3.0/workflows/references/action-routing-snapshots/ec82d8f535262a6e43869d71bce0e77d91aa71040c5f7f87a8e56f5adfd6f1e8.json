@@ -1,0 +1,1022 @@
+{
+  "schema_version": "aprof.action-routing/v1",
+  "version": "v0005",
+  "bases": {
+    "diagnosis": {
+      "version": "v0006",
+      "sha256": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+      "path": "skills/ascendc-aprof-diagnosis/graph/versions/v0006/graph.json",
+      "file_sha256": "sha256:b460cd460145b58c7aac888f25d51a0cdcc1ca03e3c23a571b2938b556a83355"
+    },
+    "parallel-planning": {
+      "version": "v0003",
+      "sha256": "sha256:f56937bc9c128b179f561d0b3d774fef393778f61de55277b7a8b8c83d59e037",
+      "path": "skills/ascendc-aprof-parallel-planning/knowledge/versions/v0003/index.json",
+      "file_sha256": "sha256:6dccb74dae6be6780fa7bb03a6da3b82d505dd8e05619d9ba75259f63d4ecad1"
+    },
+    "optimization": {
+      "version": "v0006",
+      "sha256": "sha256:76dc0fb86667d0c2f1428729435420e1d3f43f143e784843b5ec7d77df094fae",
+      "path": "skills/ascendc-aprof-optimization/knowledge/versions/v0006/index.json",
+      "file_sha256": "sha256:0db892ab4dc38a7a72edcffc50e0c134cdefcf501f063c31af59cbe3aacdf3b8"
+    }
+  },
+  "policy": "提示只缩小稳定子树范围；保留真实route_tree匹配、条件与证据。实际P在C2选择、实际O在C3选择；未知分类不自动获得执行资格。28行表示已审阅，不表示28种变换均已可执行。 诊断v0005起按精确冻结condition policy区分实施条件与性能假设，C1须携带action-decision/v1；未知收益不自动否决来源知识。 当前诊断v0006要求action-decision/v2先比较工作量/覆盖/代价及R2分层反馈。Tiling Key仅服务明确方案，不是收益目标；当前图按冻结策略区分性能假设与实施条件。",
+  "actions": [
+    {
+      "action_id": "action.align_cache_policy",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.root"
+      ],
+      "optimization_subtrees": [
+        "implementation.memory-transfer.cache-hint"
+      ],
+      "keep_boundary": "保留当前有效P的算法、task、owner、tile、通路、workspace；C2明确把逐tensor NORMAL/DISABLE列入自由度，且onePass策略依据已冻结。",
+      "replan_triggers": [
+        "O-only：只改hint，P=KEEP。",
+        "改变轮次/分片遍历以改善L2属于reuse_input_tiles的order variant；若不在旧自由度内返回C2，不用cache-hint暗改。"
+      ],
+      "limits": [
+        "dav-2201/A2/A3与目标SDK支持；未知复用轨迹保留NORMAL；PERSISTENT不支持，不能选。",
+        "按全核/跨tile/相邻消费者轨迹判断一次性，不能只看本核一次读取；同地址不同视图需合并分析。",
+        "同一tensor同一访问域的CACHE_MODE_DISABLE与依赖L2命中的复用方案互斥；不能与NORMAL同时累加收益。"
+      ],
+      "intent": "按访问复用需求调整缓存策略"
+    },
+    {
+      "action_id": "action.amortize_partial_merge",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.reduction",
+        "planning.sort-topk",
+        "planning.matmul",
+        "planning.flash-attention"
+      ],
+      "optimization_subtrees": [
+        "implementation.tiling-tail.valid-length",
+        "implementation.pipeline-sync.slots"
+      ],
+      "keep_boundary": "父计划已冻结状态、分段/合并树和owner，且只增大不影响数值归约树的局部搬运chunk，并落在自由度和容量范围内时KEEP。",
+      "replan_triggers": [
+        "改变跨核S或K/KV切片边界",
+        "改变merge层次、次序、状态表示/精度",
+        "新增partial槽或改变最终owner/完成协议",
+        "放大chunk改变既定数学归约树"
+      ],
+      "limits": [
+        "P叶描述目标骨架，命中已有split叶并不等于减少merge成本。reduction.split明确Rc、S、归约树均可能影响数值，不能将它们一概当普通tile。",
+        "现有P可承载具体族内结构；没有通用的“merge层级”规划叶，也不需要先造一个跨族算法。"
+      ],
+      "intent": "增大有效 chunk 或采用分层合并"
+    },
+    {
+      "action_id": "action.balance_tail_assignment",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.root"
+      ],
+      "optimization_subtrees": [
+        "implementation.tiling-tail",
+        "implementation.pipeline-sync.slots"
+      ],
+      "keep_boundary": "若只修正本核最后tile的valid长度且owner未变，属于KEEP配套实现而非本action的“重新分配”兑现；实际把尾task移交另一owner必须C2。",
+      "replan_triggers": [
+        "任何最终输出task归属变更",
+        "把完整输出任务改成partial生产任务",
+        "核数/混合核映射/空闲参与者变化",
+        "尾部非对齐物理块owner改变"
+      ],
+      "limits": [
+        "任务数均衡不保证异构K/尾M/N/有效KV耗时均衡；GMM跨组轮转与StreamK尾轮切K不同，不能用balance标题直接授权切归约轴。",
+        "现有P族能描述已覆盖输出域的均衡；未知算子走完整KEEP/族fallback，不能虚构尾任务算法。"
+      ],
+      "intent": "重新分配尾块"
+    },
+    {
+      "action_id": "action.batch_vector_api_calls",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.root"
+      ],
+      "optimization_subtrees": [
+        "implementation.vector-api.batch",
+        "implementation.vector-api.compare_select_tail"
+      ],
+      "keep_boundary": "同一C2任务序列和逐元素算术，合法batch可放入当前tile、buffer与同步范围；输入输出数学地址集合不变。",
+      "replan_triggers": [
+        "O-only：当前tile内减少调用，P=KEEP。",
+        "扩大tile/改变遍历、融合或累加次序超旧范围则返回C2；新P随工作负载家族选择，不为单纯API重载强制新模板。"
+      ],
+      "limits": [
+        "以当前调用次数/粒度提出发射或控制成本假设；热点未测不否决适用方法；具体API dtype/mask/repeat/stride支持有效。",
+        "repeat上限/窄字段不截断，mask状态恢复；每路按实际跨度闭合；异步释放覆盖全部batch。",
+        "跨repeat真实依赖、scan/reduction、随机序列不能直接合并；count与repeat是同一计算的替代实现，不能同时作为两份独立增益。",
+        "Compare/Select仅在原Action意图确含等价比较选择时采用；核验具体重载、predicate与tail，不能以命中此叶改变数值语义。"
+      ],
+      "intent": "批量调用 Vector API"
+    },
+    {
+      "action_id": "action.batch_writeback",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.root"
+      ],
+      "optimization_subtrees": [
+        "implementation.memory-transfer.coalesce"
+      ],
+      "keep_boundary": "所有段属于同一owner并物理连续；结果可在既定预算内保留至统一写回，原消费者可见时序与同步拓扑不变。",
+      "replan_triggers": [
+        "O-only：局部连续写回，P=KEEP。",
+        "跨owner拼接、延长跨阶段状态或新workspace租约，先返回C2；不能借一个DMA覆盖他核输出。"
+      ],
+      "limits": [
+        "继承output_ownership=true；每段已生成且不会覆写；总有效字节和写回并集不变。",
+        "跨batch/行padding/原子partial/跨核别名是合并边界；扩大输出槽需在许可额度。",
+        "需要立即被下阶段消费的段、atomic/partial语义、跨任务alias不能用延迟batch改可见顺序。",
+        "若与software_pipeline_stages竞争同一UB槽，不能简单并列，需容量模型决定batch×depth是否可行。"
+      ],
+      "intent": "合并连续有效输出写回"
+    },
+    {
+      "action_id": "action.coalesce_cast",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.root"
+      ],
+      "optimization_subtrees": [
+        "implementation.vector-api.cast"
+      ],
+      "keep_boundary": "C2已允许此转换实现；输入/输出/累加dtype、可见舍入、scale和运算次序保持；buffer延长不超预算。",
+      "replan_triggers": [
+        "重复转换合并/结果多消费者复用，P=KEEP。",
+        "若输出位置/owner/通路改变，返回C2；若只是编译/片上形式变化仍须保持原数值契约。"
+      ],
+      "limits": [
+        "继承redundant_cast与precision为真；逐边记录src/dst/RoundMode/count/scale/consumers；仅消除数学等价边。",
+        "float→half→float保留一次可见舍入；同dtype也可能是数值取整；必须按值域或契约证明。",
+        "源/目的独立span与混合宽度stride、alias、最后consumer合法。",
+        "改变rounding、量化轴/scale、移除必要舍入不兼容；不能只放宽tolerance通过。",
+        "单个必需Cast移入Fixpipe并不一定满足redundant_cast，见新增output_finalization建议，不能硬塞本action。"
+      ],
+      "intent": "合并 Cast 与中间类型边界"
+    },
+    {
+      "action_id": "action.coalesce_contiguous_transfers",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.root"
+      ],
+      "optimization_subtrees": [
+        "implementation.memory-transfer.coalesce",
+        "implementation.memory-transfer.strided-pad"
+      ],
+      "keep_boundary": "在C2现有owner、合法tile范围、stride/布局与buffer预算中合并；连续或规则矩形的数学有效访问集合相同，完成边覆盖更大段。",
+      "replan_triggers": [
+        "O-only连续/矩形batch：P=KEEP。",
+        "扩大task或跨维重排以产生连续性，超旧自由度需C2，布局变化考虑planning.layout.transpose。"
+      ],
+      "limits": [
+        "继承mte_setup_dominated+inner_loop_copy；直接拼接需相邻段末=下段首且dtype/layout一致。",
+        "规则行段走strided-pad：每行有效字节和GM间隙/UB block单位分别核验；任意gather不能用一组stride。",
+        "尾部不以对齐GM长度替代有效长度；字段与乘法先宽检后窄化。",
+        "跨owner、空洞、原子输出不允许作为单连续段；连续copy与同一段strided-pad是可选API，不并列叠加收益。"
+      ],
+      "intent": "合并连续小搬运"
+    },
+    {
+      "action_id": "action.decompose_tasks_dynamically",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.root"
+      ],
+      "optimization_subtrees": [
+        "implementation.tiling-tail",
+        "implementation.pipeline-sync.slots",
+        "implementation.fusion-composition.cv_multistage_handoff"
+      ],
+      "keep_boundary": "新拆任务与新核数一般不是KEEP；若只是复用已规划的按元数据C范围选择器，C2可复用该完整计划，但不能宣称新分解已经发生。",
+      "replan_triggers": [
+        "改变任务键/分解轴/usedOwners",
+        "新增跨核partial/merge",
+        "改变索引写冲突处理或阶段边界",
+        "改变C:V比例、workspace owner或物理数据通路"
+      ],
+      "limits": [
+        "action现有前提tasks_below_available_cores=true、tiny_or_overhead_limited=false；不能覆盖已有多轮仅尾轮失衡的所有StreamK情形。名字dynamically不承诺运行时队列/抢任务，模板多是host元数据确定的静态映射。",
+        "映射只能将P叶作为候选，不保证所有组合已合法；运行时抢任务无现有目标模板支持。"
+      ],
+      "intent": "重新分解任务并选择核数"
+    },
+    {
+      "action_id": "action.dispatch_by_workload",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.root"
+      ],
+      "optimization_subtrees": [
+        "implementation.tiling-tail.dispatch"
+      ],
+      "keep_boundary": "已有完整dispatch_plan含互斥/优先谓词、key/entry、各group计划与fallback且本次仅接线/绑定实际实现hash，可KEEP；新增分组或阈值是C2变更。",
+      "replan_triggers": [
+        "增加/改变group域、阈值或优先关系",
+        "新增key含义或entry算法",
+        "原分发域有缺口/重叠或fallback不支持",
+        "某group所有权、数值、workspace计划变化"
+      ],
+      "limits": [
+        "任何族P可成为某group的目标方案，但不能从I.dispatch反推算法或阈值。metadata必须为实际shape/dtype/layout/属性，不能用case名或上轮耗时选择。",
+        "P树当前无专属dispatch决策叶；规划SKILL/contract已有dispatch要求，I.dispatch明确禁止生成策略。新增P知识不等于立即改schema。",
+        "先比较通用/参数化方案与残余限制；仅在不同算法/能力/资源域需要不同实现时分派。case ID、已测赢家和Key数量不能作为优化目标或生产边界。"
+      ],
+      "intent": "按工作量分组选择策略"
+    },
+    {
+      "action_id": "action.fuse_kernel_chain",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.under-fusion",
+        "planning.elementwise",
+        "planning.matmul",
+        "planning.flash-attention"
+      ],
+      "optimization_subtrees": [
+        "implementation.fusion-composition",
+        "implementation.pipeline-sync"
+      ],
+      "keep_boundary": "父C2已选同一region及所有权/数值/通路，仅实现其融合代码时可复用计划；实际合并或移动kernel边界需要新C2。",
+      "replan_triggers": [
+        "改变region/kernel边界或外部可见输出",
+        "改变任务/最终owner或C:V比例",
+        "改GM↔UB通路/跨核拓扑/workspace",
+        "跨越舍入、非线性、归约最终化边界"
+      ],
+      "limits": [
+        "under-fusion是可叠加模式而非互斥基础family。kernel边界融合、片上物化、跨tile重叠三件事独立；同kernel可能仍经GM。MatMul epilogue必须等完整K/merge。",
+        "FA/GMM多阶段组合可用现有专属P，不能把全部fusion-composition I配方默认兼容所有基础P。"
+      ],
+      "intent": "融合兼容的生产消费链"
+    },
+    {
+      "action_id": "action.hoist_invariant_control",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.root"
+      ],
+      "optimization_subtrees": [
+        "implementation.scalar-control.hot_loop_address",
+        "implementation.scalar-control.tilingdata_access",
+        "implementation.scalar-control.constant_lifetime"
+      ],
+      "keep_boundary": "同一task序列、tile、owner、同步和数学操作；不变量只外提到最小合法外层，保持TilingData ABI，有限编译特化域已由C2允许。",
+      "replan_triggers": [
+        "hot_loop_address：保持旧tile序列，P=KEEP。",
+        "tilingdata_access：只换只读字段访问，ABI不变，P=KEEP。",
+        "constant_lifetime：小量constexpr/对象表达，旧分发域闭合则KEEP；新增shape特化域/entry、改ABI/静态布局额度超旧计划，返回C2。"
+      ],
+      "limits": [
+        "继承control_metadata_overhead与control_equivalence；trace/反汇编辨别真实scalar指令热点与等待。",
+        "只读launch固定TilingData可缓存；动态工作队列/信号不能缓存；GM地址空间接口与原类型保持。",
+        "外提tensor视图仅固定物理身份，不能缓存AllocTensor返回的旧queue槽；静态LocalTensor需全feature/dtype/layout区间证明。",
+        "外提更多值与shorten_scalar_lifetimes有寄存器压力张力，不是全局互斥；缓存冷字段/全部对象可能恶化spill。",
+        "改归约顺序、删event、把动态shape硬编码、伪造restrict均不可接受。"
+      ],
+      "intent": "外提循环不变量并简化主尾控制"
+    },
+    {
+      "action_id": "action.keep_intermediate_onchip",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.under-fusion",
+        "planning.matmul",
+        "planning.flash-attention",
+        "planning.elementwise"
+      ],
+      "optimization_subtrees": [
+        "implementation.fusion-composition.vector_chain_residency",
+        "implementation.buffer-lifetime.reuse"
+      ],
+      "keep_boundary": "KEEP携带真实父计划与允许的本地中间区、最后消费者和峰值容量；不能以“已有fusion”推定全部GM边可删。",
+      "replan_triggers": [
+        "扩大/合并融合region",
+        "改变任务state owner或跨task共享",
+        "从GM握手换直通本地通路",
+        "改变workspace/数值物化边界或超出驻留容量自由度"
+      ],
+      "limits": [
+        "本action要求gm_intermediate_roundtrip=true，不等于任意buffer复用；删除中间GM写回仍须保留原cast/舍入，外部消费者需要的数据不能消失。",
+        "没有通用“全部中间片上”P目标；只能按真实基础方案与边逐项决定。"
+      ],
+      "intent": "保持中间结果片上驻留"
+    },
+    {
+      "action_id": "action.narrow_sync_scope",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.root"
+      ],
+      "optimization_subtrees": [
+        "implementation.pipeline-sync.pipeline"
+      ],
+      "keep_boundary": "C2已明确允许本次局部同步作用域/放置调整；同一producer/consumer、可见性、ready/free及最后读完成关系全部保留，不改变跨核同步拓扑。",
+      "replan_triggers": [
+        "O-only既定拓扑内更精确wait/event，P=KEEP。",
+        "新增消费者/参与核、跨核握手关系/数据通路、超原计划同步拓扑，返回C2；planning.md的改变同步边界不能被recipe局部自由度架空。"
+      ],
+      "limits": [
+        "继承sync_inside_tile_loop、overlap_low、dependency_lifetime；先画实际地址的完成边。",
+        "本核HardEvent、CrossCore、PIPE_V不同；barrier不能替代跨核发布；API内部事件不重复接管。",
+        "0/1/多tile、skip、drain每代通知配平；Wait位置移动不能让槽早复用。",
+        "删除真实数据依赖不合法；缩窄与buffer复用要求的反向free冲突时必须保留free或重规划。",
+        "unitFlag不得单边启用，也不能将一次Mmad/Fixpipe完成当成全K最终化。"
+      ],
+      "intent": "缩小同步范围"
+    },
+    {
+      "action_id": "action.pad_ub_layout",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.root"
+      ],
+      "optimization_subtrees": [
+        "implementation.buffer-lifetime.arch22-bank-layout",
+        "implementation.memory-transfer.strided-pad"
+      ],
+      "keep_boundary": "父计划必须明确允许UB布局变化、tile范围与容量上限；给全物理区间、高水位、最后读者，KEEP不是空计划。",
+      "replan_triggers": [
+        "为容量改变task拆分/owner",
+        "改外部layout或新增转换stage",
+        "改变归约树、合法alias或同步拓扑",
+        "超出既定tile/槽数/布局上限"
+      ],
+      "limits": [
+        "P.layout.transpose描述逻辑输出→输入映射；UB bank padding是内部存储安排，两者正交。内部补齐不改变有效count、不授权输出多写或归约dummy。",
+        "现有I已直接覆盖，无需为内部padding新增P族模板。"
+      ],
+      "intent": "调整布局或 padding"
+    },
+    {
+      "action_id": "action.rebalance_mixed_stages",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.under-fusion",
+        "planning.matmul",
+        "planning.flash-attention"
+      ],
+      "optimization_subtrees": [
+        "implementation.fusion-composition",
+        "implementation.pipeline-sync"
+      ],
+      "keep_boundary": "合法KEEP必须显式复用父流水拓扑、核配比、持久状态、各类槽数上限，具体事件/首主尾排程才交I。",
+      "replan_triggers": [
+        "改变task粒度或C:V配比",
+        "迁移state/final owner",
+        "增加跨核参与者或换同步拓扑",
+        "换GM/UB通路、workspace结构或融合region",
+        "Br/Bc改变导致数值树/递推承诺变化"
+      ],
+      "limits": [
+        "balance“stage工作量”可能来自Br/Bc/task/核配比或仅调stage顺序，前者不属于普通流水实现。P无独立通用“CV平衡模板”，用当前组合图完整规划，不能拿I反向创造新算法。",
+        "通用C/V成本比较知识可在现有组合P中补充，不需要构造所有C/V比例组合表。"
+      ],
+      "intent": "平衡混合流水阶段工作量"
+    },
+    {
+      "action_id": "action.reduce_memory_traffic",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.root"
+      ],
+      "optimization_subtrees": [
+        "implementation.memory-transfer.input-tile-residency",
+        "implementation.memory-transfer.strided-pad",
+        "implementation.memory-transfer.l2-reuse-order",
+        "implementation.memory-transfer.coalesce",
+        "implementation.fusion-composition.vector_chain_residency"
+      ],
+      "keep_boundary": "仅在旧计划许可布局/owner/数值/通路/预算内移除经证明的无用读取或重复流量；C2中明确记录实际variant。",
+      "replan_triggers": [
+        "V1：整行载入改规则选列，owner/layout已允许，P=KEEP、O=strided-pad。",
+        "V2：同 owner 原值保留删除重复 GM 请求，选择 input-tile-residency；只改变 L2 缓存距离且逻辑读量不变，选择 l2-reuse-order。旧计划允许才 P_KEEP，否则 C2 按对应家族规划。",
+        "V3：UB/L1驻留或融合region改变，通常需要对应P；已有region/通路预算允许才KEEP。"
+      ],
+      "limits": [
+        "继承memory_bandwidth_saturation与traffic_reducible；先区分逻辑有效读写、无用搬运、HBM miss与中间GM物化。",
+        "strided-pad只读有效列，单位/逐行对齐闭合；L2 order需输入不被更新且无跨片时序；驻留需最后consumer及完整容量证明。",
+        "带不可消外部消费者、必须物化的舍入、在线状态跨片依赖不能删；cache-hint bypass与同tensor L2复用冲突。",
+        "与 reuse_input_tiles 采用同一物理输入保留时按实例目标去重；本 Action 仍需 source.memory_bandwidth_saturation、traffic_reducible 等原前提，不能借另一个意图绕过。"
+      ],
+      "intent": "减少可消除的内存流量"
+    },
+    {
+      "action_id": "action.reorder_contiguous_access",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.layout",
+        "planning.elementwise",
+        "planning.indexing",
+        "planning.matmul"
+      ],
+      "optimization_subtrees": [
+        "implementation.memory-transfer",
+        "implementation.scalar-control.hot_loop_address"
+      ],
+      "keep_boundary": "输入不被前一阶段更新、各输出独立、无随机/副作用/跨片归约依赖，且父计划允许访问顺序变化，才KEEP。",
+      "replan_triggers": [
+        "改变输出分区/切分轴/复用窗口owner",
+        "新增可见transpose或GM中间阶段",
+        "改变归约/在线更新/随机副作用次序",
+        "改变布局语义/别名或通路"
+      ],
+      "limits": [
+        "非连续访问不意味着需要transpose；只调真实stride copy可由I实现。循环交换改变在线递推/原子/浮点归约顺序时不能直接应用。",
+        "P已有broadcast/layout/indexing/matmul细化；内部访问顺序KEEP不需新增模板。"
+      ],
+      "intent": "按连续轴重排访问"
+    },
+    {
+      "action_id": "action.restructure_broadcast",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.elementwise",
+        "planning.under-fusion"
+      ],
+      "optimization_subtrees": [
+        "implementation.memory-transfer.strided-pad",
+        "implementation.vector-api.batch",
+        "implementation.buffer-lifetime.reuse",
+        "implementation.fusion-composition.vector_chain_residency",
+        "implementation.vector-api.compare_select_tail"
+      ],
+      "keep_boundary": "父计划已有广播映射、复用域、数据路径和owner，仅在许可范围内调本地tile/API、保证同一源访问与精度边界时可KEEP。",
+      "replan_triggers": [
+        "改变输出切分或复用域/owner",
+        "改跨核共享协议",
+        "换广播物理路径超出既定授权",
+        "改变融合region或归约后广播的final状态依赖",
+        "source/expanded区生存期超出预算"
+      ],
+      "limits": [
+        "broadcast目标模板本身就含分块与三种实现路径，命中它不证明动作兑现；广播“装一次”仅保证指定核内复用域。归约后广播不能省略前面的最终统计合并。",
+        "现有P正文足够；缺证据时维持真实fallback，不能单凭scope=all视为全平台API可用。",
+        "Compare/Select仅在原Action意图确含等价比较选择时采用；核验具体重载、predicate与tail，不能以命中此叶改变数值语义。"
+      ],
+      "intent": "调整广播分块和复用"
+    },
+    {
+      "action_id": "action.restructure_reduction",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.reduction",
+        "planning.under-fusion"
+      ],
+      "optimization_subtrees": [
+        "implementation.tiling-tail.valid-length",
+        "implementation.pipeline-sync.slots",
+        "implementation.vector-api.batch"
+      ],
+      "keep_boundary": "原full/split/状态/merge顺序均不变、只调整不影响归约树的合法DMA参数时KEEP；真正重选分解或合并方式必须C2。",
+      "replan_triggers": [
+        "FullLoad↔streaming↔cross-core split切换",
+        "改变R/多轴次序或merge树",
+        "改TwoPass/Welford/softmax状态表示或dtype",
+        "改变最终owner/workspace/全局同步",
+        "改变correction/epsilon/特殊值规则必须先解决语义许可"
+      ],
+      "limits": [
+        "FullLoad与Split是数据分解目标；statistics是数值方法，under-fusion是组合模式，不能四选一。Rc/S/merge tree变化影响浮点结合；chunk变更不自动是普通tile自由。",
+        "统计状态叶同时描述约束与算法目标，需区分“配套保持数值”和“主动换数值算法”的诊断意图。"
+      ],
+      "intent": "调整归约分解及合并方式"
+    },
+    {
+      "action_id": "action.retain_matrix_tiles",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.matmul"
+      ],
+      "optimization_subtrees": [
+        "implementation.cube-api.matmul_config",
+        "implementation.cube-api.mmad_accumulation",
+        "implementation.memory-transfer.l2-reuse-order",
+        "implementation.buffer-lifetime.reuse",
+        "implementation.pipeline-sync.pipeline"
+      ],
+      "keep_boundary": "父计划已选相同resident层/侧/不可变范围/消费窗口和完整K owner，只调授权范围内base tile、buffer或局部加载可KEEP。",
+      "replan_triggers": [
+        "改变驻留层/侧/窗口或跨task生命周期",
+        "重排输出task/owner或改变核数",
+        "K子窗口改变累加/写回承诺",
+        "加入splitK/StreamK partial",
+        "改变融合边界、GM/CV通路或workspace owner"
+      ],
+      "limits": [
+        "P.resident是目标结构，通常需要说明相对原流式方案的新复用窗；它首先假定MN完整K，不可自动与任意splitK/StreamK组合。L1驻留、L0驻留和L2分片三种层级作用不同。",
+        "现有P.resident已细分层级/生命周期；具体I是配套而非所有matmul recipe均必要。"
+      ],
+      "intent": "保留可复用矩阵块并调整分块"
+    },
+    {
+      "action_id": "action.reuse_disjoint_onchip_buffers",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.root"
+      ],
+      "optimization_subtrees": [
+        "implementation.buffer-lifetime.reuse"
+      ],
+      "keep_boundary": "C2已有数据流/dtype/tile/深度不变；允许物理布局/合法alias；最后异步reader完成早于下一writer；静态分配高水位在预算内。",
+      "replan_triggers": [
+        "O-only同计划布局/alias自由度内，P=KEEP。",
+        "靠减少必需槽、改同步拓扑、缩tile超范围、改dtype/归约或通路才省空间，返回C2。"
+      ],
+      "limits": [
+        "继承ub_live_bytes_near_capacity、dependency_lifetime；依据真实存储不是C++作用域。",
+        "多个独立InitBuffer即使串行也实际相加；只有受控arena/TBuf真共享才能计max而非sum。",
+        "API明确支持原地/重叠；ReinterpretCast只是同字节视图不新存储。",
+        "同时流水的两个值生命周期重叠，不能共槽；强制全流水barrier换节省与software_pipeline的overlap目标可能冲突。"
+      ],
+      "intent": "复用不重叠存活期的 buffer"
+    },
+    {
+      "action_id": "action.reuse_input_tiles",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.root"
+      ],
+      "optimization_subtrees": [
+        "implementation.memory-transfer.input-tile-residency",
+        "implementation.memory-transfer.l2-reuse-order",
+        "implementation.memory-transfer.cache-hint"
+      ],
+      "keep_boundary": "同一owner与已许可reuse_domain；输入不变，旧tile/迭代顺序/存活预算允许，数学输出集合和状态归属不变。",
+      "replan_triggers": [
+        "同一 owner 保留不可变输入片并供多个真实消费者使用：旧计划已许可读序、输入驻留窗口及完整物理预算时 P_KEEP，O 候选为 input-tile-residency；buffer-lifetime.reuse 仅作该 recipe 的分配支持文档，不能单独兑现输入复用。",
+        "L2 分片复用：l2-reuse-order 调整缓存距离而保持逻辑读量；cache-hint 只选择缓存策略。旧遍历自由度允许则 P_KEEP，交换已冻结遍历或改变任务归属则返回 C2。",
+        "跨 owner/dispatch 或融合边界的保留不由局部 UB recipe 授权；C2 重新确定 owner、融合区间、同步与数据通路，再检索适用 O。跨核 UB 不共享。",
+        "Matmul 小侧驻留改变 L1/L0 数据流、占用或任务形状时转 planning.matmul.resident；普通输入复用的 UB 配方不能替代矩阵驻留计划。"
+      ],
+      "limits": [
+        "原 Action 四项硬前提保持不变；新 recipe 另核验 same_input_region、input_value_preserved、dependency_lifetime、output_ownership 和已确认计划自由度。硬前提 ready 不代表方法 ready。",
+        "重复加载必须确实供多个消费者使用；死加载删除另行审查，不能用一个未消费的第二次 CopyIn 证明已经覆盖输入保留实现。相同基址但 stride、dtype、尾域或输入版本不同不能直接合并。",
+        "原输入保留到最后真实消费者完成；in-place、GM producer 更新、别名写入或未知同步不得以删除重读绕过。容量按物理 InitBuffer 分配、深度、padding 与 scratch 求和。",
+        "L2 只按有效并发工作集判断，物理总 L2 不是每核预算；L2 特定配方仍受 dav-2201 适用域限制。",
+        "同 tensor DISABLE 与依赖 L2 命中的路径冲突，但不排斥已合法保留的 UB 输入；删去逻辑 GM 请求不自动证明 HBM 流量或耗时同比下降。"
+      ],
+      "intent": "在容量允许时复用输入块"
+    },
+    {
+      "action_id": "action.shorten_scalar_lifetimes",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.root"
+      ],
+      "optimization_subtrees": [
+        "implementation.scalar-control.constant_lifetime"
+      ],
+      "keep_boundary": "只缩作用域/局部值与对象生存，不改算法、任务序列、ABI、队列存储与同步；保持原数值与地址。",
+      "replan_triggers": [
+        "O-only scalar scope，P=KEEP。",
+        "新静态布局、有限特化改变dispatch域或队列/同步/ABI的改动，超本action许可，应C2或另一个action；没spill时不能冒用此action进入constant_lifetime全部方法。"
+      ],
+      "limits": [
+        "继承register_spill=true与compiler_report=true，不能由Scalar占比或源变量数推断spill。",
+        "不删除必要跨tile状态；C++对象销毁不等于DMA/Cube/Vector消费结束。",
+        "不以错误alias/restrict制造优化；静态tensor只限完整固定布局。",
+        "把所有字段外提并常驻可能与本action目标相反；根据真实活跃集合取舍。"
+      ],
+      "intent": "缩短标量对象存活期"
+    },
+    {
+      "action_id": "action.size_workspace_by_shape",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.root"
+      ],
+      "optimization_subtrees": [
+        "implementation.pipeline-sync.slots"
+      ],
+      "keep_boundary": "Host按同一shape/dtype/feature、owner、已批准槽深/region/对齐公式落实更紧分配；不改变任一对象租约或同步拓扑；原计划已给workspace参数范围。",
+      "replan_triggers": [
+        "V1只落实旧公式中本shape紧尺寸，P=KEEP。",
+        "V2改变data/task/state深度：仅在C2明确允许深度候选且证明同拓扑资源闭合时KEEP；否则回C2。",
+        "V3改workspace owner、stage数、跨核参与关系或GM→UB通路：C2重规划，slots不是授权新结构。"
+      ],
+      "limits": [
+        "继承workspace_overallocation与workspace_ownership；数据、task descriptor、self-reference、L1/L0槽各自索引域。",
+        "depth>=峰值同时live数；旧代最后reader完成再覆盖，取模不给同步。",
+        "所有region地址终点在Host声明总量内；数据2槽/descriptor3槽不能互换。",
+        "CrossCore同核flagId计数器不能按mode拆独立资源，mode切换需旧Set/Wait清空。",
+        "workspace缩水与preload/多槽流水同时改会竞争租约；未证明release前不能减depth。",
+        "taskStateSlot与dataSlot%depth混用、按C++短作用域压缩async数据槽都非法。"
+      ],
+      "intent": "按 shape 和槽位所有权配置 workspace"
+    },
+    {
+      "action_id": "action.software_pipeline_stages",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.root"
+      ],
+      "optimization_subtrees": [
+        "implementation.pipeline-sync.pipeline",
+        "implementation.pipeline-sync.slots"
+      ],
+      "keep_boundary": "C2 task、owner、C:V比例、通路、同步拓扑、tile范围、buffer/workspace上限均有效；在其允许范围安排prolog/steady/drain及队列事件。",
+      "replan_triggers": [
+        "普通tile/允许深度内流水，P=KEEP。",
+        "改变task颗粒度、C:V比例、状态owner、跨核拓扑、融合region或GM/UB通路，先C2；仅重排不同tile发射不必机械重选算法模板。"
+      ],
+      "limits": [
+        "继承overlap_low、serial_queue_or_event_order、dependency_lifetime；真实tile数及可隐藏空洞有证据。",
+        "InitBuffer物理块数与TQue depth分别证明；每级UB/L1/L0独立预算。",
+        "ready/free首轮预置、每代计数、skip/空任务和drain闭合；A/B包末last-reader单独判断。",
+        "buffer复用/大batch延长活跃期可能使原depth失效；不能同时盲目加深流水和压缩workspace。",
+        "同一槽不能无契约由queue和手写event双重管理。"
+      ],
+      "intent": "重排软件流水阶段"
+    },
+    {
+      "action_id": "action.stagger_resource_access",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.root"
+      ],
+      "optimization_subtrees": [
+        "implementation.pipeline-sync.pipeline"
+      ],
+      "keep_boundary": "同一task/访问序列约束内，仅改变已许可阶段发射时刻，所有producer/consumer完成边、slot租约与owner不变。",
+      "replan_triggers": [
+        "V1同许可拓扑内时间平移，P=KEEP、O=pipeline。",
+        "V2改tile遍历、跨核工作分配或通路/深度超范围，需要C2；涉及CV整体阶段平衡归rebalance_mixed_stages，不由本action代替。"
+      ],
+      "limits": [
+        "继承transfer_compute_contention与dependency_lifetime；争用对象/阶段由trace证据明确。",
+        "错峰不应借省等待覆写live buffer；event方向/参与者与排空计数完整。",
+        "为错峰新增slot或preload超预算，与size_workspace_by_shape减depth可能冲突；不能把不同资源总时间简单相减当收益。"
+      ],
+      "intent": "错开冲突资源访问"
+    },
+    {
+      "action_id": "action.vectorize_scalar_loop",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.root"
+      ],
+      "optimization_subtrees": [
+        "implementation.vector-api.batch",
+        "implementation.vector-api.compare_select_tail"
+      ],
+      "keep_boundary": "逐元素独立且C2冻结的每元素公式可由目标Vector API等价实现；owner、有效元素和数值边界不变，UB/临时区已在许可内。",
+      "replan_triggers": [
+        "O-only计算表达，P=KEEP。",
+        "vector-api.batch提供repeat/count，不是任意数学函数的自动向量化配方；若缺对应公开API实现，记O方法缺口，不能由batch文档伪造实现。",
+        "需要改变算法/融合/owner/数据通路才成立则先C2。"
+      ],
+      "limits": [
+        "scalar_element_loop为结构依据，scalar_hot保留为性能线索；确认数学独立性与API支持，不由scalar占比推断。",
+        "保留Cast/特殊值/rounding，Vector mask不保护GM；源/目alias及tail单独证明。",
+        "带递推、跨元素归约、随机/副作用或改变精度的近似不能套逐元素vectorize；不把VF/RegBase/SIMT的3510能力迁入A3。",
+        "Compare/Select仅在原Action意图确含等价比较选择时采用；核验具体重载、predicate与tail，不能以命中此叶改变数值语义。"
+      ],
+      "intent": "向量化逐元素热循环"
+    },
+    {
+      "action_id": "action.vectorize_tail",
+      "review_state": "reviewed_with_limits",
+      "planning_subtrees": [
+        "planning.root"
+      ],
+      "optimization_subtrees": [
+        "implementation.tiling-tail.valid-length",
+        "implementation.vector-api.batch",
+        "implementation.memory-transfer.strided-pad"
+      ],
+      "keep_boundary": "保留C2已分给本核的taskBase/taskElements和原数值路径，尾块只换合法有界Vector/搬运表达，最大tile预算已闭合。",
+      "replan_triggers": [
+        "O-only尾路径，P=KEEP。",
+        "需要重分核/改task、改变reduction合并或原tail不在SDK合法域：回C2/fallback，不能扩大输入/输出分配假设。"
+      ],
+      "limits": [
+        "继承tail_slow_path、valid_lengths；有效元素、物理对齐span与API字段单位分别计数。",
+        "L=0无循环，不执行依赖一次生产的wait；T>0并先宽检乘加/字段。",
+        "padding不自动是归约单位元；输出只写有效区，输入与输出dtype分别构造字节参数。",
+        "与balance_tail_assignment是不同变换；不能为尾向量化改他核输出范围。",
+        "为对齐扩大GM读/写与有效长度硬约束互斥，mask不能修复GM越界。"
+      ],
+      "intent": "让尾块使用有界向量路径"
+    }
+  ],
+  "variant_reviews": [
+    {
+      "variant_id": "amortize_partial_merge.mechanism-scope-review",
+      "action_id": "action.amortize_partial_merge",
+      "review_state": "reviewed_with_limits",
+      "reviewed_variants": [
+        "许可内局部 chunk 摊销",
+        "partial 数量/归并结构变更"
+      ],
+      "scope": "chunk只在相同归约树/owner内摊薄调用；Rc、跨核片数S和merge树分别申报，不能把数值结合变化算普通tile。",
+      "keep_boundary": "父计划已冻结状态、分段/合并树和owner，且只增大不影响数值归约树的局部搬运chunk，并落在自由度和容量范围内时KEEP。",
+      "replan_triggers": [
+        "改变跨核S或K/KV切片边界",
+        "改变merge层次、次序、状态表示/精度",
+        "新增partial槽或改变最终owner/完成协议",
+        "放大chunk改变既定数学归约树"
+      ],
+      "routing_note": "复核结论：保留稳定意图，以同一实例证据和已确认计划约束独立P/O子树；不使用旧完整元组方案。前者可 KEEP，后者需新 C2。",
+      "limits": [
+        "结构分支需新C2，当前树没有跨族通用merge层级方法。",
+        "只完成来源与契约审阅；无SDK编译、硬件正确性或性能验证。"
+      ]
+    },
+    {
+      "variant_id": "keep_intermediate_onchip.mechanism-scope-review",
+      "action_id": "action.keep_intermediate_onchip",
+      "review_state": "reviewed_with_limits",
+      "reviewed_variants": [
+        "既有 region 内真实驻留",
+        "改变 region/通路后驻留"
+      ],
+      "scope": "只有生产到最后消费确实一直位于UB/L1/L0才算驻留；Vector链可候选，2201 Cube→GM→UB和FA四阶段GM交接不能兑现此意图。",
+      "keep_boundary": "KEEP携带真实父计划与允许的本地中间区、最后消费者和峰值容量；不能以“已有fusion”推定全部GM边可删。",
+      "replan_triggers": [
+        "扩大/合并融合region",
+        "改变任务state owner或跨task共享",
+        "从GM握手换直通本地通路",
+        "改变workspace/数值物化边界或超出驻留容量自由度"
+      ],
+      "routing_note": "复核结论：保留稳定意图，以同一实例证据和已确认计划约束独立P/O子树；不使用旧完整元组方案。实际片上支持与融合边界需独立证明。",
+      "limits": [
+        "新region或通路需C2；缺少通用Cube→UB方法，不用fusion标题填空。",
+        "只完成来源与契约审阅；无SDK编译、硬件正确性或性能验证。"
+      ]
+    },
+    {
+      "variant_id": "rebalance_mixed_stages.mechanism-scope-review",
+      "action_id": "action.rebalance_mixed_stages",
+      "review_state": "reviewed_with_limits",
+      "reviewed_variants": [
+        "许可拓扑内排程",
+        "任务/核配比/owner 变化"
+      ],
+      "scope": "固定依赖拓扑的本地发射顺序与C:V配比/任务owner变化分开；保留原online状态与最终化点。",
+      "keep_boundary": "合法KEEP必须显式复用父流水拓扑、核配比、持久状态、各类槽数上限，具体事件/首主尾排程才交I。",
+      "replan_triggers": [
+        "改变task粒度或C:V配比",
+        "迁移state/final owner",
+        "增加跨核参与者或换同步拓扑",
+        "换GM/UB通路、workspace结构或融合region",
+        "Br/Bc改变导致数值树/递推承诺变化"
+      ],
+      "routing_note": "复核结论：保留稳定意图，以同一实例证据和已确认计划约束独立P/O子树；不使用旧完整元组方案。局部时序与结构性重规划不同。",
+      "limits": [
+        "跨核/跨引擎协议、核配比与workspace owner均需要C2，来源的2数据槽/3描述符不能作为默认参数。",
+        "只完成来源与契约审阅；无SDK编译、硬件正确性或性能验证。"
+      ]
+    },
+    {
+      "variant_id": "reorder_contiguous_access.mechanism-scope-review",
+      "action_id": "action.reorder_contiguous_access",
+      "review_state": "reviewed_with_limits",
+      "reviewed_variants": [
+        "局部轨迹/规则搬运",
+        "逻辑布局/输出切分变化"
+      ],
+      "scope": "同owner独立遍历可以条件KEEP；逻辑layout/输出切分改变须在C2单独选择方法并保持原数值次序。",
+      "keep_boundary": "输入不被前一阶段更新、各输出独立、无随机/副作用/跨片归约依赖，且父计划允许访问顺序变化，才KEEP。",
+      "replan_triggers": [
+        "改变输出分区/切分轴/复用窗口owner",
+        "新增可见transpose或GM中间阶段",
+        "改变归约/在线更新/随机副作用次序",
+        "改变布局语义/别名或通路"
+      ],
+      "routing_note": "复核结论：保留稳定意图，以同一实例证据和已确认计划约束独立P/O子树；不使用旧完整元组方案。不得把 transpose 自动视为 UB padding。",
+      "limits": [
+        "不由非连续访问自动选择transpose，不能把logical transpose冒充UB padding。",
+        "只完成来源与契约审阅；无SDK编译、硬件正确性或性能验证。"
+      ]
+    },
+    {
+      "variant_id": "restructure_broadcast.mechanism-scope-review",
+      "action_id": "action.restructure_broadcast",
+      "review_state": "reviewed_with_limits",
+      "reviewed_variants": [
+        "同方案内参数实现",
+        "复用域/所有权/策略改变"
+      ],
+      "scope": "同方案内tile/API可条件KEEP；复用域、输出分区、跨核共享或广播物理通路变化先C2。",
+      "keep_boundary": "父计划已有广播映射、复用域、数据路径和owner，仅在许可范围内调本地tile/API、保证同一源访问与精度边界时可KEEP。",
+      "replan_triggers": [
+        "改变输出切分或复用域/owner",
+        "改跨核共享协议",
+        "换广播物理路径超出既定授权",
+        "改变融合region或归约后广播的final状态依赖",
+        "source/expanded区生存期超出预算"
+      ],
+      "routing_note": "复核结论：保留稳定意图，以同一实例证据和已确认计划约束独立P/O子树；不使用旧完整元组方案。由当前 C2 的明确参数域决定 KEEP 或重规划。",
+      "limits": [
+        "Reduce→broadcast只消费final统计；不得消费本核partial或删除必要输入。",
+        "只完成来源与契约审阅；无SDK编译、硬件正确性或性能验证。"
+      ]
+    },
+    {
+      "variant_id": "retain_matrix_tiles.mechanism-scope-review",
+      "action_id": "action.retain_matrix_tiles",
+      "review_state": "reviewed_with_limits",
+      "reviewed_variants": [
+        "既定驻留方案内配置",
+        "驻留侧/层级/窗口重选"
+      ],
+      "scope": "既定side/level/window内配置可以条件KEEP；选择新驻留侧/层/窗口是P工作，完整K的MN owner与K累加契约必须保留。",
+      "keep_boundary": "父计划已选相同resident层/侧/不可变范围/消费窗口和完整K owner，只调授权范围内base tile、buffer或局部加载可KEEP。",
+      "replan_triggers": [
+        "改变驻留层/侧/窗口或跨task生命周期",
+        "重排输出task/owner或改变核数",
+        "K子窗口改变累加/写回承诺",
+        "加入splitK/StreamK partial",
+        "改变融合边界、GM/CV通路或workspace owner"
+      ],
+      "routing_note": "复核结论：保留稳定意图，以同一实例证据和已确认计划约束独立P/O子树；不使用旧完整元组方案。L1/L0 数据流改变须 C2。",
+      "limits": [
+        "不自动和Split-K/StreamK组合；L2距离缺少l1_l0_reuse_deficit，优先reuse_input_tiles意图。",
+        "只完成来源与契约审阅；无SDK编译、硬件正确性或性能验证。"
+      ]
+    },
+    {
+      "variant_id": "reuse_input_tiles.mechanism-scope-review",
+      "action_id": "action.reuse_input_tiles",
+      "review_state": "reviewed_with_limits",
+      "reviewed_variants": [
+        "片上复用",
+        "L2 复用距离",
+        "矩阵驻留重规划"
+      ],
+      "scope": "分别证明片上重复消费、L2全核工作集和矩阵驻留，不能用一个cache命中率替代三个机制。",
+      "keep_boundary": "同一owner与已许可reuse_domain；输入不变，旧tile/迭代顺序/存活预算允许，数学输出集合和状态归属不变。",
+      "replan_triggers": [
+        "同一 owner 保留不可变输入片并供多个真实消费者使用：旧计划已许可读序、输入驻留窗口及完整物理预算时 P_KEEP，O 候选为 input-tile-residency；buffer-lifetime.reuse 仅作该 recipe 的分配支持文档，不能单独兑现输入复用。",
+        "L2 分片复用：l2-reuse-order 调整缓存距离而保持逻辑读量；cache-hint 只选择缓存策略。旧遍历自由度允许则 P_KEEP，交换已冻结遍历或改变任务归属则返回 C2。",
+        "跨 owner/dispatch 或融合边界的保留不由局部 UB recipe 授权；C2 重新确定 owner、融合区间、同步与数据通路，再检索适用 O。跨核 UB 不共享。",
+        "Matmul 小侧驻留改变 L1/L0 数据流、占用或任务形状时转 planning.matmul.resident；普通输入复用的 UB 配方不能替代矩阵驻留计划。"
+      ],
+      "routing_note": "同一稳定意图分开审查 UB 原值保留、L2 缓存距离与矩阵驻留；主方法由内部 router 及实例证据选定，不预锁完整 P/O。不同临时值共槽仅作支持材料，不作 UB 输入驻留的主选择。",
+      "limits": [
+        "原 Action 四项硬前提保持不变；新 recipe 另核验 same_input_region、input_value_preserved、dependency_lifetime、output_ownership 和已确认计划自由度。硬前提 ready 不代表方法 ready。",
+        "重复加载必须确实供多个消费者使用；死加载删除另行审查，不能用一个未消费的第二次 CopyIn 证明已经覆盖输入保留实现。相同基址但 stride、dtype、尾域或输入版本不同不能直接合并。",
+        "原输入保留到最后真实消费者完成；in-place、GM producer 更新、别名写入或未知同步不得以删除重读绕过。容量按物理 InitBuffer 分配、深度、padding 与 scratch 求和。",
+        "L2 只按有效并发工作集判断，物理总 L2 不是每核预算；L2 特定配方仍受 dav-2201 适用域限制。",
+        "同 tensor DISABLE 与依赖 L2 命中的路径冲突，但不排斥已合法保留的 UB 输入；删去逻辑 GM 请求不自动证明 HBM 流量或耗时同比下降。"
+      ]
+    },
+    {
+      "variant_id": "reduce_memory_traffic.mechanism-scope-review",
+      "action_id": "action.reduce_memory_traffic",
+      "review_state": "reviewed_with_limits",
+      "reviewed_variants": [
+        "减少无效/重复获取",
+        "改变复用顺序",
+        "融合/驻留消除中间物化"
+      ],
+      "scope": "无效/重复获取减少、L2访问顺序、融合驻留消物化是不同实现机制；每tensor记录实际有效字节、地址集合和消费者。",
+      "keep_boundary": "仅在旧计划许可布局/owner/数值/通路/预算内移除经证明的无用读取或重复流量；C2中明确记录实际variant。",
+      "replan_triggers": [
+        "V1：整行载入改规则选列，owner/layout已允许，P=KEEP、O=strided-pad。",
+        "V2：同 owner 原值保留删除重复 GM 请求，选择 input-tile-residency；只改变 L2 缓存距离且逻辑读量不变，选择 l2-reuse-order。旧计划允许才 P_KEEP，否则 C2 按对应家族规划。",
+        "V3：UB/L1驻留或融合region改变，通常需要对应P；已有region/通路预算允许才KEEP。"
+      ],
+      "routing_note": "复核结论：保留稳定意图，以同一实例证据和已确认计划约束独立P/O子树；不使用旧完整元组方案。上位目标由具体机制实现，与具体 action 选择通过变体/目标边去重。",
+      "limits": [
+        "继承memory_bandwidth_saturation与traffic_reducible；先区分逻辑有效读写、无用搬运、HBM miss与中间GM物化。",
+        "strided-pad只读有效列，单位/逐行对齐闭合；L2 order需输入不被更新且无跨片时序；驻留需最后consumer及完整容量证明。",
+        "带不可消外部消费者、必须物化的舍入、在线状态跨片依赖不能删；cache-hint bypass与同tensor L2复用冲突。",
+        "与 reuse_input_tiles 采用同一物理输入保留时按实例目标去重；本 Action 仍需 source.memory_bandwidth_saturation、traffic_reducible 等原前提，不能借另一个意图绕过。"
+      ]
+    },
+    {
+      "variant_id": "size_workspace_by_shape.mechanism-scope-review",
+      "action_id": "action.size_workspace_by_shape",
+      "review_state": "reviewed_with_limits",
+      "reviewed_variants": [
+        "落实已有形状公式",
+        "许可深度选择",
+        "所有权/协议重规划"
+      ],
+      "scope": "已有shape公式落实、许可depth和owner/协议变化分别审核；数据槽与描述符份数独立，所有异步消费者结束后才复用。",
+      "keep_boundary": "Host按同一shape/dtype/feature、owner、已批准槽深/region/对齐公式落实更紧分配；不改变任一对象租约或同步拓扑；原计划已给workspace参数范围。",
+      "replan_triggers": [
+        "V1只落实旧公式中本shape紧尺寸，P=KEEP。",
+        "V2改变data/task/state深度：仅在C2明确允许深度候选且证明同拓扑资源闭合时KEEP；否则回C2。",
+        "V3改workspace owner、stage数、跨核参与关系或GM→UB通路：C2重规划，slots不是授权新结构。"
+      ],
+      "routing_note": "复核结论：保留稳定意图，以同一实例证据和已确认计划约束独立P/O子树；不使用旧完整元组方案。紧尺寸不等于删除仍存活槽位。",
+      "limits": [
+        "削减空间不得删除仍存活的槽；owner/状态布局/协议变化必须C2。",
+        "只完成来源与契约审阅；无SDK编译、硬件正确性或性能验证。"
+      ]
+    },
+    {
+      "variant_id": "hoist_invariant_control.mechanism-scope-review",
+      "action_id": "action.hoist_invariant_control",
+      "review_state": "reviewed_with_limits",
+      "reviewed_variants": [
+        "地址/首主尾控制",
+        "TilingData 热点读取",
+        "有限常量/对象表达"
+      ],
+      "scope": "地址/控制、只读TilingData缓存、有限常量对象表达均需证明不变量有效范围、ABI及dispatch域。",
+      "keep_boundary": "同一task序列、tile、owner、同步和数学操作；不变量只外提到最小合法外层，保持TilingData ABI，有限编译特化域已由C2允许。",
+      "replan_triggers": [
+        "hot_loop_address：保持旧tile序列，P=KEEP。",
+        "tilingdata_access：只换只读字段访问，ABI不变，P=KEEP。",
+        "constant_lifetime：小量constexpr/对象表达，旧分发域闭合则KEEP；新增shape特化域/entry、改ABI/静态布局额度超旧计划，返回C2。"
+      ],
+      "routing_note": "复核结论：保留稳定意图，以同一实例证据和已确认计划约束独立P/O子树；不使用旧完整元组方案。ABI、静态域与 dispatch 变化有不同门槛。",
+      "limits": [
+        "const模板不是另一个A；Cube Norm/MDL服务配置无原control_metadata_overhead时仍是pending新意图。",
+        "只完成来源与契约审阅；无SDK编译、硬件正确性或性能验证。"
+      ]
+    },
+    {
+      "variant_id": "software_pipeline_stages.mechanism-scope-review",
+      "action_id": "action.software_pipeline_stages",
+      "review_state": "reviewed_with_limits",
+      "reviewed_variants": [
+        "固定逻辑依赖内多 tile 重叠",
+        "跨核/跨引擎协议变化"
+      ],
+      "scope": "局部多tile重叠保持逻辑ready/free依赖，跨核或跨引擎协议变化先C2；prolog/steady/drain及最后消费者单独检查。",
+      "keep_boundary": "C2 task、owner、C:V比例、通路、同步拓扑、tile范围、buffer/workspace上限均有效；在其允许范围安排prolog/steady/drain及队列事件。",
+      "replan_triggers": [
+        "普通tile/允许深度内流水，P=KEEP。",
+        "改变task颗粒度、C:V比例、状态owner、跨核拓扑、融合region或GM/UB通路，先C2；仅重排不同tile发射不必机械重选算法模板。"
+      ],
+      "routing_note": "复核结论：保留稳定意图，以同一实例证据和已确认计划约束独立P/O子树；不使用旧完整元组方案。后者不能沿局部流水的 KEEP 授权执行。",
+      "limits": [
+        "浅/深流水不是自动收益，目标API/容量/状态旧值未知不得执行。",
+        "只完成来源与契约审阅；无SDK编译、硬件正确性或性能验证。"
+      ]
+    },
+    {
+      "variant_id": "fuse_kernel_chain.mechanism-scope-review",
+      "action_id": "action.fuse_kernel_chain",
+      "review_state": "reviewed_with_limits",
+      "reviewed_variants": [
+        "Vector 链",
+        "归约广播",
+        "Cube epilogue",
+        "已有 FA 多阶段组合"
+      ],
+      "scope": "Vector链、reduce→broadcast、Cube epilogue、FA既定stage组合按各自任务/数值/存储通路检索；每次只冻结实际P，再由O选方法。",
+      "keep_boundary": "父C2已选同一region及所有权/数值/通路，仅实现其融合代码时可复用计划；实际合并或移动kernel边界需要新C2。",
+      "replan_triggers": [
+        "改变region/kernel边界或外部可见输出",
+        "改变任务/最终owner或C:V比例",
+        "改GM↔UB通路/跨核拓扑/workspace",
+        "跨越舍入、非线性、归约最终化边界"
+      ],
+      "routing_note": "复核结论：保留稳定意图，以同一实例证据和已确认计划约束独立P/O子树；不使用旧完整元组方案。分别绑定基础 P 与组合模式，不能自由交叉 O。",
+      "limits": [
+        "2201 Cube epilogue或FA可减少kernel边界但仍走GM，不据此宣称片上驻留；不预锁完整P/O元组。",
+        "只完成来源与契约审阅；无SDK编译、硬件正确性或性能验证。"
+      ]
+    }
+  ],
+  "proposals": [
+    {
+      "proposed_id": "action.specialize_cube_configuration",
+      "status": "pending_source_review",
+      "intent": "在同一单核矩阵任务、算术和输出契约内，选择已支持的Cube/Matmul执行配置以摊薄发射与参数开销。",
+      "routing_subtrees": [
+        "implementation.cube-api.matmul_config"
+      ],
+      "retained_reason": "复核固定Matmul配置正文：Norm/MDL及常量Tiling可在无L1/L0复用不足、冗余Cast或标量逐元素循环时独立成立，不能偷借现有A前提。保留独立意图提案，尚缺当前诊断可观测条件、最小不变量与独立来源审阅；本轮不注册A或接边。",
+      "promotion_requirements": [
+        "Matmul头开销/Scalar参数重复或细碎MTE包证据，且目标SDK/模式支持",
+        "Host/Kernel base与singleCore一致、完整shape/尾/feature分派覆盖",
+        "dtype/format/transpose/bias/累计顺序、真实L1/L0/API workspace合法",
+        "固定来源、语义去重、完整原前提与不变量、独立审阅及新诊断版本。"
+      ]
+    },
+    {
+      "proposed_id": "action.fuse_output_finalization",
+      "status": "pending_source_review",
+      "intent": "把已批准的输出布局/类型最终化合入支持的生产者输出路径，保留所有可见舍入、量化和输出owner。",
+      "routing_subtrees": [
+        "implementation.cube-api.fixpipe_output",
+        "implementation.vector-api.cast"
+      ],
+      "retained_reason": "复核Fixpipe正文：仅有一次且语义必需的输出Cast/布局最终化也可随L0C→GM输出融合，不能满足coalesce_cast的redundant_cast或必然满足missing_kernel_fusion。保留独立意图提案；须逐项绑定舍入、quant轴/scale、stride、尾输出和UnitFlag，不以配方数量造A，本轮不注册A或接边。",
+      "promotion_requirements": [
+        "独立输出转换/重排带来成本且API随路模式与原语义等价",
+        "F322F16/F322BF16 RINT与原Cast模式一致、quant scale轴/类型/生命周期不变",
+        "Fixpipe布局/stride单位、有效尾输出、不重叠目的写、全K最终化与UnitFlag配对完整",
+        "固定来源、语义去重、完整原前提与不变量、独立审阅及新诊断版本。"
+      ]
+    }
+  ],
+  "support_entries": [
+    "implementation.precision-boundaries.numeric",
+    "implementation.precision-boundaries.bounds"
+  ]
+}

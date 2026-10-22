@@ -2,7 +2,7 @@
 schema_version: aprof.diagnosis-record/v1
 id: action.batch_writeback
 kind: action
-version: 1.1.0
+version: 1.2.0
 status: active
 title: 合并连续有效输出写回
 scope:
@@ -120,7 +120,7 @@ invariants:
 - 完整语义和精度
 - 有效元素覆盖和唯一写回
 - 容量、同步与所有权合法
-expected_effect: 预期减少该机制的额外成本；具体方案由 C2 比较、C3 实施，统一计时核验。
+expected_effect: 合并写回可减少发射数，实际有效输出字节不变；缓冲滞留可能反而延长关键路径。 是否作用于关键路径及实际收益由后继验证，不能由Action就绪推出。
 slots:
 - name: target
   kind: tensor
@@ -181,7 +181,7 @@ claims:
 - id: intervention
   text: 把同owner且同时可释放的相邻输出在片上汇总后批量写回
   basis: mechanism_inference
-  source_indexes: &id001
+  source_indexes:
   - 2
   - 3
   - 4
@@ -198,10 +198,27 @@ claims:
 - id: costs
   text: 延迟buffer释放并增加片上峰值；汇总延迟可能推迟下游消费
   basis: mechanism_inference
-  source_indexes: *id001
+  source_indexes:
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
+  - 10
   review_status: reviewed
   limitations:
   - 代价需要绑定具体候选量化，尚无本任务收益
+- id: condition_separation
+  text: 同一owner的相邻有效输出可在合法时机同时写回；合并不越过其他核输出、padding或消费者可见性边界。 多个小写回的区间和生产完成边界可由源码确认；fragmented不直接说明主瓶颈。 合并写回可减少发射数，实际有效输出字节不变；缓冲滞留可能反而延长关键路径。
+  basis: mechanism_inference
+  source_indexes: []
+  review_status: reviewed
+  limitations:
+  - 本次基于已有模板、包内来源和变换语义的条件分层归纳，不是上游新增性能结论。
+  - 性能证据不足不等于变换不安全；实施安全也不证明当前关键路径、收益或试验优先级。
 review:
   state: reviewed_with_limits
   source_credibility: 固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。
@@ -226,7 +243,7 @@ instantiation:
   costs:
   - 延迟buffer释放并增加片上峰值
   - 汇总延迟可能推迟下游消费
-  unknown_policy: 任一硬前提缺失、unknown或proxy则needs_evidence；明确不满足则blocked。C2可比较条件方案，C3须完成全部原前提及invariants核验。
+  unknown_policy: 实施前逐条满足本版本preconditions与invariants；安全/结构条件缺失则指出具体未证项，C2可继续条件分析，C3不得绕过。性能假设独立记录：来源与当前源码足以支持适用时，可在合法且有试验价值的条件下提出优化，不以尚无严格性能实测一律否决；不把未知写成确认。Action优先级由成本机会比较和补证据决策形成。
   replan_triggers:
   - 目标/阶段、owner或有效元素域变化
   - 算法、归并/同步拓扑、workspace owner、融合、通路或dispatch域超出已确认C2计划自由度
@@ -241,21 +258,31 @@ instantiation:
 
 同一输出tensor的相邻有效区间及MTE3/Fixpipe写回点；阶段：host输出分片；kernel CopyOut或Fixpipe epilogue。
 
-## 实例绑定与原硬前提
+## 实例绑定与实施安全条件
 
-实例必须给出精确template_hash、task与parent实现、目标和阶段；参数逐项给单位、来源及有效域，关联已确认C2计划。未知信息不从样例常量或聊天推断。
+实例必须给出精确template_hash、task与parent实现、目标和阶段；参数逐项给单位、来源及有效域，关联已确认C2计划。来源/源码/合法API与资源公式可以证明安全，无需将每项伪装成硬件观测。
 
-- target
-- stage
-- workload
-- implementation
+同一owner的相邻有效输出可在合法时机同时写回；合并不越过其他核输出、padding或消费者可见性边界。
 
-- symptom.source.fragmented_writeback=true
-- constraint.output_ownership=true
-- constraint.semantic_equivalence=true
-- constraint.capacity=true
+- `symptom.source.fragmented_writeback=true`：多个小写回的区间和生产完成边界可由源码确认；fragmented不直接说明主瓶颈。
+- `constraint.output_ownership=true`：全部有效输出由合法owner恰好写回，合并不覆盖其他owner或padding外域。
+- `constraint.semantic_equivalence=true`：完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。
+- `constraint.capacity=true`：按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。
 
-原invariants：完整语义和精度；有效元素覆盖和唯一写回；容量、同步与所有权合法。
+不变量：完整语义和精度；有效元素覆盖和唯一写回；容量、同步与所有权合法。
+
+## 性能假设、比较与补证据
+
+多个小写回的区间和生产完成边界可由源码确认；fragmented不直接说明主瓶颈。
+
+合并写回可减少发射数，实际有效输出字节不变；缓冲滞留可能反而延长关键路径。
+
+1. 列出每次输出地址/有效长度/完成点，并计算合并窗口需要额外存活的字节。
+2. 比较写回发射节省与buffer释放/消费者延迟；没有MTE计数时仍可据明显碎片结构提出试验。
+
+已有来源说明该方法，并且当前源码形态、对象、目标API与约束匹配时，即可将其作为有依据的优化候选；不要求先完成严格性能实验。每个unknown只写具体缺失项、决策影响和是否值得补证据。若补充检查不会改变候选选择，就记录预测后进入获授权的试验，不把“信息不完备”当统一否决。反之，安全未知或明确不适用必须阻断实施。
+
+本Action能实施只是准入。选择前应与当前workload的主要字节、逐元素工作、任务/流水机会比较，说明预计改变何种成本、影响哪些case、可能代价及为何优先；不能以容易等价作为唯一理由。R2把R1实际patch与预测逐项对照，区分支持、削弱和无法判断；继续同一Action应有新证据、不同参数或尚未验证的预测，不要求机械换Action。
 
 ## 预期效果与代价
 
@@ -266,7 +293,7 @@ instantiation:
 
 ## 未知与返回规划
 
-任一硬前提缺失、unknown或proxy则needs_evidence；明确不满足则blocked。C2可比较条件方案，C3须完成全部原前提及invariants核验。
+实施前逐条满足本版本preconditions与invariants；安全/结构条件缺失则指出具体未证项，C2可继续条件分析，C3不得绕过。性能假设独立记录：来源与当前源码足以支持适用时，可在合法且有试验价值的条件下提出优化，不以尚无严格性能实测一律否决；不把未知写成确认。Action优先级由成本机会比较和补证据决策形成。
 
 - 目标/阶段、owner或有效元素域变化
 - 算法、归并/同步拓扑、workspace owner、融合、通路或dispatch域超出已确认C2计划自由度
@@ -314,3 +341,10 @@ AR全载文档明确整行连续输入、按A1切核、输入双buffer与scratch
 延迟buffer释放并增加片上峰值；汇总延迟可能推迟下游消费
 
 来源索引：2, 3, 4, 5, 6, 7, 8, 9, 10。限制：代价需要绑定具体候选量化，尚无本任务收益
+
+
+### condition_separation [mechanism_inference]
+
+同一owner的相邻有效输出可在合法时机同时写回；合并不越过其他核输出、padding或消费者可见性边界。 多个小写回的区间和生产完成边界可由源码确认；fragmented不直接说明主瓶颈。 合并写回可减少发射数，实际有效输出字节不变；缓冲滞留可能反而延长关键路径。
+
+本次维护归纳；原来源与许可不变。旧条件逐项去向见包内 `workflows/references/action-condition-policy.json`，v0004前提仅在历史快照继续按原义回放。

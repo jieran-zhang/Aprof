@@ -1,0 +1,43 @@
+{
+  "task_id": "case-01",
+  "round": 1,
+  "stage": "knowledge_consultation_only",
+  "implemented": false,
+  "router_ref": {
+    "path": "O-router-r1.json",
+    "sha256": "sha256:0ce30001536dc95a85ebd5923331060e7c15cdb03dea3d2cf782716578b7e946"
+  },
+  "adopted_document_readings": [
+    {
+      "opportunity_ids": [
+        "o-pipe"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+        "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+      },
+      "locator": "lines:89-207",
+      "effect_kind": "plan",
+      "before": "初始只知道队列/存活或连续分块结构",
+      "after": "原owner下将raw输入输出物理槽变2，计算scratch单份并明确最后消费者；容量不足返回C2；新增输入/输出物理槽、prolog/drain和回卷事件；若容量导致T缩小，tile和API次数增加",
+      "applicability": "partial：正文给方法与完成边，具体SDK支持和资源未确认"
+    },
+    {
+      "opportunity_ids": [
+        "o-merge"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+        "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+      },
+      "locator": "lines:69-108",
+      "effect_kind": "plan",
+      "before": "初始只知道队列/存活或连续分块结构",
+      "after": "保持原分核，扩大合法连续tile，保留有效尾长和数值顺序；tile加倍使全部buffer近似加倍；单核最后余数不同，API内部预留和最大count必须核验",
+      "applicability": "partial：正文给方法与完成边，具体SDK支持和资源未确认"
+    }
+  ],
+  "limitations": "内部router用于方案咨询；尚未建立confirmed C2或implemented C3；命中不等于全部采用；P读取为提取现有计划而非P_KEEP。"
+}

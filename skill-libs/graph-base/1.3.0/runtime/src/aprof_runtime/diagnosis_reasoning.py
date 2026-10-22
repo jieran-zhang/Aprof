@@ -259,8 +259,10 @@ def _validate_sources(root, sources):
     revisions = {r["repo"]: r["revision"] for r in manifest["repositories"]}
     parent = json.loads((root / diagnosis.REGION / "versions/v0003/graph.json").read_text())
     historical = {(s["path"], s["revision"], s["sha256"]) for r in parent["records"] for s in r["sources"]}
+    identity = json.loads((root / diagnosis.REGION / 'REGION.json').read_text())
+    extra = (diagnosis.EXECUTION_COST_SOURCES,) if diagnosis._version(identity['version']) >= 7 else ()
     for source in sources:
-        diagnosis._source(root, source, revisions, historical)
+        diagnosis._source(root, source, revisions, historical, additional_manifests=extra)
 
 
 def _validate_claims(root, record, *, task_root=None, visited=None):

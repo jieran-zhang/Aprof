@@ -1,0 +1,17 @@
+{
+  "task_id": "raw15-case-01",
+  "basis": "手工逐谓词源码与数学分析；非自动由Action条件列表生成truth",
+  "proofs": {
+    "symptom.source.serial_queue_or_event_order": [
+      "Process 26–33逐轮CopyIn/Compute/CopyOut；下一轮CopyIn在当前CopyOut之后发射，源码未设置跨轮预取。",
+      "Init 18–22为inQ/outQ各一个物理块；CopyIn EnQue，Compute DeQue/Free，CopyOut DeQue/Free形成单块复用闭环。",
+      "length=min(total-offset,blockLength)，每次count=min(length-off,4096)；首次由TPipe分配可用槽，不存在手写Set/Wait。Exp底层内部指令排程未知，未把它写成无重叠实测。"
+    ],
+    "constraint.semantic_equivalence": "每输出k仍读取同一x[k]，按原dtype Cast、Muls(multiplier)、Adds(shift)、Exp、Cast依次执行；只把不同k集合的搬运交错，集合不相交，无归约/共享状态，host输入输出分别分配。",
+    "constraint.dependency_lifetime": "拟排程明确两套input/output物理槽：copy(t)→DeQue(t)→Compute(t)→EnQue(out t)→CopyOut(t)；input槽等Vector最后读完成后交回，output槽等MTE3最后读完成后交回，再供t+2复用；FP32 scratch只供串行Compute。此为队列契约下的依赖图证明，真实SDK双槽能力另列target_api_support未知。",
+    "constraint.task_ownership": "Exp核c区间[c*ceil(N/C),min((c+1)*ceil(N/C),N))覆盖[0,N)且两两不交；valid=min(4096,end-off)>0；host独立分配x/y。候选保持这些地址和counts。",
+    "constraint.valid_lengths": "Exp核c区间[c*ceil(N/C),min((c+1)*ceil(N/C),N))覆盖[0,N)且两两不交；valid=min(4096,end-off)>0；host独立分配x/y。候选保持这些地址和counts。",
+    "constraint.output_ownership": "Exp核c区间[c*ceil(N/C),min((c+1)*ceil(N/C),N))覆盖[0,N)且两两不交；valid=min(4096,end-off)>0；host独立分配x/y。候选保持这些地址和counts。"
+  },
+  "limitations": "目标B可用与双物理槽队列/事件支持尚无真实architecture/SDK证据；T=4096数据区65536字节，不把它当已获容量。"
+}

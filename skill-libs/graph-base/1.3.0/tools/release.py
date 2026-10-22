@@ -121,7 +121,7 @@ def verify_knowledge(root):
             if (row or rule) and f'{original}:L{number}' not in identifiers:
                 raise ValueError(f'矩阵行或路由规则漏迁移: {original}:L{number}')
     for path in Path(root).rglob('*.md'):
-        if any(part in IGNORED | {'history', 'archive', 'sources'} for part in path.relative_to(root).parts):
+        if any(part in IGNORED | {'history', 'knowledge-history', 'archive', 'sources'} for part in path.relative_to(root).parts):
             continue
         body = re.sub(r'```.*?```', '', path.read_text(), flags=re.S)
         for link in re.findall(r'(?<!!)\[[^\]]*\]\(([^)]+)\)', body):
@@ -140,9 +140,11 @@ def verify_mechanism_package(root):
     from aprof_runtime.jsonio import canonical_json
     skill = root / 'skills/ascendc-aprof-diagnosis'
     graph = diagnosis.verify(root)
+    # v0003→v0004 迁移台账保持原义；后续条件修订由独立冻结策略校验。
+    migration_graph = diagnosis.verify_snapshot(root, skill / 'graph/versions/v0004') if graph['version'] != 'v0004' else graph
     old = json.loads((skill / 'graph/versions/v0003/graph.json').read_text())
     old_records = {r['id']: r for r in old['records']}
-    current = {r['id']: r for r in graph['records']}
+    current = {r['id']: r for r in migration_graph['records']}
     seed = json.loads((skill / 'graph/history/seed-v0003/files.json').read_text())
     for entry in seed['files']:
         if sha(local(root, entry['path'])) != entry['sha256']:
@@ -164,15 +166,29 @@ def verify_mechanism_package(root):
             raise ValueError(f'旧记录的身份或原有前提改变: {identifier}')
     if set(current) - set(old_records) != set(ledger['new_relations']):
         raise ValueError('新增诊断记录与迁移台账不符')
-    manifest = json.loads((root / 'workflows/references/knowledge-sources-1.3.0.json').read_text())
-    if len(manifest['archived_files']) != manifest['archived_file_count']:
-        raise ValueError('来源档案计数不符')
+    if graph['version'] != 'v0004':
+        from aprof_runtime.action_decision import condition_policy
+        condition_policy(root, graph)
+    manifests = ['workflows/references/knowledge-sources-1.3.0.json']
+    if int(graph['version'][1:]) >= 6:
+        manifests.append('workflows/references/knowledge-sources-selection-v2.json')
+    if int(graph['version'][1:]) >= 7:
+        manifests.append('workflows/references/knowledge-sources-execution-cost-v1.json')
     paths = set()
-    for entry in manifest['archived_files']:
-        path = local(root, entry['path'])
-        if entry['path'] in paths or sha(path) != entry['sha256'] or path.stat().st_size != entry['bytes']:
-            raise ValueError(f"来源档案身份不符或重复: {entry['path']}")
-        paths.add(entry['path'])
+    for name in manifests:
+        manifest = json.loads((root / name).read_text())
+        if len(manifest['archived_files']) != manifest['archived_file_count']:
+            raise ValueError('来源档案计数不符')
+        for entry in manifest['archived_files']:
+            path = local(root, entry['path'])
+            if entry['path'] in paths or sha(path) != entry['sha256'] or path.stat().st_size != entry['bytes']:
+                raise ValueError(f"来源档案身份不符或重复: {entry['path']}")
+            paths.add(entry['path'])
+    history = root / 'workflows/references/knowledge-history/manifest.json'
+    if history.is_file():
+        for entry in json.loads(history.read_text())['files']:
+            if sha(local(root, entry['archive_path'])) != entry['sha256']:
+                raise ValueError('历史知识正文归档 hash 不匹配')
     config = bindings.load_routing(root)
     bindings.load_frozen_bundle(root, bindings.routing_snapshot_ref(root, config))
     for path in (root / bindings.ROUTING_SNAPSHOTS).glob('*.json'):
@@ -207,7 +223,7 @@ def registry_errors(root):
             errors.append(str(exc))
     expected = {e['name'] for e in registry['capabilities']['core'] + registry['support_skills']}
     for entry in registry['support_skills']:
-        if not entry.get('trigger') or not entry.get('roles') or set(entry['roles']) - {'coordinator', 'diagnosis', 'parallel-planning', 'optimization', 'profiling'}:
+        if not entry.get('trigger') or not entry.get('roles') or set(entry['roles']) - {'coordinator', 'code-understanding', 'diagnosis', 'parallel-planning', 'optimization', 'profiling'}:
             errors.append(f"support skill lacks valid role/trigger: {entry['name']}")
     actual = {p.name for p in (root / 'skills').iterdir() if p.is_dir() and p.name not in IGNORED}
     if actual != expected:
@@ -276,6 +292,7 @@ def verify_unsealed(root, *, check_knowledge=True):
         'schemas/gate-outcome.schema.json', 'skills/registry.json',
         'workflows/migration/migration.json', 'workflows/aprof-performance-workflow.md',
         'workflows/contracts/common.md', 'workflows/contracts/preparation.md',
+        'workflows/contracts/code-understanding.md',
         'workflows/contracts/diagnosis.md', 'workflows/contracts/planning.md',
         'workflows/contracts/candidate.md', 'workflows/contracts/profiling.md',
         'workflows/contracts/decision.md', 'workflows/references/runtime-contracts.md',
@@ -293,6 +310,16 @@ def verify_unsealed(root, *, check_knowledge=True):
             or project['name'] != 'aprof-runtime'
             or not re.fullmatch(r'\d+\.\d+\.\d+', project['version'])):
         raise ValueError('invalid package or runtime identity')
+    if tuple(map(int, project['version'].split('.'))) >= (0, 8, 0):
+        scheme_files = ('schemas/action-decision-v3.schema.json',
+                        'schemas/knowledge-handoff-v4.schema.json',
+                        'runtime/src/aprof_runtime/action_decision_v3.py',
+                        'runtime/src/aprof_runtime/bindings_v4.py',
+                        'workflows/references/optimization-schemes.md',
+                        'workflows/references/optimization-history.md')
+        missing = [name for name in scheme_files if name not in actual]
+        if missing:
+            raise ValueError('incomplete scheme protocol: ' + ', '.join(missing))
     if check_knowledge:
         verify_knowledge(root)
     return {'schema_version': 1, 'status': 'unsealed', 'verification': 'structure_only',

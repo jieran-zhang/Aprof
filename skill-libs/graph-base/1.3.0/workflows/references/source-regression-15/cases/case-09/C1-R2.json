@@ -1,0 +1,736 @@
+{
+  "schema_version": "aprof.handoff/v3",
+  "stage": "C1",
+  "task_id": "case-09",
+  "candidate_id": null,
+  "parent_hash": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72",
+  "artifacts": [
+    {
+      "path": "decision-R2.json",
+      "sha256": "sha256:e733b0bd0f2ea531c50a88b6ae9d871ac1c08305282b30ce77799c71afd1ec1a"
+    },
+    {
+      "path": "expansion.json",
+      "sha256": "sha256:e7112d6435ba06d298dac93ccd3216f1c2eedb804a4dfade081b96715c23f661"
+    },
+    {
+      "path": "reading-records.json",
+      "sha256": "sha256:801b4eedb05883534e0a5e401a4a4413092196aa77df1a6d5191d58ba4f25c8c"
+    },
+    {
+      "path": "matrix-costs-R1.json",
+      "sha256": "sha256:368ba9ebbd0766e945aa95101fea648ae80c8b1111d1449de97910711d76666d"
+    },
+    {
+      "path": "validation-API-R2.json",
+      "sha256": "sha256:6d6f45a2deb081b8d0fc410e32444acb2ffb92cfa8b679bc928ec34ecebf8ebe"
+    },
+    {
+      "path": "knowledge-selection-R2.json",
+      "sha256": "sha256:81f2618d3802e434af2cf19cddd22a03c519d948f700af971960972f47cee07c"
+    },
+    {
+      "path": "O-bound-consultation-R2.json",
+      "sha256": "sha256:4353b1a46b242c3a474a792b68200900f7f62a4ec7466a92d2d87339906f3e97"
+    },
+    {
+      "path": "P-bound-route-R2.json",
+      "sha256": "sha256:78e3c60720033bf6b3e307b58cd75491185cbee4af493bc6b942830f30ca93d5"
+    },
+    {
+      "path": "source-analysis-R1.md",
+      "sha256": "sha256:9350cdef5a1d62cd796b3f5202d235e27a78b617987bbff100c62cb2d4681686"
+    },
+    {
+      "path": "review-R2.md",
+      "sha256": "sha256:ad771caddd7c8dc04163028928f87ea88d1aafb5a36540ac78dfe37d014dccc5"
+    }
+  ],
+  "reasoning": {
+    "schema_version": "aprof.diagnosis-reasoning/v1",
+    "task_id": "case-09",
+    "context_hash": "sha256:71065fea7c0bc8758663cbe633162624749e3d43a9d6b266095812f8a2587bd1",
+    "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+    "source_context_ref": {
+      "path": "authority.json",
+      "sha256": "sha256:caafc0937b91334e658fabeb7407aff8a15f85fabc12cec68384bd80235e9b9f"
+    },
+    "context_snapshot": {
+      "schema_version": "aprof.evidence/v1",
+      "task_id": "case-09",
+      "source_context_ref": {
+        "path": "authority.json",
+        "sha256": "sha256:caafc0937b91334e658fabeb7407aff8a15f85fabc12cec68384bd80235e9b9f"
+      },
+      "attributes": {
+        "family": [
+          "elementwise"
+        ],
+        "dtype": [
+          "bfloat16",
+          "float16",
+          "float32"
+        ],
+        "features": [
+          "buffer-lifetime",
+          "tiling-tail",
+          "vector-api",
+          "precision-boundaries"
+        ],
+        "platform": "dav-2201"
+      },
+      "facts": {
+        "source.kernel": {
+          "state": true,
+          "kind": "source_review",
+          "view": "source",
+          "evidence_id": "source.kernel",
+          "ref": {
+            "path": "source/op_kernel/gelu_kernel.asc",
+            "sha256": "sha256:1c2873801f387b221d9d2f38501f45e78038796fb02f579c935f7bcbb20e1a06",
+            "locator": "lines:1-137"
+          }
+        },
+        "source.tiling": {
+          "state": true,
+          "kind": "source_review",
+          "view": "source",
+          "evidence_id": "source.tiling",
+          "ref": {
+            "path": "source/op_kernel/gelu_tiling.h",
+            "sha256": "sha256:0bbddaad08330ee2ba84f3965e98f602def676a16ea61cb36b8501904d6e72c0",
+            "locator": "lines:1-27"
+          }
+        },
+        "source.host": {
+          "state": true,
+          "kind": "source_review",
+          "view": "source",
+          "evidence_id": "source.host",
+          "ref": {
+            "path": "source/op_host/gelu.asc",
+            "sha256": "sha256:9daf0d6e8f08b5200a2587cc8460c72b4fb5cbaadb6462fd757050ac50d080e6",
+            "locator": "lines:1-79"
+          }
+        },
+        "source.matrix": {
+          "state": true,
+          "kind": "source_review",
+          "view": "workload",
+          "evidence_id": "source.matrix",
+          "ref": {
+            "path": "source/matrix-20.json",
+            "sha256": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+            "locator": "lines:1-290"
+          }
+        },
+        "source.oracle": {
+          "state": true,
+          "kind": "source_review",
+          "view": "source",
+          "evidence_id": "source.oracle",
+          "ref": {
+            "path": "source/scripts/verify_result.py",
+            "sha256": "sha256:220d7b34592de881fc171b5732aad462dd4b1243d6ef036ec6defbd325d92723",
+            "locator": "lines:1-40"
+          }
+        },
+        "symptom.source.dynamic_shape_mismatch.component_1": {
+          "state": true,
+          "kind": "source_review",
+          "view": "source",
+          "evidence_id": "source.kernel",
+          "ref": {
+            "path": "source/op_kernel/gelu_kernel.asc",
+            "sha256": "sha256:1c2873801f387b221d9d2f38501f45e78038796fb02f579c935f7bcbb20e1a06",
+            "locator": "lines:1-137"
+          }
+        },
+        "symptom.source.dynamic_shape_mismatch.component_2": {
+          "state": true,
+          "kind": "source_review",
+          "view": "source",
+          "evidence_id": "source.tiling",
+          "ref": {
+            "path": "source/op_kernel/gelu_tiling.h",
+            "sha256": "sha256:0bbddaad08330ee2ba84f3965e98f602def676a16ea61cb36b8501904d6e72c0",
+            "locator": "lines:1-27"
+          }
+        },
+        "symptom.source.dynamic_shape_mismatch.component_3": {
+          "state": true,
+          "kind": "source_review",
+          "view": "source",
+          "evidence_id": "source.host",
+          "ref": {
+            "path": "source/op_host/gelu.asc",
+            "sha256": "sha256:9daf0d6e8f08b5200a2587cc8460c72b4fb5cbaadb6462fd757050ac50d080e6",
+            "locator": "lines:1-79"
+          }
+        },
+        "constraint.semantic_equivalence": {
+          "state": true,
+          "kind": "source_proof",
+          "view": "constraint",
+          "evidence_id": "semantic-proof",
+          "ref": {
+            "path": "source-analysis-R1.md",
+            "sha256": "sha256:9350cdef5a1d62cd796b3f5202d235e27a78b617987bbff100c62cb2d4681686",
+            "locator": "lines:1-24"
+          }
+        },
+        "constraint.dispatch_coverage": {
+          "state": true,
+          "kind": "source_proof",
+          "view": "constraint",
+          "evidence_id": "semantic-proof",
+          "ref": {
+            "path": "source-analysis-R1.md",
+            "sha256": "sha256:9350cdef5a1d62cd796b3f5202d235e27a78b617987bbff100c62cb2d4681686",
+            "locator": "lines:1-24"
+          }
+        },
+        "constraint.capacity": {
+          "state": "unknown",
+          "kind": "not_observed",
+          "view": "constraint"
+        },
+        "constraint.target_api": {
+          "state": "unknown",
+          "kind": "not_observed",
+          "view": "constraint"
+        }
+      }
+    },
+    "current": {
+      "implementation_ref": {
+        "path": "source-index.json",
+        "sha256": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72"
+      },
+      "workload_ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8"
+      },
+      "objects": [
+        {
+          "object_id": "target",
+          "kind": "object",
+          "description": "gelu当前kernel数据路径"
+        },
+        {
+          "object_id": "stage",
+          "kind": "stage",
+          "description": "host tiling至kernel执行范围"
+        },
+        {
+          "object_id": "workload",
+          "kind": "workload",
+          "description": "原20case全部域"
+        },
+        {
+          "object_id": "implementation",
+          "kind": "implementation",
+          "description": "原始host/tiling/kernel快照，未实施候选"
+        }
+      ],
+      "scope": {
+        "task_id": "case-09",
+        "parent_implementation_hash": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72",
+        "workload_hash": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      }
+    },
+    "facts": {
+      "source.kernel": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source.kernel",
+        "ref": {
+          "path": "source/op_kernel/gelu_kernel.asc",
+          "sha256": "sha256:1c2873801f387b221d9d2f38501f45e78038796fb02f579c935f7bcbb20e1a06",
+          "locator": "lines:1-137"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-09",
+          "parent_implementation_hash": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72",
+          "workload_hash": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "source.tiling": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source.tiling",
+        "ref": {
+          "path": "source/op_kernel/gelu_tiling.h",
+          "sha256": "sha256:0bbddaad08330ee2ba84f3965e98f602def676a16ea61cb36b8501904d6e72c0",
+          "locator": "lines:1-27"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-09",
+          "parent_implementation_hash": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72",
+          "workload_hash": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "source.host": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source.host",
+        "ref": {
+          "path": "source/op_host/gelu.asc",
+          "sha256": "sha256:9daf0d6e8f08b5200a2587cc8460c72b4fb5cbaadb6462fd757050ac50d080e6",
+          "locator": "lines:1-79"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-09",
+          "parent_implementation_hash": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72",
+          "workload_hash": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "source.matrix": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source.matrix",
+        "ref": {
+          "path": "source/matrix-20.json",
+          "sha256": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+          "locator": "lines:1-290"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-09",
+          "parent_implementation_hash": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72",
+          "workload_hash": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "workload"
+      },
+      "source.oracle": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source.oracle",
+        "ref": {
+          "path": "source/scripts/verify_result.py",
+          "sha256": "sha256:220d7b34592de881fc171b5732aad462dd4b1243d6ef036ec6defbd325d92723",
+          "locator": "lines:1-40"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-09",
+          "parent_implementation_hash": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72",
+          "workload_hash": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "source.analysis": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "semantic-proof",
+        "ref": {
+          "path": "source-analysis-R1.md",
+          "sha256": "sha256:9350cdef5a1d62cd796b3f5202d235e27a78b617987bbff100c62cb2d4681686",
+          "locator": "lines:1-24"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-09",
+          "parent_implementation_hash": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72",
+          "workload_hash": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.dynamic_shape_mismatch.component_1": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "source.kernel",
+          "source.tiling",
+          "source.host",
+          "source.matrix",
+          "source.analysis"
+        ],
+        "scope": {
+          "task_id": "case-09",
+          "parent_implementation_hash": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72",
+          "workload_hash": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.dynamic_shape_mismatch.component_2": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "source.kernel",
+          "source.tiling",
+          "source.host",
+          "source.matrix",
+          "source.analysis"
+        ],
+        "scope": {
+          "task_id": "case-09",
+          "parent_implementation_hash": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72",
+          "workload_hash": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.dynamic_shape_mismatch.component_3": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "source.kernel",
+          "source.tiling",
+          "source.host",
+          "source.matrix",
+          "source.analysis"
+        ],
+        "scope": {
+          "task_id": "case-09",
+          "parent_implementation_hash": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72",
+          "workload_hash": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.dynamic_shape_mismatch": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "symptom.source.dynamic_shape_mismatch.component_1",
+          "symptom.source.dynamic_shape_mismatch.component_2",
+          "symptom.source.dynamic_shape_mismatch.component_3"
+        ],
+        "components": [
+          "symptom.source.dynamic_shape_mismatch.component_1",
+          "symptom.source.dynamic_shape_mismatch.component_2",
+          "symptom.source.dynamic_shape_mismatch.component_3"
+        ],
+        "scope": {
+          "task_id": "case-09",
+          "parent_implementation_hash": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72",
+          "workload_hash": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "constraint.dispatch_coverage": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "source.analysis",
+          "source.kernel",
+          "source.tiling"
+        ],
+        "scope": {
+          "task_id": "case-09",
+          "parent_implementation_hash": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72",
+          "workload_hash": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "constraint"
+      },
+      "constraint.semantic_equivalence": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "source.analysis",
+          "source.kernel",
+          "source.tiling"
+        ],
+        "scope": {
+          "task_id": "case-09",
+          "parent_implementation_hash": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72",
+          "workload_hash": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "constraint"
+      },
+      "constraint.capacity": {
+        "state": "unknown",
+        "kind": "raw",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-09",
+          "parent_implementation_hash": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72",
+          "workload_hash": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "constraint"
+      },
+      "constraint.target_api": {
+        "state": "unknown",
+        "kind": "raw",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-09",
+          "parent_implementation_hash": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72",
+          "workload_hash": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "constraint"
+      },
+      "source.second_review": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "static-review-R2",
+        "ref": {
+          "path": "static-evidence-R2.json",
+          "sha256": "sha256:0356c9e854992bbea53b8e93679c27e26241f00dfc8118651c9404cbb4fc1399",
+          "locator": "rows (all 20 original case IDs)"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-09",
+          "parent_implementation_hash": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72",
+          "workload_hash": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      }
+    },
+    "candidates": [
+      {
+        "hypothesis_id": "hypothesis.primary",
+        "problem_id": "problem.dynamic_shape_mismatch",
+        "mechanism": "所有mode固定T1024；两Raw队列加fi/work/fo三个FP32区、Erfc5*T FP32 scratch以及mask无条件分配。显式UB=(2*b+32)*T+Align256(ceil(T/8))，尚不含API/编译保留；tanh不访问erfTmp/mask。none仍有Erfc和尾部特殊修正；tanh有2^-23网格RINT转换，不是无意义cast。",
+        "targets": [
+          "target"
+        ],
+        "scope": {
+          "task_id": "case-09",
+          "parent_implementation_hash": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72",
+          "workload_hash": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "support": [
+          "source.kernel",
+          "source.tiling",
+          "source.matrix",
+          "source.second_review"
+        ],
+        "counter": [],
+        "unknown": [
+          "constraint.capacity",
+          "constraint.target_api"
+        ],
+        "alternatives": [
+          "hypothesis.alt1"
+        ],
+        "checks": [
+          "核对目标Erfc/Tanh/CompareScalar count与API临时预算后才设T上限；先单独验证删除无用分配，再同意图内增加合法T，完整20case含NaN/Inf/零和负尾域。若较大T不改善，保留资源简化但不宣称性能接纳。"
+        ],
+        "status": "plausible",
+        "reason": "直接删掉tanh永不使用的20*T+mask静态字节，给更大tile提供可核算空间；相比强行复用none临时区，避免Erfc输入/tmp重叠未证问题。容量节约本身不是加速，收益假设来自同算术较少tile循环/API发射。 R2：逐20case重算模式域，9个tanh和11个none；T1024节约20736B的等式成立。确认erfTmp在none还被saved复用，不能从none再减一块；tanh的work ReinterpretCast<int32>只是视图，未新增物理区。R2坚持保留2^-23 RINT和none负尾修正。",
+        "excluded_by": [],
+        "independent_evidence_groups": []
+      },
+      {
+        "hypothesis_id": "hypothesis.alt1",
+        "problem_id": "problem.onchip_capacity_pressure",
+        "mechanism": "复用none的work/fo与Erfc scratch需要API alias和最后读证据；当前fi跨Erfc、Mul、Compare仍存活，不能仅按C++作用域共享。",
+        "targets": [
+          "target"
+        ],
+        "scope": {
+          "task_id": "case-09",
+          "parent_implementation_hash": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72",
+          "workload_hash": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "support": [
+          "source.kernel",
+          "source.tiling",
+          "source.matrix"
+        ],
+        "counter": [],
+        "unknown": [],
+        "alternatives": [
+          "hypothesis.primary"
+        ],
+        "checks": [
+          "复用none的work/fo与Erfc scratch需要API alias和最后读证据；当前fi跨Erfc、Mul、Compare仍存活，不能仅按C++作用域共享。；若重新采用，先核对其地址/API/资源和数值合同。"
+        ],
+        "status": "plausible",
+        "reason": "复用none的work/fo与Erfc scratch需要API alias和最后读证据；当前fi跨Erfc、Mul、Compare仍存活，不能仅按C++作用域共享。",
+        "excluded_by": [],
+        "independent_evidence_groups": []
+      },
+      {
+        "hypothesis_id": "hypothesis.alt2",
+        "problem_id": "problem.redundant_cast",
+        "mechanism": "移除tanh中FP32→int32 RINT→FP32会破坏明确2^-23概率量化；输入升精度/最终输出缩位也是数值契约。",
+        "targets": [
+          "target"
+        ],
+        "scope": {
+          "task_id": "case-09",
+          "parent_implementation_hash": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72",
+          "workload_hash": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "support": [
+          "source.kernel",
+          "source.tiling",
+          "source.matrix"
+        ],
+        "counter": [
+          "source.oracle"
+        ],
+        "unknown": [],
+        "alternatives": [
+          "hypothesis.primary"
+        ],
+        "checks": [
+          "移除tanh中FP32→int32 RINT→FP32会破坏明确2^-23概率量化；输入升精度/最终输出缩位也是数值契约。；若重新采用，先核对其地址/API/资源和数值合同。"
+        ],
+        "status": "rejected",
+        "reason": "移除tanh中FP32→int32 RINT→FP32会破坏明确2^-23概率量化；输入升精度/最终输出缩位也是数值契约。",
+        "excluded_by": [
+          "source.oracle"
+        ],
+        "independent_evidence_groups": []
+      }
+    ],
+    "action_instances": [
+      {
+        "instance_id": "instance.primary",
+        "action_id": "action.dispatch_by_workload",
+        "template_hash": "sha256:41abee13bcba12eade351ab852cffd5234341186a75c47d41879fe2eac59b6cf",
+        "hypothesis_id": "hypothesis.primary",
+        "targets": {
+          "target": "target",
+          "stage": "stage",
+          "workload": "workload",
+          "implementation": "implementation"
+        },
+        "scope": {
+          "task_id": "case-09",
+          "parent_implementation_hash": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72",
+          "workload_hash": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+          "target_ids": [
+            "target"
+          ],
+          "stage": "kernel"
+        },
+        "parameters": {
+          "tanh_T_candidates": [
+            1024,
+            2048,
+            4096
+          ],
+          "none_T_candidates": [
+            1024,
+            2048
+          ],
+          "minimum_count_alignment": 64,
+          "dispatch_metadata": [
+            "mode",
+            "dtype",
+            "numel"
+          ],
+          "workspace_bytes": 0
+        },
+        "evidence_bindings": {
+          "symptom.source.dynamic_shape_mismatch": "symptom.source.dynamic_shape_mismatch",
+          "constraint.dispatch_coverage": "constraint.dispatch_coverage",
+          "constraint.semantic_equivalence": "constraint.semantic_equivalence",
+          "constraint.capacity": "constraint.capacity"
+        },
+        "unknowns": [
+          "constraint.capacity"
+        ],
+        "status": "conditional",
+        "reason": "当前源码支持此意图；实施合法性与性能收益分开。直接删掉tanh永不使用的20*T+mask静态字节，给更大tile提供可核算空间；相比强行复用none临时区，避免Erfc输入/tmp重叠未证问题。容量节约本身不是加速，收益假设来自同算术较少tile循环/API发射。",
+        "parent_plan_hash": null
+      }
+    ],
+    "predecessor_ref": {
+      "path": "reasoning-R1.json",
+      "sha256": "sha256:f96fea4361b5a71b648b2f9896733f8358b06ea58aeeaa7c9c8b507ab422401f"
+    }
+  }
+}

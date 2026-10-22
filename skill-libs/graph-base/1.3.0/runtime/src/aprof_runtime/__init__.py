@@ -50,4 +50,4 @@ __all__ = [
     "write_policy_checkpoint",
 ]
 
-__version__ = "0.5.0"
+__version__ = "0.8.1"

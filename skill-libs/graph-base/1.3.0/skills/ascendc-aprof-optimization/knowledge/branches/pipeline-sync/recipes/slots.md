@@ -2,7 +2,7 @@
 schema_version: aprof.knowledge-record/v1
 id: implementation.pipeline-sync.slots
 kind: recipe
-version: 1.1.0
+version: 1.2.0
 status: active
 title: Workspace 槽、任务描述符与跨阶段所有权
 scope:
@@ -53,6 +53,22 @@ sources:
   - 151
   sha256: sha256:fb6098e64301d056e53eb0f083dcc96083075fc8da78409492f905653c311f96
   excerpt_sha256: sha256:c5145c71c4361eef7d3e7a5597dfa8bc235c92153767ab8322ebee5109ed0b5d
+- path: skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/cann-samples/17c948bb961fc6a660e4fcab45f6bf217c9c6239/Samples/2_Performance/rms_norm_quant_story/src/4_double_buffer.asc
+  original_path: Samples/2_Performance/rms_norm_quant_story/src/4_double_buffer.asc
+  revision: 17c948bb961fc6a660e4fcab45f6bf217c9c6239
+  lines:
+  - 1
+  - 569
+  sha256: sha256:6b027cb2b0faa24546a5d13339f06f93a1e8fe0bed527c80866038ae12c0557a
+  excerpt_sha256: sha256:6b027cb2b0faa24546a5d13339f06f93a1e8fe0bed527c80866038ae12c0557a
+- path: skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/cann-samples/17c948bb961fc6a660e4fcab45f6bf217c9c6239/Samples/2_Performance/rms_norm_quant_story/CMakeLists.txt
+  original_path: Samples/2_Performance/rms_norm_quant_story/CMakeLists.txt
+  revision: 17c948bb961fc6a660e4fcab45f6bf217c9c6239
+  lines:
+  - 1
+  - 57
+  sha256: sha256:6e7620af55c25f4c17416072ad4e9b82f065e23d55b58449d56db6ad3e46a123
+  excerpt_sha256: sha256:6e7620af55c25f4c17416072ad4e9b82f065e23d55b58449d56db6ad3e46a123
 learning: {}
 tags: []
 seed_reason: 内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。
@@ -63,14 +79,13 @@ references:
 - implementation.fusion-composition.cv_multistage_handoff
 evidence_status: source_reviewed_not_benchmarked
 ---
-
 # Workspace 槽、任务描述符与跨阶段所有权
 
 ## 核心原则与适用条件
 
 slot 不是一个通用取模数字，而是某类对象在其完整生存期内的存储租约。跨 AIC/AIV 的中间结果、跨 s2 的在线状态、三阶段的任务描述符、L1 ping-pong 即使都用 `%2/%3`，仍属于不同的索引空间。只有最后一个异步读者完成，租约才结束。
 
-适用于 C2 已确定融合 region、逻辑 task、AIC/AIV 配比、workspace 划分和阶段依赖的 FA/FIA、split-K 或复杂 CV kernel。C3 可以落实每槽的 offset、代次和 ready/free，但不能自行把 task 改成另一个维度、增加跨核消费者，或把 GM 中转换成 UB 直通；遇到这些需求返回 C2。对普通单 tile Vector，应先使用 TQue，不为简单实现新增多种全局槽。
+适用于 C2 已确定融合 region、逻辑 task、AIC/AIV 配比、workspace 划分和阶段依赖的 FA/FIA、split-K 或复杂 CV kernel。C3 可以落实每槽的 offset、代次和 ready/free，但不能自行把 task 改成另一个维度、增加跨核消费者，或把 GM 中转换成 UB 直通；遇到这些需求返回 C2。普通同核Vector按TQue、TBuf+合法事件或静态租约的适用域和实际成本比较，见implementation.pipeline-sync.vector-static-lease；不把本条FA跨核全局槽方案套过去，也不固定TQue优先。
 
 ## 先建生产者—消费者表
 
@@ -173,3 +188,9 @@ S4的官方说明中，mode2 是AIC与所有AIV；A2/A3的Wait参数不参与硬
 - S5：[docs/zh/api/SIMD-API/basic_api/sync_control/inter_core_sync/CrossCoreSetFlag_ISASI.md](../../../sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/sync_control/inter_core_sync/CrossCoreSetFlag_ISASI.md)，行 28–151；修订 `d378849769f9ee610af9d0ac38db2b3b6bed3209`。
 
 来源事实、本文推导与待验证项在正文分别标注。冻结源码及仓库许可证随包保存；本次仅完成审读，未在目标 SDK 构建，未运行 NPU 正确性或性能测量。源码存在不代表当前 shape 已分派到该路径，任何收益都须由当前候选的完整正确性、Task Duration 与针对性 timeline 证明。
+
+## 槽数与有效tile联合选，不以DoubleBuffer作完成标志
+
+槽数至少覆盖正在使用的物理区，不代表越多越好。把候选 `(tileElements, inputSlots, outputSlots, residentBytes)` 代入实际容量，并记录总tile数、最大小队列占用、等待位置及最后消费者。只改队列模板depth没有增加物理槽；只增加物理槽却保留每轮全流水等待，也不能认定获得重叠。
+
+预取和长期驻留同时采用时，resident区不得因同一buffer名字被算作轮转槽内的“空闲空间”。若共享scratch使两个原可并行阶段必须等待，应把失去的重叠作为buffer复用代价交回比较。具体时间/代价模型见 [流水阶段](pipeline.md)，本条不重复维护另一套收益阈值。固定950 RMSNormQuant的gamma常驻与x/y双槽只是该实现事实；A3方案须用其合法API和容量重建。

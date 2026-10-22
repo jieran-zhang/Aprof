@@ -40,9 +40,9 @@ references:
 - planning.under-fusion.fallback
 - planning.under-fusion.reduce_broadcast
 - planning.under-fusion.epilogue
+- planning.under-fusion.vector_producer_consumer
 evidence_status: source_reviewed_not_benchmarked
 ---
-
 # 融合与组合：连续逐元素链
 
 ## 从计算图确定边界
@@ -81,3 +81,6 @@ AscendC::Adds(outLocal, tmpLocal, bias, validCount);
 ```
 
 片段非完整算子；具体 API 重载和队列依赖在目标 SDK 核验。涉及归约用 `planning.under-fusion.reduce_broadcast`，矩阵乘输出组合用 `planning.under-fusion.epilogue`。验证尾块、所有参数广播、输入输出别名、外部消费者、中间舍入边界、NaN/Inf/±0 和资源峰值。本条 scope all 是通用规划方法，未做硬件资格或性能验证。
+
+
+一般Vector生产者/消费者不必是连续算术链；生成派生索引、布局准备、局部加权消费与GM中转的完整比较见planning.under-fusion.vector_producer_consumer。融合与派生复用分别绑定action.fuse_kernel_chain、action.keep_intermediate_onchip和独立action.reuse_derived_results，不扩大旧Action覆盖范围。

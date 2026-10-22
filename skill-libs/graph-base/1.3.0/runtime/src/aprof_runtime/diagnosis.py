@@ -16,6 +16,7 @@ from .measurement_admission import _release_root
 REGION = "skills/ascendc-aprof-diagnosis/graph"
 SCHEMA = "aprof.diagnosis-graph/v1"
 SCHEMA_NAMES = ("diagnosis-record", "diagnosis-region", "diagnosis-graph")
+EXECUTION_COST_SOURCES = "workflows/references/knowledge-sources-execution-cost-v1.json"
 
 
 def _root(root=None):
@@ -29,7 +30,7 @@ def _read(path):
         raise GraphError(f"无法读取诊断JSON: {path}: {exc}") from exc
 
 
-def _source(root, source, allowed_revisions, historical):
+def _source(root, source, allowed_revisions, historical, *, additional_manifests=()):
     path = local(root, source["path"])
     raw = path.read_bytes()
     if digest(raw) != source["sha256"]:
@@ -54,11 +55,13 @@ def _source(root, source, allowed_revisions, historical):
         license_file = local(root, license_path.as_posix())
         if not license_file.is_file():
             raise GraphError(f"新增来源缺少完整 LICENSE: {repo}")
-        declared = _read(root / "workflows/references/knowledge-sources-1.3.0.json")
+        manifests = [_read(root / name) for name in
+                     ("workflows/references/knowledge-sources-1.3.0.json", *additional_manifests)]
+        archived = [item for manifest in manifests for item in manifest["archived_files"]]
         suffix = f"/sources/{repo}/{revision}/{source['original_path']}"
-        expected = {item["sha256"] for item in declared["archived_files"] if item["path"].endswith(suffix)}
+        expected = {item["sha256"] for item in archived if item["path"].endswith(suffix)}
         license_suffix = f"/sources/{repo}/{revision}/LICENSE"
-        licenses = {item["sha256"] for item in declared["archived_files"] if item["path"].endswith(license_suffix)}
+        licenses = {item["sha256"] for item in archived if item["path"].endswith(license_suffix)}
         if source["sha256"] not in expected or digest(license_file.read_bytes()) not in licenses:
             raise GraphError(f"新增来源/许可与固定来源清单不符: {source['path']}")
     return source["path"], digest(raw)
@@ -117,7 +120,7 @@ def _parent(root, snapshot):
     return graph, {"graph_version": version, "graph_ref": {"path": graph_path.relative_to(root).as_posix(), "sha256": digest(graph_path.read_bytes())}}
 
 
-def _validate_records(records, parent=None):
+def _validate_records(records, parent=None, *, condition_migration=False):
     nodes = {r["id"]: r for r in records}
     if len(nodes) != len(records):
         raise GraphError("诊断知识 ID 重复")
@@ -174,6 +177,8 @@ def _validate_records(records, parent=None):
             if new is None or new["kind"] != old["kind"] or new["learning"] != old["learning"]:
                 raise GraphError(f"迁移丢失历史 ID/类型/初值: {old['id']}")
             for key in (("preconditions", "invariants") if old["kind"] == "action" else ("relation", "from", "to") if old["kind"] == "edge" else ()):
+                if key == "preconditions" and condition_migration:
+                    continue  # 新版本仍由精确冻结的条件迁移策略逐项校验。
                 if new[key] != old[key]:
                     raise GraphError(f"迁移改变历史 {key}: {old['id']}")
 
@@ -185,6 +190,7 @@ def compile_region(root: Path, parent_snapshot: Path) -> dict:
     identity = _read(region / "REGION.json")
     validate_schema(root, "diagnosis-region", identity)
     _check_parent(identity["version"], parent_ref["graph_version"])
+    additional_manifests = (EXECUTION_COST_SOURCES,) if _version(identity["version"]) >= 7 else ()
     declared = _read(root / "workflows/references/knowledge-sources-1.3.0.json")
     revisions = {r["repo"]: r["revision"] for r in declared["repositories"]}
     historical = {(s["path"], s["revision"], s["sha256"]) for r in parent["records"] for s in r["sources"]}
@@ -206,14 +212,15 @@ def compile_region(root: Path, parent_snapshot: Path) -> dict:
             if not body.strip():
                 raise GraphError(f"诊断知识正文为空: {path}")
             for source in record["sources"]:
-                name, value = _source(root, source, revisions, historical)
+                name, value = _source(root, source, revisions, historical,
+                                      additional_manifests=additional_manifests)
                 hashes[name] = value
             record.update(body=body.strip(), source_path=path.relative_to(root).as_posix(), source_hash=digest(path.read_bytes()))
             hashes[record["source_path"]] = record["source_hash"]
             records.append(record)
     if not records:
         raise GraphError("诊断知识区为空")
-    _validate_records(records, parent)
+    _validate_records(records, parent, condition_migration=_version(identity["version"]) >= 5)
     # Include unreferenced source files too: changing a license or copied source invalidates the build.
     for source_directory in (region / "sources", region.parent / "sources"):
         for path in sorted(source_directory.rglob("*")):
@@ -222,10 +229,31 @@ def compile_region(root: Path, parent_snapshot: Path) -> dict:
                 hashes[name] = digest(local(root, name).read_bytes())
     for name in (f"{REGION}/REGION.json", "workflows/references/knowledge-sources-1.3.0.json"):
         hashes[name] = digest(local(root, name).read_bytes())
+    if _version(identity["version"]) >= 6:
+        name = "workflows/references/knowledge-sources-selection-v2.json"
+        hashes[name] = digest(local(root, name).read_bytes())
+    for name in additional_manifests:
+        manifest = _read(local(root, name))
+        if {r["repo"]: r["revision"] for r in manifest["repositories"]} != revisions:
+            raise GraphError("新增来源清单不能改变固定仓库修订")
+        hashes[name] = digest(local(root, name).read_bytes())
+    if _version(identity["version"]) >= 5:
+        policy = _read(root / "workflows/references/action-condition-policy.json")
+        if not re.fullmatch(r"v[0-9]{4}", policy.get("version", "")):
+            raise GraphError("条件策略版本必须为 vNNNN")
+        name = f"workflows/references/action-condition-policies/{policy['version']}.json"
+        if _read(local(root, name)) != policy:
+            raise GraphError("当前条件策略与不可变副本不同")
+        hashes[name] = digest(local(root, name).read_bytes())
+        name = "schemas/action-condition-policy.schema.json"
+        hashes[name] = digest(local(root, name).read_bytes())
     artifact = {"schema_version": SCHEMA, "owner": "diagnosis", "version": identity["version"], "graph_version": identity["version"], "parent": parent_ref,
                 "generator": {"id": "aprof_runtime.diagnosis/v1", "sha256": digest(Path(__file__).read_bytes()), "schema_hashes": {n: digest((root / f"schemas/{n}.schema.json").read_bytes()) for n in SCHEMA_NAMES}},
                 "source_hashes": dict(sorted(hashes.items())), "records": sorted(records, key=lambda r: r["id"])}
     validate_schema(root, "diagnosis-graph", artifact)
+    if _version(identity["version"]) >= 5:
+        from .action_decision import condition_policy
+        condition_policy(root, artifact)
     return artifact
 
 
@@ -292,7 +320,10 @@ def verify_snapshot(root: Path, snapshot: Path) -> dict:
     lineage = _read(directory / "lineage.json")
     if lineage != _lineage(artifact):
         raise GraphError("诊断 lineage 父引用不匹配")
-    _validate_records(artifact["records"], parent)
+    _validate_records(artifact["records"], parent, condition_migration=_version(artifact["version"]) >= 5)
+    if _version(artifact["version"]) >= 5:
+        from .action_decision import condition_policy
+        condition_policy(root, artifact)
     live_metadata = {r["source_path"] for r in artifact["records"]} | {f"{REGION}/REGION.json"}
     for name, expected in artifact["source_hashes"].items():
         if name not in live_metadata and digest(local(root, name).read_bytes()) != expected:

@@ -1,0 +1,5 @@
+# 独立源码审核补充（主体回答未读，评分前冻结）
+
+- Sum的数学有效输出为前3个，但物理输出8个，原CompareResult按完整8个输出比较，gen_data golden中后5个为零。优化不能省去约定padding值或缩短实际oracle覆盖。
+- Maximum FP16所有non-sameShape进入KernelMaximumHalfLastAxisBroadcast。该实现按完整输出读取x1并按out最后轴读取x2，支持范围不能自动推广为任意多轴广播；须核对20case的实际成员与host约束。源码存在路径不等于完整API域正确。
+- 本次八份主体只做独立一轮的方案与初始摘要，后继行为另用显式静态/合成反馈回放评估；不宣称八份回答验证了真实多轮硬件反馈。

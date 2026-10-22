@@ -1,0 +1,52 @@
+{
+  "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+  "task_id": "raw15-case-01",
+  "context_hash": "sha256:7a564c209399b02650433a706a6c323535d9ac071fc6c1bf10da64ce309590cf",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "graph_version": "v0005",
+  "source_context_ref": {
+    "path": "origin.json",
+    "sha256": "sha256:5ea83cd75836eff2090b988b473654449eae4b376d54178818ab19a6f45e4aab"
+  },
+  "retrieval_hash": "sha256:e036c546493bd84df1a1584a40904acc12f14e6db7a2073e25c946d6fd1d407e",
+  "selections": [
+    {
+      "problem_id": "problem.pipeline_serialization",
+      "reason": "单槽CopyIn-Compute-CopyOut，需判断双槽可否覆盖Exp延迟与额外容量。",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.current_kernel"
+      ]
+    },
+    {
+      "problem_id": "problem.dynamic_shape_mismatch",
+      "reason": "固定4096 tile跨三dtype/百万到6700万元素，比较按dtype资源选tile。",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.current_kernel"
+      ]
+    },
+    {
+      "problem_id": "problem.control_metadata_overhead",
+      "reason": "每tile读tiling字段，但是否重要须与逐元素Exp成本比较。",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.current_kernel"
+      ]
+    },
+    {
+      "problem_id": "problem.onchip_capacity_pressure",
+      "reason": "复核低精度fi在Muls后已无旧值消费者，比较fpIn/fpOut物理复用与双槽流水的资源取舍；不能把容量未查当作机制已成立。",
+      "trigger": "followup_check",
+      "related_problem_ids": [
+        "problem.pipeline_serialization"
+      ],
+      "unexplained_observations": [
+        "low precision fi/fo distinct InitBuffer"
+      ]
+    }
+  ]
+}

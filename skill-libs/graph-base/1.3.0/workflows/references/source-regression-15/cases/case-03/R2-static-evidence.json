@@ -1,0 +1,18 @@
+{
+  "task_id": "raw15-case-03",
+  "kind": "new_static_evidence",
+  "parent_R1_analysis_ref": {
+    "path": "R1-analysis.md",
+    "sha256": "sha256:307f8b24f9c4dfdec3dab0e55a35e608393ea80b2c3985d00f43db8487833dd0"
+  },
+  "matrix_costs_ref": {
+    "path": "matrix-costs.json",
+    "sha256": "sha256:faf97d1368c94d3f4c3e3bd211e419299844722c0a7f7748fccd339e03b51204"
+  },
+  "checks": [
+    "20case逐dtype复核of=xf显式分配均减少4T；原xf无Mul后的旧值消费者。"
+  ],
+  "conclusion": "原xf最后读就是Mul本身；mf需读至Mul结束，之后两者旧值均无消费者。采用源一完全原地Mul须查API重叠许可；不需要让xLocal和xf跨dtype共用地址。20case逐项公式显示整数mask系数至少减少4，float32 mask和X组合也一致；scale=NaN/Inf(case12/13)或0(case7)均保留完整两个乘法及特殊值。",
+  "execution": "CPU integer/formula assertions only; no original module import, hardware or correctness run",
+  "performance": "not_measured"
+}

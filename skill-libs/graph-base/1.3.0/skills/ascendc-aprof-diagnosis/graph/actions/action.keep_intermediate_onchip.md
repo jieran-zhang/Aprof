@@ -2,7 +2,7 @@
 schema_version: aprof.diagnosis-record/v1
 id: action.keep_intermediate_onchip
 kind: action
-version: 1.1.0
+version: 1.2.0
 status: active
 title: 保持中间结果片上驻留
 scope:
@@ -96,8 +96,6 @@ transformation: 保持中间结果片上驻留
 preconditions:
 - fact: symptom.source.gm_intermediate_roundtrip
   state: true
-- fact: symptom.profile.gm_traffic_amplified
-  state: true
 - fact: constraint.semantic_equivalence
   state: true
 - fact: constraint.capacity
@@ -106,7 +104,7 @@ invariants:
 - 算子语义与精度要求保持
 - 有效写回无重叠且覆盖完整
 - 资源与依赖约束经核验
-expected_effect: 由机制相关指标和统一计时共同核验；不承诺收益。
+expected_effect: 合法驻留可去掉对应中间写读，但UB/L1占用、tile缩小或spill可抵消；实际外部流量减少需后续确认。 是否作用于关键路径及实际收益由后继验证，不能由Action就绪推出。
 slots:
 - name: target
   kind: tensor
@@ -173,7 +171,7 @@ claims:
 - id: intervention
   text: 在已有合法片上边界内让生产结果直接供本地消费者使用
   basis: mechanism_inference
-  source_indexes: &id001
+  source_indexes:
   - 1
   - 2
   - 3
@@ -189,17 +187,42 @@ claims:
 - id: costs
   text: 中间值驻留延长并可能减少tile或buffer数；外部消费者需要额外输出，不能删除其可见性
   basis: mechanism_inference
-  source_indexes: *id001
+  source_indexes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
   review_status: reviewed
   limitations:
   - 代价需要绑定具体候选量化，尚无本任务收益
 - id: producer_consumer_binding
   text: 实例以中间tensor T作为scope主target；producer与consumer必须分别绑定current.objects内当前实现的生产阶段和消费阶段ID，不能用候选执行后的阶段代替当前边界。两阶段的原始/派生证据均须绑定同一T、parent实现与workload，并注明各自stage；不得跨tensor借证据。T的其他消费者、所有权及GM可见性另按原硬前提核验。
   basis: mechanism_inference
-  source_indexes: *id001
+  source_indexes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
   review_status: reviewed
   limitations:
   - 新增对象绑定要求不改变原preconditions或invariants；这里只验证元数据关系，不能代替C++语义/同步证明
+- id: condition_separation
+  text: 中间值的生产者、全部消费者、owner、外部可见性及生命周期已知；只有已获C2许可的合法片上边界内可以删除对应GM往返。 GM中间写读是地址和生命周期事实；必须核验外部消费者，不能把总GM放大归因到该tensor。
+    合法驻留可去掉对应中间写读，但UB/L1占用、tile缩小或spill可抵消；实际外部流量减少需后续确认。
+  basis: mechanism_inference
+  source_indexes: []
+  review_status: reviewed
+  limitations:
+  - 本次基于已有模板、包内来源和变换语义的条件分层归纳，不是上游新增性能结论。
+  - 性能证据不足不等于变换不安全；实施安全也不证明当前关键路径、收益或试验优先级。
 review:
   state: reviewed_with_limits
   source_credibility: 固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。
@@ -228,7 +251,7 @@ instantiation:
   costs:
   - 中间值驻留延长并可能减少tile或buffer数
   - 外部消费者需要额外输出，不能删除其可见性
-  unknown_policy: 任一硬前提缺失、unknown或proxy则needs_evidence；明确不满足则blocked。C2可比较条件方案，C3须完成全部原前提及invariants核验。
+  unknown_policy: 实施前逐条满足本版本preconditions与invariants；安全/结构条件缺失则指出具体未证项，C2可继续条件分析，C3不得绕过。性能假设独立记录：来源与当前源码足以支持适用时，可在合法且有试验价值的条件下提出优化，不以尚无严格性能实测一律否决；不把未知写成确认。Action优先级由成本机会比较和补证据决策形成。
   replan_triggers:
   - 目标/阶段、owner或有效元素域变化
   - 算法、归并/同步拓扑、workspace owner、融合、通路或dispatch域超出已确认C2计划自由度
@@ -243,21 +266,34 @@ instantiation:
 
 同一kernel内具有本地生产者和消费者的中间tensor；阶段：kernel生产中间值；GM暂存再搬回；本地消费。
 
-## 实例绑定与原硬前提
+## 实例绑定与实施安全条件
 
-实例必须给出精确template_hash、task与parent实现、目标和阶段；参数逐项给单位、来源及有效域，关联已确认C2计划。未知信息不从样例常量或聊天推断。
+实例必须给出精确template_hash、task与parent实现、目标和阶段；参数逐项给单位、来源及有效域，关联已确认C2计划。来源/源码/合法API与资源公式可以证明安全，无需将每项伪装成硬件观测。
 
-- target
-- stage
-- workload
-- implementation
+中间值的生产者、全部消费者、owner、外部可见性及生命周期已知；只有已获C2许可的合法片上边界内可以删除对应GM往返。
 
-- symptom.source.gm_intermediate_roundtrip=true
-- symptom.profile.gm_traffic_amplified=true
-- constraint.semantic_equivalence=true
-- constraint.capacity=true
+- `symptom.source.gm_intermediate_roundtrip=true`：GM中间写读是地址和生命周期事实；必须核验外部消费者，不能把总GM放大归因到该tensor。
+- `constraint.semantic_equivalence=true`：完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。
+- `constraint.capacity=true`：按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。
 
-原invariants：算子语义与精度要求保持；有效写回无重叠且覆盖完整；资源与依赖约束经核验。
+不变量：算子语义与精度要求保持；有效写回无重叠且覆盖完整；资源与依赖约束经核验。
+
+## 性能假设、比较与补证据
+
+GM中间写读是地址和生命周期事实；必须核验外部消费者，不能把总GM放大归因到该tensor。
+
+合法驻留可去掉对应中间写读，但UB/L1占用、tile缩小或spill可抵消；实际外部流量减少需后续确认。
+
+以下旧门槛作为性能/选择线索保留，不再与实施安全混用；期望false也原样保留：
+
+- `symptom.profile.gm_traffic_amplified=true`：GM流量放大用于机制归因；是否可删除特定中间读写取决于消费者可见性、生命周期和容量。
+
+1. 按目标tensor逐次列写读地址、唯一/重复字节和消费者，算驻留峰值与可能挤掉的buffer/tile容量。
+2. 比较保留、重算与GM交接方案；无GM放大计数时可凭精确冗余往返与容量模型提出试验。
+
+已有来源说明该方法，并且当前源码形态、对象、目标API与约束匹配时，即可将其作为有依据的优化候选；不要求先完成严格性能实验。每个unknown只写具体缺失项、决策影响和是否值得补证据。若补充检查不会改变候选选择，就记录预测后进入获授权的试验，不把“信息不完备”当统一否决。反之，安全未知或明确不适用必须阻断实施。
+
+本Action能实施只是准入。选择前应与当前workload的主要字节、逐元素工作、任务/流水机会比较，说明预计改变何种成本、影响哪些case、可能代价及为何优先；不能以容易等价作为唯一理由。R2把R1实际patch与预测逐项对照，区分支持、削弱和无法判断；继续同一Action应有新证据、不同参数或尚未验证的预测，不要求机械换Action。
 
 ## 预期效果与代价
 
@@ -268,7 +304,7 @@ instantiation:
 
 ## 未知与返回规划
 
-任一硬前提缺失、unknown或proxy则needs_evidence；明确不满足则blocked。C2可比较条件方案，C3须完成全部原前提及invariants核验。
+实施前逐条满足本版本preconditions与invariants；安全/结构条件缺失则指出具体未证项，C2可继续条件分析，C3不得绕过。性能假设独立记录：来源与当前源码足以支持适用时，可在合法且有试验价值的条件下提出优化，不以尚无严格性能实测一律否决；不把未知写成确认。Action优先级由成本机会比较和补证据决策形成。
 
 - 目标/阶段、owner或有效元素域变化
 - 算法、归并/同步拓扑、workspace owner、融合、通路或dispatch域超出已确认C2计划自由度
@@ -326,3 +362,10 @@ arch35文档区分跨迭代常驻与串行阶段分时复用，并要求重叠�
 实例以中间tensor T作为scope主target；producer与consumer必须分别绑定current.objects内当前实现的生产阶段和消费阶段ID，不能用候选执行后的阶段代替当前边界。两阶段的原始/派生证据均须绑定同一T、parent实现与workload，并注明各自stage；不得跨tensor借证据。T的其他消费者、所有权及GM可见性另按原硬前提核验。
 
 来源索引：1, 2, 3, 4, 5, 6, 7, 8。限制：保留全部原硬前提；元数据绑定不替代C++语义与同步证明。
+
+
+### condition_separation [mechanism_inference]
+
+中间值的生产者、全部消费者、owner、外部可见性及生命周期已知；只有已获C2许可的合法片上边界内可以删除对应GM往返。 GM中间写读是地址和生命周期事实；必须核验外部消费者，不能把总GM放大归因到该tensor。 合法驻留可去掉对应中间写读，但UB/L1占用、tile缩小或spill可抵消；实际外部流量减少需后续确认。
+
+本次维护归纳；原来源与许可不变。旧条件逐项去向见包内 `workflows/references/action-condition-policy.json`，v0004前提仅在历史快照继续按原义回放。

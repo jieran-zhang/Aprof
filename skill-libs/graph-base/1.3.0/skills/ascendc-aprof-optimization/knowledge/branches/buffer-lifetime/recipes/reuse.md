@@ -2,7 +2,7 @@
 schema_version: aprof.knowledge-record/v1
 id: implementation.buffer-lifetime.reuse
 kind: recipe
-version: 1.1.0
+version: 1.2.0
 status: active
 title: 存活期、合法复用与 UB 布局核验
 scope:
@@ -53,6 +53,46 @@ sources:
   - 144
   sha256: sha256:a41ac2ff57f181c342d823a1b453bfabfb20c56bf840e31f4dff7232cefdc80a
   excerpt_sha256: sha256:9b82f521bfc25b8c16cea361e35e230d057580630377745c5a4a099d56a39447
+- path: skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_host/rope_interleaved_tiling.cpp
+  original_path: posembedding/rotary_position_embedding/op_host/rope_interleaved_tiling.cpp
+  revision: d7e6a7c6c1450c040049486845336c77f3100406
+  lines:
+  - 1
+  - 395
+  sha256: sha256:0f2bac0d6cd52e57ef38976b7fb8205e3104f2e0ea26f3689f0be1dd0a09cec6
+  excerpt_sha256: sha256:0f2bac0d6cd52e57ef38976b7fb8205e3104f2e0ea26f3689f0be1dd0a09cec6
+- path: skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_kernel/rotary_position_embedding.cpp
+  original_path: posembedding/rotary_position_embedding/op_kernel/rotary_position_embedding.cpp
+  revision: d7e6a7c6c1450c040049486845336c77f3100406
+  lines:
+  - 1
+  - 291
+  sha256: sha256:5160d08c053ba32694df0c699d31ddc9b67a26d3ae4545f4fb9d6122efc3400e
+  excerpt_sha256: sha256:5160d08c053ba32694df0c699d31ddc9b67a26d3ae4545f4fb9d6122efc3400e
+- path: skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bs.h
+  original_path: posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bs.h
+  revision: d7e6a7c6c1450c040049486845336c77f3100406
+  lines:
+  - 1
+  - 299
+  sha256: sha256:92e2365907ffbd499d113d173a67bd2ade41d1a92d82f3d20b3965eaad17b001
+  excerpt_sha256: sha256:92e2365907ffbd499d113d173a67bd2ade41d1a92d82f3d20b3965eaad17b001
+- path: skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_common.h
+  original_path: posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_common.h
+  revision: d7e6a7c6c1450c040049486845336c77f3100406
+  lines:
+  - 1
+  - 145
+  sha256: sha256:564521918a374297b74d8bdfad264bcd8359c0be3689188e0ac83490de4360e1
+  excerpt_sha256: sha256:564521918a374297b74d8bdfad264bcd8359c0be3689188e0ac83490de4360e1
+- path: skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md
+  original_path: ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md
+  revision: 41377d0a442cd5b1c2356874873a3dda591c6633
+  lines:
+  - 1
+  - 478
+  sha256: sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c
+  excerpt_sha256: sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c
 learning: {}
 tags:
 - alias
@@ -66,7 +106,6 @@ references:
 - implementation.tiling-tail.valid-length
 evidence_status: source_reviewed_not_benchmarked
 ---
-
 # 按最后消费者安排合法复用与 UB 布局
 
 ## 原理与适用条件
@@ -119,3 +158,13 @@ AscendC::Add(yB, temp, xB, nB);
 覆盖单tile/多tile、两阶段不同长度、最后短tile、重复运行、所有dtype路径及跨tile状态。偶发错误常说明异步消费者未结束；形状越大越错常说明容量/元素单位混淆。先恢复独立 buffer 和原完成边验证，再局部重做共享，不能以加大 UB 上界掩盖越界。收益看实际静态分配、最大tile与Task；省UB但串行化热点可能劣化。
 
 来源事实：InitBuffer/Get 文档给出字节/元素契约；Add 实例用 V_MTE2、MTE3_V 表达输入和输出槽最后消费者。生命周期模型、下界与静态分配的区分、串行 polynomial 片段是工程提炼；没有目标 SDK 编译和 NPU 性能证明。
+
+## 区分“复用同一地址”与“保留同一个值”
+
+本条的主意图是串行生命周期共享存储；若一个值将被多次消费，保留它会延长生命周期，反而减少可共享空间。分别记录原始输入值、派生表/转换值和可重算标量：输入重复读取减少的是相应存储层访问；派生值复用减少构造或转换，不一定减少原始tensor流量；多个临时值共用地址只减少分配峰值，可能并未减少计算。
+
+设派生状态每tile有Q个元素、每元素s字节、复用r次。重算做r次构造；保留做1次构造及r次读取，显式驻留至少`AlignUp(Q*s,32)`字节，再加槽/metadata。构造次数减少`r-1`，但缓存后tile若变小、任务更少或访问更离散，收益可能反转。UB字节可以精确预算；Scalar自动数组的寄存器/栈/spill只有编译结果才可确认，不把数组声明字节直接加进UB。
+
+固定ops-transformer RoPE SplitBS在Process前构造一次Gather偏移表供各seq/batch迭代使用，保留`headDim*numHeads*sizeof(int32_t)`的索引区；host按dtype及转换临时区选择可容纳的批量范围。它同时复用cos/sin的临时地址，通过V→MTE2完成边等待前值最后消费。前者是值复用，后者是存储复用，不能合并成“都省输入”。该源码只支持所示RoPE布局和分派，不能直接证明任意采样坐标算法的数值等价。
+
+若要把计算迁到外层、改变复用轴或扩大owner域，先确认C2和Action意图覆盖；`hoist_invariant_control`不自动授权任意数学状态预计算，`reuse_input_tiles`也不自动代表派生几何复用。派生状态采用独立action.reuse_derived_results，管理简化采用独立action.simplify_buffer_event_management（均须经独立复核的冻结注册版本）；条件不满足时保留机会/提案，不借旧Action通过交接。

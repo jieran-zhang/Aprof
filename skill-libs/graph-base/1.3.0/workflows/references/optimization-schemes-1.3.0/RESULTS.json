@@ -1,0 +1,2088 @@
+{
+  "schema": "aprof.scheme-maintenance-results/v1",
+  "package_version": "1.3.0",
+  "publication": "unsealed",
+  "runtime": "0.8.0",
+  "knowledge": {
+    "diagnosis": "v0006",
+    "parallel-planning": "v0003",
+    "optimization": "v0006",
+    "routing": "v0005"
+  },
+  "hardware": false,
+  "training": false,
+  "default_version_changed": false,
+  "subject_tool_calls": 0,
+  "comparison_with_previous_skill": false,
+  "retrieval_efficiency_evaluated": false,
+  "grading_identity": "sha256:082087d0692142f720813a8747c60e9fccce9cd47b333e96b3d6f0781e15296e",
+  "grade_aggregate": {
+    "answers": 8,
+    "score_sum": 80,
+    "max_score_sum": 80,
+    "explicit_failure_count": 0,
+    "interpretation": "在允许条件方案与保留实现的冻结静态标准下，八答均达到五维充分档；不代表实施已就绪、硬件通过或已证实总体改进。"
+  },
+  "runs": [
+    {
+      "id": "grid_sampler_3d-1",
+      "anonymous_id": "answer-c4844129d1",
+      "answer_sha256": "sha256:7bfea4fdca70540ef6843fcf83f3c1a8ade59e1ec478bf0f34903d8a8ac03b75",
+      "plan": "原owner及几何/取数不变，bilinear算术批量Vector，T∈256/512/1024",
+      "actions": [
+        {
+          "id": "action.vectorize_scalar_loop",
+          "use": "adopted",
+          "instance_count": 1
+        }
+      ],
+      "problem_mentions": [
+        {
+          "id": "problem.control_metadata_overhead",
+          "use": "referenced",
+          "effect": "地址解码替代并非默认优先。"
+        },
+        {
+          "id": "problem.fragmented_writeback",
+          "use": "referenced",
+          "effect": "FP32块写回为Vector结果配套步骤，不重复计成员。"
+        },
+        {
+          "id": "problem.noncontiguous_access",
+          "use": "referenced",
+          "effect": "不以输出连续推出X连续。"
+        },
+        {
+          "id": "problem.redundant_cast",
+          "use": "rejected",
+          "effect": "输入扩位/最终缩位承担数值边界。"
+        }
+      ],
+      "documents": [
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/coordinate_neighborhood.md",
+          "use": "adopted",
+          "effect": "采用不共享几何的输出连续块；跨c派生几何需明确注册意图。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+          "use": "adopted",
+          "effect": "逐tile count Mul/Add发射，保留运算图。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/cast.md",
+          "use": "adopted",
+          "effect": "保持FP16实际最终CAST_NONE路径。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+          "use": "adopted",
+          "effect": "保留三乘与八次顺序累加、Inf×0等特殊值，FTZ/FMA待核验。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+          "use": "adopted",
+          "effect": "FP32输出从Scalarstore改有效块搬出。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/strided-pad.md",
+          "use": "referenced",
+          "effect": "规则DMA不能表达随机X gather，拒绝源窗口自动连续假设。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/recipes/valid-length.md",
+          "use": "adopted",
+          "effect": "尾有效字节不向GM补齐。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+          "use": "referenced",
+          "effect": "term/acc/样本/权重共同存活，独立分配不做alias。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+          "use": "referenced",
+          "effect": "保守单槽完成边，不进行本轮流水变换。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/compare-select-tail.md",
+          "use": "rejected",
+          "effect": "坐标clamp向量化会新增比较补齐与8KiB，不夹带。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+          "use": "referenced",
+          "effect": "地址解码是低资源替代，字段CSE需编译证据。"
+        }
+      ],
+      "score": 10,
+      "out_of": 10,
+      "gaps": [
+        {
+          "kind": "implementation_prerequisite",
+          "blocking_implementation": true,
+          "finding": "实际SDK Mul/Add精确alias、Scalar/Vector浮点模式、UB/预留尚未闭合，最终源码与全oracle未执行；回答准确保留conditional_plan。",
+          "evidence_lines": [
+            209,
+            210,
+            366,
+            431,
+            477
+          ]
+        },
+        {
+          "kind": "residual",
+          "blocking_implementation": false,
+          "finding": "nearest、几何重算、随机X读取及FP16标量扩位保留；跨c几何状态有注册意图缺口。",
+          "evidence_lines": [
+            164,
+            172,
+            478
+          ]
+        }
+      ],
+      "model": "gpt-6.1-sol",
+      "tool_calls": 0,
+      "response_status": "completed",
+      "input_tokens": 181208,
+      "output_tokens": 9280,
+      "wall_seconds": 272.135
+    },
+    {
+      "id": "grid_sampler_3d-2",
+      "anonymous_id": "answer-01c6ded3ab",
+      "answer_sha256": "sha256:c039bbd129fc7be46c7896272629ce5c085808d6be468a0b1fa68b93b998ddb5",
+      "plan": "输出owner不变，Scalar生成坐标/样本，Vector按原八项顺序计算bilinear，nearest保留",
+      "actions": [
+        {
+          "id": "action.vectorize_scalar_loop",
+          "use": "adopted",
+          "instance_count": 1
+        }
+      ],
+      "problem_mentions": [
+        {
+          "id": "problem.noncontiguous_access",
+          "use": "referenced",
+          "effect": "拒绝用规则stride冒充随机gather。"
+        }
+      ],
+      "documents": [
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/coordinate_neighborhood.md",
+          "use": "adopted",
+          "effect": "采用输出连续块、独立几何的分支，拒绝将跨c派生几何复用归入输入驻留。"
+        },
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+          "use": "referenced",
+          "effect": "只采用输出独占/间接取数原则，不冒称GatherElements完整骨架。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+          "use": "adopted",
+          "effect": "连续count计算，24Mul+8Add按tile发射。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/cast.md",
+          "use": "adopted",
+          "effect": "保留实际FP16 CAST_NONE最终边界。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+          "use": "adopted",
+          "effect": "不预乘权重、不跳零项、不改FMA/累加树。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+          "use": "adopted",
+          "effect": "FP32结果按连续有效区汇总写回。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/recipes/valid-length.md",
+          "use": "adopted",
+          "effect": "有效元素数、GM有效字节与UB物理跨度分开。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+          "use": "referenced",
+          "effect": "单槽保守完成边，未采用流水优化。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+          "use": "referenced",
+          "effect": "按独立物理区核算，本轮拒绝别名复用。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/compare-select-tail.md",
+          "use": "rejected",
+          "effect": "完整坐标向量化的256B比较域/8KiB临时区增加成本，本轮不并入。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+          "use": "referenced",
+          "effect": "作为地址分段外提替代。"
+        }
+      ],
+      "score": 10,
+      "out_of": 10,
+      "gaps": [
+        {
+          "kind": "implementation_prerequisite",
+          "blocking_implementation": true,
+          "finding": "目标Mul/Add/Cast的浮点/精确alias、SDK与完整UB预留仍须闭合；回答明确conditional_plan，未假称已通过。",
+          "evidence_lines": [
+            430,
+            436
+          ]
+        },
+        {
+          "kind": "residual",
+          "blocking_implementation": false,
+          "finding": "nearest、跨c几何重算、Scalar随机取数和输入扩位保留；没有将全正确性覆盖冒称全域优化。",
+          "evidence_lines": [
+            458,
+            461
+          ]
+        }
+      ],
+      "model": "gpt-6.1-sol",
+      "tool_calls": 0,
+      "response_status": "completed",
+      "input_tokens": 181208,
+      "output_tokens": 9049,
+      "wall_seconds": 275.338
+    },
+    {
+      "id": "maximum-1",
+      "anonymous_id": "answer-3ac7de846c",
+      "answer_sha256": "sha256:0386dfe379738dcecf2dc821b3b9db933ac5f8a0b240ec843dc245fa39856135",
+      "plan": "同形int8的6Cast+float Max改3Cast+half Max，完整int8域精确",
+      "actions": [
+        {
+          "id": "action.coalesce_cast",
+          "use": "adopted",
+          "instance_count": 1
+        }
+      ],
+      "problem_mentions": [
+        {
+          "id": "problem.scalar_control_hot_loop",
+          "use": "referenced",
+          "effect": "支持广播数据计算批量化替代。"
+        },
+        {
+          "id": "problem.broadcast_strategy_mismatch",
+          "use": "referenced",
+          "effect": "区分解码、展开及源复用。"
+        },
+        {
+          "id": "problem.pipeline_serialization",
+          "use": "referenced",
+          "effect": "单槽不自动证明重叠不足或增槽收益。"
+        }
+      ],
+      "documents": [
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+          "use": "adopted",
+          "effect": "原连续owner、tile、物理槽及转换区按字节计。"
+        },
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/broadcast.md",
+          "use": "referenced",
+          "effect": "比较广播替代，不能padding后伪造axis=0原shape合法性。"
+        },
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/fallback.md",
+          "use": "referenced",
+          "effect": "保留原路径不等于已验证fallback。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/cast.md",
+          "use": "adopted",
+          "effect": "用完整int8域的half精确表示删除3条转换，不推广BF16/int64。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+          "use": "adopted",
+          "effect": "整数精确域与浮点NaN/Max/三元选择区分。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/compare-select-tail.md",
+          "use": "referenced",
+          "effect": "广播替代成本含256B比较域、predicate与8KiB临时区，本轮未采用。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+          "use": "referenced",
+          "effect": "三个half区独立，不申报物理alias节省。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/recipes/valid-length.md",
+          "use": "adopted",
+          "effect": "有效count与对齐分配分开。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+          "use": "rejected",
+          "effect": "不将节省空间自动用于双缓冲。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+          "use": "referenced",
+          "effect": "int64线性索引/广播段解码替代，保留精确比较。"
+        }
+      ],
+      "score": 10,
+      "out_of": 10,
+      "gaps": [
+        {
+          "kind": "implementation_prerequisite",
+          "blocking_implementation": true,
+          "finding": "安装SDK的half Max/转换具体位置与同步、可用UB和隐含预留尚待核验；不是该纸面证明的事实错误。",
+          "evidence_lines": [
+            367
+          ]
+        },
+        {
+          "kind": "inherited_source_boundary",
+          "blocking_implementation": false,
+          "finding": "一般FP16广播与浮点Scalar三元选择的既有API域问题单列；本轮只改同形int8，不夸大全域正确。",
+          "evidence_lines": [
+            28,
+            70
+          ]
+        }
+      ],
+      "model": "gpt-6.1-sol",
+      "tool_calls": 0,
+      "response_status": "completed",
+      "input_tokens": 180424,
+      "output_tokens": 10002,
+      "wall_seconds": 295.854
+    },
+    {
+      "id": "maximum-2",
+      "anonymous_id": "answer-77a9a43cb4",
+      "answer_sha256": "sha256:395eeb9eda40cebc9c523916f4bed19607b4bbca0fa272f4f6d2dad9dd138ff6",
+      "plan": "同形int8精确half Max链，保留owner/4096tile，广播为强替代",
+      "actions": [
+        {
+          "id": "action.coalesce_cast",
+          "use": "adopted",
+          "instance_count": 1
+        }
+      ],
+      "problem_mentions": [
+        {
+          "id": "problem.control_metadata_overhead",
+          "use": "referenced",
+          "effect": "字段缓存不消除主要逐元素数据处理。"
+        },
+        {
+          "id": "problem.cache_policy_mismatch",
+          "use": "referenced",
+          "effect": "不将单次输入推成无复用/统一bypass。"
+        }
+      ],
+      "documents": [
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+          "use": "adopted",
+          "effect": "按原owner、tile和真实转换区资源建立计划。"
+        },
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/broadcast.md",
+          "use": "referenced",
+          "effect": "连续短行/广播原形状与展开域进入替代成本。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/cast.md",
+          "use": "adopted",
+          "effect": "完整int8域精确half表示，保留两次扩位与一次缩位。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+          "use": "adopted",
+          "effect": "三元选择/Max、NaN与数值替换分开。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/compare-select-tail.md",
+          "use": "referenced",
+          "effect": "FP32比较补齐、predicate、Select 8KiB影响广播替代。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+          "use": "referenced",
+          "effect": "独立half区，不将逻辑生存期自动转为物理复用。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/recipes/valid-length.md",
+          "use": "adopted",
+          "effect": "有效count和GM字节、物理对齐分开。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/bounds.md",
+          "use": "adopted",
+          "effect": "空owner不调用，尾count/地址范围闭合。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+          "use": "rejected",
+          "effect": "本轮不叠加无必要依赖的双物理槽。"
+        }
+      ],
+      "score": 10,
+      "out_of": 10,
+      "gaps": [
+        {
+          "kind": "implementation_prerequisite",
+          "blocking_implementation": true,
+          "finding": "SDK half Max/Cast支持和V内依赖、UB隐含预留与最终完整oracle待核验；条件方案范围准确。",
+          "evidence_lines": [
+            213,
+            220,
+            253,
+            308
+          ]
+        },
+        {
+          "kind": "inherited_source_boundary",
+          "blocking_implementation": false,
+          "finding": "通用half广播和浮点三元选择的既有问题未被int8优化掩盖。",
+          "evidence_lines": [
+            77,
+            79,
+            388
+          ]
+        }
+      ],
+      "model": "gpt-6.1-sol",
+      "tool_calls": 0,
+      "response_status": "completed",
+      "input_tokens": 180424,
+      "output_tokens": 10007,
+      "wall_seconds": 314.091
+    },
+    {
+      "id": "reduction_sum-1",
+      "anonymous_id": "answer-f57f8ae4c2",
+      "answer_sha256": "sha256:85d11c36e114d0be548fd9636613a9f11e5a98510f8db42cb47328bb288b9638",
+      "plan": "保留现有单核AR全载；基础ReduceSum、增核/流水均作具体成本比较",
+      "actions": [],
+      "problem_mentions": [
+        {
+          "id": "problem.underused_task_parallelism",
+          "use": "referenced",
+          "effect": "独立行只有128B，要联合考虑固定成本。"
+        },
+        {
+          "id": "problem.tiny_transfer_setup_amplification",
+          "use": "rejected",
+          "effect": "一次全载不等于存在可合并碎片。"
+        },
+        {
+          "id": "problem.fragmented_writeback",
+          "use": "rejected",
+          "effect": "单次32B写回不等于碎片化。"
+        },
+        {
+          "id": "problem.pipeline_serialization",
+          "use": "rejected",
+          "effect": "单tile真依赖不支持自动添加双缓冲。"
+        }
+      ],
+      "documents": [
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/fullload.md",
+          "use": "adopted",
+          "effect": "当前AR全载h=3、容量及有效/对齐长度原则。"
+        },
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/split.md",
+          "use": "rejected",
+          "effect": "短R的partial/merge新增成本阻止本轮采用。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+          "use": "referenced",
+          "effect": "当前读/写各一次，不能再登记合并收益。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+          "use": "rejected",
+          "effect": "没有next tile，不为流水制造分块。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+          "use": "adopted",
+          "effect": "保留原FP32数值/归约范围，不外推生成小整数域。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/bounds.md",
+          "use": "adopted",
+          "effect": "保持8个可见输出和5个padding零。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+          "use": "referenced",
+          "effect": "Sum时各区有用途，不能按逻辑生存期伪造物理复用。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/tilingdata-access.md",
+          "use": "rejected",
+          "effect": "按值5字段无热循环，不套GM字段缓存。"
+        }
+      ],
+      "score": 10,
+      "out_of": 10,
+      "gaps": [
+        {
+          "kind": "alternative_prerequisite",
+          "blocking_implementation": false,
+          "finding": "若后续重开基础ReduceSum，需scratch、目的地址/布局、三结果打包与意图归属；本次保留选择不要求强行试验。",
+          "evidence_lines": [
+            180,
+            185,
+            276
+          ]
+        },
+        {
+          "kind": "inherited_oracle_boundary",
+          "blocking_implementation": false,
+          "finding": "全部8输出、NaN比较、短输入/未检返回值/比较失败exit0均单列，后继验收不能以原exit0当正确性。",
+          "evidence_lines": [
+            282,
+            286
+          ]
+        }
+      ],
+      "model": "gpt-6.1-sol",
+      "tool_calls": 0,
+      "response_status": "completed",
+      "input_tokens": 178031,
+      "output_tokens": 6374,
+      "wall_seconds": 194.038
+    },
+    {
+      "id": "reduction_sum-2",
+      "anonymous_id": "answer-a3f44151bb",
+      "answer_sha256": "sha256:51fbace7939eef97041b4c83b297d0853f1203f23a5f37327fbff7c75036d845",
+      "plan": "保留单核AR全载，基础ReduceSum仅作为有具体API缺项的强替代",
+      "actions": [],
+      "problem_mentions": [
+        {
+          "id": "problem.reduction_strategy_mismatch",
+          "use": "referenced",
+          "effect": "短R全载不能仅凭一核认定失配。"
+        },
+        {
+          "id": "problem.underused_task_parallelism",
+          "use": "referenced",
+          "effect": "三行独立与每行只有128B同时比较。"
+        },
+        {
+          "id": "problem.tiny_transfer_setup_amplification",
+          "use": "rejected",
+          "effect": "一次全载无可合并碎片。"
+        },
+        {
+          "id": "problem.pipeline_serialization",
+          "use": "rejected",
+          "effect": "单批真依赖不自动是错误串行。"
+        }
+      ],
+      "documents": [
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/fullload.md",
+          "use": "adopted",
+          "effect": "解释当前AR全载h=3；容量包含输入/输出/scratch及预留。"
+        },
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/split.md",
+          "use": "rejected",
+          "effect": "R=32的partial/merge新增工作不支持本轮采用。"
+        },
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/fallback.md",
+          "use": "referenced",
+          "effect": "未经验证父entry不冒称已验证fallback。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+          "use": "referenced",
+          "effect": "确认输入输出已各一次，无可再次登记的合并收益。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+          "use": "rejected",
+          "effect": "单tile无独立next tile，拒绝为流水制造片段。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+          "use": "referenced",
+          "effect": "Sum时输入/输出/scratch均参与，不可未经alias证明重叠。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/tilingdata-access.md",
+          "use": "rejected",
+          "effect": "20B按值tiling无用户热循环，不套GM指针外提。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+          "use": "adopted",
+          "effect": "生成整数域不外推任意FP32/特殊值。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/bounds.md",
+          "use": "adopted",
+          "effect": "全部8个物理输出及padding约束保留。"
+        }
+      ],
+      "score": 10,
+      "out_of": 10,
+      "gaps": [
+        {
+          "kind": "alternative_prerequisite",
+          "blocking_implementation": false,
+          "finding": "保留R0不需强制新增候选。若重开ReduceSum，scratch、目的地址/打包和注册意图仍需明确；这些缺项阻止替代方案直接实施，不否决知识。",
+          "evidence_lines": [
+            168,
+            171,
+            273,
+            274
+          ]
+        },
+        {
+          "kind": "inherited_oracle_boundary",
+          "blocking_implementation": false,
+          "finding": "输入短文件、未检查ACL返回值、比较失败仍exit0等限制已明确，未来验收不能只看退出码。",
+          "evidence_lines": [
+            95,
+            316
+          ]
+        }
+      ],
+      "model": "gpt-6.1-sol",
+      "tool_calls": 0,
+      "response_status": "completed",
+      "input_tokens": 178031,
+      "output_tokens": 7873,
+      "wall_seconds": 230.015
+    },
+    {
+      "id": "transpose-1",
+      "anonymous_id": "answer-a8d96b5afc",
+      "answer_sha256": "sha256:f8a39b6bb1e2466c4e27a4171025570743e1899000da9944116e51e1bf8c5deb",
+      "plan": "双端连续轴矩形/条带任务，DMA+原始整数Scalar UB重排，通用回退",
+      "actions": [
+        {
+          "id": "action.reorder_contiguous_access",
+          "use": "adopted",
+          "instance_count": 1
+        }
+      ],
+      "problem_mentions": [
+        {
+          "id": "problem.insufficient_input_reuse",
+          "use": "rejected",
+          "effect": "双射一次消费不满足重复原输入读取。"
+        },
+        {
+          "id": "problem.cache_policy_mismatch",
+          "use": "referenced",
+          "effect": "一次性读取不自动证明bypass更好。"
+        },
+        {
+          "id": "problem.tail_slow_path",
+          "use": "rejected",
+          "effect": "全域Scalar不是仅尾慢分支。"
+        }
+      ],
+      "documents": [
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md",
+          "use": "adopted",
+          "effect": "选择输出owner与双端连续轴矩形，合法合轴、高rank保留外轴映射。"
+        },
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/fallback.md",
+          "use": "referenced",
+          "effect": "保留一般Raw映射，不把未经验证父实现叫正确fallback。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+          "use": "adopted",
+          "effect": "连续条带可直接批量复制。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/strided-pad.md",
+          "use": "adopted",
+          "effect": "GM字节间隙、UB32B块间隙与固定pitch公式。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/recipes/valid-length.md",
+          "use": "adopted",
+          "effect": "有效va/vb与物理Lx/Ly不混用。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/bounds.md",
+          "use": "adopted",
+          "effect": "字段窄化/最后GM地址及尾部检查。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+          "use": "referenced",
+          "effect": "局部置换期间双区同时存活，不取max。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+          "use": "referenced",
+          "effect": "初版浅单槽，不宣称预取/流水收益。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+          "use": "referenced",
+          "effect": "输出计数器S2作为无UB替代。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+          "use": "adopted",
+          "effect": "按原始整数lane/字节复制，不做浮点算术转换。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+          "use": "rejected",
+          "effect": "count/mask信息不能外推为通用Vector转置能力。"
+        }
+      ],
+      "score": 10,
+      "out_of": 10,
+      "gaps": [
+        {
+          "kind": "implementation_prerequisite",
+          "blocking_implementation": true,
+          "finding": "原始整数DMA支持、Scalar UB访问与DMA交接可见性、实际UB预算未闭合；这是一份有准确公式和映射的条件方案，不是可直接执行候选。",
+          "evidence_lines": [
+            442,
+            448,
+            512
+          ]
+        },
+        {
+          "kind": "conditional_physical_boundary",
+          "blocking_implementation": true,
+          "finding": "相邻矩形/跨核短行物理写入契约须确认；若需要共同物理owner会返回C2，没有声称逻辑不重叠已证明安全。",
+          "evidence_lines": [
+            454,
+            456
+          ]
+        }
+      ],
+      "model": "gpt-6.1-sol",
+      "tool_calls": 0,
+      "response_status": "completed",
+      "input_tokens": 170815,
+      "output_tokens": 9715,
+      "wall_seconds": 292.185
+    },
+    {
+      "id": "transpose-2",
+      "anonymous_id": "answer-3be217d2ac",
+      "answer_sha256": "sha256:cf9102541255fa5a9def53d4dd3b609fb4d9d697523cf3434c46c78cef84b5ba",
+      "plan": "共同连续尾段批量DMA；其余置换保持Raw复制并用混合进位递推地址",
+      "actions": [
+        {
+          "id": "action.coalesce_contiguous_transfers",
+          "use": "adopted",
+          "instance_count": 1
+        },
+        {
+          "id": "action.hoist_invariant_control",
+          "use": "adopted",
+          "instance_count": 1
+        }
+      ],
+      "problem_mentions": [
+        {
+          "id": "problem.insufficient_input_reuse",
+          "use": "rejected",
+          "effect": "置换双射，一次逻辑消费不满足原输入多消费者。"
+        },
+        {
+          "id": "problem.cache_policy_mismatch",
+          "use": "referenced",
+          "effect": "一次性访问不证明缓存策略错。"
+        },
+        {
+          "id": "problem.dynamic_shape_mismatch",
+          "use": "referenced",
+          "effect": "不因20case造阈值/Key。"
+        }
+      ],
+      "documents": [
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md",
+          "use": "adopted",
+          "effect": "双端连续性、输出owner、合轴边界决定连续段和通用映射两路。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+          "use": "adopted",
+          "effect": "仅共同连续区合并，2/4B DMA视图无数值运算。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/strided-pad.md",
+          "use": "adopted",
+          "effect": "有效GM字节与UB对齐跨度分开，case14写508B。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+          "use": "adopted",
+          "effect": "初始解码与有界进位更新，保留相同元素序列。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/tilingdata-access.md",
+          "use": "referenced",
+          "effect": "没有整结构栈拷贝可删，不优先少量字段缓存。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/recipes/valid-length.md",
+          "use": "adopted",
+          "effect": "段长度不得跨连续尾段/owner/tile边界。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/bounds.md",
+          "use": "adopted",
+          "effect": "检查最大地址/乘法溢出，无符号回绕不造负stride。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+          "use": "referenced",
+          "effect": "浅单槽完成后复用，本轮不叠加流水变换。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+          "use": "rejected",
+          "effect": "原路径无独立临时区可复用，不添加arena。"
+        }
+      ],
+      "score": 10,
+      "out_of": 10,
+      "gaps": [
+        {
+          "kind": "implementation_prerequisite",
+          "blocking_implementation": true,
+          "finding": "VECIN TBuf→GM DataCopyPad方向/位置/类型及非对齐写出契约、可用UB、最终递推地址尚待闭合；回答没有把这些缺项藏在ready里。",
+          "evidence_lines": [
+            388,
+            391
+          ]
+        },
+        {
+          "kind": "residual",
+          "blocking_implementation": false,
+          "finding": "其余18case仍Scalar离散GM复制，矩形保位转置API路线待补；未宣称全部perm均变成DMA转置。",
+          "evidence_lines": [
+            127,
+            148,
+            158
+          ]
+        }
+      ],
+      "model": "gpt-6.1-sol",
+      "tool_calls": 0,
+      "response_status": "completed",
+      "input_tokens": 170815,
+      "output_tokens": 8827,
+      "wall_seconds": 284.333
+    }
+  ],
+  "history_runs": {
+    "schema": "aprof.history-qualitative-review/v1",
+    "reviewed_at_utc": "2026-10-21T12:01:11.071006+00:00",
+    "initial_grades_were_locked_before_history_read": true,
+    "initial_grades_sha256": "sha256:082087d0692142f720813a8747c60e9fccce9cd47b333e96b3d6f0781e15296e",
+    "masking_json_read": false,
+    "scored_separately": true,
+    "hardware_feedback": false,
+    "records": [
+      {
+        "operator": "grid_sampler_3d",
+        "round": 2,
+        "path": "history-runs/grid_sampler_3d-r2/answer.md",
+        "answer_sha256": "sha256:85f2ee190b5ee0e2d46909fbf8922f7f50cb3ccdadaddee552c26ece7de5a3a6",
+        "summary_consumption": true,
+        "new_information": "外部给定128KiB/核规划预算，不是设备观测",
+        "response": "保留原Action，但把未闭合alias改为18个独立FP32数组的保守条件布局，计算74T/72T+R及1024/1536/2048、双槽预算；几何复用仍保留注册意图缺口与成本。",
+        "evidence": [
+          {
+            "path": "history-runs/grid_sampler_3d-r2/answer.md",
+            "start_line": 1,
+            "end_line": 1,
+            "quote": "**简短更新：**先复用前轮摘要，再核对 R0 的计算、分核与缓冲区。源码、workload、结果状态均未变；新增的 **128KiB/核规划预算**使容量可定量约束，但没有证明收益或强迫换方案。保留三线性算术向量化的条件方案，收紧 tile/槽数；几何复用仍是强替代，不能因有容量预算就视为已获实施许可。"
+          },
+          {
+            "path": "history-runs/grid_sampler_3d-r2/answer.md",
+            "start_line": 16,
+            "end_line": 29,
+            "quote": "为避免依赖未证实的原地 alias，可采用保守布局：8个邻值、6个轴权重、2个乘法临时区、2个交替累加区，共18个 FP32 数组。原 `fpBuf` 计入累加区，不另重复计费；FP16 另保留输出 half 区。令其余实际 scratch、对齐和预留为 R：\n\n- FP16：`U=74T+R` 字节；\n- FP32：`U=72T+R` 字节。\n\n这是拟定布局，不是 R0 已有分配。按材料 `buffer-lifetime/recipes/reuse.md`，独立静态分配不能仅凭用途错峰就取最大值。\n\nFP16 下：\n- T=1024：74KiB，剩54KiB；\n- T=1536：111KiB，须 R≤17KiB；\n- T=2048：148KiB，**不合法**。\n- 全套双槽在1024同样超预算；768双槽为111KiB，但不代表已有重叠。\n\n因此暂以1024单槽为保守起点，不因容量允许就扩大。具体 scratch 未闭合前，不能宣布实施合法。"
+          },
+          {
+            "path": "history-runs/grid_sampler_3d-r2/answer.md",
+            "start_line": 39,
+            "end_line": 41,
+            "quote": "举例保存8个64位空间偏移、6个FP32轴权重及4字节有效标记，三线性描述约92字节/点；逐通道消费并保留FP16输出区时约 `98St+R`。St=1024约98KiB，1536已超预算。nearest 描述可更小，尤其值得继续比较 case5。\n\n代价是长存活表、描述读取、跨通道访问及任务数变化：约为 `N·ceil(C/Ct)·ceil(S/St)`。它不是向量化方案的免费附加项；组合须重算共同峰值，且派生几何复用的注册意图缺口仍未补齐。"
+          }
+        ],
+        "limits": [
+          "布局只是新纸面提案，未改R0。",
+          "具体scratch/alias仍未知，128KiB不是实施许可。"
+        ],
+        "issue": null
+      },
+      {
+        "operator": "grid_sampler_3d",
+        "round": 3,
+        "path": "history-runs/grid_sampler_3d-r3/answer.md",
+        "answer_sha256": "sha256:4c5d82eb655c334a90fc213559a08857eaef7fe106aba93882255efc21c98230",
+        "summary_consumption": true,
+        "new_information": "没有新增源码/实现/正确性/性能证据，外部三轮范围结束",
+        "response": "没有强换Action或造新候选，保留R0及条件方案，交付18数组容量、34/35调用表达式模型、几何复用/nearest残余，按外部三轮范围结束。",
+        "evidence": [
+          {
+            "path": "history-runs/grid_sampler_3d-r3/answer.md",
+            "start_line": 1,
+            "end_line": 1,
+            "quote": "**简短更新：**已先复用前轮摘要，再核对 R0 与相关材料。源码、20例 workload、128KiB/核规划预算及未测状态均未变；本轮只完成最终比较与收尾。**最终保留 `GS3D-R1-trilinear-vector` 条件方案，不实施、不晋升；实际保留实现仍为 R0。**三轮静态授权至此结束，不自动追加补证或实验轮次。"
+          },
+          {
+            "path": "history-runs/grid_sampler_3d-r3/answer.md",
+            "start_line": 15,
+            "end_line": 23,
+            "quote": "保守拟定布局为18个FP32数组，FP16另含输出half区；原 `fpBuf` 已计入，不重复收费。其余scratch、对齐及预留记为R：\n\n- FP16：`74T+R`字节；FP32：`72T+R`字节。\n- 保留 **T=1024、单槽**起点：分别占74/72KiB，余54/56KiB。\n- FP16的1536仅余17KiB；2048及1024全套双槽超预算，不采用。容量余量不等于scratch已经闭合。\n\n令各核有效长度为Lb，批次数为 `Σceil(Lb/T)`。按表达式模型，每批约24次Mul、8次Add、一次初始化和一次写回，FP16另一次Cast，即34/35次API调用，不含同步、不等于机器指令数。\n\n减少的是逐元素Scalar算术；新增邻值/权重UB写入、Vector读写和依赖。随机X读取、FP16标量扩位、坐标重算仍保留；FP32批量写回是方案组成，不能再重复计算收益。上述布局和工作变化**均未实现**。"
+          },
+          {
+            "path": "history-runs/grid_sampler_3d-r3/answer.md",
+            "start_line": 37,
+            "end_line": 37,
+            "quote": "**交付结论：静态分析已完成，工程实施未开始。保留R0及上述条件方案，不宣称正确性、收益或正式验收。**"
+          }
+        ],
+        "limits": [
+          "没有把R1/R2布局改写为实际实现。",
+          "调用计数为表达式模型，初始化选型/同步仍须实现核对。"
+        ],
+        "issue": null
+      },
+      {
+        "operator": "maximum",
+        "round": 2,
+        "path": "history-runs/maximum-r2/answer.md",
+        "answer_sha256": "sha256:3bfb6a14259466dc6bd88222919a91ecec12de9e814a2e8911caa34921c4b9a2",
+        "summary_consumption": true,
+        "new_information": "外部给定128KiB/核规划预算，不是设备观测",
+        "response": "保留int8转换链收缩，以128KiB核算R0 17T与S1 9T及4096/8192/16384参数边界，固定T的6L→3L与放大tile另减L分别计数；广播、双槽、case18驻留重新比较。",
+        "evidence": [
+          {
+            "path": "history-runs/maximum-r2/answer.md",
+            "start_line": 1,
+            "end_line": 1,
+            "quote": "**简短更新：**先沿用前轮三部分摘要，再核对 R0 的 `InitBuffer`、分派与新增预算。源码、workload、执行路径均未变，前轮删 Cast 的预测尚未兑现。128KiB 是本轮规划约束，不是设备探测值；它不否决 S1，但限制 tile 放大及多槽组合。保留 S1 条件方案，不作性能晋升。"
+          },
+          {
+            "path": "history-runs/maximum-r2/answer.md",
+            "start_line": 21,
+            "end_line": 31,
+            "quote": "- R0：\\(3A(T)+3A(4T)+A(2T)+H\\)\n- S1：\\(3A(T)+3A(2T)+H\\le131072\\) 字节\n\n| T（元素） | R0显式分配 | S1显式分配 |\n|---|---:|---:|\n|4096|69,632B|36,864B|\n|8192|139,264B，超预算|73,728B|\n\n因此**保留4096为首选纸面参数**；8192可比较，尚非最优结论。16384的 S1 数据区已达147,456B，不合法。忽略H且T取32倍数时，S1上限为14560；这不是可直接采用的完整容量结论。\n\n令 \\(L(T)=\\sum_c\\lceil N_c/T\\rceil\\)：固定4096时，Cast 调用由 \\(6L\\) 拟减为 \\(3L\\)，Max仍为L，搬入2L、搬出L；有效GM流量仍为3N字节。放大tile才另行减少L，不能重复计收益。"
+          },
+          {
+            "path": "history-runs/maximum-r2/answer.md",
+            "start_line": 35,
+            "end_line": 40,
+            "quote": "- **广播段化/源复用，case11/12/13/20：**可减少逐元素rank级解码，但新增搬运、展开、padding和同步。FP32 Compare/Select 的8192元素基础预算为107,520B，已含predicate和8KiB临时区；源驻留及其他分配还须加入。37、101短行若独立比较，分别需覆盖64、128执行元素；513×4不满足静态axis=0源宽32B约束，不能靠UB补齐假满足。整数路径不能套用浮点Compare/Select。\n- **int64 case5/19：**同形直接线性索引、广播段级解码仍有价值，预算不直接否决；不得转float损失完整值域。\n- **流水组合：**S1双份输入/输出、单份三个half scratch，在8192时为98,304B＋H；若全部翻倍则147,456B，超预算。共享scratch还须证明跨tile依赖，双槽不等于已重叠。\n- **case18驻留：**完整广播源对齐后16,416B；在原24,576B缓冲之外追加仍有预算空间，但收益取决于重复copy与依赖成本。\n\nS1继续保留，理由是消除工作明确、无新增广播布局；不是因更易验证或前轮已投入。其他方案潜在收益可能更大，现无时间依据排序。"
+          }
+        ],
+        "limits": [
+          "107520B比较/选择基础预算另加驻留与其他实际分配。",
+          "S1仍是conditional_plan，无SDK通过或收益。"
+        ],
+        "issue": null
+      },
+      {
+        "operator": "maximum",
+        "round": 3,
+        "path": "history-runs/maximum-r3/answer.md",
+        "answer_sha256": "sha256:b9dab8cc17ecf8ad2a4119140ea856a919211633feda1b382994fcf51fda8bb6",
+        "summary_consumption": true,
+        "new_information": "没有新增源码/实现/正确性/性能证据，外部三轮范围结束",
+        "response": "保留同一Action条件方案和R0，明确不因已投入而自动继续；结束本授权范围且不追加第四轮，资源/GM工作/未测残余持续保留。",
+        "evidence": [
+          {
+            "path": "history-runs/maximum-r3/answer.md",
+            "start_line": 1,
+            "end_line": 1,
+            "quote": "**简短更新：**先沿用前轮摘要，再核对 R0 的分派、`InitBuffer` 和有效尾块。源码、workload、128KiB分析预算及证据均未变化；删 Cast、放大 tile、流水重叠都未实施或验证。最终保留 S1 条件方案与 R0 实现，不强制换方案；三轮静态分析至此结束，无性能晋升。"
+          },
+          {
+            "path": "history-runs/maximum-r3/answer.md",
+            "start_line": 23,
+            "end_line": 25,
+            "quote": "T=4096时，显式分配69,632→36,864B，继续作为首选纸面参数；8192时R0为139,264B、超预算，S1为73,728B＋H，仍可比较但非最优结论；16384的S1数据区已超预算。\n\n令 \\(L=\\sum_c\\lceil N_c/T\\rceil\\)。固定T时拟将Cast调用6L减至3L，Max仍L、搬入2L、搬出L，有效GM流量仍3N字节。只有放大T才另减L，不能重复计收益；减少调用不等于时延同比下降。"
+          },
+          {
+            "path": "history-runs/maximum-r3/answer.md",
+            "start_line": 36,
+            "end_line": 36,
+            "quote": "S1保留是因为可消除的转换工作明确且不新增广播布局，不是因为更易验证或已有投入。广播/int64可能收益更大，现无时间依据判定赢家。`continuous.md`、`reuse.md`约束实际静态分配；`compare-select-tail.md`约束广播替代的执行粒度与容量。"
+          },
+          {
+            "path": "history-runs/maximum-r3/answer.md",
+            "start_line": 42,
+            "end_line": 42,
+            "quote": "**最终决定：结束本授权范围，交付S1条件方案，工程上保留R0，不提交性能结论。**这不是实现后的KEEP/NOOP，也不是机制证伪。若未来另获执行授权，应先闭合API、容量及完成边，再做全20例正确性与有效计时；保持NaN/Inf/±0及整数精确合同。若S1减少工作却不改善关键路径，再重开广播/int64比较；不自动追加第四轮。"
+          }
+        ],
+        "limits": [
+          "原工程正确性仍未验证。",
+          "同Action基于数值/工作依据保留，不是验证机制成立。"
+        ],
+        "issue": null
+      }
+    ],
+    "finding": "四份均实际回应所给三部分摘要和新增/未变约束。R2重算预算，R3无新证据时保留R0并按外部范围交付；未发现强换Action、未测当反证或纸面计划变实现的退化。",
+    "coverage_limits": [
+      "这组是摘要作为prompt输入的静态/合成后继，不能证明自主文件读取顺序或硬件反馈闭环。",
+      "四份没有真实失败候选、实际patch或有效/无效计时；相关行为不能据此外推。"
+    ]
+  },
+  "checks": {
+    "decision-v3": {
+      "schema_version": "aprof.development-check/v1",
+      "kind": "decision-v3-regression-evidence",
+      "generated_at": "2026-10-21T12:09:11.934791+00:00",
+      "status": "passed",
+      "hardware_used": false,
+      "new_test_runs_performed_for_this_report": false,
+      "source_package_mutation": false,
+      "summary": {
+        "unique_passed": 25,
+        "total_passed_executions": 26,
+        "failed_in_accepted_batches": 0,
+        "base_passed": 21,
+        "supplement_passed": 4,
+        "overlap_between_base_and_supplement": 1,
+        "ancestor_passed": 1,
+        "formula": "21 + 4 - 1 + 1 = 25",
+        "duplicate_test_ids": [
+          "test_members_can_have_distinct_targets_without_borrowing_evidence"
+        ]
+      },
+      "provenance": {
+        "result_source": "Tool outputs from sessions 56126, 91151, 75110 recorded during development",
+        "inventory_method": "Read retained fixture test AST and apply the original -k selectors; no pytest invocation",
+        "fixture_hash_method": "SHA-256 of retained fixture package files, computed at report curation time",
+        "execution_source_limit": "Python runtime modules were imported from the working tree. Retained fixture source copies are not a separately recorded hash attestation of imported code objects. Files changed between development batches.",
+        "interpretation": "This report records three historical passing batches and their versioned fixture snapshots; it does not claim one single 25-case run against the final working tree.",
+        "final_run_interpretation": "The final_run is a separate complete 25-case process against stable recorded source/schema hashes; earlier runs remain historical evidence."
+      },
+      "current_working_tree_file_sha256_at_curation": {
+        "runtime/src/aprof_runtime/action_decision.py": "sha256:8a5e7efcdfab0ffc406bd5dccd461a56335717f03f5b68ca283d0877f1765408",
+        "runtime/src/aprof_runtime/action_decision_v2.py": "sha256:b34b1d095002a04058e97ac144f43b4dfca5702d100355af4d2cc57552251c67",
+        "runtime/src/aprof_runtime/action_decision_v3.py": "sha256:aa26b3948ff07eee07ff109d02eb1209111e6459c416ac91b5aeb0b4a2777845",
+        "runtime/tests/test_action_decision_v3.py": "sha256:437ebff6425cdc99fc450eebf68eed045ef6ed197d4f5b86ff5a9337dbef4549",
+        "schemas/action-decision.schema.json": "sha256:a7ad5dc8912a8c63a7fe220d1690425c21f0dc7e018b9fd80abf05cfb5c9065e",
+        "schemas/action-decision-v2.schema.json": "sha256:a0b6081cf66191ffc4427d3c98020f7ec342a50de3f4766888e9b3d73278cbdb",
+        "schemas/action-decision-v3.schema.json": "sha256:e5cc21a4340e9d4d5932a3c9876d4258e952bc6ea5863889f27d2273b1a5ba31",
+        "runtime/src/aprof_runtime/knowledge.py": "sha256:f09921f590f7306cd7777415784f3b894576d48cbc648a24dc0d43d199d70076"
+      },
+      "runs": [
+        {
+          "id": "base-21",
+          "base": "/dev/shm/aprof-action-decision-v3-final",
+          "session_id": 56126,
+          "selector": null,
+          "passed": 21,
+          "deselected": 0,
+          "elapsed_seconds": 384.43,
+          "stdout_summary": "21 passed in 384.43s (0:06:24)",
+          "status": "passed",
+          "exit_code": 0,
+          "cwd": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/skill-libs/graph-base/1.3.0",
+          "environment": {
+            "PYTHONPATH": "runtime/src"
+          },
+          "command_argv": [
+            "python",
+            "-m",
+            "pytest",
+            "-q",
+            "runtime/tests/test_action_decision_v3.py",
+            "--basetemp",
+            "/dev/shm/aprof-action-decision-v3-final",
+            "--disable-warnings",
+            "--maxfail=1"
+          ],
+          "retained_fixture_package": "/dev/shm/aprof-action-decision-v3-final/scheme-package0/package",
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "collected_test_count": 21,
+          "selected_test_ids": [
+            "test_single_member_dispatch_and_unknown_performance",
+            "test_multi_member_shared_work_is_counted_once",
+            "test_scheme_must_be_complete_and_jointly_compared[missing_member]",
+            "test_scheme_must_be_complete_and_jointly_compared[borrow_instance]",
+            "test_scheme_must_be_complete_and_jointly_compared[double_work]",
+            "test_scheme_must_be_complete_and_jointly_compared[omit_work]",
+            "test_scheme_must_be_complete_and_jointly_compared[missing_cost]",
+            "test_scheme_must_be_complete_and_jointly_compared[wrong_role]",
+            "test_scheme_must_be_complete_and_jointly_compared[cycle]",
+            "test_scheme_must_be_complete_and_jointly_compared[unknown_step]",
+            "test_safety_unknown_and_planned_guarantee_are_not_actual_facts",
+            "test_lifetime_peak_uses_concurrent_allocations",
+            "test_round_three_replays_complete_feedback_without_forced_action_change",
+            "test_whole_scheme_predictions_drive_feedback",
+            "test_handoff_v4_requires_exact_scheme_and_all_members",
+            "test_compound_feedback_support_and_regression_are_scoped_not_single_factor[80-supported-False]",
+            "test_compound_feedback_support_and_regression_are_scoped_not_single_factor[110-weakened-False]",
+            "test_compound_feedback_support_and_regression_are_scoped_not_single_factor[80-supported-True]",
+            "test_invalid_measurement_and_repair_do_not_force_new_action",
+            "test_rescheduling_can_improve_overlap_without_falsely_claiming_less_work",
+            "test_members_can_have_distinct_targets_without_borrowing_evidence"
+          ],
+          "fixture_file_sha256": {
+            "runtime/src/aprof_runtime/action_decision.py": "sha256:e13c4fc628b890af966dd6086acdeac99ee4937bba821c0e20eb6ee933b5e02e",
+            "runtime/src/aprof_runtime/action_decision_v2.py": "sha256:b34b1d095002a04058e97ac144f43b4dfca5702d100355af4d2cc57552251c67",
+            "runtime/src/aprof_runtime/action_decision_v3.py": "sha256:9c8d57e9db7091e36ae1c747f11dbbc94c98f2e4078fd5007a84ccf584412520",
+            "runtime/tests/test_action_decision_v3.py": "sha256:a050d3a188f284e8675521aefc9ad63c47bd75bb62a42e912a44d9955ca926d4",
+            "schemas/action-decision.schema.json": "sha256:a7ad5dc8912a8c63a7fe220d1690425c21f0dc7e018b9fd80abf05cfb5c9065e",
+            "schemas/action-decision-v2.schema.json": "sha256:a0b6081cf66191ffc4427d3c98020f7ec342a50de3f4766888e9b3d73278cbdb",
+            "schemas/action-decision-v3.schema.json": "sha256:579f4d1872fce55f9d953548211f5764c6a91dfeb40dc8751e39094d465d8981",
+            "runtime/src/aprof_runtime/knowledge.py": "sha256:f09921f590f7306cd7777415784f3b894576d48cbc648a24dc0d43d199d70076"
+          },
+          "knowledge_identity": {
+            "routing_version": "v0005",
+            "routing_file_sha256": "sha256:fde21372195004f2ae06c2a295edd3ca726b0f00da220aa64ef8f1c0bc6507e2",
+            "bases": {
+              "diagnosis": {
+                "version": "v0006",
+                "sha256": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+                "path": "skills/ascendc-aprof-diagnosis/graph/versions/v0006/graph.json",
+                "file_sha256": "sha256:b460cd460145b58c7aac888f25d51a0cdcc1ca03e3c23a571b2938b556a83355"
+              },
+              "parallel-planning": {
+                "version": "v0003",
+                "sha256": "sha256:f56937bc9c128b179f561d0b3d774fef393778f61de55277b7a8b8c83d59e037",
+                "path": "skills/ascendc-aprof-parallel-planning/knowledge/versions/v0003/index.json",
+                "file_sha256": "sha256:6dccb74dae6be6780fa7bb03a6da3b82d505dd8e05619d9ba75259f63d4ecad1"
+              },
+              "optimization": {
+                "version": "v0006",
+                "sha256": "sha256:76dc0fb86667d0c2f1428729435420e1d3f43f143e784843b5ec7d77df094fae",
+                "path": "skills/ascendc-aprof-optimization/knowledge/versions/v0006/index.json",
+                "file_sha256": "sha256:0db892ab4dc38a7a72edcffc50e0c134cdefcf501f063c31af59cbe3aacdf3b8"
+              }
+            }
+          },
+          "evidence_kind": "Previously returned tool execution result; summaries transcribed without rerunning tests",
+          "original_raw_stdout_archived": false
+        },
+        {
+          "id": "supplement-4",
+          "base": "/dev/shm/aprof-action-decision-v3-extra-final",
+          "session_id": 91151,
+          "selector": "distinct_targets or distinct_registered or numerically_double or real_parameter_change",
+          "passed": 4,
+          "deselected": 20,
+          "elapsed_seconds": 139.68,
+          "stdout_summary": "4 passed, 20 deselected in 139.68s (0:02:19)",
+          "status": "passed",
+          "exit_code": 0,
+          "cwd": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/skill-libs/graph-base/1.3.0",
+          "environment": {
+            "PYTHONPATH": "runtime/src"
+          },
+          "command_argv": [
+            "python",
+            "-m",
+            "pytest",
+            "-q",
+            "runtime/tests/test_action_decision_v3.py",
+            "-k",
+            "distinct_targets or distinct_registered or numerically_double or real_parameter_change",
+            "--basetemp",
+            "/dev/shm/aprof-action-decision-v3-extra-final",
+            "--disable-warnings",
+            "--maxfail=1"
+          ],
+          "retained_fixture_package": "/dev/shm/aprof-action-decision-v3-extra-final/scheme-package0/package",
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "collected_test_count": 24,
+          "selected_test_ids": [
+            "test_members_can_have_distinct_targets_without_borrowing_evidence",
+            "test_distinct_registered_actions_share_scheme_but_not_policies",
+            "test_shared_work_cannot_be_numerically_double_counted",
+            "test_real_parameter_change_can_retest_same_prediction_but_renaming_cannot"
+          ],
+          "fixture_file_sha256": {
+            "runtime/src/aprof_runtime/action_decision.py": "sha256:8a5e7efcdfab0ffc406bd5dccd461a56335717f03f5b68ca283d0877f1765408",
+            "runtime/src/aprof_runtime/action_decision_v2.py": "sha256:b34b1d095002a04058e97ac144f43b4dfca5702d100355af4d2cc57552251c67",
+            "runtime/src/aprof_runtime/action_decision_v3.py": "sha256:6445f7dfc8c55d479e0d13ee20d21b028c27151129885d7a1c396e4cee15d8ff",
+            "runtime/tests/test_action_decision_v3.py": "sha256:efa431b7c404b01288339773c22c6821eed88a31a06bfd3e017efdc7a87c3fb2",
+            "schemas/action-decision.schema.json": "sha256:a7ad5dc8912a8c63a7fe220d1690425c21f0dc7e018b9fd80abf05cfb5c9065e",
+            "schemas/action-decision-v2.schema.json": "sha256:a0b6081cf66191ffc4427d3c98020f7ec342a50de3f4766888e9b3d73278cbdb",
+            "schemas/action-decision-v3.schema.json": "sha256:579f4d1872fce55f9d953548211f5764c6a91dfeb40dc8751e39094d465d8981",
+            "runtime/src/aprof_runtime/knowledge.py": "sha256:f09921f590f7306cd7777415784f3b894576d48cbc648a24dc0d43d199d70076"
+          },
+          "knowledge_identity": {
+            "routing_version": "v0005",
+            "routing_file_sha256": "sha256:fde21372195004f2ae06c2a295edd3ca726b0f00da220aa64ef8f1c0bc6507e2",
+            "bases": {
+              "diagnosis": {
+                "version": "v0006",
+                "sha256": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+                "path": "skills/ascendc-aprof-diagnosis/graph/versions/v0006/graph.json",
+                "file_sha256": "sha256:b460cd460145b58c7aac888f25d51a0cdcc1ca03e3c23a571b2938b556a83355"
+              },
+              "parallel-planning": {
+                "version": "v0003",
+                "sha256": "sha256:f56937bc9c128b179f561d0b3d774fef393778f61de55277b7a8b8c83d59e037",
+                "path": "skills/ascendc-aprof-parallel-planning/knowledge/versions/v0003/index.json",
+                "file_sha256": "sha256:6dccb74dae6be6780fa7bb03a6da3b82d505dd8e05619d9ba75259f63d4ecad1"
+              },
+              "optimization": {
+                "version": "v0006",
+                "sha256": "sha256:76dc0fb86667d0c2f1428729435420e1d3f43f143e784843b5ec7d77df094fae",
+                "path": "skills/ascendc-aprof-optimization/knowledge/versions/v0006/index.json",
+                "file_sha256": "sha256:0db892ab4dc38a7a72edcffc50e0c134cdefcf501f063c31af59cbe3aacdf3b8"
+              }
+            }
+          },
+          "evidence_kind": "Previously returned tool execution result; summaries transcribed without rerunning tests",
+          "original_raw_stdout_archived": false
+        },
+        {
+          "id": "ancestor-1",
+          "base": "/dev/shm/aprof-action-decision-v3-history",
+          "session_id": 75110,
+          "selector": "bound_ancestor",
+          "passed": 1,
+          "deselected": 24,
+          "elapsed_seconds": 95.94,
+          "stdout_summary": "1 passed, 24 deselected in 95.94s (0:01:35)",
+          "status": "passed",
+          "exit_code": 0,
+          "cwd": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/skill-libs/graph-base/1.3.0",
+          "environment": {
+            "PYTHONPATH": "runtime/src"
+          },
+          "command_argv": [
+            "python",
+            "-m",
+            "pytest",
+            "-q",
+            "runtime/tests/test_action_decision_v3.py",
+            "-k",
+            "bound_ancestor",
+            "--basetemp",
+            "/dev/shm/aprof-action-decision-v3-history",
+            "--disable-warnings",
+            "--maxfail=1"
+          ],
+          "retained_fixture_package": "/dev/shm/aprof-action-decision-v3-history/scheme-package0/package",
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "collected_test_count": 25,
+          "selected_test_ids": [
+            "test_round_three_can_return_to_bound_ancestor_parent_with_exact_lineage"
+          ],
+          "fixture_file_sha256": {
+            "runtime/src/aprof_runtime/action_decision.py": "sha256:8a5e7efcdfab0ffc406bd5dccd461a56335717f03f5b68ca283d0877f1765408",
+            "runtime/src/aprof_runtime/action_decision_v2.py": "sha256:b34b1d095002a04058e97ac144f43b4dfca5702d100355af4d2cc57552251c67",
+            "runtime/src/aprof_runtime/action_decision_v3.py": "sha256:aa26b3948ff07eee07ff109d02eb1209111e6459c416ac91b5aeb0b4a2777845",
+            "runtime/tests/test_action_decision_v3.py": "sha256:437ebff6425cdc99fc450eebf68eed045ef6ed197d4f5b86ff5a9337dbef4549",
+            "schemas/action-decision.schema.json": "sha256:a7ad5dc8912a8c63a7fe220d1690425c21f0dc7e018b9fd80abf05cfb5c9065e",
+            "schemas/action-decision-v2.schema.json": "sha256:a0b6081cf66191ffc4427d3c98020f7ec342a50de3f4766888e9b3d73278cbdb",
+            "schemas/action-decision-v3.schema.json": "sha256:e5cc21a4340e9d4d5932a3c9876d4258e952bc6ea5863889f27d2273b1a5ba31",
+            "runtime/src/aprof_runtime/knowledge.py": "sha256:f09921f590f7306cd7777415784f3b894576d48cbc648a24dc0d43d199d70076"
+          },
+          "knowledge_identity": {
+            "routing_version": "v0005",
+            "routing_file_sha256": "sha256:fde21372195004f2ae06c2a295edd3ca726b0f00da220aa64ef8f1c0bc6507e2",
+            "bases": {
+              "diagnosis": {
+                "version": "v0006",
+                "sha256": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+                "path": "skills/ascendc-aprof-diagnosis/graph/versions/v0006/graph.json",
+                "file_sha256": "sha256:b460cd460145b58c7aac888f25d51a0cdcc1ca03e3c23a571b2938b556a83355"
+              },
+              "parallel-planning": {
+                "version": "v0003",
+                "sha256": "sha256:f56937bc9c128b179f561d0b3d774fef393778f61de55277b7a8b8c83d59e037",
+                "path": "skills/ascendc-aprof-parallel-planning/knowledge/versions/v0003/index.json",
+                "file_sha256": "sha256:6dccb74dae6be6780fa7bb03a6da3b82d505dd8e05619d9ba75259f63d4ecad1"
+              },
+              "optimization": {
+                "version": "v0006",
+                "sha256": "sha256:76dc0fb86667d0c2f1428729435420e1d3f43f143e784843b5ec7d77df094fae",
+                "path": "skills/ascendc-aprof-optimization/knowledge/versions/v0006/index.json",
+                "file_sha256": "sha256:0db892ab4dc38a7a72edcffc50e0c134cdefcf501f063c31af59cbe3aacdf3b8"
+              }
+            }
+          },
+          "evidence_kind": "Previously returned tool execution result; summaries transcribed without rerunning tests",
+          "original_raw_stdout_archived": false
+        }
+      ],
+      "tests": [
+        {
+          "test_id": "test_single_member_dispatch_and_unknown_performance",
+          "function": "test_single_member_dispatch_and_unknown_performance",
+          "parameters": [],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "base-21"
+          ]
+        },
+        {
+          "test_id": "test_multi_member_shared_work_is_counted_once",
+          "function": "test_multi_member_shared_work_is_counted_once",
+          "parameters": [],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "base-21"
+          ]
+        },
+        {
+          "test_id": "test_scheme_must_be_complete_and_jointly_compared[missing_member]",
+          "function": "test_scheme_must_be_complete_and_jointly_compared",
+          "parameters": [
+            "missing_member"
+          ],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "base-21"
+          ]
+        },
+        {
+          "test_id": "test_scheme_must_be_complete_and_jointly_compared[borrow_instance]",
+          "function": "test_scheme_must_be_complete_and_jointly_compared",
+          "parameters": [
+            "borrow_instance"
+          ],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "base-21"
+          ]
+        },
+        {
+          "test_id": "test_scheme_must_be_complete_and_jointly_compared[double_work]",
+          "function": "test_scheme_must_be_complete_and_jointly_compared",
+          "parameters": [
+            "double_work"
+          ],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "base-21"
+          ]
+        },
+        {
+          "test_id": "test_scheme_must_be_complete_and_jointly_compared[omit_work]",
+          "function": "test_scheme_must_be_complete_and_jointly_compared",
+          "parameters": [
+            "omit_work"
+          ],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "base-21"
+          ]
+        },
+        {
+          "test_id": "test_scheme_must_be_complete_and_jointly_compared[missing_cost]",
+          "function": "test_scheme_must_be_complete_and_jointly_compared",
+          "parameters": [
+            "missing_cost"
+          ],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "base-21"
+          ]
+        },
+        {
+          "test_id": "test_scheme_must_be_complete_and_jointly_compared[wrong_role]",
+          "function": "test_scheme_must_be_complete_and_jointly_compared",
+          "parameters": [
+            "wrong_role"
+          ],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "base-21"
+          ]
+        },
+        {
+          "test_id": "test_scheme_must_be_complete_and_jointly_compared[cycle]",
+          "function": "test_scheme_must_be_complete_and_jointly_compared",
+          "parameters": [
+            "cycle"
+          ],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "base-21"
+          ]
+        },
+        {
+          "test_id": "test_scheme_must_be_complete_and_jointly_compared[unknown_step]",
+          "function": "test_scheme_must_be_complete_and_jointly_compared",
+          "parameters": [
+            "unknown_step"
+          ],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "base-21"
+          ]
+        },
+        {
+          "test_id": "test_safety_unknown_and_planned_guarantee_are_not_actual_facts",
+          "function": "test_safety_unknown_and_planned_guarantee_are_not_actual_facts",
+          "parameters": [],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "base-21"
+          ]
+        },
+        {
+          "test_id": "test_lifetime_peak_uses_concurrent_allocations",
+          "function": "test_lifetime_peak_uses_concurrent_allocations",
+          "parameters": [],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "base-21"
+          ]
+        },
+        {
+          "test_id": "test_round_three_replays_complete_feedback_without_forced_action_change",
+          "function": "test_round_three_replays_complete_feedback_without_forced_action_change",
+          "parameters": [],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "base-21"
+          ]
+        },
+        {
+          "test_id": "test_whole_scheme_predictions_drive_feedback",
+          "function": "test_whole_scheme_predictions_drive_feedback",
+          "parameters": [],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "base-21"
+          ]
+        },
+        {
+          "test_id": "test_handoff_v4_requires_exact_scheme_and_all_members",
+          "function": "test_handoff_v4_requires_exact_scheme_and_all_members",
+          "parameters": [],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "base-21"
+          ]
+        },
+        {
+          "test_id": "test_compound_feedback_support_and_regression_are_scoped_not_single_factor[80-supported-False]",
+          "function": "test_compound_feedback_support_and_regression_are_scoped_not_single_factor",
+          "parameters": [
+            80,
+            "supported",
+            false
+          ],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "base-21"
+          ]
+        },
+        {
+          "test_id": "test_compound_feedback_support_and_regression_are_scoped_not_single_factor[110-weakened-False]",
+          "function": "test_compound_feedback_support_and_regression_are_scoped_not_single_factor",
+          "parameters": [
+            110,
+            "weakened",
+            false
+          ],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "base-21"
+          ]
+        },
+        {
+          "test_id": "test_compound_feedback_support_and_regression_are_scoped_not_single_factor[80-supported-True]",
+          "function": "test_compound_feedback_support_and_regression_are_scoped_not_single_factor",
+          "parameters": [
+            80,
+            "supported",
+            true
+          ],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "base-21"
+          ]
+        },
+        {
+          "test_id": "test_invalid_measurement_and_repair_do_not_force_new_action",
+          "function": "test_invalid_measurement_and_repair_do_not_force_new_action",
+          "parameters": [],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "base-21"
+          ]
+        },
+        {
+          "test_id": "test_rescheduling_can_improve_overlap_without_falsely_claiming_less_work",
+          "function": "test_rescheduling_can_improve_overlap_without_falsely_claiming_less_work",
+          "parameters": [],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "base-21"
+          ]
+        },
+        {
+          "test_id": "test_members_can_have_distinct_targets_without_borrowing_evidence",
+          "function": "test_members_can_have_distinct_targets_without_borrowing_evidence",
+          "parameters": [],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "base-21",
+            "supplement-4"
+          ]
+        },
+        {
+          "test_id": "test_distinct_registered_actions_share_scheme_but_not_policies",
+          "function": "test_distinct_registered_actions_share_scheme_but_not_policies",
+          "parameters": [],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "supplement-4"
+          ]
+        },
+        {
+          "test_id": "test_shared_work_cannot_be_numerically_double_counted",
+          "function": "test_shared_work_cannot_be_numerically_double_counted",
+          "parameters": [],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "supplement-4"
+          ]
+        },
+        {
+          "test_id": "test_real_parameter_change_can_retest_same_prediction_but_renaming_cannot",
+          "function": "test_real_parameter_change_can_retest_same_prediction_but_renaming_cannot",
+          "parameters": [],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "supplement-4"
+          ]
+        },
+        {
+          "test_id": "test_round_three_can_return_to_bound_ancestor_parent_with_exact_lineage",
+          "function": "test_round_three_can_return_to_bound_ancestor_parent_with_exact_lineage",
+          "parameters": [],
+          "test_file": "runtime/tests/test_action_decision_v3.py",
+          "status": "passed",
+          "passed_in_runs": [
+            "ancestor-1"
+          ]
+        }
+      ],
+      "prior_development_attempts_excluded_from_acceptance": [
+        {
+          "result": "1 failed, 10 passed in 204.94s (0:03:24)",
+          "failure": "test_safety_unknown_and_planned_guarantee_are_not_actual_facts",
+          "cause": "Fixture copied a second safety unknown without its required evidence request.",
+          "resolution": "Copied the corresponding per-member request; did not weaken the runtime validator."
+        },
+        {
+          "result": "1 failed, 1 passed, 20 deselected in 90.46s (0:01:30)",
+          "failure": "test_distinct_registered_actions_share_scheme_but_not_policies",
+          "cause": "Fixture incorrectly asserted a composite fragmented_writeback Symptom as raw true.",
+          "resolution": "Constructed every frozen required_component and derived the composite; did not weaken the runtime validator."
+        }
+      ],
+      "log_sha256": "sha256:df3fee360a296e7aa69de876dc45a55e915f106a329efdfc47207fa6ec2fd348",
+      "counts": {
+        "passed": 25,
+        "failed": 0,
+        "unique_tests": 25,
+        "successful_test_executions": 26
+      },
+      "final_run": {
+        "id": "final-complete-25",
+        "status": "passed",
+        "cwd": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/skill-libs/graph-base/1.3.0",
+        "command_argv": [
+          "/usr/local/python3.11.15/bin/python",
+          "-m",
+          "pytest",
+          "-q",
+          "-p",
+          "no:cacheprovider",
+          "runtime/tests/test_action_decision_v3.py",
+          "--basetemp",
+          "/dev/shm/aprof-action-decision-v3-final-complete",
+          "--disable-warnings"
+        ],
+        "environment": {
+          "PYTHONPATH": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/skill-libs/graph-base/1.3.0/runtime/src",
+          "PYTHONDONTWRITEBYTECODE": "1"
+        },
+        "basetemp": "/dev/shm/aprof-action-decision-v3-final-complete",
+        "started_at": "2026-10-21T12:10:11.408675+00:00",
+        "hardware_used": false,
+        "source_package_mutation": false,
+        "source_schema_sha256_before": {
+          "runtime/src/aprof_runtime/action_decision.py": "sha256:8a5e7efcdfab0ffc406bd5dccd461a56335717f03f5b68ca283d0877f1765408",
+          "runtime/src/aprof_runtime/action_decision_v2.py": "sha256:b34b1d095002a04058e97ac144f43b4dfca5702d100355af4d2cc57552251c67",
+          "runtime/src/aprof_runtime/action_decision_v3.py": "sha256:aa26b3948ff07eee07ff109d02eb1209111e6459c416ac91b5aeb0b4a2777845",
+          "runtime/tests/test_action_decision_v3.py": "sha256:437ebff6425cdc99fc450eebf68eed045ef6ed197d4f5b86ff5a9337dbef4549",
+          "schemas/action-decision.schema.json": "sha256:a7ad5dc8912a8c63a7fe220d1690425c21f0dc7e018b9fd80abf05cfb5c9065e",
+          "schemas/action-decision-v2.schema.json": "sha256:a0b6081cf66191ffc4427d3c98020f7ec342a50de3f4766888e9b3d73278cbdb",
+          "schemas/action-decision-v3.schema.json": "sha256:e5cc21a4340e9d4d5932a3c9876d4258e952bc6ea5863889f27d2273b1a5ba31",
+          "runtime/src/aprof_runtime/knowledge.py": "sha256:f09921f590f7306cd7777415784f3b894576d48cbc648a24dc0d43d199d70076"
+        },
+        "log_path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/scaffolding/curation/graph-base-1.3.0-optimization-schemes/checks/decision-v3-final-complete.log",
+        "original_raw_stdout_archived": true,
+        "exit_code": 0,
+        "finished_at": "2026-10-21T12:18:10.063391+00:00",
+        "elapsed_seconds": 478.655,
+        "stdout_summary": "25 passed in 477.89s (0:07:57)",
+        "counts": {
+          "passed": 25,
+          "failed": 0
+        },
+        "source_schema_sha256_after": {
+          "runtime/src/aprof_runtime/action_decision.py": "sha256:8a5e7efcdfab0ffc406bd5dccd461a56335717f03f5b68ca283d0877f1765408",
+          "runtime/src/aprof_runtime/action_decision_v2.py": "sha256:b34b1d095002a04058e97ac144f43b4dfca5702d100355af4d2cc57552251c67",
+          "runtime/src/aprof_runtime/action_decision_v3.py": "sha256:aa26b3948ff07eee07ff109d02eb1209111e6459c416ac91b5aeb0b4a2777845",
+          "runtime/tests/test_action_decision_v3.py": "sha256:437ebff6425cdc99fc450eebf68eed045ef6ed197d4f5b86ff5a9337dbef4549",
+          "schemas/action-decision.schema.json": "sha256:a7ad5dc8912a8c63a7fe220d1690425c21f0dc7e018b9fd80abf05cfb5c9065e",
+          "schemas/action-decision-v2.schema.json": "sha256:a0b6081cf66191ffc4427d3c98020f7ec342a50de3f4766888e9b3d73278cbdb",
+          "schemas/action-decision-v3.schema.json": "sha256:e5cc21a4340e9d4d5932a3c9876d4258e952bc6ea5863889f27d2273b1a5ba31",
+          "runtime/src/aprof_runtime/knowledge.py": "sha256:f09921f590f7306cd7777415784f3b894576d48cbc648a24dc0d43d199d70076"
+        },
+        "log_sha256": "sha256:83349022c839f2a990c9de500629650bfba228b12e3fce35c889157fa0ef37a5",
+        "source_schema_unchanged_during_run": true,
+        "selected_test_ids": [
+          "test_single_member_dispatch_and_unknown_performance",
+          "test_multi_member_shared_work_is_counted_once",
+          "test_scheme_must_be_complete_and_jointly_compared[missing_member]",
+          "test_scheme_must_be_complete_and_jointly_compared[borrow_instance]",
+          "test_scheme_must_be_complete_and_jointly_compared[double_work]",
+          "test_scheme_must_be_complete_and_jointly_compared[omit_work]",
+          "test_scheme_must_be_complete_and_jointly_compared[missing_cost]",
+          "test_scheme_must_be_complete_and_jointly_compared[wrong_role]",
+          "test_scheme_must_be_complete_and_jointly_compared[cycle]",
+          "test_scheme_must_be_complete_and_jointly_compared[unknown_step]",
+          "test_safety_unknown_and_planned_guarantee_are_not_actual_facts",
+          "test_lifetime_peak_uses_concurrent_allocations",
+          "test_round_three_replays_complete_feedback_without_forced_action_change",
+          "test_whole_scheme_predictions_drive_feedback",
+          "test_handoff_v4_requires_exact_scheme_and_all_members",
+          "test_compound_feedback_support_and_regression_are_scoped_not_single_factor[80-supported-False]",
+          "test_compound_feedback_support_and_regression_are_scoped_not_single_factor[110-weakened-False]",
+          "test_compound_feedback_support_and_regression_are_scoped_not_single_factor[80-supported-True]",
+          "test_invalid_measurement_and_repair_do_not_force_new_action",
+          "test_rescheduling_can_improve_overlap_without_falsely_claiming_less_work",
+          "test_members_can_have_distinct_targets_without_borrowing_evidence",
+          "test_distinct_registered_actions_share_scheme_but_not_policies",
+          "test_shared_work_cannot_be_numerically_double_counted",
+          "test_real_parameter_change_can_retest_same_prediction_but_renaming_cannot",
+          "test_round_three_can_return_to_bound_ancestor_parent_with_exact_lineage"
+        ],
+        "collected_test_count": 25,
+        "hash_scope": "Explicitly listed decision implementation/test files, v1/v2/v3 schemas, and knowledge.py."
+      },
+      "final_tree_status": "passed",
+      "evidence_totals": {
+        "unique_scenarios": 25,
+        "historical_successful_test_executions": 26,
+        "final_complete_successful_test_executions": 25,
+        "all_successful_test_executions": 51
+      }
+    },
+    "grade-integrity": {
+      "quotes_checked": 40,
+      "issues": []
+    },
+    "legacy-decisions.metadata": {
+      "schema_version": "aprof.development-check/v1",
+      "kind": "legacy-decision-regression",
+      "status": "passed",
+      "cwd": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/skill-libs/graph-base/1.3.0",
+      "command": [
+        "/usr/local/python3.11.15/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "runtime/tests/test_action_decision.py",
+        "runtime/tests/test_action_decision_v2.py",
+        "--basetemp",
+        "/dev/shm/aprof-scheme-legacy-decisions-20261021",
+        "--disable-warnings"
+      ],
+      "environment": {
+        "PYTHONPATH": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/skill-libs/graph-base/1.3.0/runtime/src",
+        "PYTHONDONTWRITEBYTECODE": "1"
+      },
+      "started_at": "2026-10-21T11:55:02.512501+00:00",
+      "hardware_used": false,
+      "source_package_mutation": false,
+      "log_path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/scaffolding/curation/graph-base-1.3.0-optimization-schemes/checks/legacy-decisions.log",
+      "exit_code": 0,
+      "finished_at": "2026-10-21T12:02:43.641104+00:00",
+      "elapsed_seconds": 461.129,
+      "pytest_summary": "60 passed in 460.51s (0:07:40)",
+      "counts": {
+        "passed": 60
+      }
+    },
+    "old-v3-outcome-operator": {
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "runtime/tests/test_scheme_cli.py",
+        "-k",
+        "old_v3_link",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp",
+        "/dev/shm/aprof-scheme-v3-outcome-operator-20261021"
+      ],
+      "environment": {
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "PYTHONPATH": "runtime/src"
+      },
+      "cwd": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/skill-libs/graph-base/1.3.0",
+      "status": "passed",
+      "hardware": false,
+      "reason": "独立复核新增算子身份检查后重跑受影响的旧v3正反例",
+      "exit_code": 0,
+      "pytest_seconds": 269.03,
+      "summary": "1 passed, 3 deselected in 269.03s (0:04:29)",
+      "assertions": [
+        "正常v3结果关联",
+        "相同source/candidate但request与result均属于其他operator被拒",
+        "request/result operator不一致被拒",
+        "修改result而不重算decision_hash被拒"
+      ],
+      "source_hashes": {
+        "runtime/src/aprof_runtime/knowledge_outcome.py": "sha256:0a89ac30c2d0e6747c8f2da18529c0edee60a94cf3bed71393a5e598500fe122",
+        "runtime/tests/test_scheme_cli.py": "sha256:dee995a39578b805def9066d843426bd0cf7e85c37fde386073461e37b71cf7c"
+      }
+    },
+    "package": {
+      "group": "package",
+      "command": [
+        "/usr/local/python3.11.15/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "runtime/tests/test_workflow_package.py",
+        "runtime/tests/test_knowledge_v130.py",
+        "runtime/tests/test_diagnosis_integration_v130.py",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp",
+        "/dev/shm/aprof-scheme-package-20261021",
+        "--maxfail=2"
+      ],
+      "cwd": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/skill-libs/graph-base/1.3.0",
+      "status": "passed",
+      "hardware": false,
+      "exit_code": 0,
+      "wall_seconds": 1245.027,
+      "summary": "18 passed in 1244.52s (0:20:44)"
+    },
+    "protected": {
+      "relative_to": "actual working tree at task start",
+      "checked": {
+        "diagnosis_generator": 1,
+        "knowledge.py": 1,
+        "old_schemas": 45,
+        "diagnosis": 447,
+        "optimization": 164,
+        "parallel-planning": 174,
+        "condition_policy": 2,
+        "routing": 7,
+        "1.2.0": 586
+      },
+      "changed": [],
+      "passed": true,
+      "hardware": false
+    },
+    "public-cli": {
+      "group": "public-cli",
+      "command": [
+        "/usr/local/python3.11.15/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "runtime/tests/test_scheme_cli.py",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp",
+        "/dev/shm/aprof-scheme-public-cli-20261021",
+        "--maxfail=2"
+      ],
+      "cwd": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/skill-libs/graph-base/1.3.0",
+      "status": "passed",
+      "hardware": false,
+      "exit_code": 0,
+      "wall_seconds": 318.998,
+      "summary": "4 passed in 318.28s (0:05:18)"
+    },
+    "standalone": {
+      "copy": "/dev/shm/aprof-scheme-130-offline-ssy2u0_h/package",
+      "exit_code": 0,
+      "result": {
+        "standalone": true,
+        "runtime": "0.8.0",
+        "knowledge": [
+          "D6",
+          "P3",
+          "O6",
+          "routing5"
+        ],
+        "compiled_in_memory": true,
+        "frozen_snapshots_overwritten": false,
+        "cases": [
+          {
+            "case": "single",
+            "members": 1,
+            "status": "implemented"
+          },
+          {
+            "case": "multiple",
+            "members": 2,
+            "status": "implemented"
+          }
+        ],
+        "package_status": "unsealed",
+        "network": false,
+        "original_tree": false,
+        "upstream": false,
+        "hardware": false,
+        "guard_probes_rejected": 2
+      },
+      "hardware": false,
+      "final_runtime_identity": {
+        "runtime/src/aprof_runtime/knowledge_outcome.py": "sha256:0a89ac30c2d0e6747c8f2da18529c0edee60a94cf3bed71393a5e598500fe122",
+        "runtime/src/aprof_runtime/action_decision_v3.py": "sha256:aa26b3948ff07eee07ff109d02eb1209111e6459c416ac91b5aeb0b4a2777845",
+        "runtime/src/aprof_runtime/bindings_v4.py": "sha256:c2e30512348bb2ef5ea5218bfc36b5e83ccc2c42dd447992dddbff409308929b",
+        "schemas/action-decision-v3.schema.json": "sha256:e5cc21a4340e9d4d5932a3c9876d4258e952bc6ea5863889f27d2273b1a5ba31",
+        "schemas/knowledge-handoff-v4.schema.json": "sha256:9d5e2cd60ff2acce4374d905f3099f83259e948dbbe92bb50532320dab5935c4",
+        "runtime/src/aprof_runtime/knowledge.py": "sha256:f09921f590f7306cd7777415784f3b894576d48cbc648a24dc0d43d199d70076"
+      }
+    },
+    "bindings": {
+      "kind": "graph-base-1.3.0-scheme-bindings-cpu-checks",
+      "recorded_at": "2026-10-21T12:07:00.294109+00:00",
+      "cwd": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/skill-libs/graph-base/1.3.0",
+      "python": "3.11.15",
+      "hardware_experiments": false,
+      "performance_causal_claim": false,
+      "checks": [
+        {
+          "name": "handoff/v4 complete",
+          "command": "PYTHONPATH=runtime/src pytest -q runtime/tests/test_action_handoff_v4.py --basetemp /dev/shm/aprof-v4-bindings-tests-20261021-complete -x",
+          "passed": 46,
+          "deselected": 0,
+          "elapsed_seconds": 781.68,
+          "exit_code": 0,
+          "stdout_summary": "46 passed in 781.68s (0:13:01)"
+        },
+        {
+          "name": "handoff/v3 full compatibility",
+          "command": "PYTHONPATH=runtime/src pytest -q runtime/tests/test_action_handoff_v3.py --basetemp /dev/shm/aprof-v3-handoff-compat-20261021 -x",
+          "passed": 45,
+          "deselected": 0,
+          "elapsed_seconds": 325.67,
+          "exit_code": 0,
+          "stdout_summary": "45 passed in 325.67s (0:05:25)"
+        },
+        {
+          "name": "final scheme_level outcome positive",
+          "command": "PYTHONPATH=runtime/src pytest -q runtime/tests/test_action_handoff_v4.py -k result_link_preserves_scheme_all_member_docs_and_exact_source --basetemp /dev/shm/aprof-v4-link-scheme-level-20261021 -x",
+          "passed": 1,
+          "deselected": 45,
+          "elapsed_seconds": 32.33,
+          "exit_code": 0,
+          "stdout_summary": "1 passed, 45 deselected in 32.33s"
+        }
+      ],
+      "final_file_hashes": {
+        "runtime/src/aprof_runtime/bindings_v4.py": "sha256:c2e30512348bb2ef5ea5218bfc36b5e83ccc2c42dd447992dddbff409308929b",
+        "runtime/src/aprof_runtime/bindings.py": "sha256:5d5f0c8245faa40abf9b5f3c5ba77ae10a681831f45564e38df086c5089412be",
+        "schemas/knowledge-handoff-v4.schema.json": "sha256:9d5e2cd60ff2acce4374d905f3099f83259e948dbbe92bb50532320dab5935c4",
+        "runtime/tests/test_action_handoff_v4.py": "sha256:eddca2ea54f046579a01c14588d42ce4c6c6c1c35394a7e9add5a5f5d3cba820",
+        "runtime/src/aprof_runtime/knowledge.py": "sha256:f09921f590f7306cd7777415784f3b894576d48cbc648a24dc0d43d199d70076"
+      },
+      "coverage": [
+        "single and multiple instances",
+        "two distinct registered actions with independent policies and real routers",
+        "same-scope explicit evidence disambiguation",
+        "joint compatibility and scoped source/parameter/plan identity",
+        "shared allocation and simultaneous-lifetime peak",
+        "complete P_KEEP plan with untouched targets",
+        "all KEEP NOOP and changed P with O_KEEP",
+        "temporary unknown C2 and final-source dependency guarantees",
+        "producer parameter changes invalidate consumer guarantee",
+        "strict version isolation",
+        "unified timing result/request schema and hashes without timing replay"
+      ],
+      "notes": [
+        "These are CPU contract fixtures, not hardware measurements or arbitrary C++ semantic proofs.",
+        "The full v4 run began before the wording-only outcome attribution value changed from compound_scheme to scheme_level; the final value and assertion were verified in a separate fresh-process positive test. No structural implementation changed after that run began.",
+        "Source inventory identities and source-file locators retain the existing v3 limitation for genuine multi-file capture; see the main task gap report."
+      ]
+    },
+    "final-delivery": {
+      "status": "passed",
+      "hardware": false,
+      "training": false,
+      "unique_cpu_cases": 198,
+      "source_files_hashed": 29,
+      "no_tool_responses": 12,
+      "report_links_checked": 156,
+      "grading_sha256": "sha256:082087d0692142f720813a8747c60e9fccce9cd47b333e96b3d6f0781e15296e",
+      "final_runtime_identity": {
+        "runtime/src/aprof_runtime/knowledge_outcome.py": "sha256:0a89ac30c2d0e6747c8f2da18529c0edee60a94cf3bed71393a5e598500fe122",
+        "runtime/src/aprof_runtime/action_decision_v3.py": "sha256:aa26b3948ff07eee07ff109d02eb1209111e6459c416ac91b5aeb0b4a2777845",
+        "runtime/src/aprof_runtime/bindings_v4.py": "sha256:c2e30512348bb2ef5ea5218bfc36b5e83ccc2c42dd447992dddbff409308929b",
+        "schemas/action-decision-v3.schema.json": "sha256:e5cc21a4340e9d4d5932a3c9876d4258e952bc6ea5863889f27d2273b1a5ba31",
+        "schemas/knowledge-handoff-v4.schema.json": "sha256:9d5e2cd60ff2acce4374d905f3099f83259e948dbbe92bb50532320dab5935c4",
+        "runtime/src/aprof_runtime/knowledge.py": "sha256:f09921f590f7306cd7777415784f3b894576d48cbc648a24dc0d43d199d70076"
+      },
+      "byte_identical_final_copy": "/dev/shm/aprof-scheme-130-offline-ssy2u0_h/package",
+      "isolation_audit": "checks/standalone.json",
+      "note": "完整隔离执行已验证最终运行时；本步只同步验收文档，并逐文件核对最终整包字节相同。"
+    }
+  },
+  "history_input_characters": {
+    "grid_sampler_3d-r2": 818,
+    "grid_sampler_3d-r3": 1969,
+    "maximum-r2": 598,
+    "maximum-r3": 1927
+  },
+  "primary_cpu_suites": {
+    "action-decision/v3": 25,
+    "handoff/v4": 46,
+    "legacy action-decision/v1+v2": 60,
+    "legacy handoff/v3": 45,
+    "public CLI": 4,
+    "package integration": 18
+  },
+  "unique_cpu_case_count": 198,
+  "repeated_targeted_checks_counted_twice": false
+}

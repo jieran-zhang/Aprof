@@ -1,0 +1,97 @@
+{
+  "task_id": "case-10",
+  "complete_directory_count": 28,
+  "directory_review": "全部28个轻目录均审读；按当前复制/坐标/分配/队列成本选正文。Cube、跨kernel融合、归约/merge等不属于当前主数据路径，不加载全部正文。",
+  "used": [
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+        "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+      },
+      "locator": "lines:271-318",
+      "effect_kind": "mechanism",
+      "before": "InitBuffer两块即可宣称有overlap",
+      "after": "必须展示prefetch/steady/drain与槽完成边；单tile作为fallback，overlap仍是性能预测。",
+      "applicability": "sigmoid当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.transfer_compute_contention.md",
+        "sha256": "sha256:055ef2406cd741a26a11f55e813f356567195c4f26fab9fa0c9ada1b2727bdc7"
+      },
+      "locator": "lines:278-325",
+      "effect_kind": "alternative",
+      "before": "更多重叠必然更快",
+      "after": "同资源竞争可能反向影响Task，若只见并发不能确认争用；后继保留单槽T8192对照。",
+      "applicability": "sigmoid当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+      },
+      "locator": "lines:67-114",
+      "effect_kind": "parameters",
+      "before": "深度翻倍时tile应机械减半",
+      "after": "tile与物理槽需联合预算；T4096若实际容量允许先保持，避免额外发射混杂。",
+      "applicability": "sigmoid当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+        "sha256": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603"
+      },
+      "locator": "lines:57-104",
+      "effect_kind": "plan",
+      "before": "把TQue模板depth改2即可流水",
+      "after": "InitBuffer物理num与队列depth不同；depth1只允许当前DeQue后预取下一块，完整0/1/2/奇数tile/drain。",
+      "applicability": "sigmoid当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    }
+  ],
+  "additional_problem_reading": [
+    {
+      "id": "problem.pipeline_serialization",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+      "why": "单槽CopyIn-Compute-CopyOut循环是否有独立tile预取窗口"
+    },
+    {
+      "id": "problem.dynamic_shape_mismatch",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.dynamic_shape_mismatch.md",
+      "why": "4096tile跨dtype，资源公式影响合法T/slot域"
+    },
+    {
+      "id": "problem.transfer_compute_contention",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.transfer_compute_contention.md",
+      "why": "双缓冲可能竞争UB/MTE，需要明确反证条件"
+    },
+    {
+      "id": "problem.redundant_cast",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.redundant_cast.md",
+      "why": "低精度输入升FP32后单次回转是否是必要边界"
+    }
+  ],
+  "selected_P": [
+    "planning.elementwise.continuous"
+  ],
+  "selected_O": [
+    "implementation.pipeline-sync.pipeline",
+    "implementation.tiling-tail.valid-length"
+  ],
+  "limits": "真正采用项单列，不把router自动复制全文或全部matches视为已读/已实施；P/O采用仅为条件分析。"
+}

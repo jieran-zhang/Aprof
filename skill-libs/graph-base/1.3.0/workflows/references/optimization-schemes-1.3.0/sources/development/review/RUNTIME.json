@@ -1,0 +1,77 @@
+{
+  "schema": "aprof.runtime-independent-review/v1",
+  "reviewed_at_utc": "2026-10-21T12:01:11.110850+00:00",
+  "implementation_modified": false,
+  "hardware_used": false,
+  "status": "review_complete; no confirmed unresolved major issue in reviewed paths",
+  "source_identity": {
+    "runtime/src/aprof_runtime/action_decision_v3.py": "sha256:aa26b3948ff07eee07ff109d02eb1209111e6459c416ac91b5aeb0b4a2777845",
+    "runtime/src/aprof_runtime/bindings_v4.py": "sha256:c2e30512348bb2ef5ea5218bfc36b5e83ccc2c42dd447992dddbff409308929b",
+    "runtime/src/aprof_runtime/action_decision.py": "sha256:8a5e7efcdfab0ffc406bd5dccd461a56335717f03f5b68ca283d0877f1765408",
+    "runtime/src/aprof_runtime/bindings.py": "sha256:5d5f0c8245faa40abf9b5f3c5ba77ae10a681831f45564e38df086c5089412be",
+    "runtime/src/aprof_runtime/cli.py": "sha256:102e15637541c57ccedf8151aebf485d988bfadd4554b2761e9e4e6c5eb477a5",
+    "schemas/action-decision-v3.schema.json": "sha256:e5cc21a4340e9d4d5932a3c9876d4258e952bc6ea5863889f27d2273b1a5ba31",
+    "schemas/knowledge-handoff-v4.schema.json": "sha256:9d5e2cd60ff2acce4374d905f3099f83259e948dbbe92bb50532320dab5935c4"
+  },
+  "findings": [
+    {
+      "id": "RR-001",
+      "priority": "P2",
+      "status": "fixed_and_independently_verified",
+      "title": "保证回执原先只绑定消费者参数，生产者变参可复用旧保证",
+      "evidence": [
+        {
+          "path": "runtime/src/aprof_runtime/bindings_v4.py",
+          "line": 274
+        },
+        {
+          "path": "runtime/src/aprof_runtime/bindings_v4.py",
+          "line": 278
+        }
+      ],
+      "original_gap": "参数hash只来自target实例；依赖的生产成员在许可域内变参而consumer/source不变时，原回执没有绑定整体配置差异。",
+      "fix": "保证回执使用现有configuration_hash覆盖共同plan、source和所有成员实际参数。由实现代理修改，审查者未改实现。",
+      "validation": {
+        "hardware": false,
+        "bundle_version": "v0006",
+        "actions": [
+          "action.coalesce_contiguous_transfers",
+          "action.batch_writeback"
+        ],
+        "before_status": "implemented",
+        "producer_before": {
+          "tile": 64
+        },
+        "producer_after": {
+          "tile": 128
+        },
+        "old_guarantee_unchanged": true,
+        "stale_guarantee_rejected": true,
+        "rejection": "保证核实串用了实例、目标、参数、计划或候选源码身份",
+        "updated_guarantee_status": "implemented",
+        "bindings_v4_sha256": "sha256:c2e30512348bb2ef5ea5218bfc36b5e83ccc2c42dd447992dddbff409308929b"
+      },
+      "reproduction_note": "首次修复前探针与schema更新并发，被新增必需configuration_hash挡住，不将其报告为成功绕过。修复后以真实D6两种Action链独立验证：生产者64→128且刷新member/joint、旧保证原样被拒；重绑保证后通过。"
+    }
+  ],
+  "reviewed_invariants": [
+    "v3决策/v4交接显式按版本分派；旧handoff/v3仍要求其冻结D的v1/v2决策，不投影新方案。",
+    "方案、成员Action/template/target/scope/参数与共同plan精确相连；逐成员真实P/O route重算。",
+    "共同plan可覆盖成员target子集但不得超current范围；P_KEEP仍为同一完整有效计划。",
+    "joint绑定全部实际配置；互斥dispatch group内统一timeline核算峰值，不增加pool枚举。",
+    "保证仍为planned，不注入facts；DAG、scope、bool期望、source locator和最终配置核验，已知反向条件不由保证覆盖。",
+    "性能unknown不默认变实施门禁，无效/未测不支持性能预测；整体评价不证明成员因果。",
+    "summary仍为Markdown导航，不替代证据/授权；轮次/停止与工程结果分离。"
+  ],
+  "validation_performed": [
+    "真实D6 coalesce_contiguous_transfers+batch_writeback依赖链生产者参数反例：旧保证拒绝、重绑正例通过。",
+    "Draft202012Validator.check_schema对两个新schema通过。",
+    "git diff --quiet核对knowledge.py、旧knowledge-handoff及v3 schema无本次工作树差异。",
+    "只读审查公开dispatcher/CLI/结果关联及common.md修复。"
+  ],
+  "not_checked": [
+    "未独立重跑全部runtime/历史回归套件；实现代理的全量测试不冒称由本审查者执行。",
+    "hash、locator及声明不证明任意C++语义、API支持、实际资源或机制因果。",
+    "没有硬件构建/正确性/性能，也没有训练。"
+  ]
+}

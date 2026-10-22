@@ -2,7 +2,7 @@
 schema_version: aprof.knowledge-record/v1
 id: planning.indexing
 kind: router
-version: 1.0.0
+version: 1.3.0
 status: active
 title: 索引访问与索引写入
 scope:
@@ -111,6 +111,22 @@ routes:
   prior_score: 0
   fallback: true
   seed_reason: 未知条件保留现有合法方案并补资料。
+- target: planning.indexing.coordinate_neighborhood
+  match: []
+  exclude:
+  - field: excluded_templates
+    op: contains
+    value: planning.indexing.coordinate_neighborhood
+  required_evidence:
+  - constraint.semantic_equivalence
+  - constraint.capacity
+  - constraint.task_ownership
+  - constraint.coordinate_mapping
+  - constraint.neighborhood_bounds
+  - constraint.precision
+  prior_score: 2
+  fallback: false
+  seed_reason: 按当前语义/实现条件咨询；不由算子名称、case编号或Key数量决定，不保证收益。
 ---
 
 # 索引访问与索引写入
@@ -122,3 +138,6 @@ routes:
 - [索引访问与索引写入：保守回退](fallback.md)
 
 来源审读不等于目标硬件收益验证；不确定的能力或容量返回 needs_evidence，不能由模板代填。
+- [坐标生成与邻域读取的条件化骨架](templates/coordinate_neighborhood.md)
+
+coordinate_mapping：绑定坐标生成/边界变换/输入stride/累加函数的数学契约；neighborhood_bounds：所有邻域读取的有效域或合法掩码策略。二者可由任务定义与源码证明，缺失时只能参考原则/条件规划，不能由Gather来源补造插值语义。

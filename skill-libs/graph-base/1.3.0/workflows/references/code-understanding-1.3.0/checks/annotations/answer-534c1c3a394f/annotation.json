@@ -1,0 +1,61 @@
+{
+  "answer_id": "answer-534c1c3a394f",
+  "case": "case-02",
+  "facts": [
+    {
+      "id": "CU02.A01",
+      "status": "correct",
+      "rationale": "明确描述5行、输入物理行宽20、输出行宽18、每行复制前13个float及100r+c的数值规律，并将操作定性为数据搬运。",
+      "answer_span": "当前实现是按行截取并改变物理行距的数据搬运。输入按 float32 存储，物理形状为 [5,20]，共 5×20×4=400B，input[r,c]=100r+c；输出分配 [5,18]，共360B，预先逐字节置为0xA5。最终每行前13个 float 等于输入同行前13个值，其余5个 float 所占字节保持0xA5。因此各行有效值依次为0～12、100～112、200～212、300～312、400～412；保留区若按float32解释，其位模式为0xA5A5A5A5，不能解释为补零。"
+    },
+    {
+      "id": "CU02.A02",
+      "status": "correct",
+      "rationale": "完整说明Duplicate清零整个UB、每行13个数据和3个零填充、32B间隙由预清零保留；明确仅搬出52B有效数据，五段输出空隙（含末尾）保持0xA5。",
+      "answer_span": "UB每块有效52B按32B向上对齐到64B，加32B间隔，源行距仍为96B，恰好读取前述五行；输出GM行距则为52+20=72B，即18个float。非对齐搬出只向GM提交每块52B有效内容，对齐部分被丢弃；UB中的12B右填充和32B行间空隙均不写入输出。"
+    },
+    {
+      "id": "CU02.A03",
+      "status": "correct",
+      "rationale": "分析使用current固定的scenarioNum=2、5/13/16/120参数及修改后的逐行搬出，没有代入上游参数或平坦写回；明确排除其它平台分支。",
+      "answer_span": "依据是 [source/current/data_copy_pad.asc](/tmp/eval/source/current/data_copy_pad.asc:20) 中固定的 scenarioNum=2，以及 main 的常量和调用（220～269行）。SRC_ROWS=5、SRC_COLS=13、DST_COLS=16、DST_TOTAL_LENGTH=5×24=120；这些量分别控制块数、有效行长、UB填充后行长和UB分配元素数，不是同一个形状。"
+    },
+    {
+      "id": "CU02.E01",
+      "status": "correct",
+      "rationale": "正确给出52B块长、28B源间隙、80B行距；表中五段读取区间为[0,52)、[80,132)、[160,212)、[240,292)、[320,372)，结合400B输入分配完成边界核对。",
+      "answer_span": "CopyIn的场景2分支（95～105行）使用 DataCopyExtParams{5,52,28,1,0}：5块，每块13×4=52B。依据 shared/rawdocs 中 DataCopyPad_GMToUB.md 的A3表4，GM侧srcStride以字节计，UB侧dstStride以32B dataBlock计，且stride表示块间空隙。因此输入GM行起点间距为52+28=80B，正好对应20个float；每行只读取列0～12，列13～19的28B不读。"
+    },
+    {
+      "id": "CU02.E02",
+      "status": "correct",
+      "rationale": "正确推导52B数据加12B填充为64B，再加32B间隙得到96B行距；逐行表完整列出起点、数据、填充及间隙区间，并明确UB分配480B。",
+      "answer_span": "padParams设置 isPad=true、leftPadding=0、rightPadding=16−13=3、paddingValue=0。依据同文档表5，左右padding以元素计，故显式右补3×4=12B。有效数据加填充为52+12=64B，已经32B对齐，不需要额外dummy。再加dstStride=1所代表的32B间隙，UB行起点间距为64+32=96B，即24个float。"
+    },
+    {
+      "id": "CU02.E03",
+      "status": "correct",
+      "rationale": "明确搬出块长52B、UB源块按64B对齐后加32B间隙，源行距96B；输出目的间隙20B、行距72B，表中五段写入区间及末端340B均正确，且核对360B分配。",
+      "answer_span": "写回使用 Process 的 DataCopyExtParams{5,52,1,20,0}。根据原始 DataCopyPad_UBToGM.md 的A3表4及非对齐搬运说明，此时单位随方向改变：srcStride在UB侧以32B计，dstStride在GM侧以字节计。UB每块有效52B按32B向上对齐到64B，加32B间隔，源行距仍为96B，恰好读取前述五行；输出GM行距则为52+20=72B，即18个float。非对齐搬出只向GM提交每块52B有效内容，对齐部分被丢弃；UB中的12B右填充和32B行间空隙均不写入输出。"
+    },
+    {
+      "id": "CU02.H01",
+      "status": "correct",
+      "rationale": "正确区分blockLen字节、GM stride字节间隙、UB stride的32B块数及padding元素数；也区分逻辑5×13、GM物理行距、UB填充行和总分配。",
+      "answer_span": "CopyIn的场景2分支（95～105行）使用 DataCopyExtParams{5,52,28,1,0}：5块，每块13×4=52B。依据 shared/rawdocs 中 DataCopyPad_GMToUB.md 的A3表4，GM侧srcStride以字节计，UB侧dstStride以32B dataBlock计，且stride表示块间空隙。因此输入GM行起点间距为52+28=80B，正好对应20个float；每行只读取列0～12，列13～19的28B不读。\n\npadParams设置 isPad=true、leftPadding=0、rightPadding=16−13=3、paddingValue=0。依据同文档表5，左右padding以元素计，故显式右补3×4=12B。"
+    },
+    {
+      "id": "CU02.H02",
+      "status": "correct",
+      "rationale": "明确Duplicate在V流水执行，V_MTE2保护清零到搬入的依赖，MTE2_MTE3保护搬入到搬出的依赖；分别解释两组事件，并明确搬运之间没有数值激活。",
+      "answer_span": "同步对应具体依赖：63～64行的 V_MTE2 事件使MTE2等待Duplicate完成，保护同一UB上的先清零、后覆盖关系，也保证间隙初始化完成；66～67行的 MTE2_MTE3 事件使MTE3等待输入搬运及填充结束，避免读取尚未就绪的数据。两组均使用EVENT_ID0，但事件方向不同且各自Set/Wait配对，不是同一事件重复置位。"
+    },
+    {
+      "id": "CU02.H03",
+      "status": "correct",
+      "rationale": "明确当前使用A3支持的普通重载，排除3510限定的Compact和loop分支；完整核对各缓冲区范围，并限定结论为静态契约推导，没有声称已编译、实测或证明硬件时序。",
+      "answer_span": "以上是源码与固定API契约共同给出的静态结果，以输入符合题面、相关API成功执行为前提。host未检查读取、分配及运行调用的返回状态，静态材料不能证明实际成功执行；也没有构建产物或设备观测来确认指令展开、耗时、带宽或流水重叠。numBlocks=1只能说明此次启动的工作块数量，不能推出910C的物理核数。"
+    }
+  ],
+  "critical_errors": []
+}

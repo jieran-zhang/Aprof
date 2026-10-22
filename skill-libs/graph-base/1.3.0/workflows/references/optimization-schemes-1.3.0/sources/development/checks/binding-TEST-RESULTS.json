@@ -1,0 +1,62 @@
+{
+  "kind": "graph-base-1.3.0-scheme-bindings-cpu-checks",
+  "recorded_at": "2026-10-21T12:07:00.294109+00:00",
+  "cwd": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/skill-libs/graph-base/1.3.0",
+  "python": "3.11.15",
+  "hardware_experiments": false,
+  "performance_causal_claim": false,
+  "checks": [
+    {
+      "name": "handoff/v4 complete",
+      "command": "PYTHONPATH=runtime/src pytest -q runtime/tests/test_action_handoff_v4.py --basetemp /dev/shm/aprof-v4-bindings-tests-20261021-complete -x",
+      "passed": 46,
+      "deselected": 0,
+      "elapsed_seconds": 781.68,
+      "exit_code": 0,
+      "stdout_summary": "46 passed in 781.68s (0:13:01)"
+    },
+    {
+      "name": "handoff/v3 full compatibility",
+      "command": "PYTHONPATH=runtime/src pytest -q runtime/tests/test_action_handoff_v3.py --basetemp /dev/shm/aprof-v3-handoff-compat-20261021 -x",
+      "passed": 45,
+      "deselected": 0,
+      "elapsed_seconds": 325.67,
+      "exit_code": 0,
+      "stdout_summary": "45 passed in 325.67s (0:05:25)"
+    },
+    {
+      "name": "final scheme_level outcome positive",
+      "command": "PYTHONPATH=runtime/src pytest -q runtime/tests/test_action_handoff_v4.py -k result_link_preserves_scheme_all_member_docs_and_exact_source --basetemp /dev/shm/aprof-v4-link-scheme-level-20261021 -x",
+      "passed": 1,
+      "deselected": 45,
+      "elapsed_seconds": 32.33,
+      "exit_code": 0,
+      "stdout_summary": "1 passed, 45 deselected in 32.33s"
+    }
+  ],
+  "final_file_hashes": {
+    "runtime/src/aprof_runtime/bindings_v4.py": "sha256:c2e30512348bb2ef5ea5218bfc36b5e83ccc2c42dd447992dddbff409308929b",
+    "runtime/src/aprof_runtime/bindings.py": "sha256:5d5f0c8245faa40abf9b5f3c5ba77ae10a681831f45564e38df086c5089412be",
+    "schemas/knowledge-handoff-v4.schema.json": "sha256:9d5e2cd60ff2acce4374d905f3099f83259e948dbbe92bb50532320dab5935c4",
+    "runtime/tests/test_action_handoff_v4.py": "sha256:eddca2ea54f046579a01c14588d42ce4c6c6c1c35394a7e9add5a5f5d3cba820",
+    "runtime/src/aprof_runtime/knowledge.py": "sha256:f09921f590f7306cd7777415784f3b894576d48cbc648a24dc0d43d199d70076"
+  },
+  "coverage": [
+    "single and multiple instances",
+    "two distinct registered actions with independent policies and real routers",
+    "same-scope explicit evidence disambiguation",
+    "joint compatibility and scoped source/parameter/plan identity",
+    "shared allocation and simultaneous-lifetime peak",
+    "complete P_KEEP plan with untouched targets",
+    "all KEEP NOOP and changed P with O_KEEP",
+    "temporary unknown C2 and final-source dependency guarantees",
+    "producer parameter changes invalidate consumer guarantee",
+    "strict version isolation",
+    "unified timing result/request schema and hashes without timing replay"
+  ],
+  "notes": [
+    "These are CPU contract fixtures, not hardware measurements or arbitrary C++ semantic proofs.",
+    "The full v4 run began before the wording-only outcome attribution value changed from compound_scheme to scheme_level; the final value and assertion were verified in a separate fresh-process positive test. No structural implementation changed after that run began.",
+    "Source inventory identities and source-file locators retain the existing v3 limitation for genuine multi-file capture; see the main task gap report."
+  ]
+}

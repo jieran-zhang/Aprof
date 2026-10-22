@@ -1,0 +1,128 @@
+{
+  "task_id": "case-09",
+  "complete_directory_count": 28,
+  "directory_review": "全部28个轻目录均审读；按当前复制/坐标/分配/队列成本选正文。Cube、跨kernel融合、归约/merge等不属于当前主数据路径，不加载全部正文。",
+  "used": [
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.dynamic_shape_mismatch.md",
+        "sha256": "sha256:24caeddf6063226e52e28c8d8fbd07a6cf7193ee2c3a2575d2a78f0cf28ea4b2"
+      },
+      "locator": "lines:305-352",
+      "effect_kind": "mechanism",
+      "before": "仅因20个shape不同建立20个分支",
+      "after": "只按mode/dtype的资源差异分组，none/tanh算法和容量不同；不按case号特化。",
+      "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+        "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+      },
+      "locator": "lines:307-354",
+      "effect_kind": "alternative",
+      "before": "看见大量scratch即可判断容量瓶颈",
+      "after": "当前实际UB未知，不能证明接近容量；只确认未使用的静态分配及可行tile域扩大。",
+      "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+      },
+      "locator": "lines:67-114",
+      "effect_kind": "parameters",
+      "before": "函数未用scratch意味着不计容量",
+      "after": "独立InitBuffer即使无读者仍占空间，需实际删分配；U算全部物理字节并加APIreserve。",
+      "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+        "sha256": "sha256:04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483"
+      },
+      "locator": "lines:69-116",
+      "effect_kind": "parameters",
+      "before": "none和tanh串行分支的所有区可直接取max",
+      "after": "只有真实共享/条件分配才能扣字节；此处tanh省erfTmp/mask，none保留saved别名和完成边。",
+      "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/recipes/dispatch.md",
+        "sha256": "sha256:9fe36578c284c773038c7f64644b58c9aaa708adc2bd00578b231e34e731fefa"
+      },
+      "locator": "lines:60-100",
+      "effect_kind": "plan",
+      "before": "引入key宏做模式特化",
+      "after": "当前为kernel直调，正文明确TILING_KEY_IS不适用于该框架；保持真实mode字段和入口接线。",
+      "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+        "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+      },
+      "locator": "lines:70-110",
+      "effect_kind": "rejection",
+      "before": "两次Cast似乎可以删除",
+      "after": "RINT位置承担概率量化；保留其与负尾/NaN/Inf合同，拒绝未证数值改写。",
+      "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    }
+  ],
+  "additional_problem_reading": [
+    {
+      "id": "problem.onchip_capacity_pressure",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+      "why": "tanh从不使用Erfc临时区却保留5个fp32数组；是否只能证明多余分配而非容量瓶颈"
+    },
+    {
+      "id": "problem.dynamic_shape_mismatch",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.dynamic_shape_mismatch.md",
+      "why": "none/tanh使用同一1024tile，按模式预算tile是否值得"
+    },
+    {
+      "id": "problem.redundant_cast",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.redundant_cast.md",
+      "why": "保留必要cast/2^-23量化边界，避免错误删除舍入"
+    },
+    {
+      "id": "problem.pipeline_serialization",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+      "why": "正文提出的替代解释/代价：结合当前gelu源码，进一步区分新增局部状态spill、地址控制或容量对流水的限制。"
+    }
+  ],
+  "selected_P": [
+    "planning.elementwise.continuous"
+  ],
+  "selected_O": [
+    "implementation.tiling-tail.dispatch",
+    "implementation.buffer-lifetime.reuse",
+    "implementation.precision-boundaries.numeric"
+  ],
+  "limits": "真正采用项单列，不把router自动复制全文或全部matches视为已读/已实施；P/O采用仅为条件分析。"
+}

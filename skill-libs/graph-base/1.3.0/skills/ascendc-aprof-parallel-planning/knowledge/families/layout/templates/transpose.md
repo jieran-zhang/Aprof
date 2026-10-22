@@ -2,7 +2,7 @@
 schema_version: aprof.knowledge-record/v1
 id: planning.layout.transpose
 kind: template
-version: 1.1.0
+version: 1.2.0
 status: active
 title: 布局转换、有效宽度与对齐宽度
 scope:
@@ -22,6 +22,38 @@ sources:
   sha256: sha256:3b11c42fec83631ee8b2c26eefd3ac7b16b2606b6a09ea7ad15991c0b806e306
   excerpt_sha256: sha256:3b11c42fec83631ee8b2c26eefd3ac7b16b2606b6a09ea7ad15991c0b806e306
 - path: skills/ascendc-aprof-parallel-planning/knowledge/sources/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_kernel/gather_elements_v2_transpose.h
+  original_path: index/gather_elements_v2/op_kernel/gather_elements_v2_transpose.h
+  revision: 8b42e125134fa9abf1e42a67e6b2792f78c26be5
+  lines:
+  - 1
+  - 522
+  sha256: sha256:cc2ec40a9f9d3cfce1021e356e4e8f2a5f27e1528caaeb2ff1796a6a530c0d75
+  excerpt_sha256: sha256:cc2ec40a9f9d3cfce1021e356e4e8f2a5f27e1528caaeb2ff1796a6a530c0d75
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/README.md
+  original_path: index/gather_elements_v2/README.md
+  revision: 8b42e125134fa9abf1e42a67e6b2792f78c26be5
+  lines:
+  - 1
+  - 16
+  sha256: sha256:c8df45df36e823c8531e2e64a7d396d53f04c7e75ddc223dfb476c3910ffc43e
+  excerpt_sha256: sha256:710989d3762b9a9b098d32ae60880ef24e30e663be574d65aeb494ae047304d6
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_host/gather_elements_v2_tiling.cpp
+  original_path: index/gather_elements_v2/op_host/gather_elements_v2_tiling.cpp
+  revision: 8b42e125134fa9abf1e42a67e6b2792f78c26be5
+  lines:
+  - 105
+  - 280
+  sha256: sha256:c7bb8d76d1741b5c3212a8de9f28bf6f9de5fe2f7d012bfa90780b25e6f12793
+  excerpt_sha256: sha256:e3de11b8245bfed856224ab85e90f622e751b99b8a00cacab770c6d8cb7b2546
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_kernel/gather_elements_v2_scalar.h
+  original_path: index/gather_elements_v2/op_kernel/gather_elements_v2_scalar.h
+  revision: 8b42e125134fa9abf1e42a67e6b2792f78c26be5
+  lines:
+  - 35
+  - 187
+  sha256: sha256:d7038ab1282e3a89aaecc2123a5b5c6bd3e6ce041703dfcbc63c34a0fbace77f
+  excerpt_sha256: sha256:27c6ffe9981fd02e7bf51e3722407a0bbe0b2ec0a73904fb0162e78f43843ab3
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_kernel/gather_elements_v2_transpose.h
   original_path: index/gather_elements_v2/op_kernel/gather_elements_v2_transpose.h
   revision: 8b42e125134fa9abf1e42a67e6b2792f78c26be5
   lines:
@@ -84,3 +116,13 @@ uint64_t localPlaneOffset = channel * tileNA; // 不用 curN 作物理跨度
 ```
 
 本条的通用映射/owner 方法 scope all，不代表任何 SoC 已通过该 API 组合验证。索引决定源地址的 Gather 另见 `planning.indexing.gather_output_owned`；融合边界见 `planning.under-fusion.chain`。验证 C/N 非对齐、非连续 stride、单通道、多个小轴合轴、异 dtype、超大地址、别名和输出边界；当前没有 NPU 性能验证。
+
+## 用整个数据通路比较，防止局部转置的收益被中转抵消
+
+固定 GatherElements host 只有在 `CalcMaxBufferSize()` 可行时才选择 transpose，并为每核配置 workspace；kernel 的流程是转置、Gather、反转置，包含结果写 workspace 后重新读回。此为源码直接事实，不能缩写成“向量 Gather 替代标量，所以更快”。
+
+对一个含 M 个有效元素、元素宽 s 字节的纯 out-of-place 置换，必要输入读与输出写为 `2Ms` 字节；若中间数组 W 字节落 GM 并完整写读一次，额外至少 `2W` 字节，每多一次中转另计。局部 transpose 的输入/输出 padding、offset 表生成、Gather、Cast、同步分别计工作量，不与字节数相加。相同 offset 表若只依赖 tile 物理布局，可每 owner 生成一次；尾片有效 mask 仍须更新，表保存增加活跃存储。
+
+比较矩形的两条轴长时，较长连续输入方向可减少搬运段数，却可能使输出行更短、尾部 padding 更多；反向 tile 则相反。至少依据真实 stride 列出每 tile 输入/输出段数、每段有效字节、边界 owner 与全分配容量。扩大 tile 只有在这些代价与 task 数一并比较后才有选择依据。
+
+若转置只为下游消费，咨询消费者能否接受原布局；如果接口要求可见的置换结果，就保留完整物化。删除转换、融合消费者或改变 workspace 所有权均属于 C2 方案变化。C3 用新 API 实现后增加 workspace 或改变中转布局，也应返回 C2 重算，不能继续沿用旧“只读写一次”的性能解释。

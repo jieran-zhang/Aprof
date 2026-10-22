@@ -1,0 +1,368 @@
+你正在AProf算子优化的code-understanding阶段。以下消息已经给出源码、workload和本次可用资料；仅凭这些上下文及你已有知识完成理解，不调用任何工具，不执行代码、CPU脚本或心算工具，不访问文件、网络、设备或其他Agent。不要请求工具或补充材料。
+
+提交一份供后续diagnosis使用的中文代码理解说明：整体算法与数值语义、当前实现策略、实际分派/任务/循环/尾块、数据/存储/依赖，以及对应的910C硬件行为。用当前workload做必要的具体推导，给出文件/符号/行号定位。区分源码事实、平台/API知识、具体推断及尚不能确认的边界；缺少性能测量不妨碍静态理解。不要预选Problem/Action，不设计新优化方案。
+
+所有资料正文已内联；链接和历史路径只作定位，不提供外部手册或检索能力。尽量在3500个中文或ASCII字符内完成，正确且具体的解释比字数和引用数量重要。最终直接提交完整的中文代码理解说明，使用Markdown，不输出JSON外壳。
+
+=== 平台与workload ===
+目标平台：Ascend 910C / Atlas A3，实际device架构条件为 __NPU_ARCH__=2201。host侧NPU_ARCH以workload指定值为准，不与device宏混用。3510只在题面指定时作为静态对照。没有设备编译、运行或profiling结果。
+# 题 4
+
+请阅读完整 source（含 host、参数/tiling 和 kernel 上下文）及 workload。本题要求理解现有实现，请提交一份连贯的代码理解说明：先解释输入输出与整体算法，再解释当前实现怎样分工、搬运、计算和同步，最后说明目标硬件上的执行行为、适用边界和证据不足之处。
+
+用 workload 中的值做必要的具体推导，让地址/计数的单位明确。请给出能定位到源文件/符号的依据。不要预选 Problem/Action，不要求提出优化或改代码。只写能由本题材料支持的结论；字数和引用数量不计分。
+
+
+分析 `source/matmul_leakyrelu_basic_api.asc` 的完整调用。采用文件中 main 的所有常量：M=512、K=128、N=128，singleCoreM=256、singleCoreK=128、singleCoreN=128，baseM=256、baseK=128、baseN=128。输入 A 与 B 都是 half、连续 ND，分别按 [M,K] 与 [K,N] 存放。
+
+本题实际目标为 910C/2201。请说明最终计算关系、分核和每个分支处理的范围、各存储层的数据类型与排布，以及从输入到最终输出每条关键依赖如何得到保证。说明源码中的其他平台分支在本次分析中的地位。
+=== 完整输入源码 ===
+=== SOURCE FILE: source/data_utils.h ; sha256=f9c32a9658b48708e1f6a3e33c7200de05546f3e3a95a131e96a7cbcd7d1b2a5 ===
+0001: /**
+0002:  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+0003:  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+0004:  * CANN Open Software License Agreement Version 2.0 (the "License").
+0005:  * Please refer to the License for details. You may not use this file except in compliance with the License.
+0006:  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+0007:  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+0008:  * See LICENSE in the root of the software repository for the full text of the License.
+0009:  */
+0010: 
+0011: /* !
+0012:  * \file data_utils.h
+0013:  * \brief
+0014:  */
+0015: 
+0016: #ifndef DATA_UTILS_H
+0017: #define DATA_UTILS_H
+0018: #include <fcntl.h>
+0019: #include <sys/stat.h>
+0020: #include <unistd.h>
+0021: #include <fstream>
+0022: 
+0023: #define ERROR_LOG(fmt, args...) fprintf(stdout, "[ERROR]  " fmt "\n", ##args)
+0024: 
+0025: bool ReadFile(const std::string& filePath, size_t& fileSize, void* buffer, size_t bufferSize)
+0026: {
+0027:     struct stat sBuf;
+0028:     int fileStatus = stat(filePath.data(), &sBuf);
+0029:     if (fileStatus == -1) {
+0030:         ERROR_LOG("failed to get file");
+0031:         return false;
+0032:     }
+0033:     if (S_ISREG(sBuf.st_mode) == 0) {
+0034:         ERROR_LOG("%s is not a file, please enter a file", filePath.c_str());
+0035:         return false;
+0036:     }
+0037: 
+0038:     std::ifstream file;
+0039:     file.open(filePath, std::ios::binary);
+0040:     if (!file.is_open()) {
+0041:         ERROR_LOG("Open file failed. path = %s", filePath.c_str());
+0042:         return false;
+0043:     }
+0044: 
+0045:     std::filebuf* buf = file.rdbuf();
+0046:     size_t size = buf->pubseekoff(0, std::ios::end, std::ios::in);
+0047:     if (size == 0) {
+0048:         ERROR_LOG("file size is 0");
+0049:         file.close();
+0050:         return false;
+0051:     }
+0052:     if (size > bufferSize) {
+0053:         ERROR_LOG("file size is larger than buffer size");
+0054:         file.close();
+0055:         return false;
+0056:     }
+0057:     buf->pubseekpos(0, std::ios::in);
+0058:     buf->sgetn(static_cast<char*>(buffer), size);
+0059:     fileSize = size;
+0060:     file.close();
+0061:     return true;
+0062: }
+0063: 
+0064: bool WriteFile(const std::string& filePath, const void* buffer, size_t size)
+0065: {
+0066:     if (buffer == nullptr) {
+0067:         ERROR_LOG("Write file failed. buffer is nullptr");
+0068:         return false;
+0069:     }
+0070: 
+0071:     int fd = open(filePath.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWRITE);
+0072:     if (fd < 0) {
+0073:         ERROR_LOG("Open file failed. path = %s", filePath.c_str());
+0074:         return false;
+0075:     }
+0076: 
+0077:     size_t writeSize = write(fd, buffer, size);
+0078:     (void)close(fd);
+0079:     if (writeSize != size) {
+0080:         ERROR_LOG("Write file Failed.");
+0081:         return false;
+0082:     }
+0083: 
+0084:     return true;
+0085: }
+0086: #endif // DATA_UTILS_H
+
+=== SOURCE FILE: source/matmul_leakyrelu_basic_api.asc ; sha256=64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6 ===
+0001: /**
+0002:  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+0003:  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+0004:  * CANN Open Software License Agreement Version 2.0 (the "License").
+0005:  * Please refer to the License for details. You may not use this file except in compliance with the License.
+0006:  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+0007:  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+0008:  * See LICENSE in the root of the software repository for the full text of the License.
+0009:  */
+0010: 
+0011: /* !
+0012:  * \file matmul_leakyrelu_basic_api.asc
+0013:  * \brief 基于静态Tensor编程模式实现Matmul和LeakyRelu融合计算，展示Cube单元和Vector单元协同计算的编程模式。
+0014:  *        样例矩阵规格为M=512、K=128、N=128，按singleCoreM=256、singleCoreN=128分核后，使用2个Cube核和4个Vector核完成计算。
+0015:  *        硬件Cube:Vector核数比例为1:2，2个Cube核负责Matmul计算，每个Cube核产生的结果再由2个Vector核协同完成LeakyRelu激活计算。
+0016:  */
+0017: 
+0018: #include "acl/acl.h"
+0019: #include "kernel_operator.h"
+0020: #include "data_utils.h"
+0021: 
+0022: // half type, cube block: [16, 16]
+0023: constexpr uint32_t CUBE_BLOCK = 16;
+0024: 
+0025: template <
+0026:     uint32_t M, uint32_t K, uint32_t N, uint32_t singleCoreM, uint32_t singleCoreK, uint32_t singleCoreN,
+0027:     uint32_t baseM, uint32_t baseK, uint32_t baseN>
+0028: class KernelMatmul {
+0029: public:
+0030:     __aicore__ inline KernelMatmul() {}
+0031:     __aicore__ inline void Init(__gm__ uint8_t* xMatrix, __gm__ uint8_t* yMatrix, __gm__ uint8_t* zMatrix)
+0032:     {
+0033:         aGM.SetGlobalBuffer((__gm__ half*)xMatrix);
+0034:         bGM.SetGlobalBuffer((__gm__ half*)yMatrix);
+0035:         cGM.SetGlobalBuffer((__gm__ half*)zMatrix);
+0036:         // Cube核按M方向分核，每个Cube核负责singleCoreM * N大小输出块对应的A输入和C输出。
+0037:         if ASCEND_IS_AIC {
+0038:             aGM = aGM[AscendC::GetBlockIdx() * singleCoreM * K];
+0039:             cGM = cGM[AscendC::GetBlockIdx() * singleCoreM * N];
+0040:         }
+0041:         if ASCEND_IS_AIV {
+0042:             // Vector核数是Cube核数的2倍，1个Cube核的计算结果由2个Vector核继续完成LeakyRelu。
+0043:             // 因此这里用GetBlockIdx() / 2映射回对应的Cube核输出块起始地址。
+0044:             cGM = cGM[AscendC::GetBlockIdx() / 2 * singleCoreM * N];
+0045:         }
+0046:     }
+0047: 
+0048:     __aicore__ inline void Process()
+0049:     {
+0050:         if ASCEND_IS_AIC {
+0051:             // Matmul计算场景内存分配，需要在AIC侧执行。
+0052:             AscendC::LocalMemAllocator<AscendC::Hardware::L1> l1Allocator;
+0053:             AscendC::LocalMemAllocator<AscendC::Hardware::L0A> l0aAllocator;
+0054:             AscendC::LocalMemAllocator<AscendC::Hardware::L0B> l0bAllocator;
+0055:             AscendC::LocalMemAllocator<AscendC::Hardware::L0C> l0cAllocator;
+0056:             // 使用LocalMemAllocator按申请顺序分配片上内存，避免手动维护LocalTensor地址偏移。
+0057:             AscendC::LocalTensor<half> a1Local = l1Allocator.Alloc<half>(baseM * baseK);
+0058:             AscendC::LocalTensor<half> b1Local = l1Allocator.Alloc<half>(baseK * baseN);
+0059:             AscendC::LocalTensor<half> a2Local = l0aAllocator.Alloc<half>(baseM * baseK);
+0060:             AscendC::LocalTensor<half> b2Local = l0bAllocator.Alloc<half>(baseK * baseN);
+0061:             AscendC::LocalTensor<float> cLocal = l0cAllocator.Alloc<float>(baseM * baseN);
+0062:             // 矩阵计算逻辑，完成K方向累加，产生一个baseM*baseN的计算结果
+0063:             // A矩阵GM->L1调用DataCopy接口 + Nd2NzParams结构体参数:
+0064:             // {ndNum, nValue, dValue, srcNdMatrixStride, srcDValue, dstNzC0Stride, dstNzNStride, dstNzMatrixStride}
+0065:             AscendC::DataCopy(a1Local, aGM, AscendC::Nd2NzParams{1, baseM, baseK, 0, K, baseM, 1, 0});
+0066:             // B矩阵GM->L1调用DataCopy接口 + Nd2NzParams结构体参数:
+0067:             // {ndNum, nValue, dValue, srcNdMatrixStride, srcDValue, dstNzC0Stride, dstNzNStride, dstNzMatrixStride}
+0068:             AscendC::DataCopy(b1Local, bGM, AscendC::Nd2NzParams{1, baseK, baseN, 0, N, baseK, 1, 0});
+0069: 
+0070:             // GM->L1的DataCopy由MTE2流水完成，后续L1->L0的LoadData由MTE1流水读取L1数据；
+0071:             // 这里设置MTE2_MTE1事件，使MTE1等待MTE2，避免LoadData读取到尚未搬运完成的数据。
+0072:             AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(EVENT_ID0);
+0073:             AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE1>(EVENT_ID0);
+0074: 
+0075: #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 2201)
+0076:             // Nz->Zz, L0A上的排布格式为Zz
+0077:             // A矩阵L1->L0A调用LoadData接口 + LoadData2DParams结构体参数:
+0078:             // {startIndex, repeatTimes, srcStride, sid, dstGap, ifTranspose, addrMode}
+0079:             for (int i = 0; i < baseM / CUBE_BLOCK; ++i) {
+0080:                 AscendC::LoadData(
+0081:                     a2Local[i * baseK * CUBE_BLOCK], a1Local[i * 512 / sizeof(half)],
+0082:                     AscendC::LoadData2DParams{0, baseK / CUBE_BLOCK, baseM / CUBE_BLOCK, 0, 0, false, 0});
+0083:             }
+0084:             // B矩阵L1->L0B（Nz->Zn）
+0085:             // B矩阵L1->L0B调用LoadData接口 + LoadData2DParams结构体参数:
+0086:             // {startIndex, repeatTimes, srcStride, sid, dstGap, ifTranspose, addrMode}
+0087:             for (int i = 0; i < baseK / CUBE_BLOCK; ++i) {
+0088:                 AscendC::LoadData(
+0089:                     b2Local[i * baseN * CUBE_BLOCK], b1Local[i * 512 / sizeof(half)],
+0090:                     AscendC::LoadData2DParams{0, baseN / CUBE_BLOCK, baseK / CUBE_BLOCK, 0, 0, true, 0});
+0091:             }
+0092: #elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+0093:             // Nz->Nz, L0A上的排布格式为Nz。
+0094:             // A矩阵L1->L0A调用LoadData接口 + LoadData2DParamsV2结构体参数：
+0095:             // {mStartPosition, kStartPosition, mStep, kStep, srcStride, dstStride, ifTranspose, sid}
+0096:             AscendC::LoadData(
+0097:                 a2Local, a1Local,
+0098:                 AscendC::LoadData2DParamsV2{
+0099:                     0, 0, baseM / CUBE_BLOCK, baseK / CUBE_BLOCK, baseM / CUBE_BLOCK, baseM / CUBE_BLOCK, false, 0});
+0100:             // B矩阵L1->L0B（Nz->Zn）
+0101:             // B矩阵L1->L0B调用LoadData接口 + LoadData2DParamsV2结构体参数:
+0102:             // {mStartPosition, kStartPosition, mStep, kStep, srcStride, dstStride, ifTranspose, sid}
+0103:             AscendC::LoadData(
+0104:                 b2Local, b1Local,
+0105:                 AscendC::LoadData2DParamsV2{
+0106:                     0, 0, baseK / CUBE_BLOCK, baseN / CUBE_BLOCK, baseK / CUBE_BLOCK, baseN / CUBE_BLOCK, true, 0});
+0107: #endif
+0108:             // L1->L0的LoadData由MTE1流水完成，后续Mmad由M流水读取L0A/L0B数据；
+0109:             // 这里设置MTE1_M事件，使M流水等待MTE1，避免Mmad读取到尚未搬运完成的数据。
+0110:             AscendC::SetFlag<AscendC::HardEvent::MTE1_M>(EVENT_ID0);
+0111:             AscendC::WaitFlag<AscendC::HardEvent::MTE1_M>(EVENT_ID0);
+0112: 
+0113:             // 矩阵乘调用Mmad接口 + MmadParams结构体参数:{m, n, k, unitFlag, cmatrixSource, cmatrixInitVal}
+0114:             // 这里完成一个baseM * baseN大小tile的Matmul计算，结果保存在L0C中。
+0115:             AscendC::Mmad(cLocal, a2Local, b2Local, AscendC::MmadParams{baseM, baseN, baseK, 0, false, true});
+0116: 
+0117:             // Fixpipe由FIX流水读取L0C并搬运到GM；
+0118:             // 这里设置M_FIX事件，使FIX流水等待M流水，避免Fixpipe读取到尚未计算完成的数据。
+0119:             AscendC::SetFlag<AscendC::HardEvent::M_FIX>(EVENT_ID0);
+0120:             AscendC::WaitFlag<AscendC::HardEvent::M_FIX>(EVENT_ID0);
+0121:             // L0C->GM搬运调用Fixpipe接口 + FixpipeParamsV220结构体参数:
+0122:             // {nSize, mSize, srcStride, dstStride, reluEn, quantPre, deqScalar, ndNum,
+0123:             //  srcNdStride, dstNdStride, unitFlag}
+0124:             // 搬运时同时完成Nz到ND的格式转换，以及float到half的数据类型转换。
+0125:             AscendC::Fixpipe(
+0126:                 cGM, cLocal,
+0127:                 AscendC::FixpipeParamsV220{baseN, baseM, baseM, N, false, QuantMode_t::F322F16, 0, 1, 0, 0, 0});
+0128:             // Cube核完成当前tile写回后，通过核间同步通知对应的2个Vector核可以开始读取该tile结果。
+0129:             AscendC::CrossCoreSetFlag<0x2, PIPE_FIX>(0);
+0130:         }
+0131:         if ASCEND_IS_AIV {
+0132:             // Vector计算场景内存分配，需要在AIV侧执行。
+0133:             AscendC::LocalMemAllocator<AscendC::Hardware::UB> ubAllocator;
+0134:             AscendC::LocalTensor<half> vecLocal = ubAllocator.Alloc<half>(baseM / 2 * baseN);
+0135:             // Vector核需要先等待对应Cube核完成Fixpipe写回，再开始读取当前baseM * baseN tile的结果。
+0136:             AscendC::CrossCoreWaitFlag<0x2>(0);
+0137:             // 向量计算逻辑中，Cube:Vector=1:2，每个Vector核处理baseM / 2 * baseN大小的半块结果。
+0138:             LeakyReluCompute(vecLocal, 0, 0, baseM / 2 * baseN);
+0139:         }
+0140:     }
+0141: 
+0142: private:
+0143:     __aicore__ inline void LeakyReluCompute(
+0144:         const AscendC::LocalTensor<half>& vecLocal, uint32_t mIndex, uint32_t nIndex, uint32_t tileLen)
+0145:     {
+0146:         uint32_t blockLen = baseN * sizeof(half);
+0147:         uint32_t srcStride = (N - baseN) * sizeof(half);
+0148: 
+0149:         // 每个Cube核产生的计算结果，由对应的2个Vector核完成计算，此处需要完成这2个Vector核的起始地址偏移计算
+0150:         uint32_t gmOffset = (mIndex * baseM * N + nIndex * baseN) + AscendC::GetBlockIdx() % 2 * (baseM / 2 * N);
+0151: 
+0152:         // 先把当前Cube tile中的一半结果从GM搬到UB，供当前Vector核做激活计算。
+0153:         // GM->UB调用DataCopyPad接口 + DataCopyExtParams结构体参数:{blockCount, blockLen, srcStride, dstStride, rsv}
+0154:         // DataCopyPadExtParams结构体参数:{isPad, leftPadding, rightPadding, paddingValue}
+0155:         AscendC::DataCopyPad<half>(
+0156:             vecLocal, cGM[gmOffset],
+0157:             AscendC::DataCopyExtParams{static_cast<uint16_t>(baseM / 2), blockLen, srcStride, 0, 0},
+0158:             AscendC::DataCopyPadExtParams<half>{true, 0, 0, 0});
+0159: 
+0160:         // GM->UB的DataCopyPad由MTE2流水完成，后续LeakyRelu由V流水读取UB数据；
+0161:         // 这里设置MTE2_V事件，使V流水等待MTE2，避免向量计算读取到尚未搬运完成的数据。
+0162:         AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+0163:         AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
+0164: 
+0165:         // 对当前半块结果执行LeakyRelu激活，负值部分乘以0.001。
+0166:         AscendC::LeakyRelu(vecLocal, vecLocal, (half)0.001, tileLen);
+0167: 
+0168:         // LeakyRelu由V流水完成，后续DataCopyPad写回GM由MTE3流水执行；
+0169:         // 这里设置V_MTE3事件，使MTE3等待V流水，避免写回尚未计算完成的数据。
+0170:         AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(EVENT_ID0);
+0171:         AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(EVENT_ID0);
+0172: 
+0173:         // 将当前Vector核负责的激活结果写回到原输出矩阵对应的半块区域。
+0174:         AscendC::DataCopyPad<half>(
+0175:             cGM[gmOffset], vecLocal,
+0176:             AscendC::DataCopyExtParams{static_cast<uint16_t>(baseM / 2), blockLen, 0, srcStride, 0});
+0177:     }
+0178: 
+0179: private:
+0180:     AscendC::GlobalTensor<half> aGM;
+0181:     AscendC::GlobalTensor<half> bGM;
+0182:     AscendC::GlobalTensor<half> cGM;
+0183: };
+0184: 
+0185: template <
+0186:     uint32_t M, uint32_t K, uint32_t N, uint32_t singleCoreM, uint32_t singleCoreK, uint32_t singleCoreN,
+0187:     uint32_t baseM, uint32_t baseK, uint32_t baseN>
+0188: __global__ __mix__(1, 2) void mmad_vec_custom(__gm__ uint8_t* xMatrix, __gm__ uint8_t* yMatrix, __gm__ uint8_t* zMatrix)
+0189: {
+0190:     AscendC::InitSocState();
+0191:     KernelMatmul<M, K, N, singleCoreM, singleCoreK, singleCoreN, baseM, baseK, baseN> op;
+0192:     op.Init(xMatrix, yMatrix, zMatrix);
+0193:     op.Process();
+0194:     AscendC::PipeBarrier<PIPE_ALL>();
+0195: }
+0196: 
+0197: int32_t main(int32_t argc, char* argv[])
+0198: {
+0199:     // matmul参数
+0200:     constexpr uint32_t M = 512;
+0201:     constexpr uint32_t K = 128;
+0202:     constexpr uint32_t N = 128;
+0203:     // 单核计算量
+0204:     constexpr uint32_t singleCoreM = 256;
+0205:     constexpr uint32_t singleCoreK = 128;
+0206:     constexpr uint32_t singleCoreN = 128;
+0207:     // 矩阵乘执行单元Tile参数
+0208:     constexpr uint32_t baseM = 256;
+0209:     constexpr uint32_t baseK = 128;
+0210:     constexpr uint32_t baseN = 128;
+0211: 
+0212:     size_t aFileSize = M * K * sizeof(half);
+0213:     size_t bFileSize = K * N * sizeof(half);
+0214:     size_t cFileSize = M * N * sizeof(half);
+0215:     uint32_t numBlocks = (M / singleCoreM) * (N / singleCoreN);
+0216: 
+0217:     aclInit(nullptr);
+0218:     int32_t deviceId = 0;
+0219:     aclrtSetDevice(deviceId);
+0220:     aclrtStream stream = nullptr;
+0221:     aclrtCreateStream(&stream);
+0222: 
+0223:     uint8_t* aHost;
+0224:     uint8_t* aDevice;
+0225:     aclrtMallocHost((void**)(&aHost), aFileSize);
+0226:     aclrtMalloc((void**)&aDevice, aFileSize, ACL_MEM_MALLOC_HUGE_FIRST);
+0227:     ReadFile("./input/x1_gm.bin", aFileSize, aHost, aFileSize);
+0228:     aclrtMemcpy(aDevice, aFileSize, aHost, aFileSize, ACL_MEMCPY_HOST_TO_DEVICE);
+0229: 
+0230:     uint8_t* bHost;
+0231:     uint8_t* bDevice;
+0232:     aclrtMallocHost((void**)(&bHost), bFileSize);
+0233:     aclrtMalloc((void**)&bDevice, bFileSize, ACL_MEM_MALLOC_HUGE_FIRST);
+0234:     ReadFile("./input/x2_gm.bin", bFileSize, bHost, bFileSize);
+0235:     aclrtMemcpy(bDevice, bFileSize, bHost, bFileSize, ACL_MEMCPY_HOST_TO_DEVICE);
+0236: 
+0237:     uint8_t* cHost;
+0238:     uint8_t* cDevice;
+0239:     aclrtMallocHost((void**)(&cHost), cFileSize);
+0240:     aclrtMalloc((void**)&cDevice, cFileSize, ACL_MEM_MALLOC_HUGE_FIRST);
+0241: 
+0242:     mmad_vec_custom<M, K, N, singleCoreM, singleCoreK, singleCoreN, baseM, baseK, baseN>
+0243:         <<<numBlocks, 0, stream>>>(aDevice, bDevice, cDevice);
+0244:     aclrtSynchronizeStream(stream);
+0245: 
+0246:     aclrtMemcpy(cHost, cFileSize, cDevice, cFileSize, ACL_MEMCPY_DEVICE_TO_HOST);
+0247:     WriteFile("./output/output.bin", cHost, cFileSize);
+0248: 
+0249:     aclrtFree(aDevice);
+0250:     aclrtFreeHost(aHost);
+0251:     aclrtFree(bDevice);
+0252:     aclrtFreeHost(bHost);
+0253:     aclrtFree(cDevice);
+0254:     aclrtFreeHost(cHost);
+0255: 
+0256:     aclrtDestroyStream(stream);
+0257:     aclrtResetDevice(deviceId);
+0258:     aclFinalize();
+0259:     return 0;
+0260: }
