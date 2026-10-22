@@ -1,0 +1,67 @@
+{
+  "answer_id": "answer-acd9c31421b0",
+  "case": "case-03",
+  "facts": [
+    {
+      "id": "CU03.A01",
+      "status": "correct",
+      "rationale": "明确说明右对齐广播逐元素最大值，并给出P/Q和R的完整数学结果。后文给出Q的索引序列0、0、0、1、1、1，说明P正确语义应逐行重复3和7，以及R逐行重复[3,7,6]；同时明确区分数学语义与实际FP16路径。",
+      "answer_span": "该程序意图实现连续ND张量的广播逐元素最大值：输入使用同一dtype，shape从末轴对齐，每轴尺寸须相同或其中一个为1，输出尺寸取两者较大值。P、Q的数学目标均为[[3,4,8],[7,7,9]]；R的目标为[[3,7,8],[3,7,9]]。但FP16广播分支没有使用通用广播stride，P因此不能保证产生合法输出。"
+    },
+    {
+      "id": "CU03.A02",
+      "status": "correct",
+      "rationale": "准确给出half按sameShape分派、P/R进入专用广播路径、Q进入float标量路径。末段还明确指出分派没有检查专用路径所需的末轴向量前提。",
+      "answer_span": "[kernel源码](/tmp/eval/source/op_kernel/maximum_kernel.asc:153)的DispatchMaximum决定实际路径。int64始终进入MaximumScalar；half按sameShape选择同形向量路径或KernelMaximumHalfLastAxisBroadcast；其余dtype在同形时走向量路径，否则走MaximumScalar。因此P与R执行同一个half广播实现，Q执行float标量实现。"
+    },
+    {
+      "id": "CU03.A03",
+      "status": "correct",
+      "rationale": "完整描述除int64外的同形向量分派、BF16经float计算、int8经half和float转换，并在其他段明确int64同形也走标量、其他非half广播按坐标和stride走标量。",
+      "answer_span": "其他分支中，KernelMaximumSame（第7—77行）按每核连续区间分成最多4096元素的tile，使用实际尾块count搬入、计算和搬出。half、float、int32直接Vector Max；bfloat16先转float，Max后以CAST_RINT转回；int8先经half转float，Max后以CAST_RINT经half转回int8。"
+    },
+    {
+      "id": "CU03.E01",
+      "status": "correct",
+      "rationale": "给出全部三次调用的shape、rank、totalLength、sameShape、blockNum、blockLength及两组输入stride；前段明确tileElements固定4096。实际分配字节数与host按输入元素乘积分配一致。",
+      "answer_span": "本题三次调用的rank均为2、outShape均为[2,3]、totalLength=6、x1Stride=[3,1]、sameShape=0。P/Q的x2Stride=[1,0]；R将[3]补成[1,3]，得到x2Stride=[0,1]。虽然查询核数为4，但ceil(6/4096)=1，因此三次都是blockNum=1、blockLength=6，只有blockIdx=0负责元素[0,6)。P的dtype枚举为0，Q为1，R为0。输入x1、输入x2、输出的分配字节数分别为：P为12、4、12；Q为24、8、24；R为12、6、12。"
+    },
+    {
+      "id": "CU03.E02",
+      "status": "correct",
+      "rationale": "准确追踪row=3、off=0和3、每次count=3以及从x2[0]连续读三个half，区别于逻辑stride映射。后文明确P仅分配4字节，请求[0,6)中的[4,6)越界。",
+      "answer_span": "P/R的KernelMaximumHalfLastAxisBroadcast（第82—123行）设置begin=0、end=6、row=outShape[1]=3。它将x1、y描述为6个half，将x2描述为3个half，但完全不读取x1Stride/x2Stride。每段count=min(end-off,4096,row-off%row)，因此仅有off=0和3两段，各3个元素。两段都从x2[off%3]=x2[0]开始连续读取3个half；x1读取元素范围[0,3)、[3,6)，y写回相应范围。换成字节区间，x1和y分别为[0,6)、[6,12)，x2两次均为[0,6)。"
+    },
+    {
+      "id": "CU03.E03",
+      "status": "correct",
+      "rationale": "Q段明确按outShape反解坐标、累加stride并得到正确广播索引。R段明确三个half的分配足够、逐行复用相同向量，结果与有限值数学语义一致。",
+      "answer_span": "R的x2恰有3个half，即[3,7,6]，上述读取合法。两次向量比较分别为[1,4,8]与[3,7,6]、[2,5,9]与[3,7,6]，得到float16的[[3,7,8],[3,7,9]]，符合R的广播映射。"
+    },
+    {
+      "id": "CU03.H01",
+      "status": "correct",
+      "rationale": "明确P/R使用队列搬入UB、执行向量Max并搬回GM，指出MTE2、Vector、MTE3依赖。Q段则明确标量索引、GM读取、比较和写回，不调用Vector Max。",
+      "answer_span": "这条half路径通过三个深度为1的队列分配输入、输出UB块，每块4096×2=8192字节，合计24576字节，即24KiB。每段先AllocTensor、搬入，再EnQue/DeQue交给计算；输出Max完成后入队、出队并搬出，最后FreeTensor。队列框架表达MTE2→Vector→MTE3的数据依赖及缓冲复用依赖。"
+    },
+    {
+      "id": "CU03.H02",
+      "status": "correct",
+      "rationale": "明确SetGlobalBuffer仅设置描述，不能扩展实际分配；用具体请求字节范围和实际分配证明P的问题，并将静态地址结论与实际设备是否报错区分开。",
+      "answer_span": "P的x2只有2个half，即[3,7]，合法字节区间为[0,4)，两次请求都额外读取[4,6)。第92行SetGlobalBuffer(...,row)只是设置GlobalTensor描述，不能把4字节分配扩成6字节；其原文契约也要求调用者保证描述长度不超过实际数据长度。"
+    },
+    {
+      "id": "CU03.H03",
+      "status": "correct",
+      "rationale": "明确三个深度为1的half队列各8192字节、合计24576字节；前文说明每行仅处理三个half，且UB补齐不能扩大GM分配或修复广播映射。",
+      "answer_span": "这条half路径通过三个深度为1的队列分配输入、输出UB块，每块4096×2=8192字节，合计24576字节，即24KiB。"
+    },
+    {
+      "id": "CU03.H04",
+      "status": "correct",
+      "rationale": "明确拒绝给出P的确定完整输出，将可证实的广播映射错误和越界请求与不可确定的实际返回值、报错及完成情况区分；没有声称观测到硬件故障。",
+      "answer_span": "因此不能给P一个确定完整结果，也不能保证已有部分会写回或host成功完成。越界的实际返回值、是否报错及报错位置，静态材料无法确定。"
+    }
+  ],
+  "critical_errors": []
+}

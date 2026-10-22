@@ -1,0 +1,225 @@
+{
+  "task_id": "case-02",
+  "kind": "additional_static_reassessment",
+  "attempt_identity": {
+    "parent_implementation_hash": "sha256:3e2d5447e889f2c8fbd8959610de5bebb126edbd179e35915c2679d49784ff9b",
+    "implementation_hash": null,
+    "workload_hash": "sha256:27f63b400e45b3e4a47c5b1504d94a2d5a1bd561f9432a74d6025d4064c7814e"
+  },
+  "source_refs": [
+    {
+      "path": "parent.json",
+      "sha256": "sha256:3e2d5447e889f2c8fbd8959610de5bebb126edbd179e35915c2679d49784ff9b"
+    },
+    {
+      "path": "source/matrix-20.json",
+      "sha256": "sha256:27f63b400e45b3e4a47c5b1504d94a2d5a1bd561f9432a74d6025d4064c7814e"
+    }
+  ],
+  "finding": "逐条核算Compute为15个API，两个dtype分支各只执行一次输入/输出转换；T=2048的UB分别41216B(float)、33024B(16位)，T=4096分别82432B/66048B。Compare仍每64元素向上取整，不得将有效输出长度也对齐扩写。",
+  "method": "从原始matrix形态及InitBuffer/Compute/host容量代码重新计数；不运行种子Python，不编译，不探测设备",
+  "rows": [
+    {
+      "case_id": "1",
+      "dtype": "float16",
+      "input_numel": 1048576,
+      "logical_GM_bytes": 4194304,
+      "single_slot_T2048_UB": 33024,
+      "single_slot_T4096_UB": 66048,
+      "vector_API_per_tile": 15,
+      "excludes": "API内部预留"
+    },
+    {
+      "case_id": "2",
+      "dtype": "float32",
+      "input_numel": 4194304,
+      "logical_GM_bytes": 33554432,
+      "single_slot_T2048_UB": 41216,
+      "single_slot_T4096_UB": 82432,
+      "vector_API_per_tile": 15,
+      "excludes": "API内部预留"
+    },
+    {
+      "case_id": "3",
+      "dtype": "bfloat16",
+      "input_numel": 16777216,
+      "logical_GM_bytes": 67108864,
+      "single_slot_T2048_UB": 33024,
+      "single_slot_T4096_UB": 66048,
+      "vector_API_per_tile": 15,
+      "excludes": "API内部预留"
+    },
+    {
+      "case_id": "4",
+      "dtype": "float16",
+      "input_numel": 67108864,
+      "logical_GM_bytes": 268435456,
+      "single_slot_T2048_UB": 33024,
+      "single_slot_T4096_UB": 66048,
+      "vector_API_per_tile": 15,
+      "excludes": "API内部预留"
+    },
+    {
+      "case_id": "5",
+      "dtype": "float32",
+      "input_numel": 67108864,
+      "logical_GM_bytes": 536870912,
+      "single_slot_T2048_UB": 41216,
+      "single_slot_T4096_UB": 82432,
+      "vector_API_per_tile": 15,
+      "excludes": "API内部预留"
+    },
+    {
+      "case_id": "6",
+      "dtype": "bfloat16",
+      "input_numel": 1046529,
+      "logical_GM_bytes": 4186116,
+      "single_slot_T2048_UB": 33024,
+      "single_slot_T4096_UB": 66048,
+      "vector_API_per_tile": 15,
+      "excludes": "API内部预留"
+    },
+    {
+      "case_id": "7",
+      "dtype": "float16",
+      "input_numel": 1030189,
+      "logical_GM_bytes": 4120756,
+      "single_slot_T2048_UB": 33024,
+      "single_slot_T4096_UB": 66048,
+      "vector_API_per_tile": 15,
+      "excludes": "API内部预留"
+    },
+    {
+      "case_id": "8",
+      "dtype": "float32",
+      "input_numel": 1181953,
+      "logical_GM_bytes": 9455624,
+      "single_slot_T2048_UB": 41216,
+      "single_slot_T4096_UB": 82432,
+      "vector_API_per_tile": 15,
+      "excludes": "API内部预留"
+    },
+    {
+      "case_id": "9",
+      "dtype": "bfloat16",
+      "input_numel": 49691433,
+      "logical_GM_bytes": 198765732,
+      "single_slot_T2048_UB": 33024,
+      "single_slot_T4096_UB": 66048,
+      "vector_API_per_tile": 15,
+      "excludes": "API内部预留"
+    },
+    {
+      "case_id": "10",
+      "dtype": "float16",
+      "input_numel": 1051137,
+      "logical_GM_bytes": 4204548,
+      "single_slot_T2048_UB": 33024,
+      "single_slot_T4096_UB": 66048,
+      "vector_API_per_tile": 15,
+      "excludes": "API内部预留"
+    },
+    {
+      "case_id": "11",
+      "dtype": "float32",
+      "input_numel": 1092273,
+      "logical_GM_bytes": 8738184,
+      "single_slot_T2048_UB": 41216,
+      "single_slot_T4096_UB": 82432,
+      "vector_API_per_tile": 15,
+      "excludes": "API内部预留"
+    },
+    {
+      "case_id": "12",
+      "dtype": "bfloat16",
+      "input_numel": 1000003,
+      "logical_GM_bytes": 4000012,
+      "single_slot_T2048_UB": 33024,
+      "single_slot_T4096_UB": 66048,
+      "vector_API_per_tile": 15,
+      "excludes": "API内部预留"
+    },
+    {
+      "case_id": "13",
+      "dtype": "float32",
+      "input_numel": 10912759,
+      "logical_GM_bytes": 87302072,
+      "single_slot_T2048_UB": 41216,
+      "single_slot_T4096_UB": 82432,
+      "vector_API_per_tile": 15,
+      "excludes": "API内部预留"
+    },
+    {
+      "case_id": "14",
+      "dtype": "float16",
+      "input_numel": 3030027,
+      "logical_GM_bytes": 12120108,
+      "single_slot_T2048_UB": 33024,
+      "single_slot_T4096_UB": 66048,
+      "vector_API_per_tile": 15,
+      "excludes": "API内部预留"
+    },
+    {
+      "case_id": "15",
+      "dtype": "float32",
+      "input_numel": 1049088,
+      "logical_GM_bytes": 8392704,
+      "single_slot_T2048_UB": 41216,
+      "single_slot_T4096_UB": 82432,
+      "vector_API_per_tile": 15,
+      "excludes": "API内部预留"
+    },
+    {
+      "case_id": "16",
+      "dtype": "bfloat16",
+      "input_numel": 2089215,
+      "logical_GM_bytes": 8356860,
+      "single_slot_T2048_UB": 33024,
+      "single_slot_T4096_UB": 66048,
+      "vector_API_per_tile": 15,
+      "excludes": "API内部预留"
+    },
+    {
+      "case_id": "17",
+      "dtype": "float16",
+      "input_numel": 2093567,
+      "logical_GM_bytes": 8374268,
+      "single_slot_T2048_UB": 33024,
+      "single_slot_T4096_UB": 66048,
+      "vector_API_per_tile": 15,
+      "excludes": "API内部预留"
+    },
+    {
+      "case_id": "18",
+      "dtype": "float32",
+      "input_numel": 2094078,
+      "logical_GM_bytes": 16752624,
+      "single_slot_T2048_UB": 41216,
+      "single_slot_T4096_UB": 82432,
+      "vector_API_per_tile": 15,
+      "excludes": "API内部预留"
+    },
+    {
+      "case_id": "19",
+      "dtype": "bfloat16",
+      "input_numel": 2089980,
+      "logical_GM_bytes": 8359920,
+      "single_slot_T2048_UB": 33024,
+      "single_slot_T4096_UB": 66048,
+      "vector_API_per_tile": 15,
+      "excludes": "API内部预留"
+    },
+    {
+      "case_id": "20",
+      "dtype": "float32",
+      "input_numel": 10549248,
+      "logical_GM_bytes": 84393984,
+      "single_slot_T2048_UB": 41216,
+      "single_slot_T4096_UB": 82432,
+      "vector_API_per_tile": 15,
+      "excludes": "API内部预留"
+    }
+  ],
+  "implemented": false,
+  "measurement": "not_measured"
+}

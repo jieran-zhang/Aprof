@@ -1,0 +1,10 @@
+cmake_minimum_required(VERSION 3.16)
+find_package(ASC REQUIRED)
+project(scatter_direct LANGUAGES ASC CXX)
+set(CMAKE_CXX_STANDARD 17)
+
+add_executable(scatter op_host/scatter.asc)
+target_include_directories(scatter PRIVATE op_host op_kernel)
+target_link_libraries(scatter PRIVATE tiling_api register platform unified_dlog dl m graph_base ascendcl ascendc_runtime)
+target_link_directories(scatter PRIVATE "$ENV{ASCEND_HOME_PATH}/lib64" "$ENV{ASCEND_HOME_PATH}/aarch64-linux/lib64")
+target_compile_options(scatter PRIVATE $<$<COMPILE_LANGUAGE:ASC>:--npu-arch=dav-2201>)

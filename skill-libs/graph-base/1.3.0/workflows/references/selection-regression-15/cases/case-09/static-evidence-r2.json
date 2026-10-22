@@ -1,0 +1,548 @@
+{
+  "task_id": "case-09",
+  "attempt_identity": {
+    "parent_implementation_hash": "sha256:ad8a00b8c4bad6c2cf31ef2723082050b7c27525b0ff1b6d6d891ea0e3290675",
+    "implementation_hash": null,
+    "workload_hash": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8"
+  },
+  "source_refs": [
+    {
+      "path": "source/op_kernel/gelu_kernel.asc",
+      "sha256": "sha256:1c2873801f387b221d9d2f38501f45e78038796fb02f579c935f7bcbb20e1a06"
+    },
+    {
+      "path": "source/op_kernel/gelu_tiling.h",
+      "sha256": "sha256:0bbddaad08330ee2ba84f3965e98f602def676a16ea61cb36b8501904d6e72c0"
+    },
+    {
+      "path": "source/matrix-20.json",
+      "sha256": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8"
+    }
+  ],
+  "finding": "新增静态API/容量复核：none路径CompareScalar按64元素补齐，而输入fi只定义count个有效值，未来扩大T仍要定义实际比较尾域；Select模式2正文要求A2/A3另预留8192B。显式none/tanh均保留5*T*4的erfTmp分配，不能因tanh未使用就自动扣除。R2缩紧合法T域并保持所有原特殊值修正，收益仍未测。",
+  "rows": [
+    {
+      "case_id": "1",
+      "candidate_ledger": [
+        {
+          "T": 1024,
+          "explicit_buffers_bytes": 37120,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 2048,
+          "explicit_buffers_bytes": 73984,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 4096,
+          "explicit_buffers_bytes": 147968,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        }
+      ]
+    },
+    {
+      "case_id": "2",
+      "candidate_ledger": [
+        {
+          "T": 1024,
+          "explicit_buffers_bytes": 41216,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 2048,
+          "explicit_buffers_bytes": 82176,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 4096,
+          "explicit_buffers_bytes": 164352,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        }
+      ]
+    },
+    {
+      "case_id": "3",
+      "candidate_ledger": [
+        {
+          "T": 1024,
+          "explicit_buffers_bytes": 37120,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 2048,
+          "explicit_buffers_bytes": 73984,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 4096,
+          "explicit_buffers_bytes": 147968,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        }
+      ]
+    },
+    {
+      "case_id": "4",
+      "candidate_ledger": [
+        {
+          "T": 1024,
+          "explicit_buffers_bytes": 37120,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 2048,
+          "explicit_buffers_bytes": 73984,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 4096,
+          "explicit_buffers_bytes": 147968,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        }
+      ]
+    },
+    {
+      "case_id": "5",
+      "candidate_ledger": [
+        {
+          "T": 1024,
+          "explicit_buffers_bytes": 41216,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 2048,
+          "explicit_buffers_bytes": 82176,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 4096,
+          "explicit_buffers_bytes": 164352,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        }
+      ]
+    },
+    {
+      "case_id": "6",
+      "candidate_ledger": [
+        {
+          "T": 1024,
+          "explicit_buffers_bytes": 37120,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 2048,
+          "explicit_buffers_bytes": 73984,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 4096,
+          "explicit_buffers_bytes": 147968,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        }
+      ]
+    },
+    {
+      "case_id": "7",
+      "candidate_ledger": [
+        {
+          "T": 1024,
+          "explicit_buffers_bytes": 37120,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 2048,
+          "explicit_buffers_bytes": 73984,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 4096,
+          "explicit_buffers_bytes": 147968,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        }
+      ]
+    },
+    {
+      "case_id": "8",
+      "candidate_ledger": [
+        {
+          "T": 1024,
+          "explicit_buffers_bytes": 41216,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 2048,
+          "explicit_buffers_bytes": 82176,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 4096,
+          "explicit_buffers_bytes": 164352,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        }
+      ]
+    },
+    {
+      "case_id": "9",
+      "candidate_ledger": [
+        {
+          "T": 1024,
+          "explicit_buffers_bytes": 37120,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 2048,
+          "explicit_buffers_bytes": 73984,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 4096,
+          "explicit_buffers_bytes": 147968,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        }
+      ]
+    },
+    {
+      "case_id": "10",
+      "candidate_ledger": [
+        {
+          "T": 1024,
+          "explicit_buffers_bytes": 37120,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 2048,
+          "explicit_buffers_bytes": 73984,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 4096,
+          "explicit_buffers_bytes": 147968,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        }
+      ]
+    },
+    {
+      "case_id": "11",
+      "candidate_ledger": [
+        {
+          "T": 1024,
+          "explicit_buffers_bytes": 41216,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 2048,
+          "explicit_buffers_bytes": 82176,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 4096,
+          "explicit_buffers_bytes": 164352,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        }
+      ]
+    },
+    {
+      "case_id": "12",
+      "candidate_ledger": [
+        {
+          "T": 1024,
+          "explicit_buffers_bytes": 37120,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 2048,
+          "explicit_buffers_bytes": 73984,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 4096,
+          "explicit_buffers_bytes": 147968,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        }
+      ]
+    },
+    {
+      "case_id": "13",
+      "candidate_ledger": [
+        {
+          "T": 1024,
+          "explicit_buffers_bytes": 41216,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 2048,
+          "explicit_buffers_bytes": 82176,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 4096,
+          "explicit_buffers_bytes": 164352,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        }
+      ]
+    },
+    {
+      "case_id": "14",
+      "candidate_ledger": [
+        {
+          "T": 1024,
+          "explicit_buffers_bytes": 37120,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 2048,
+          "explicit_buffers_bytes": 73984,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 4096,
+          "explicit_buffers_bytes": 147968,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        }
+      ]
+    },
+    {
+      "case_id": "15",
+      "candidate_ledger": [
+        {
+          "T": 1024,
+          "explicit_buffers_bytes": 41216,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 2048,
+          "explicit_buffers_bytes": 82176,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 4096,
+          "explicit_buffers_bytes": 164352,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        }
+      ]
+    },
+    {
+      "case_id": "16",
+      "candidate_ledger": [
+        {
+          "T": 1024,
+          "explicit_buffers_bytes": 37120,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 2048,
+          "explicit_buffers_bytes": 73984,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 4096,
+          "explicit_buffers_bytes": 147968,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        }
+      ]
+    },
+    {
+      "case_id": "17",
+      "candidate_ledger": [
+        {
+          "T": 1024,
+          "explicit_buffers_bytes": 37120,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 2048,
+          "explicit_buffers_bytes": 73984,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 4096,
+          "explicit_buffers_bytes": 147968,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        }
+      ]
+    },
+    {
+      "case_id": "18",
+      "candidate_ledger": [
+        {
+          "T": 1024,
+          "explicit_buffers_bytes": 41216,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 2048,
+          "explicit_buffers_bytes": 82176,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 4096,
+          "explicit_buffers_bytes": 164352,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        }
+      ]
+    },
+    {
+      "case_id": "19",
+      "candidate_ledger": [
+        {
+          "T": 1024,
+          "explicit_buffers_bytes": 37120,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 2048,
+          "explicit_buffers_bytes": 73984,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 4096,
+          "explicit_buffers_bytes": 147968,
+          "select_reserved_bytes_if_none": 0,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        }
+      ]
+    },
+    {
+      "case_id": "20",
+      "candidate_ledger": [
+        {
+          "T": 1024,
+          "explicit_buffers_bytes": 41216,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 2048,
+          "explicit_buffers_bytes": 82176,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        },
+        {
+          "T": 4096,
+          "explicit_buffers_bytes": 164352,
+          "select_reserved_bytes_if_none": 8192,
+          "other_api_tmp_and_fixed": "unknown; add separately",
+          "not_capacity_authorization": true
+        }
+      ]
+    }
+  ],
+  "counterfactual_probe": "反事实可用UB仅容纳原T总预算而不足较大T：batch减少调用的benefit为0；若仍容纳双槽同T可转pipeline，否则保留原计划并研究物理buffer复用。不能把192KiB注释当设备容量。",
+  "implementation_state": "not_implemented",
+  "measurement": "not_measured"
+}

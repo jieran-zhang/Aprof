@@ -1,0 +1,29 @@
+两个入口彼此独立；source/DELTA.json 只记录测试标识符更名，没有改变数值常量或 API。以下结论来自源码和固定 API 契约，实际目标按 910C/A3、__NPU_ARCH__=2201 解释，3510 仅作静态对照。
+
+入口 V 的输入、输出均为一维连续 ND，本题各含 25019 个 bfloat16 元素，即各 50038 字节。[host](/tmp/eval/source/vector/op_host/nacre.asc:38) 读取文件、分配并复制输入和 tiling，启动 nacre_entry，等待流完成后取回输出。MakeNacrePlan 将正底数转换为自然指数系数：gain=0.5·ln2≈0.34657359，bias=−ln2≈−0.69314718。因此数学目标为 y[i]=2^(0.5x[i]−1)。实现先将 BF16 转为 FP32，依次执行 Muls、Adds、Exp，再以 CAST_RINT 转回 BF16，不能视为无限精度求幂后只舍入一次。其他参数下，base≤0 被源码作为自然指数分支处理，并非计算非正底数幂。
+
+[MakeNacrePlan](/tmp/eval/source/vector/op_kernel/nacre_plan.h:18) 得到 useful=ceil(25019/4096)=7，laneCount=min(3,7)=3，laneExtent=ceil(25019/3)=8340，windowElements=4096。三个逻辑块的元素起点为 0、8340、16680，长度为 8340、8340、8339；对应字节半开区间为 [0,16680)、[16680,33360)、[33360,50038)，完整覆盖输入且不重叠。
+
+StageNacre::Process 每块执行三轮，count 分别为 (4096,4096,148)、(4096,4096,148)、(4096,4096,147)。[kernel](/tmp/eval/source/vector/op_kernel/nacre_stage.asc:37) 中 GlobalTensor 下标及 off 均以元素计，DataCopyExtParams.blockLen 则是字节，每轮为 8192、8192、296 或 294；blockCount=1，两侧 stride=0。DataCopyPad 允许这些非对齐 GM 地址。搬入末块在 UB 中补到 320 字节，isPad=false 且左右 padding=0，不代表补零；固定文档说明此情形的 dummy 使用首元素值。计算只处理 count 个有效元素，搬出也只写有效字节，因此不把 UB 补齐长度当成 GM 长度。
+
+每个 V 块分配输入、输出队列各一个 8192 字节槽，以及两个各 16384 字节的 FP32 临时区，显式 UB 合计 49152 字节，即 48 KiB。AllocTensor→EnQue→DeQue→FreeTensor 管理张量生命周期和搬运、计算间依赖；循环按 CopyIn→Compute→CopyOut 发起，单槽队列，没有源码层面的双缓冲安排，也没有核间同步需求。910C 上数据经 MTE2 搬入 UB、Vector 运算、MTE3 写回 GM，未使用 Cube。
+
+入口 C 的 main 固定 M=512、K=N=128，A、B 为连续 half ND，输出也是 half ND。A/C 各 131072 字节，B 为 32768 字节。算法先计算 S[m,n]=Σ(k=0…127)A[m,k]B[k,n]，用 FP32 L0C 保存矩阵乘结果；Fixpipe 先将其转换成 half 写入 C，随后执行 half LeakyRelu：非负值保留，负值乘以 (half)0.001。因此实际数值路径包含激活前的 half 舍入，斜率本身也先转为 half。
+
+[mica.asc](/tmp/eval/source/cube/mica.asc:197) 的 singleCoreM=baseM=256，singleCoreK=baseK=128，singleCoreN=baseN=128，numBlocks=(512/256)(128/128)=2。mica_entry 的 __mix__(1,2) 表示两个组合，共 2 个 AIC 和 4 个 AIV。GetBlockIdx 返回逻辑核编号：AIC 为 0、1，AIV 为 0…3。AIC j 的 A/C 起点各为 j·32768 个 half，即 j·65536 字节，分别处理行 0…255、256…511；两核都读取完整 B。AIV 通过编号除以 2 找所属 AIC，通过余数选择其前、后 128 行，最终四核分别覆盖全矩阵连续的四个 128×128 区域，字节起点为 0、32768、65536、98304。
+
+StageMica::Process 每个 AIC 只处理一个完整 tile，没有外层 M/N/K 分块循环。LocalMemAllocator 在 L1 依次分配 A 64 KiB、B 32 KiB；L0A、L0B、L0C 分别分配 64、32、128 KiB。每个 AIV 分配 128×128×2=32 KiB UB。这些是申请量，不能据此推定设备实际可用容量。
+
+两种架构条件下，GM→L1 的源码相同：Nd2NzParams 分别为 {1,256,128,0,128,256,1,0}、{1,128,128,0,128,128,1,0}。srcDValue=128 的单位是元素，GM 行距为 256 字节；dstNzC0Stride 的单位是 32 字节，A/B 相邻列分组的起点相距 8192/4096 字节，组内相邻行相距 32 字节。两者均为 ND→NZ，没有本题维度尾补。3510 文档增加 enableSmallC0 模板契约；本题列数为 128，源码未启用 SmallC0。
+
+2201 分支（mica.asc:75–91）用 512 字节、即 16×16 half 的分形搬运。A 循环 16 次，每次 repeatTimes=8、srcStride=16、dstGap=0、不转置：第 i 次从 L1 的 i·512 字节开始，依次读取分形 i+16r，写至 L0A 的 i·4096+r·512 字节，r=0…7，共搬 128 个分形、65536 字节，实现 NZ→ZZ。B 循环 8 次，每次读分形 i+8r，r=0…7，写至 L0B 的 i·4096+r·512 字节，并转置每个分形，共 64 个分形、32768 字节，实现 NZ→ZN。这是适配 Cube 输入布局，不是把数学问题改成 A·B转置。
+
+3510 分支（92–106）改为各一次 LoadData2DParamsV2：A={0,0,16,8,16,16,false,0}，B={0,0,8,8,8,8,true,0}。mStep 以 16 元素计，kStep 以 32 字节计，src/dstStride 以 512 字节分形计；搬运量仍分别为 128、64 个分形。其 L0A 契约为 NZ，L0B 仍为 ZN，L0C 仍为 NZ。固定 LoadData/Mmad 文档明确支持这一布局差异，V2 在 A3 不受支持，所以该分支不能当作 910C 的执行路径。
+
+两分支随后都调用一次 Mmad{256,128,128,0,false,true}：清零初始化 C，不使用 BT 偏置，完成整个 K=128 的乘加，而非跨多次调用累加。FixpipeParamsV220{128,256,256,128,false,F322F16,0,1,0,0,0} 将 L0C NZ 转为 GM ND，并按 CAST_RINT 转 half。srcStride=256 的单位为 16·sizeof(float)=64 字节，实际间距 16384 字节；dstStride=128 是元素，即每行 256 字节。ndNum=1，两个 ND stride 不生效，reluEn=false。固定文档确认两平台均支持此 V220 接口；3510 另有 Arch3510 参数接口，源码没有选用。
+
+同步顺序在源码中相同：MTE2_MTE1 保证 L1 搬入完成，MTE1_M 保证 L0A/B 就绪，M_FIX 保证矩阵乘结果可读；每种事件都用 EVENT_ID0 配对 set/wait，不同流水事件使用相同数字不等于重复占用同一事件。Mmad 和 Fixpipe 的 unitFlag 都为 0，未启用分形粒度并行。Fixpipe 后的 CrossCoreSetFlag<2,PIPE_FIX>(0) 通知所属两个 AIV，不是全体 AIC 的屏障。A3 的 CrossCoreWaitFlag<2>(0) 阻塞全部流水的后续指令；3510 的默认 PIPE_S 参数生效，选择阻塞 Scalar 流水，不能把硬件等待范围说成完全相同。
+
+AIV 的 ApplyGate 先等待，再以 128 个数据块搬入，每块 128×2=256 字节，GM 间隔 (N−baseN)×2=0，UB 间隔也为 0，恰好读取 32768 字节。MTE2_V 之后执行 16384 元素 LeakyRelu，V_MTE3 之后原址写回。入口末尾 PipeBarrier<PIPE_ALL> 排空各核流水，host 再等待整个流完成。该 GM 中转路径在两架构分支都存在；源码没有使用 3510 的其他直连路径或显式寄存器向量实现。
+
+适用范围上，V 有按有效 count 处理尾块的路径；C 依赖当前整除形状、单核恰好一个 tile 和 1:2 核映射，模板参数不等于实现了任意形状的通用矩阵乘。C 的文件读取和 ACL 返回值也未像 V 那样系统检查，文件异常时不能保证完整有效输入。材料支持上述地址覆盖、搬运量和同步偏序，但没有设备编译、运行、误差或性能证据，不能确认实际耗时、指令展开、缓存流量及两平台逐位数值一致性。

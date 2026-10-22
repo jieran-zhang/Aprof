@@ -1,0 +1,339 @@
+{
+  "schema_version": "aprof.action-decision/v1",
+  "task_id": "case-07",
+  "context_hash": "sha256:f401c02f16aa0cd448f3949f2729f9d393245fdf048d3e7f54cdefd8cfebdea9",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "reasoning_ref": {
+    "path": "reasoning-R2.json",
+    "sha256": "sha256:072d398907ec414e64f916cac9ea565b6f8647617879806b7e7756403f9d4cb9"
+  },
+  "reasoning_hash": "sha256:52ed396dacfd380fe12a07b2335f82443c05392fa222a0a797da5c913523d11c",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/f3a6d55be57ea647180e624b4fffe6a25b55beea2b35d140d50fe71108f4232d.json",
+    "sha256": "sha256:02d64ca8cc4efafae4665940ea3cfd6bf955b40e79d76125906445f4337450a4"
+  },
+  "round": 2,
+  "current_parent_ref": {
+    "path": "source-index.json",
+    "sha256": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f"
+  },
+  "opportunities": [
+    {
+      "id": "opportunity.primary",
+      "hypothesis_id": "hypothesis.primary",
+      "action_id": "action.reorder_contiguous_access",
+      "action_instance_id": "instance.primary",
+      "case_ids": [
+        "2",
+        "7",
+        "10",
+        "11",
+        "13",
+        "14",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "source.matrix",
+        "source.oracle"
+      ],
+      "cost_mechanism": "Host将masks归一化为outputShape/sourceStep/sourceBase；kernel每输出做2*outputRank次除模并Raw单元素GM拷贝。输出64字节对齐分核，必须保留物理独占边界。所有原case正stride，负stride仍走原fallback。",
+      "predictions": [
+        {
+          "id": "primary.source-work",
+          "kind": "source_work",
+          "statement": "连续组每段由N次Scalar读写改为ceil(run/T)级DMA，段内不再rank除模；逻辑有效字节仍2*N*itemBytes。",
+          "check_method": "当前源码审读与完整20case公式；R2静态证据，后续真实patch/编译检查",
+          "on_support": "保留结构预测，按参数域继续条件规划",
+          "on_refute": "修订地址/分配公式或降低该候选优先级"
+        },
+        {
+          "id": "primary.performance",
+          "kind": "performance",
+          "statement": "连续组可能缩短Scalar及搬运发射时间；短run、UB排队开销和输出边界拆段会削弱收益，run1 fallback不承诺加速。",
+          "check_method": "未来完整正确性后，同源20case Task计时及针对性timeline/编译检查；本任务未测",
+          "on_support": "按组检查收益与回归后决定是否保留",
+          "on_refute": "保留失败与父本，按最强替代进一步判别"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "primary.performance",
+          "unknown_id": "primary.performance-unknown-1",
+          "reason": "当前仅有可适用来源及源码工作量；没有该项当前性能观察。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "primary.performance-unknown-1",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "连续组可能缩短Scalar及搬运发射时间；短run、UB排队开销和输出边界拆段会削弱收益，run1 fallback不承诺加速。；具体政策假设 cost_reduction 尚无当前编译/Task证据。",
+          "affects": "决定该变化是否缩短当前关键路径，不能从源码工作量直接推出时延。",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "primary.safety-1",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "availableUB、API预留与所选T尚未取得；用2*Align32(T*b)+reserve预算，不采用来源常量。",
+          "affects": "限制具体参数/路径实施合法性，不否决条件方案或性能假设。",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "primary.safety-2",
+          "kind": "implementation_safety",
+          "fact": "constraint.target_api",
+          "expected_state": true,
+          "statement": "目标SDK对1/2/4/8字节Raw的DataCopyPad有效字节、非对齐GM及输出边界语义待核对。",
+          "affects": "限制具体参数/路径实施合法性，不否决条件方案或性能假设。",
+          "resolution": "check_before_implementation"
+        }
+      ],
+      "strongest_alternative_id": "opportunity.alt1",
+      "comparison": "11个case存在100至1048576等长度连续段，批量搬运同时去掉逐元素拷贝和段内rank解码；地址外提对其余9case有价值但保留每元素Scalar访存，作为最强替代。",
+      "disposition": "selected",
+      "reason": "11个case存在100至1048576等长度连续段，批量搬运同时去掉逐元素拷贝和段内rank解码；地址外提对其余9case有价值但保留每元素Scalar访存，作为最强替代。"
+    },
+    {
+      "id": "opportunity.alt1",
+      "hypothesis_id": "hypothesis.alt1",
+      "action_id": "action.hoist_invariant_control",
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "source.matrix",
+        "source.oracle"
+      ],
+      "cost_mechanism": "对全部case采用归一化sourceStep的odometer，消除rank除模但保留每元素GM读写；在run1组更适用。",
+      "predictions": [
+        {
+          "id": "alt1.source-work",
+          "kind": "source_work",
+          "statement": "对全部case采用归一化sourceStep的odometer，消除rank除模但保留每元素GM读写；在run1组更适用。",
+          "check_method": "当前源码审读与完整20case公式；R2静态证据，后续真实patch/编译检查",
+          "on_support": "保留结构预测，按参数域继续条件规划",
+          "on_refute": "修订地址/分配公式或降低该候选优先级"
+        },
+        {
+          "id": "alt1.performance",
+          "kind": "performance",
+          "statement": "对全部case采用归一化sourceStep的odometer，消除rank除模但保留每元素GM读写；在run1组更适用。：收益未知。",
+          "check_method": "未来完整正确性后，同源20case Task计时及针对性timeline/编译检查；本任务未测",
+          "on_support": "按组检查收益与回归后决定是否保留",
+          "on_refute": "保留失败与父本，按最强替代进一步判别"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "alt1.performance",
+          "unknown_id": "alt1.performance-unknown-1",
+          "reason": "当前仅有可适用来源及源码工作量；没有该项当前性能观察。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "alt1.performance-unknown-1",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "对全部case采用归一化sourceStep的odometer，消除rank除模但保留每元素GM读写；在run1组更适用。；具体政策假设 cost_reduction 尚无当前编译/Task证据。",
+          "affects": "决定该变化是否缩短当前关键路径，不能从源码工作量直接推出时延。",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "opportunity.primary",
+      "comparison": "对全部case采用归一化sourceStep的odometer，消除rank除模但保留每元素GM读写；在run1组更适用。",
+      "disposition": "deferred",
+      "reason": "对全部case采用归一化sourceStep的odometer，消除rank除模但保留每元素GM读写；在run1组更适用。"
+    }
+  ],
+  "evidence_requests": [
+    {
+      "id": "request.safety-1",
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "unknown_ids": [
+        "primary.safety-1"
+      ],
+      "method": "在允许硬件/SDK阶段读取真实平台/API证据并对照方案逐项证明：availableUB、API预留与所选T尚未取得；用2*Align32(T*b)+reserve预算，不采用来源常量。",
+      "discriminating_results": [
+        {
+          "outcome": "条件与所给参数域成立",
+          "decision_effect": "允许构建候选并完整20case验证；仍不代表性能改善"
+        },
+        {
+          "outcome": "条件不满足",
+          "decision_effect": "缩小参数域或走原fallback；不把失败解释为性能机制反证"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行硬件/构建；当前任务禁止相关动作。",
+      "defer_reason": "用户限定CPU源码/公式分析，保留具体补项交后继。"
+    },
+    {
+      "id": "request.safety-2",
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "unknown_ids": [
+        "primary.safety-2"
+      ],
+      "method": "在允许硬件/SDK阶段读取真实平台/API证据并对照方案逐项证明：目标SDK对1/2/4/8字节Raw的DataCopyPad有效字节、非对齐GM及输出边界语义待核对。",
+      "discriminating_results": [
+        {
+          "outcome": "条件与所给参数域成立",
+          "decision_effect": "允许构建候选并完整20case验证；仍不代表性能改善"
+        },
+        {
+          "outcome": "条件不满足",
+          "decision_effect": "缩小参数域或走原fallback；不把失败解释为性能机制反证"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行硬件/构建；当前任务禁止相关动作。",
+      "defer_reason": "用户限定CPU源码/公式分析，保留具体补项交后继。"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+        "sha256": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db"
+      },
+      "locator": "lines:316-363",
+      "effect_kind": "applicability",
+      "before": "以全输出大小作为可合并长度",
+      "after": "必须逐段核对真实地址差；不连续空洞分开，run1路径不能用连续DMA。",
+      "applicability": "strided_slice当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md",
+        "sha256": "sha256:678b709d7ea4092de4145febb3c7174155094d097e47f2b42b3f073d499b1c25"
+      },
+      "locator": "lines:46-86",
+      "effect_kind": "plan",
+      "before": "布局模板似乎要求引入转置",
+      "after": "正文先列连续切片直接批量搬运；只采用一般映射、合轴和唯一owner，不引入transpose/Gather中间区。",
+      "applicability": "strided_slice当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+        "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+      },
+      "locator": "lines:69-108",
+      "effect_kind": "parameters",
+      "before": "合并跨行DataCopy即可",
+      "after": "前段末端必须等于后段起点；将run与原owner交集后按有效字节搬运，并在MTE3读取结束后复用槽。",
+      "applicability": "strided_slice当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    }
+  ],
+  "selection": {
+    "mode": "conditional_plan",
+    "opportunity_id": "opportunity.primary",
+    "action_instance_id": "instance.primary",
+    "reason": "11个case存在100至1048576等长度连续段，批量搬运同时去掉逐元素拷贝和段内rank解码；地址外提对其余9case有价值但保留每元素Scalar访存，作为最强替代。 R2：重算所有mask、shrink/new-axis/ellipsis后得到连续组2/7/10/11/13/14/16/17/18/19/20；81处边界断言验证run内source(root+k)=source(root)+k且最大地址在输入内。case16/17的size1新轴不能阻止合轴；case20 run=127，跨行有空洞，不能把整个输出当连续。",
+    "concrete_plan": "基于归一化metadata合并最长连续尾段：跳过size1轴，要求最后有效axis step=1，继续合轴条件sourceStep[d]=当前run长度。每核仍持有原64B边界输出区间，与run交集切段；每段起点只解码一次，用DataCopyPad按有效字节搬入单独UB槽并搬出同宽位模式。T∈{256,1024,4096}元素，U=2*Align32(T*itemBytes)+API_reserved≤availableUB；不补读GM、不跨不连续行空洞。run=1、负stride、未支持API保留原逐元素路径。",
+    "stop_reason": null
+  },
+  "previous_feedback": {
+    "previous_decision_ref": {
+      "path": "decision-R1.json",
+      "sha256": "sha256:8b802e653bb9c7448f75165bca2bdbba6521ed3d25db1f6fc11701a24652c338"
+    },
+    "result_ref": null,
+    "measurement": "not_measured",
+    "result_limits": "无候选实现、native/正确性执行或性能结果。新增静态分析只能更新源码工作量预测。",
+    "prediction_updates": [
+      {
+        "prediction_id": "primary.source-work",
+        "judgement": "supported",
+        "reason": "重算所有mask、shrink/new-axis/ellipsis后得到连续组2/7/10/11/13/14/16/17/18/19/20；81处边界断言验证run内source(root+k)=source(root)+k且最大地址在输入内。case16/17的size1新轴不能阻止合轴；case20 run=127，跨行有空洞，不能把整个输出当连续。",
+        "evidence_refs": [
+          {
+            "path": "static-evidence-R2.json",
+            "sha256": "sha256:cb0ad68799282a61eee464c70cc7ec2c004f823f94ddfb6b89ee4b4fda58073e"
+          },
+          {
+            "path": "review-R2.md",
+            "sha256": "sha256:bc3c6312f77081ee3726f3d22b3eea3915bab300eda460ddbc9259df18536a3e"
+          }
+        ]
+      },
+      {
+        "prediction_id": "primary.performance",
+        "judgement": "not_tested",
+        "reason": "禁止硬件/性能执行，无真实measurement。",
+        "evidence_refs": []
+      }
+    ],
+    "current_parent_ref": {
+      "path": "source-index.json",
+      "sha256": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f"
+    },
+    "parent_reason": "没有实现并验证的新候选，继续原始源码父本。",
+    "same_action_reason": "重算所有mask、shrink/new-axis/ellipsis后得到连续组2/7/10/11/13/14/16/17/18/19/20；81处边界断言验证run内source(root+k)=source(root)+k且最大地址在输入内。case16/17的size1新轴不能阻止合轴；case20 run=127，跨行有空洞，不能把整个输出当连续。；仍选择相同意图但按新增边界收紧，而非为轮次强制换Action。",
+    "new_information": "重算所有mask、shrink/new-axis/ellipsis后得到连续组2/7/10/11/13/14/16/17/18/19/20；81处边界断言验证run内source(root+k)=source(root)+k且最大地址在输入内。case16/17的size1新轴不能阻止合轴；case20 run=127，跨行有空洞，不能把整个输出当连续。"
+  }
+}

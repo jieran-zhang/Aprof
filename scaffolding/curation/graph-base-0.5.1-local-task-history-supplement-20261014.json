@@ -1,0 +1,208 @@
+{
+  "candidate_version": "graph-base/0.5.1",
+  "created_at_utc": "2026-10-14T17:08:54.071930+00:00",
+  "current_default_version": "graph-base/0.5.0",
+  "eligible_for_publication": false,
+  "facts": {
+    "prewarm_v1": {
+      "completed_slots": [
+        "cycle-0-A",
+        "cycle-0-B"
+      ],
+      "failed_slot": "cycle-1-B",
+      "method_conclusion_available": false,
+      "reason": "timeline_protocol passed cycle=0 for actual cycle=1; no method conclusion; no replay retry",
+      "retained_source_and_scratch_evidence": true,
+      "status": "facility_failure",
+      "unexecuted_slots": 9
+    },
+    "prewarm_v2": {
+      "A": "原 binary，保留原 4222 个完整 kernel tasks",
+      "B": "相同 baseline 在原序列前增加固定 25×400=10000 次调用；原 4222 tasks、30 个计时事件（15 对）和双 oracle 保留",
+      "B_main_region_observation": {
+        "adjacent_400_task_mean_changes_percent": [
+          2.08,
+          -2.05,
+          2.37
+        ],
+        "cycle": 5,
+        "interpretation": "B 六周期虽通过原控制，固定前缀后主计时区间仍有持续 Task Duration 状态切换；不能把 stable=true 解读为跃迁已消失。",
+        "native_task_boundaries": [
+          1000,
+          1800,
+          3000
+        ],
+        "task_time_from_native_ms": [
+          7.738,
+          13.765,
+          23.087
+        ]
+      },
+      "causal_hardware_mechanism_established": false,
+      "decision": "reject_fixed_prewarm_prefix_for_production",
+      "decision_reason": "预登记关注的主区间跃迁消除条件未满足；12 槽仅为诊断，不支持将固定 25×400 前缀投产。",
+      "descriptive_analysis_adds_no_new_gate_threshold": true,
+      "fresh_cycles": 6,
+      "independent_replay_complete": true,
+      "independent_replay_eligible_for_publication": false,
+      "independent_replay_wall_seconds": 9.12287087738514,
+      "preserved_bytes": 334976635,
+      "preserved_file_count": 1079,
+      "registered_controls": {
+        "A": {
+          "reasons": [
+            "case 1 cycle 3 baseline: A/A mean drift exceeds 2%"
+          ],
+          "stable": false
+        },
+        "B": {
+          "reasons": [],
+          "stable": true
+        }
+      },
+      "slots": 12,
+      "status": "complete_diagnostic_only"
+    },
+    "readonly_cache_replay": {
+      "authority": "historical_task_measurement",
+      "eligible_for_publication": false,
+      "interpretation": "缓存修复后完成同一 sigmoid 证据的只读历史重放；旧父回放被主动中止而没有完整耗时，不能据此声称严格的整体加速比或原 campaign 已完成。",
+      "prior_uncached_parent_replay_cancelled_after_seconds": 1182.8239524364471,
+      "sigmoid_full_historical_replay_seconds": 82.12269449979067,
+      "snapshot_bytes": 17025522203,
+      "snapshot_files": 16613,
+      "snapshot_seconds": 240.14915895089507,
+      "unique_verified_cas_bytes": 2608392324,
+      "unique_verified_cas_objects": 5645,
+      "valid": true,
+      "whole_historical_audit_seconds": 330.1082370840013
+    },
+    "task_v2_local_cancellation": {
+      "actual_timeout": false,
+      "exp": {
+        "cycle_control_results": [
+          true,
+          true,
+          true,
+          false
+        ],
+        "failed_case_id": 1,
+        "failed_cycle": 3,
+        "failed_drift": {
+          "baseline": 0.022915742461891098,
+          "candidate": 0.022746750755685774
+        },
+        "raw_partition_controls_replayed": true,
+        "saved_sessions": 4
+      },
+      "original_campaign_complete": false,
+      "original_outer_wall_seconds": 4044.4258824139833,
+      "reason": "root_cost_cancellation_during_uncached_readonly_admission_replay",
+      "sigmoid": {
+        "collector_complete": true,
+        "collector_exit_status": 0,
+        "collector_wall_seconds": 2698.247664105147,
+        "independent_observations_run": 0,
+        "parent_confirmation_terminal_exists": false,
+        "saved_sessions": 120
+      }
+    }
+  },
+  "next_protocol_entry_requirements": [
+    "明确登记新协议的干预、完整计时范围、样本和失败停止规则。",
+    "将本补充来源接入可独立重放的历史链后，才能作为下一协议的历史入场证据；本 JSON 本身不提供验收。",
+    "另行完成已冻结正确性、测量控制和发布门禁；不重贴旧失败状态，不更新默认入口。"
+  ],
+  "not_a_release": true,
+  "publication_verifier_integration": {
+    "claim": "本文件仅汇总并绑定历史来源；现有 publication verifier 尚未接入该 supplement 的独立重放，不能将引用存在视为验收通过。",
+    "status": "not_integrated"
+  },
+  "purpose": "explicit_history_source_supplement_for_future_protocol_registration",
+  "references": {
+    "base_local_task_method_history": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-restructured/scaffolding/curation/graph-base-0.5.1-local-task-method-history.json",
+      "sha256": "sha256:5fed3f18baf691a77f1d4464fa5aee931ada610c9f16ab3e954897c7c557b091"
+    },
+    "prewarm_v1_facility_failure_audit": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/exp-prewarm-v1-facility-failure-audit/audit.json",
+      "sha256": "sha256:9c5240fdaa0008f78a9a9a19d3f954b938561c21cb12f2f049bee7d3112e057b"
+    },
+    "prewarm_v1_producer_archive": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/exp-prewarm-v1-facility-failure-audit/producer-index.json",
+      "sha256": "sha256:9cd7e4c7daf031809c44177ec473916fa2443f1c012d501433fdcfb492d22462"
+    },
+    "prewarm_v1_scratch_preservation": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/exp-prewarm-v1-facility-failure-audit/scratch-preservation.json",
+      "sha256": "sha256:82688977069027b8f50f070535ef6b71a3b6d956fc07800c52ab8d3ee9a034cc"
+    },
+    "prewarm_v2_freeze": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/exp-case1-prewarm-diagnostic-v2/freeze.json",
+      "sha256": "sha256:186f33b1af1a39bcb5430f449fab82a947cfd7aa8eb4867ce07e819e423dcec1"
+    },
+    "prewarm_v2_independent_replay": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/exp-case1-prewarm-v2-replay-audit-20261014/result.json",
+      "sha256": "sha256:d51b7d32572ae2515ddd1eae0a1ffdc942a9274e3212c6caa9b78bc72a77f1a5"
+    },
+    "prewarm_v2_independent_replay_execution": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/exp-case1-prewarm-v2-replay-audit-20261014/execution.json",
+      "sha256": "sha256:f490fe72439e5e6392cc7ac0baf853367cc69c70dbaec54dd873043c91544d1e"
+    },
+    "prewarm_v2_plan": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/exp-case1-prewarm-diagnostic-v2/plan.json",
+      "sha256": "sha256:eac0b31330e287968d741e6c2f94eb5359e60e5840c445257e83e7afa579fa4f"
+    },
+    "prewarm_v2_preservation": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/exp-case1-prewarm-v2-replay-audit-20261014/preservation.json",
+      "sha256": "sha256:0fecea6fb1efcf145f7b8be68a0a998b4fa7f6b4a11ac801517136c8055ac427"
+    },
+    "prewarm_v2_raw_task_analysis_report": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/exp-case1-prewarm-v2-task-timeline-analysis/report.md",
+      "sha256": "sha256:9a743c81d69e32d4af4ba716c560ef9b176b045f13cf47980aba5bfe93d58172"
+    },
+    "prewarm_v2_raw_task_analysis_summary": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/exp-case1-prewarm-v2-task-timeline-analysis/summary.json",
+      "sha256": "sha256:f39671b6ee46a3e02e7a23efbaae96bb8e38212f87c527da23003c824845a9a0"
+    },
+    "prewarm_v2_registered_analysis": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/exp-case1-prewarm-diagnostic-v2/campaign/analysis.json",
+      "sha256": "sha256:ea77c89684a88b79533018e5900ac4bcc50396c8d37bb3103dddf4b70d37bf25"
+    },
+    "prewarm_v2_root_anchor": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-restructured/scaffolding/curation/graph-base-0.5.1-exp-case1-prewarm-diagnostic-v2-anchor.json",
+      "sha256": "sha256:de82973112a7b5d9ee3ebf0d69e18fbb8cdb18c76e2387fea1f6f19859e409e6"
+    },
+    "prewarm_v2_source_archive": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/measurement-exp-case1-prewarm-v2-source-archive-20261014/index.json",
+      "sha256": "sha256:e161914ed1d1a2f189be227285504365301518af37f40d290fc0067b87457d86"
+    },
+    "task_v2_local_cancellation_audit": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/task-v2-local-cancellation-audit-20261014/audit.json",
+      "sha256": "sha256:1f101944d346997416b08b66aaf14797ec8e81f73944db33225311502ce106e1"
+    },
+    "task_v2_local_full_source_archive": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/measurement-task-v2-local-source-archive-20261014/index.json",
+      "sha256": "sha256:1da135b76c99223c803ca11e6b48fa6d8fb1efa0e42aa55a5d4f969d7b891af0"
+    },
+    "task_v2_local_historical_replay": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/task-v2-local-cancellation-replay-20261014/replay.json",
+      "sha256": "sha256:ab58d6867b451ac9fd768adf31cc7ca617f6d47fc5a3c1c077400a55146b8722"
+    },
+    "task_v2_local_historical_replay_refs": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/task-v2-local-cancellation-replay-20261014/result-refs.json",
+      "sha256": "sha256:c9105ae8e5ed2a89065e1e3b8eda9fea52f3c055d5f1efa38a04e5c9accfdfbf"
+    },
+    "task_v2_local_producer_only_archive": {
+      "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/validation-graph-base-0.5.1-20261014/task-v2-local-cancellation-replay-20261014/producer-only-index.json",
+      "sha256": "sha256:a5aa60ef79f11c254031a1de168862c3539acf13e70927b55c5a66ed2a260dca"
+    }
+  },
+  "release_state": {
+    "candidate_package_modified_by_this_supplement": false,
+    "default_entry_modified": false,
+    "frozen_acceptance_rules_modified": false,
+    "reason": "0.5.1 尚未完成有效的完整方法资格确认；原 exp 控制失败及父流程取消保留。",
+    "sealed": false
+  },
+  "schema_version": 1
+}

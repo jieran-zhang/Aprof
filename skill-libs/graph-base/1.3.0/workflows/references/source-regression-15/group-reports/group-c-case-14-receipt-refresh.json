@@ -1,0 +1,287 @@
+{
+  "schema_version": "receipt-refresh/v1",
+  "task_id": "raw-case-14",
+  "operation": "回放索引修复后的真实runtime核验；非新增Agent推理、非证据修改、非新知识选择",
+  "history_note": "原有R1-/R2-prefixed回执已正确绑定当前Context。离线inventory/harness误把初始历史unprefixed回执当作当前轮输入；主agent已修复每轮refs。本次10组重放与原有prefixed回执逐字节一致，所有历史与当前既有文件字节保留。",
+  "historical_receipts": {
+    "retrieval.json": {
+      "path": "retrieval.json",
+      "sha256": "sha256:d6c0f03b1267e77363b2f1711e706477cd1a872c67b0a39dc5f926a9a3c3468c",
+      "content_hash": "sha256:728c36a7e5e5e198a57f74582768389928cf61062365158edb02bd2a4bdfe01d",
+      "schema_version": "aprof.diagnosis-retrieval/v1",
+      "task_id": "raw-case-14",
+      "context_hash": "sha256:ef16186f73a8232aa4513f5c8cac87cac65bfaf546619a00075ed2801c65c023",
+      "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+      "retrieval_hash": null
+    },
+    "expansion-request.json": {
+      "path": "expansion-request.json",
+      "sha256": "sha256:df50ec2885000287e3d475bd4b56bcb9f790ca01fe3eea134f92377166f2c735",
+      "content_hash": "sha256:404e9e295bc3573495159239d77f6ca1b233fb91deed54454e20b0c28c71a18a",
+      "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+      "task_id": "raw-case-14",
+      "context_hash": "sha256:ef16186f73a8232aa4513f5c8cac87cac65bfaf546619a00075ed2801c65c023",
+      "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+      "retrieval_hash": "sha256:728c36a7e5e5e198a57f74582768389928cf61062365158edb02bd2a4bdfe01d"
+    },
+    "expansion.json": {
+      "path": "expansion.json",
+      "sha256": "sha256:2356cc3c6a0274d732c2d3c9411bb76fc0a6b52315a9ad7538bf09de0455a262",
+      "content_hash": "sha256:1fd199c1b478aacb0171c5f22301135768084d894eec6d94c6d300af7802b7b0",
+      "schema_version": "aprof.diagnosis-problem-expansion/v1",
+      "task_id": "raw-case-14",
+      "context_hash": "sha256:ef16186f73a8232aa4513f5c8cac87cac65bfaf546619a00075ed2801c65c023",
+      "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+      "retrieval_hash": "sha256:728c36a7e5e5e198a57f74582768389928cf61062365158edb02bd2a4bdfe01d"
+    },
+    "expansion-validation.json": {
+      "path": "expansion-validation.json",
+      "sha256": "sha256:8ee3b4c458d31f24bdd118df6176211110eb86b6ba6b7522d702ca104beebc6c",
+      "content_hash": "sha256:9dace1d8b401cb25bf0ae6fef52b694b7a5e54ea00e1c6177529668219b6375c",
+      "schema_version": "aprof.diagnosis-problem-expansion/v1",
+      "task_id": null,
+      "context_hash": "sha256:ef16186f73a8232aa4513f5c8cac87cac65bfaf546619a00075ed2801c65c023",
+      "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+      "retrieval_hash": null
+    }
+  },
+  "reading_record_policy": "原reading-record不改；新旧回执身份仅在本文件说明。",
+  "runtime_root": "/tmp/aprof-selection-maintenance-vdxp89ro/regression-package",
+  "runtime_action_decision_sha256": "sha256:2df71cd39e0610e0332126b57975c1715672e4ea73aec6f408ffa85a73bd269d",
+  "rounds": [
+    {
+      "round": 1,
+      "reasoning_ref": {
+        "path": "R1-reasoning.json",
+        "sha256": "sha256:8b2b3c3ec61c8a265b857c7aa7ae07a0d7204e36168d5e0b21b5790477754f89",
+        "content_hash": "sha256:aed8354ffc43766b51e118a5004fbdd4b52401a5490ddbe3a82ee844cdc2578f"
+      },
+      "current_context_hash": "sha256:ee21892687a10c42d529243997ec3bb326f3aa748c6fd41f9f3f9882b4884ad2",
+      "old_round_receipts": {
+        "retrieval": {
+          "path": "R1-retrieval.json",
+          "sha256": "sha256:289a55e1ad1fbbc09891270219c954b3575e8760a8a8409b6b36b93d37c45591",
+          "content_hash": "sha256:962912c6f4cd6ae002ad1c296e84231bbba076dc70edf03b83bd74f18dc9081e",
+          "schema_version": "aprof.diagnosis-retrieval/v1",
+          "task_id": "raw-case-14",
+          "context_hash": "sha256:ee21892687a10c42d529243997ec3bb326f3aa748c6fd41f9f3f9882b4884ad2",
+          "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+          "retrieval_hash": null
+        },
+        "expansion-request": {
+          "path": "R1-expansion-request.json",
+          "sha256": "sha256:a265dfb709565ef0112705f4a7b0a079b64a5abc38d16c45a74e3cfcab89c7cb",
+          "content_hash": "sha256:6ab321f523e60e108dc4159eb0b98ccb88b2ffb94a6775bab7bf51a51f228a0b",
+          "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+          "task_id": "raw-case-14",
+          "context_hash": "sha256:ee21892687a10c42d529243997ec3bb326f3aa748c6fd41f9f3f9882b4884ad2",
+          "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+          "retrieval_hash": "sha256:962912c6f4cd6ae002ad1c296e84231bbba076dc70edf03b83bd74f18dc9081e"
+        },
+        "expansion": {
+          "path": "R1-expansion.json",
+          "sha256": "sha256:4c0c87ebd35ff70146bdd428f414fb94d1bd7f40348fd8f05bbf9e32e3cb155d",
+          "content_hash": "sha256:3532678de3deaeddb9e8d7246bd0f829d0496184d23c77e7343b8e42c3475760",
+          "schema_version": "aprof.diagnosis-problem-expansion/v1",
+          "task_id": "raw-case-14",
+          "context_hash": "sha256:ee21892687a10c42d529243997ec3bb326f3aa748c6fd41f9f3f9882b4884ad2",
+          "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+          "retrieval_hash": "sha256:962912c6f4cd6ae002ad1c296e84231bbba076dc70edf03b83bd74f18dc9081e"
+        },
+        "expansion-validation": {
+          "path": "R1-expansion-validation.json",
+          "sha256": "sha256:5591a0542cc1793a9502fccbe71ca5cca334bf353f184f897c8127b5eba70a26",
+          "content_hash": "sha256:284875f2ff31e26e9319f616c0584e0cef7212d50236237931d2efe9be2bd5f9",
+          "schema_version": "aprof.diagnosis-problem-expansion/v1",
+          "task_id": null,
+          "context_hash": "sha256:ee21892687a10c42d529243997ec3bb326f3aa748c6fd41f9f3f9882b4884ad2",
+          "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+          "retrieval_hash": null
+        }
+      },
+      "request_problem_ids": [
+        "problem.scalar_control_hot_loop",
+        "problem.noncontiguous_access",
+        "problem.control_metadata_overhead"
+      ],
+      "selection_payload_unchanged": true,
+      "new_context_hash": "sha256:ee21892687a10c42d529243997ec3bb326f3aa748c6fd41f9f3f9882b4884ad2",
+      "new_retrieval_content_hash": "sha256:962912c6f4cd6ae002ad1c296e84231bbba076dc70edf03b83bd74f18dc9081e",
+      "new_expansion_content_hash": "sha256:3532678de3deaeddb9e8d7246bd0f829d0496184d23c77e7343b8e42c3475760",
+      "replay_equal_existing_prefixed_receipts": true,
+      "validate_expansion": {
+        "valid": true,
+        "schema_version": "aprof.diagnosis-problem-expansion/v1",
+        "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+        "context_hash": "sha256:ee21892687a10c42d529243997ec3bb326f3aa748c6fd41f9f3f9882b4884ad2",
+        "expansion_hash": "sha256:3532678de3deaeddb9e8d7246bd0f829d0496184d23c77e7343b8e42c3475760",
+        "problem_ids": [
+          "problem.scalar_control_hot_loop",
+          "problem.noncontiguous_access",
+          "problem.control_metadata_overhead"
+        ]
+      },
+      "immutable_C1_expansion_ref_matches": true,
+      "new_round_receipts": {
+        "retrieval": {
+          "path": "R1-retrieval.json",
+          "sha256": "sha256:289a55e1ad1fbbc09891270219c954b3575e8760a8a8409b6b36b93d37c45591",
+          "content_hash": "sha256:962912c6f4cd6ae002ad1c296e84231bbba076dc70edf03b83bd74f18dc9081e",
+          "schema_version": "aprof.diagnosis-retrieval/v1",
+          "task_id": "raw-case-14",
+          "context_hash": "sha256:ee21892687a10c42d529243997ec3bb326f3aa748c6fd41f9f3f9882b4884ad2",
+          "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+          "retrieval_hash": null
+        },
+        "expansion-request": {
+          "path": "R1-expansion-request.json",
+          "sha256": "sha256:a265dfb709565ef0112705f4a7b0a079b64a5abc38d16c45a74e3cfcab89c7cb",
+          "content_hash": "sha256:6ab321f523e60e108dc4159eb0b98ccb88b2ffb94a6775bab7bf51a51f228a0b",
+          "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+          "task_id": "raw-case-14",
+          "context_hash": "sha256:ee21892687a10c42d529243997ec3bb326f3aa748c6fd41f9f3f9882b4884ad2",
+          "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+          "retrieval_hash": "sha256:962912c6f4cd6ae002ad1c296e84231bbba076dc70edf03b83bd74f18dc9081e"
+        },
+        "expansion": {
+          "path": "R1-expansion.json",
+          "sha256": "sha256:4c0c87ebd35ff70146bdd428f414fb94d1bd7f40348fd8f05bbf9e32e3cb155d",
+          "content_hash": "sha256:3532678de3deaeddb9e8d7246bd0f829d0496184d23c77e7343b8e42c3475760",
+          "schema_version": "aprof.diagnosis-problem-expansion/v1",
+          "task_id": "raw-case-14",
+          "context_hash": "sha256:ee21892687a10c42d529243997ec3bb326f3aa748c6fd41f9f3f9882b4884ad2",
+          "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+          "retrieval_hash": "sha256:962912c6f4cd6ae002ad1c296e84231bbba076dc70edf03b83bd74f18dc9081e"
+        },
+        "expansion-validation": {
+          "path": "R1-expansion-validation.json",
+          "sha256": "sha256:5591a0542cc1793a9502fccbe71ca5cca334bf353f184f897c8127b5eba70a26",
+          "content_hash": "sha256:284875f2ff31e26e9319f616c0584e0cef7212d50236237931d2efe9be2bd5f9",
+          "schema_version": "aprof.diagnosis-problem-expansion/v1",
+          "task_id": null,
+          "context_hash": "sha256:ee21892687a10c42d529243997ec3bb326f3aa748c6fd41f9f3f9882b4884ad2",
+          "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+          "retrieval_hash": null
+        }
+      }
+    },
+    {
+      "round": 2,
+      "reasoning_ref": {
+        "path": "R2-reasoning.json",
+        "sha256": "sha256:f1ff7c05ffa4d26658dc2515a32f85e09a25bd79d14b49f8f705553de8a276a9",
+        "content_hash": "sha256:b8349858e4894eb2150e7c8ff337fc893cc808dbaff4a7b11d67bea77572e695"
+      },
+      "current_context_hash": "sha256:7989773c688bf2e3f5e661905cd0abd338bf4bb06b3f47529e986207fef60e5b",
+      "old_round_receipts": {
+        "retrieval": {
+          "path": "R2-retrieval.json",
+          "sha256": "sha256:c449584cf44428fce6c8960b1495b2d923f429f49752ad651cb307207bba28e9",
+          "content_hash": "sha256:87259b2d94f95e28aeb5d48736c342e62f15aff4b9610bfdc00018e77c3eec2f",
+          "schema_version": "aprof.diagnosis-retrieval/v1",
+          "task_id": "raw-case-14",
+          "context_hash": "sha256:7989773c688bf2e3f5e661905cd0abd338bf4bb06b3f47529e986207fef60e5b",
+          "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+          "retrieval_hash": null
+        },
+        "expansion-request": {
+          "path": "R2-expansion-request.json",
+          "sha256": "sha256:83485d8d54f5516ad7c876dfddb0772257f62324f60f07eeefc568febb26b489",
+          "content_hash": "sha256:4303cc7e1c5e61840295dd09c3a3d981eeea69101750d9b631a19a81f8fefeeb",
+          "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+          "task_id": "raw-case-14",
+          "context_hash": "sha256:7989773c688bf2e3f5e661905cd0abd338bf4bb06b3f47529e986207fef60e5b",
+          "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+          "retrieval_hash": "sha256:87259b2d94f95e28aeb5d48736c342e62f15aff4b9610bfdc00018e77c3eec2f"
+        },
+        "expansion": {
+          "path": "R2-expansion.json",
+          "sha256": "sha256:547bea3c91da6c058ef077e2ad6e5f1a3d550fc22bb782087334860037463741",
+          "content_hash": "sha256:0ceb50deba84ea2367dfde102f594c806bd1b2eee3da1ab0d5a6fb2b80e36437",
+          "schema_version": "aprof.diagnosis-problem-expansion/v1",
+          "task_id": "raw-case-14",
+          "context_hash": "sha256:7989773c688bf2e3f5e661905cd0abd338bf4bb06b3f47529e986207fef60e5b",
+          "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+          "retrieval_hash": "sha256:87259b2d94f95e28aeb5d48736c342e62f15aff4b9610bfdc00018e77c3eec2f"
+        },
+        "expansion-validation": {
+          "path": "R2-expansion-validation.json",
+          "sha256": "sha256:9c4f72a78bf7e95a81c09041627a81cd24c2fe51df487c44a8068d684037ffdd",
+          "content_hash": "sha256:57d37ff2b1554cadae42e4eb5450d7ec4714c40c9a8de8bd74d13b2f565c6f61",
+          "schema_version": "aprof.diagnosis-problem-expansion/v1",
+          "task_id": null,
+          "context_hash": "sha256:7989773c688bf2e3f5e661905cd0abd338bf4bb06b3f47529e986207fef60e5b",
+          "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+          "retrieval_hash": null
+        }
+      },
+      "request_problem_ids": [
+        "problem.scalar_control_hot_loop",
+        "problem.noncontiguous_access",
+        "problem.control_metadata_overhead"
+      ],
+      "selection_payload_unchanged": true,
+      "new_context_hash": "sha256:7989773c688bf2e3f5e661905cd0abd338bf4bb06b3f47529e986207fef60e5b",
+      "new_retrieval_content_hash": "sha256:87259b2d94f95e28aeb5d48736c342e62f15aff4b9610bfdc00018e77c3eec2f",
+      "new_expansion_content_hash": "sha256:0ceb50deba84ea2367dfde102f594c806bd1b2eee3da1ab0d5a6fb2b80e36437",
+      "replay_equal_existing_prefixed_receipts": true,
+      "validate_expansion": {
+        "valid": true,
+        "schema_version": "aprof.diagnosis-problem-expansion/v1",
+        "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+        "context_hash": "sha256:7989773c688bf2e3f5e661905cd0abd338bf4bb06b3f47529e986207fef60e5b",
+        "expansion_hash": "sha256:0ceb50deba84ea2367dfde102f594c806bd1b2eee3da1ab0d5a6fb2b80e36437",
+        "problem_ids": [
+          "problem.scalar_control_hot_loop",
+          "problem.noncontiguous_access",
+          "problem.control_metadata_overhead"
+        ]
+      },
+      "immutable_C1_expansion_ref_matches": true,
+      "new_round_receipts": {
+        "retrieval": {
+          "path": "R2-retrieval.json",
+          "sha256": "sha256:c449584cf44428fce6c8960b1495b2d923f429f49752ad651cb307207bba28e9",
+          "content_hash": "sha256:87259b2d94f95e28aeb5d48736c342e62f15aff4b9610bfdc00018e77c3eec2f",
+          "schema_version": "aprof.diagnosis-retrieval/v1",
+          "task_id": "raw-case-14",
+          "context_hash": "sha256:7989773c688bf2e3f5e661905cd0abd338bf4bb06b3f47529e986207fef60e5b",
+          "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+          "retrieval_hash": null
+        },
+        "expansion-request": {
+          "path": "R2-expansion-request.json",
+          "sha256": "sha256:83485d8d54f5516ad7c876dfddb0772257f62324f60f07eeefc568febb26b489",
+          "content_hash": "sha256:4303cc7e1c5e61840295dd09c3a3d981eeea69101750d9b631a19a81f8fefeeb",
+          "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+          "task_id": "raw-case-14",
+          "context_hash": "sha256:7989773c688bf2e3f5e661905cd0abd338bf4bb06b3f47529e986207fef60e5b",
+          "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+          "retrieval_hash": "sha256:87259b2d94f95e28aeb5d48736c342e62f15aff4b9610bfdc00018e77c3eec2f"
+        },
+        "expansion": {
+          "path": "R2-expansion.json",
+          "sha256": "sha256:547bea3c91da6c058ef077e2ad6e5f1a3d550fc22bb782087334860037463741",
+          "content_hash": "sha256:0ceb50deba84ea2367dfde102f594c806bd1b2eee3da1ab0d5a6fb2b80e36437",
+          "schema_version": "aprof.diagnosis-problem-expansion/v1",
+          "task_id": "raw-case-14",
+          "context_hash": "sha256:7989773c688bf2e3f5e661905cd0abd338bf4bb06b3f47529e986207fef60e5b",
+          "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+          "retrieval_hash": "sha256:87259b2d94f95e28aeb5d48736c342e62f15aff4b9610bfdc00018e77c3eec2f"
+        },
+        "expansion-validation": {
+          "path": "R2-expansion-validation.json",
+          "sha256": "sha256:9c4f72a78bf7e95a81c09041627a81cd24c2fe51df487c44a8068d684037ffdd",
+          "content_hash": "sha256:57d37ff2b1554cadae42e4eb5450d7ec4714c40c9a8de8bd74d13b2f565c6f61",
+          "schema_version": "aprof.diagnosis-problem-expansion/v1",
+          "task_id": null,
+          "context_hash": "sha256:7989773c688bf2e3f5e661905cd0abd338bf4bb06b3f47529e986207fef60e5b",
+          "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+          "retrieval_hash": null
+        }
+      }
+    }
+  ],
+  "protected_files_unchanged": true,
+  "content_changes_to_existing_files": 0
+}

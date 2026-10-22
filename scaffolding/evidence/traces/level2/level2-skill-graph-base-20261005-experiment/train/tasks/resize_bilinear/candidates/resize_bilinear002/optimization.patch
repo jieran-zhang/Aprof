@@ -1,0 +1,10 @@
+--- parent/op_kernel/resize_bilinear_dispatch.h
++++ candidate/op_kernel/resize_bilinear_dispatch.h
+@@ -3,5 +3,7 @@
+ inline uint64_t SelectTilingKey(const ResizeBilinearTilingData &t) {
+  const uint64_t item=t.dtype==RESIZE_FP32?4:2;
+  if((t.outW*item)%64)return 0;
++ // Wide low-precision input rows did not benefit from per-output-row geometry reuse.
++ if(t.dtype!=RESIZE_FP32 && t.inW>=2048)return 0;
+  return t.dtype==RESIZE_FP32?1:2;
+ }

@@ -1,0 +1,317 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aprof:knowledge-handoff:v2",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "aprof.handoff/v2"
+    },
+    "stage": {
+      "enum": [
+        "C1",
+        "C2",
+        "C3"
+      ]
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "candidate_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "parent_hash": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "route": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": "aprof.knowledge-route/v1"
+        },
+        "owner": {
+          "enum": [
+            "diagnosis",
+            "parallel-planning",
+            "optimization"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "knowledge_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "context_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "task_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "override_hash": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "selection_mode": {
+          "const": "deterministic"
+        },
+        "evidence": {
+          "type": "object"
+        },
+        "diagnostic_state": {
+          "enum": [
+            "resolved",
+            "unknown",
+            "workload_limited",
+            "measurement_limited"
+          ]
+        },
+        "problems": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "deduplicated": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "missing": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "selected_action": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "matches": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "considered": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "context_snapshot": {
+          "type": "object",
+          "required": [
+            "schema_version",
+            "task_id",
+            "source_context_ref",
+            "facts",
+            "attributes"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "owner",
+        "version",
+        "knowledge_hash",
+        "context_hash",
+        "task_id",
+        "override_hash",
+        "selection_mode",
+        "evidence",
+        "context_snapshot"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "owner": {
+                "const": "diagnosis"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "diagnostic_state",
+              "problems",
+              "actions",
+              "deduplicated",
+              "missing",
+              "selected_action"
+            ]
+          },
+          "else": {
+            "required": [
+              "matches",
+              "considered"
+            ]
+          }
+        }
+      ]
+    },
+    "selected_actions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "executed_actions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "parameters": {
+      "type": "object"
+    },
+    "alternatives": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "implementation_freedom": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "parameter_adjustments": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "plan_compliance": {
+      "enum": [
+        "compliant",
+        "replanning_required"
+      ]
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "path",
+          "sha256"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "selected_entries": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "implementation_source_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  },
+  "required": [
+    "schema_version",
+    "stage",
+    "task_id",
+    "candidate_id",
+    "parent_hash",
+    "route",
+    "artifacts"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "stage": {
+            "const": "C2"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "selected_actions",
+          "selected_entries",
+          "parameters",
+          "alternatives",
+          "implementation_freedom"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "stage": {
+            "const": "C3"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "executed_actions",
+          "selected_entries",
+          "parameters",
+          "parameter_adjustments",
+          "plan_compliance",
+          "implementation_source_hash"
+        ],
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  ]
+}

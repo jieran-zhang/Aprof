@@ -1,0 +1,27 @@
+{
+  "frozen_at_utc": "2026-10-22T04:09:38.365539+00:00",
+  "applies_to": [
+    "A",
+    "B"
+  ],
+  "reason": "Provide 24 completed independent results; max-output truncations are infrastructure failures and not graded.",
+  "initial_requests": 24,
+  "initial_protocol_unchanged": true,
+  "retry_after": "All 24 initial requests have final RUN records.",
+  "retry_eligibility": "No valid completed response, including max_output_tokens truncation.",
+  "max_extra_independent_attempts_per_logical_run": 2,
+  "selection": "First valid completed response by chronological attempt order. Never content/score selection.",
+  "unchanged_request_fields": [
+    "prompt",
+    "instructions",
+    "model",
+    "reasoning.effort",
+    "tools",
+    "tool_choice",
+    "max_output_tokens",
+    "service_tier"
+  ],
+  "retention": "Keep every request, SSE event trace, response, answer and RUN; account all failed costs separately.",
+  "if_three_attempts_fail": "Report blocking item; do not silently change prompt, corpus, budget or grade incomplete response.",
+  "review_state_at_freeze": "No formal grades saved or frozen. Two completed s1-A answers have been read for factual review; truncated s2 not read. No prompt/material change based on answers."
+}

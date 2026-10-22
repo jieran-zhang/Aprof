@@ -1,0 +1,27 @@
+{
+  "task_id": "case-09",
+  "status": "conditional_analysis_only",
+  "strict_C2_constructed": false,
+  "selected_P": [
+    "planning.elementwise.continuous"
+  ],
+  "selected_O": [
+    "implementation.tiling-tail.dispatch",
+    "implementation.buffer-lifetime.reuse",
+    "implementation.precision-boundaries.numeric"
+  ],
+  "plan": "保留none/tanh定义和全部Cast/尾部修正。在Init按mode分配：none保持原erfTmp/mask；tanh省去两项无用分配。基于mode,dtype合法容量选择T：tanh{1024,2048,4096}，none{1024,2048}，T均64整数倍。tanh U=2*Align32(b*T)+3*Align32(4*T)+APIreserve；none另加Align32(20*T)+Align256(ceil(T/8))。只有U≤actualUB且count API允许才选择较大T，否则原1024分支。直调用实际mode字段/template分支接线，不伪造TILING_KEY_IS。",
+  "missing": [
+    "实际device/SKU/hardware_fingerprint及CANN/compiler身份",
+    "真实可见AIV与可用UB及API预留（影响最终核数/tile/槽域）",
+    "有来源的architecture_profile与冻结parallel_plan/dispatch_plan及其能力/容量回执",
+    "新实现真实入口/dispatch源码绑定；本轮只有计划没有C3"
+  ],
+  "not_claimed": [
+    "C2实施就绪",
+    "C3 implemented",
+    "正确性passed",
+    "性能加速比"
+  ],
+  "reason": "不以占位hardware facts或书面参数替代严格计划；target-provenance仅目标适用域。"
+}

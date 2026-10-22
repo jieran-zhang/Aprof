@@ -1,0 +1,1085 @@
+{
+  "schema_version": "aprof.action-decision/v2",
+  "task_id": "autonomy-c-13",
+  "context_hash": "sha256:922c4e787da382ee6f78cb218380b70d3a9d407e674d91ec9b1a4d1ec0f7d738",
+  "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/ec82d8f535262a6e43869d71bce0e77d91aa71040c5f7f87a8e56f5adfd6f1e8.json",
+    "sha256": "sha256:fde21372195004f2ae06c2a295edd3ca726b0f00da220aa64ef8f1c0bc6507e2"
+  },
+  "current_parent_ref": {
+    "path": "parent-source.json",
+    "sha256": "sha256:781031b550075d691047e7474f50d7038a53e295782e5613824ae8684fa75be1"
+  },
+  "opportunities": [
+    {
+      "id": "primary",
+      "hypothesis_id": "H-primary",
+      "action_id": "action.vectorize_scalar_loop",
+      "action_instance_id": "I-primary",
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "7",
+        "8",
+        "11",
+        "13",
+        "14",
+        "16",
+        "18",
+        "4",
+        "9",
+        "15",
+        "19",
+        "5",
+        "10",
+        "20",
+        "6",
+        "12",
+        "17"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "source.workload"
+      ],
+      "cost_mechanism": "R*D次Scalar元素循环及其GetValue/SetValue改为每row常数个Mul/Add/Sub向量批次；不减少数学乘加或必要GM",
+      "predictions": [
+        {
+          "id": "primary-work",
+          "kind": "source_work",
+          "statement": "R*D次Scalar元素循环及其GetValue/SetValue改为每row常数个Mul/Add/Sub向量批次；不减少数学乘加或必要GM",
+          "check_method": "修改前后工作计数及地址序列审查，当前未实施",
+          "on_support": "保留减少工作假设；另验证新增代价",
+          "on_refute": "重新比较最强替代"
+        },
+        {
+          "id": "primary-time",
+          "kind": "performance",
+          "statement": "减少上述工作是否抵消半分模式可用两段连续视图，interleaved需要配对重排/索引；Ubase=20D+10D*[s=2]字节，加临时Q(D)、padding、mask与API暂存",
+          "check_method": "完整correctness后统一Task timing，按语义域比较",
+          "on_support": "仅支持工程收益，不自动证明主瓶颈",
+          "on_refute": "检查编译消除、新增发射与残余，再决定缩参数或改方法"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_scalar_hot",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "primary-time",
+          "unknown_id": "primary-perf-0",
+          "reason": "源码工作模型是待检验预测，未把未测性能置真。"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "primary-time",
+          "unknown_id": "primary-perf-1",
+          "reason": "源码工作模型是待检验预测，未把未测性能置真。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "primary-safe-1",
+          "kind": "implementation_safety",
+          "fact": "constraint.semantic_equivalence",
+          "expected_state": true,
+          "statement": "constraint.semantic_equivalence：需对具体参数/计划完成证明；源码机制支持不能代替最终实例合法性",
+          "affects": "保留row owner和读取，half mode将q/k两半分别Mul后Add/Sub，禁止FMA融合或重排原数值顺序；interleaved建立合法偶奇视图/UB重排后同序计算；保留数值与同步边，只有API、容量、特殊值契约闭合后实施。",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "primary-safe-2",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "constraint.capacity：需对具体参数/计划完成证明；源码机制支持不能代替最终实例合法性",
+          "affects": "半分模式可用两段连续视图，interleaved需要配对重排/索引；Ubase=20D+10D*[s=2]字节，加临时Q(D)、padding、mask与API暂存",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "primary-perf-0",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "旧条件 symptom.profile.scalar_hot 的期望状态为 true。Scalar热点证据提高试验优先级，但不是等价逐元素向量化的安全前提。；当前compiled成本与Task关键路径占比未知",
+          "affects": "收益大小及主替代优先级，不阻止有来源的条件规划",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "primary-perf-1",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "合法向量化可能减少逐元素Scalar处理与发射，但Gather/转换、UB暂存和精度路径可成为新成本。；当前compiled成本与Task关键路径占比未知",
+          "affects": "收益大小及主替代优先级，不阻止有来源的条件规划",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "alternative",
+      "comparison": "保留cos/sin输入可减少trig读和Cast，但只占基线逻辑字节1/5；BSND相邻head容易同key，BNSD需跨S窗口或重排owner，仍保留全部Scalar乘加。",
+      "disposition": "selected",
+      "reason": "保留row owner和读取，half mode将q/k两半分别Mul后Add/Sub，禁止FMA融合或重排原数值顺序；interleaved建立合法偶奇视图/UB重排后同序计算；保留数值与同步边，只有API、容量、特殊值契约闭合后实施。",
+      "analysis": {
+        "intent_gap": null,
+        "work_delta": [
+          {
+            "id": "primary-reduced",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "0-half",
+              "1-half",
+              "0-interleaved",
+              "1-interleaved"
+            ],
+            "change": "reduced",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "R*D",
+              "unit": "scalar element loop iterations replaced",
+              "symbols": [
+                {
+                  "name": "R",
+                  "meaning": "行数",
+                  "unit": "rows"
+                },
+                {
+                  "name": "D",
+                  "meaning": "RoPE每行特征宽度",
+                  "unit": "elements/row"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload"
+              ]
+            },
+            "explanation": "逻辑工作变化预测；不对应确定时延或编译指令数。"
+          },
+          {
+            "id": "primary-retained",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "0-half",
+              "1-half",
+              "0-interleaved",
+              "1-interleaved"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "qualitative",
+              "expression": "cos/sin跨head重复DMA、row级屏障与小D搬运仍在；Vector API出现于Cast不代表原乘加已经批量化。",
+              "unit": "logical work",
+              "symbols": [],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload"
+              ]
+            },
+            "explanation": "未覆盖计算/搬运明确保留。"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "primary-cov-0-half",
+            "domain_id": "0-half",
+            "status": "partial",
+            "region": "仅计划指定阶段减少；其它工作保留。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "primary-cov-1-half",
+            "domain_id": "1-half",
+            "status": "partial",
+            "region": "仅计划指定阶段减少；其它工作保留。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "primary-cov-0-interleaved",
+            "domain_id": "0-interleaved",
+            "status": "partial",
+            "region": "仅计划指定阶段减少；其它工作保留。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "primary-cov-1-interleaved",
+            "domain_id": "1-interleaved",
+            "status": "partial",
+            "region": "仅计划指定阶段减少；其它工作保留。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "primary-cost",
+            "domain_ids": [
+              "0-half",
+              "1-half",
+              "0-interleaved",
+              "1-interleaved"
+            ],
+            "dimension": "UB bytes / API issue / task / synchronization, separately accounted",
+            "change": {
+              "mode": "symbolic",
+              "expression": "20*D+I16*10*D+Btmp",
+              "unit": "bytes",
+              "symbols": [
+                {
+                  "name": "D",
+                  "meaning": "RoPE每行特征宽度",
+                  "unit": "elements/row"
+                },
+                {
+                  "name": "I16",
+                  "meaning": "窄dtype为1否则0",
+                  "unit": "dimensionless"
+                },
+                {
+                  "name": "Btmp",
+                  "meaning": "API临时分配",
+                  "unit": "bytes"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload"
+              ]
+            },
+            "consequence": "保留cos/sin输入可减少trig读和Cast，但只占基线逻辑字节1/5；BSND相邻head容易同key，BNSD需跨S窗口或重排owner，仍保留全部Scalar乘加。"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "primary-residual",
+            "domain_ids": [
+              "0-half",
+              "1-half",
+              "0-interleaved",
+              "1-interleaved"
+            ],
+            "remaining_work": "cos/sin跨head重复DMA、row级屏障与小D搬运仍在；Vector API出现于Cast不代表原乘加已经批量化。",
+            "next_step": "保留fallback并在后续独立候选比较；不把部分减少当整个算子解决。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          }
+        ],
+        "no_alternative_reason": null
+      }
+    },
+    {
+      "id": "alternative",
+      "hypothesis_id": "H-alternative",
+      "action_id": "action.reuse_input_tiles",
+      "action_instance_id": "I-alternative",
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "7",
+        "8",
+        "11",
+        "13",
+        "14",
+        "16",
+        "18",
+        "4",
+        "9",
+        "15",
+        "19",
+        "5",
+        "10",
+        "20",
+        "6",
+        "12",
+        "17"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "source.workload"
+      ],
+      "cost_mechanism": "同owner连续重复trig key的m行可由m*D*s读量降为D*s，节省(m-1)*D*s；窄dtype相应减少(m-1)*D次Cast",
+      "predictions": [
+        {
+          "id": "alternative-work",
+          "kind": "source_work",
+          "statement": "同owner连续重复trig key的m行可由m*D*s读量降为D*s，节省(m-1)*D*s；窄dtype相应减少(m-1)*D次Cast",
+          "check_method": "修改前后工作计数及地址序列审查，当前未实施",
+          "on_support": "保留减少工作假设；另验证新增代价",
+          "on_refute": "重新比较最强替代"
+        },
+        {
+          "id": "alternative-time",
+          "kind": "performance",
+          "statement": "减少上述工作是否抵消每key驻留D*s原值与可能D*4 FP32表示；BNSD整S缓存需S*D*s，与q/k连续扫描和任务数权衡",
+          "check_method": "完整correctness后统一Task timing，按语义域比较",
+          "on_support": "仅支持工程收益，不自动证明主瓶颈",
+          "on_refute": "检查编译消除、新增发射与残余，再决定缩参数或改方法"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "alternative-time",
+          "unknown_id": "alternative-perf-0",
+          "reason": "源码工作模型是待检验预测，未把未测性能置真。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "alternative-safe-1",
+          "kind": "implementation_safety",
+          "fact": "constraint.reuse_domain",
+          "expected_state": true,
+          "statement": "constraint.reuse_domain：需对具体参数/计划完成证明；源码机制支持不能代替最终实例合法性",
+          "affects": "保留row owner和读取，half mode将q/k两半分别Mul后Add/Sub，禁止FMA融合或重排原数值顺序；interleaved建立合法偶奇视图/UB重排后同序计算；保留数值与同步边，只有API、容量、特殊值契约闭合后实施。",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "alternative-safe-2",
+          "kind": "implementation_safety",
+          "fact": "constraint.semantic_equivalence",
+          "expected_state": true,
+          "statement": "constraint.semantic_equivalence：需对具体参数/计划完成证明；源码机制支持不能代替最终实例合法性",
+          "affects": "保留row owner和读取，half mode将q/k两半分别Mul后Add/Sub，禁止FMA融合或重排原数值顺序；interleaved建立合法偶奇视图/UB重排后同序计算；保留数值与同步边，只有API、容量、特殊值契约闭合后实施。",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "alternative-safe-3",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "constraint.capacity：需对具体参数/计划完成证明；源码机制支持不能代替最终实例合法性",
+          "affects": "半分模式可用两段连续视图，interleaved需要配对重排/索引；Ubase=20D+10D*[s=2]字节，加临时Q(D)、padding、mask与API暂存",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "alternative-perf-0",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "驻留或改变tile顺序可减少重复装入；代价是更长存活、较小tile/较少流水buffer，L2提示不保证实际驻留。；当前compiled成本与Task关键路径占比未知",
+          "affects": "收益大小及主替代优先级，不阻止有来源的条件规划",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "primary",
+      "comparison": "保留cos/sin输入可减少trig读和Cast，但只占基线逻辑字节1/5；BSND相邻head容易同key，BNSD需跨S窗口或重排owner，仍保留全部Scalar乘加。",
+      "disposition": "deferred",
+      "reason": "保留cos/sin输入可减少trig读和Cast，但只占基线逻辑字节1/5；BSND相邻head容易同key，BNSD需跨S窗口或重排owner，仍保留全部Scalar乘加。",
+      "analysis": {
+        "intent_gap": null,
+        "work_delta": [
+          {
+            "id": "alternative-reduced",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "0-half",
+              "1-half",
+              "0-interleaved",
+              "1-interleaved"
+            ],
+            "change": "reduced",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "(m-1)*D*s",
+              "unit": "repeated original-input bytes",
+              "symbols": [
+                {
+                  "name": "D",
+                  "meaning": "RoPE每行特征宽度",
+                  "unit": "elements/row"
+                },
+                {
+                  "name": "s",
+                  "meaning": "当前dtype每元素字节",
+                  "unit": "bytes/element"
+                },
+                {
+                  "name": "m",
+                  "meaning": "同owner相同trig key连续消费行数",
+                  "unit": "rows"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload"
+              ]
+            },
+            "explanation": "逻辑工作变化预测；不对应确定时延或编译指令数。"
+          },
+          {
+            "id": "alternative-retained",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "0-half",
+              "1-half",
+              "0-interleaved",
+              "1-interleaved"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "qualitative",
+              "expression": "cos/sin跨head重复DMA、row级屏障与小D搬运仍在；Vector API出现于Cast不代表原乘加已经批量化。",
+              "unit": "logical work",
+              "symbols": [],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload"
+              ]
+            },
+            "explanation": "未覆盖计算/搬运明确保留。"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "alternative-cov-0-half",
+            "domain_id": "0-half",
+            "status": "partial",
+            "region": "仅计划指定阶段减少；其它工作保留。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "alternative-cov-1-half",
+            "domain_id": "1-half",
+            "status": "partial",
+            "region": "仅计划指定阶段减少；其它工作保留。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "alternative-cov-0-interleaved",
+            "domain_id": "0-interleaved",
+            "status": "partial",
+            "region": "仅计划指定阶段减少；其它工作保留。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "alternative-cov-1-interleaved",
+            "domain_id": "1-interleaved",
+            "status": "partial",
+            "region": "仅计划指定阶段减少；其它工作保留。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "alternative-cost",
+            "domain_ids": [
+              "0-half",
+              "1-half",
+              "0-interleaved",
+              "1-interleaved"
+            ],
+            "dimension": "UB bytes / API issue / task / synchronization, separately accounted",
+            "change": {
+              "mode": "symbolic",
+              "expression": "D*s+4*D+Bother",
+              "unit": "bytes",
+              "symbols": [
+                {
+                  "name": "D",
+                  "meaning": "RoPE每行特征宽度",
+                  "unit": "elements/row"
+                },
+                {
+                  "name": "s",
+                  "meaning": "当前dtype每元素字节",
+                  "unit": "bytes/element"
+                },
+                {
+                  "name": "Bother",
+                  "meaning": "其它同时存活分配",
+                  "unit": "bytes"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload"
+              ]
+            },
+            "consequence": "保留cos/sin输入可减少trig读和Cast，但只占基线逻辑字节1/5；BSND相邻head容易同key，BNSD需跨S窗口或重排owner，仍保留全部Scalar乘加。"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "alternative-residual",
+            "domain_ids": [
+              "0-half",
+              "1-half",
+              "0-interleaved",
+              "1-interleaved"
+            ],
+            "remaining_work": "cos/sin跨head重复DMA、row级屏障与小D搬运仍在；Vector API出现于Cast不代表原乘加已经批量化。",
+            "next_step": "保留fallback并在后续独立候选比较；不把部分减少当整个算子解决。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          }
+        ],
+        "no_alternative_reason": null
+      }
+    }
+  ],
+  "evidence_requests": [
+    {
+      "id": "REQ-primary-safe-1",
+      "opportunity_ids": [
+        "primary"
+      ],
+      "unknown_ids": [
+        "primary-safe-1"
+      ],
+      "method": "限定原dtype/owner/有效域，以源码地址映射与原oracle逐项审查；容量按公式，SDK/API支持待授权实现前核验。",
+      "discriminating_results": [
+        {
+          "outcome": "合法性条件闭合",
+          "decision_effect": "可将条件方案推进正式实现"
+        },
+        {
+          "outcome": "条件不成立",
+          "decision_effect": "缩小参数/覆盖或返回C2，不能伪造事实"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本任务只允许静态条件分析，未编译设备。",
+      "defer_reason": "未实施，实际SDK/可用UB未知。"
+    },
+    {
+      "id": "REQ-primary-safe-2",
+      "opportunity_ids": [
+        "primary"
+      ],
+      "unknown_ids": [
+        "primary-safe-2"
+      ],
+      "method": "限定原dtype/owner/有效域，以源码地址映射与原oracle逐项审查；容量按公式，SDK/API支持待授权实现前核验。",
+      "discriminating_results": [
+        {
+          "outcome": "合法性条件闭合",
+          "decision_effect": "可将条件方案推进正式实现"
+        },
+        {
+          "outcome": "条件不成立",
+          "decision_effect": "缩小参数/覆盖或返回C2，不能伪造事实"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本任务只允许静态条件分析，未编译设备。",
+      "defer_reason": "未实施，实际SDK/可用UB未知。"
+    },
+    {
+      "id": "REQ-alternative-safe-1",
+      "opportunity_ids": [
+        "alternative"
+      ],
+      "unknown_ids": [
+        "alternative-safe-1"
+      ],
+      "method": "限定原dtype/owner/有效域，以源码地址映射与原oracle逐项审查；容量按公式，SDK/API支持待授权实现前核验。",
+      "discriminating_results": [
+        {
+          "outcome": "合法性条件闭合",
+          "decision_effect": "可将条件方案推进正式实现"
+        },
+        {
+          "outcome": "条件不成立",
+          "decision_effect": "缩小参数/覆盖或返回C2，不能伪造事实"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本任务只允许静态条件分析，未编译设备。",
+      "defer_reason": "未实施，实际SDK/可用UB未知。"
+    },
+    {
+      "id": "REQ-alternative-safe-2",
+      "opportunity_ids": [
+        "alternative"
+      ],
+      "unknown_ids": [
+        "alternative-safe-2"
+      ],
+      "method": "限定原dtype/owner/有效域，以源码地址映射与原oracle逐项审查；容量按公式，SDK/API支持待授权实现前核验。",
+      "discriminating_results": [
+        {
+          "outcome": "合法性条件闭合",
+          "decision_effect": "可将条件方案推进正式实现"
+        },
+        {
+          "outcome": "条件不成立",
+          "decision_effect": "缩小参数/覆盖或返回C2，不能伪造事实"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本任务只允许静态条件分析，未编译设备。",
+      "defer_reason": "未实施，实际SDK/可用UB未知。"
+    },
+    {
+      "id": "REQ-alternative-safe-3",
+      "opportunity_ids": [
+        "alternative"
+      ],
+      "unknown_ids": [
+        "alternative-safe-3"
+      ],
+      "method": "限定原dtype/owner/有效域，以源码地址映射与原oracle逐项审查；容量按公式，SDK/API支持待授权实现前核验。",
+      "discriminating_results": [
+        {
+          "outcome": "合法性条件闭合",
+          "decision_effect": "可将条件方案推进正式实现"
+        },
+        {
+          "outcome": "条件不成立",
+          "decision_effect": "缩小参数/覆盖或返回C2，不能伪造事实"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本任务只允许静态条件分析，未编译设备。",
+      "defer_reason": "未实施，实际SDK/可用UB未知。"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "primary"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+        "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+      },
+      "locator": "lines:279-334",
+      "effect_kind": "mechanism",
+      "before": "从源码观察到路径但尚未区分成本类别。",
+      "after": "R*D次Scalar元素循环及其GetValue/SetValue改为每row常数个Mul/Add/Sub向量批次；不减少数学乘加或必要GM；正文要求把支持预测与实测瓶颈分开。",
+      "applicability": "来源机制原则适用；当前性能不明，不作为实测结论。"
+    },
+    {
+      "opportunity_ids": [
+        "alternative"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.insufficient_input_reuse.md",
+        "sha256": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4"
+      },
+      "locator": "lines:252-307",
+      "effect_kind": "mechanism",
+      "before": "从源码观察到路径但尚未区分成本类别。",
+      "after": "保留cos/sin输入可减少trig读和Cast，但只占基线逻辑字节1/5；BSND相邻head容易同key，BNSD需跨S窗口或重排owner，仍保留全部Scalar乘加。",
+      "applicability": "来源机制原则适用；当前性能不明，不作为实测结论。"
+    },
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+      },
+      "locator": "lines:83-188",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "确认按连续输出owner分区和valid长度，tile容量必须计所有实际分配；单槽/双槽只是假设。foreach完整结构适用；Maximum只覆盖同形；RoPE伴随partner读不满足逐元素同下标前提，仅采用owner/容量原则。",
+      "applicability": "partial：仅采用容量、有效域、所有权/数值边界原则；未声称整套模板API已验证。"
+    },
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+        "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+      },
+      "locator": "lines:90-131",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "采用A3 memory Vector连续count与合法repeat的地址范围公式，避免950 Reg/VF。数值操作顺序和mask尾部须逐API核验；有Cast不代表主要Scalar算术已向量化。Compare非整256B边界不能从Add的count推合法性。",
+      "applicability": "partial：仅采用容量、有效域、所有权/数值边界原则；未声称整套模板API已验证。"
+    },
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+        "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+      },
+      "locator": "lines:97-264",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "只有原输入同地址同版本才能驻留；保留到最后异步消费者结束，删除copy不自动扣除独立InitBuffer分配。RoPE限同owner trig key窗口；Maximum限broadcast源；Resize限同nc窗口公共原值，几何权重表不是原输入。",
+      "applicability": "partial：仅采用容量、有效域、所有权/数值边界原则；未声称整套模板API已验证。"
+    }
+  ],
+  "selection": {
+    "mode": "conditional_plan",
+    "opportunity_id": "primary",
+    "action_instance_id": "I-primary",
+    "reason": "以主要可减少工作、覆盖和新增代价优先：保留row owner和读取，half mode将q/k两半分别Mul后Add/Sub，禁止FMA融合或重排原数值顺序；interleaved建立合法偶奇视图/UB重排后同序计算；保留数值与同步边，只有API、容量、特殊值契约闭合后实施。",
+    "concrete_plan": "保留row owner和读取，half mode将q/k两半分别Mul后Add/Sub，禁止FMA融合或重排原数值顺序；interleaved建立合法偶奇视图/UB重排后同序计算；保留数值与同步边，只有API、容量、特殊值契约闭合后实施。",
+    "stop_reason": null,
+    "comparison_basis": [
+      {
+        "opportunity_id": "primary",
+        "item_ids": [
+          "primary-reduced"
+        ],
+        "role": "benefit",
+        "decision_effect": "R*D次Scalar元素循环及其GetValue/SetValue改为每row常数个Mul/Add/Sub向量批次；不减少数学乘加或必要GM",
+        "reversal_condition": "反事实非实测：D=2且N很大、BSND时Mul/Add小批次发射和重排可高于Scalar算术，trig驻留可能更优；D=128且interleaved重排代价可控则批量算术更合理。BNSD长S会削弱同owner小驻留窗收益。"
+      },
+      {
+        "opportunity_id": "primary",
+        "item_ids": [
+          "primary-cost"
+        ],
+        "role": "cost",
+        "decision_effect": "半分模式可用两段连续视图，interleaved需要配对重排/索引；Ubase=20D+10D*[s=2]字节，加临时Q(D)、padding、mask与API暂存",
+        "reversal_condition": "若新增存储/同步或padding抵消工作减少，比较替代而不自动dispatch"
+      },
+      {
+        "opportunity_id": "primary",
+        "item_ids": [
+          "primary-cov-0-half",
+          "primary-cov-1-half",
+          "primary-cov-0-interleaved",
+          "primary-cov-1-interleaved"
+        ],
+        "role": "coverage",
+        "decision_effect": "覆盖按真实语义域映射，partial不等于全部工作消失",
+        "reversal_condition": "域变为不满足地址/数值映射时保留fallback"
+      },
+      {
+        "opportunity_id": "primary",
+        "item_ids": [
+          "primary-residual"
+        ],
+        "role": "residual",
+        "decision_effect": "cos/sin跨head重复DMA、row级屏障与小D搬运仍在；Vector API出现于Cast不代表原乘加已经批量化。",
+        "reversal_condition": "残余成为主要可消除成本则重开C1"
+      },
+      {
+        "opportunity_id": "alternative",
+        "item_ids": [
+          "alternative-reduced",
+          "alternative-cost"
+        ],
+        "role": "alternative",
+        "decision_effect": "保留cos/sin输入可减少trig读和Cast，但只占基线逻辑字节1/5；BSND相邻head容易同key，BNSD需跨S窗口或重排owner，仍保留全部Scalar乘加。",
+        "reversal_condition": "反事实非实测：D=2且N很大、BSND时Mul/Add小批次发射和重排可高于Scalar算术，trig驻留可能更优；D=128且interleaved重排代价可控则批量算术更合理。BNSD长S会削弱同owner小驻留窗收益。"
+      }
+    ]
+  },
+  "path_overview": {
+    "workload_ref": {
+      "path": "source/matrix-20.json",
+      "sha256": "sha256:06ae0620d38ca95965bbbf199337a775ef42b2fd64011fb0acc42fc1d0014250"
+    },
+    "case_ids": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20"
+    ],
+    "domains": [
+      {
+        "id": "0-half",
+        "case_ids": [
+          "1",
+          "2",
+          "3",
+          "7",
+          "8",
+          "11",
+          "13",
+          "14",
+          "16",
+          "18"
+        ],
+        "predicate": "0-half determined by actual dtype/layout/broadcast/perm/scale metadata, never by case ID",
+        "supported_scope": "当前20case成员；API合法范围还包括未覆盖shape，未覆盖部分不声明验证。",
+        "fact_ids": [
+          "source.kernel",
+          "source.workload"
+        ]
+      },
+      {
+        "id": "1-half",
+        "case_ids": [
+          "4",
+          "9",
+          "15",
+          "19"
+        ],
+        "predicate": "1-half determined by actual dtype/layout/broadcast/perm/scale metadata, never by case ID",
+        "supported_scope": "当前20case成员；API合法范围还包括未覆盖shape，未覆盖部分不声明验证。",
+        "fact_ids": [
+          "source.kernel",
+          "source.workload"
+        ]
+      },
+      {
+        "id": "0-interleaved",
+        "case_ids": [
+          "5",
+          "10",
+          "20"
+        ],
+        "predicate": "0-interleaved determined by actual dtype/layout/broadcast/perm/scale metadata, never by case ID",
+        "supported_scope": "当前20case成员；API合法范围还包括未覆盖shape，未覆盖部分不声明验证。",
+        "fact_ids": [
+          "source.kernel",
+          "source.workload"
+        ]
+      },
+      {
+        "id": "1-interleaved",
+        "case_ids": [
+          "6",
+          "12",
+          "17"
+        ],
+        "predicate": "1-interleaved determined by actual dtype/layout/broadcast/perm/scale metadata, never by case ID",
+        "supported_scope": "当前20case成员；API合法范围还包括未覆盖shape，未覆盖部分不声明验证。",
+        "fact_ids": [
+          "source.kernel",
+          "source.workload"
+        ]
+      }
+    ],
+    "stages": [
+      {
+        "id": "host",
+        "domain_ids": [
+          "0-half",
+          "1-half",
+          "0-interleaved",
+          "1-interleaved"
+        ],
+        "fact_ids": [
+          "source.host",
+          "source.tiling"
+        ],
+        "behavior": "分配和H2D准备后按tiling启动kernel；完整调用范围见原host，host输出kernel_us不作性能证据。"
+      },
+      {
+        "id": "kernel",
+        "domain_ids": [
+          "0-half",
+          "1-half",
+          "0-interleaved",
+          "1-interleaved"
+        ],
+        "fact_ids": [
+          "source.kernel",
+          "source.tiling",
+          "source.workload"
+        ],
+        "behavior": "host验证BSND/BNSD和cos rank2/3；按row分核，整D行搬入q/k及D/2 cos/sin，必要FP32 Cast后逐d GetValue/SetValue执行两输出乘加；最后批量Cast/DMA，显式PIPE_ALL贯穿各阶段。"
+      },
+      {
+        "id": "output",
+        "domain_ids": [
+          "0-half",
+          "1-half",
+          "0-interleaved",
+          "1-interleaved"
+        ],
+        "fact_ids": [
+          "source.host",
+          "source.oracle"
+        ],
+        "behavior": "输出同步D2H和原oracle检验；本次未执行。"
+      }
+    ],
+    "baseline_work": [
+      {
+        "id": "base-host",
+        "stage_id": "host",
+        "domain_ids": [
+          "0-half",
+          "1-half",
+          "0-interleaved",
+          "1-interleaved"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "qualitative",
+          "expression": "host分配、H2D及按源码完整launch链；不作为已测Task时间",
+          "unit": "logical work",
+          "symbols": [],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.host"
+          ]
+        },
+        "explanation": "设备外准备与kernel执行分开"
+      },
+      {
+        "id": "base-kernel",
+        "stage_id": "kernel",
+        "domain_ids": [
+          "0-half",
+          "1-half",
+          "0-interleaved",
+          "1-interleaved"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "symbolic",
+          "expression": "5*R*D*s",
+          "unit": "logical GM requested bytes",
+          "symbols": [
+            {
+              "name": "R",
+              "meaning": "行数",
+              "unit": "rows"
+            },
+            {
+              "name": "D",
+              "meaning": "RoPE每行特征宽度",
+              "unit": "elements/row"
+            },
+            {
+              "name": "s",
+              "meaning": "当前dtype每元素字节",
+              "unit": "bytes/element"
+            }
+          ],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.kernel",
+            "source.tiling",
+            "source.workload"
+          ]
+        },
+        "explanation": "N=该语义域输出元素数；s=该域dtype字节；R=行数；E=内轴长度；T=候选tile；A为32B向上对齐。单位分别计，不相加评分。"
+      },
+      {
+        "id": "base-output",
+        "stage_id": "output",
+        "domain_ids": [
+          "0-half",
+          "1-half",
+          "0-interleaved",
+          "1-interleaved"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "qualitative",
+          "expression": "每声明输出一次D2H与oracle全域检查",
+          "unit": "logical work",
+          "symbols": [],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.host",
+            "source.oracle"
+          ]
+        },
+        "explanation": "未执行不能写passed"
+      }
+    ]
+  },
+  "previous_feedback": null,
+  "round": 1,
+  "reasoning_ref": {
+    "path": "reasoning-r1.json",
+    "sha256": "sha256:b7e057456a6101e3984cc6f90535527a8c10e5e3c4740d4d930be2ef29d6dbdd"
+  },
+  "reasoning_hash": "sha256:0b1972cf8750e77328c616fb868d9da5019dc6c346660f5c05e19f490350306c"
+}

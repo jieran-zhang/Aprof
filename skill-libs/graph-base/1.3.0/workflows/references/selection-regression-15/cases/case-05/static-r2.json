@@ -1,0 +1,245 @@
+{
+  "task_id": "case-05",
+  "kind": "additional_static_reassessment",
+  "attempt_identity": {
+    "parent_implementation_hash": "sha256:b063ee5d2f02e8c75c8be9933165e15a168644a335f62853da3f53f427be9078",
+    "implementation_hash": null,
+    "workload_hash": "sha256:0bcdecc53621402511d6631fde12caa836a1980898e844da3f8e9bdc2bfd46bf"
+  },
+  "source_refs": [
+    {
+      "path": "parent.json",
+      "sha256": "sha256:b063ee5d2f02e8c75c8be9933165e15a168644a335f62853da3f53f427be9078"
+    },
+    {
+      "path": "source/matrix-20.json",
+      "sha256": "sha256:0bcdecc53621402511d6631fde12caa836a1980898e844da3f8e9bdc2bfd46bf"
+    }
+  ],
+  "finding": "进一步查CastOne逐输入DeQue/Cast/Free与E首用Muls的边：词法Free并非物理内存自动共享，必须显式arena且Cast完成→E写入。单个raw槽仅2T不能冒充4T；四槽统一8T arena才容纳E。理论30→26是分配模型，实际收益未测，API不可表达时撤回。",
+  "method": "从原始matrix形态及InitBuffer/Compute/host容量代码重新计数；不运行种子Python，不编译，不探测设备",
+  "rows": [
+    {
+      "case_id": "1",
+      "dtype": "float32",
+      "input_numel": 1048576,
+      "logical_GM_bytes": 20971520,
+      "bytes_per_tile_element": 20,
+      "proposed_bytes_per_tile_element": 20,
+      "reserve_bytes": 10240,
+      "mask_bytes_formula": "ceil(ceil(T/8)/256)*256",
+      "tile_alignment_elements": 64
+    },
+    {
+      "case_id": "2",
+      "dtype": "float16",
+      "input_numel": 4194304,
+      "logical_GM_bytes": 41943040,
+      "bytes_per_tile_element": 30,
+      "proposed_bytes_per_tile_element": 26,
+      "reserve_bytes": 10240,
+      "mask_bytes_formula": "ceil(ceil(T/8)/256)*256",
+      "tile_alignment_elements": 64
+    },
+    {
+      "case_id": "3",
+      "dtype": "bfloat16",
+      "input_numel": 16777216,
+      "logical_GM_bytes": 167772160,
+      "bytes_per_tile_element": 30,
+      "proposed_bytes_per_tile_element": 26,
+      "reserve_bytes": 10240,
+      "mask_bytes_formula": "ceil(ceil(T/8)/256)*256",
+      "tile_alignment_elements": 64
+    },
+    {
+      "case_id": "4",
+      "dtype": "float32",
+      "input_numel": 16777216,
+      "logical_GM_bytes": 335544320,
+      "bytes_per_tile_element": 20,
+      "proposed_bytes_per_tile_element": 20,
+      "reserve_bytes": 10240,
+      "mask_bytes_formula": "ceil(ceil(T/8)/256)*256",
+      "tile_alignment_elements": 64
+    },
+    {
+      "case_id": "5",
+      "dtype": "float16",
+      "input_numel": 33554432,
+      "logical_GM_bytes": 335544320,
+      "bytes_per_tile_element": 30,
+      "proposed_bytes_per_tile_element": 26,
+      "reserve_bytes": 10240,
+      "mask_bytes_formula": "ceil(ceil(T/8)/256)*256",
+      "tile_alignment_elements": 64
+    },
+    {
+      "case_id": "6",
+      "dtype": "bfloat16",
+      "input_numel": 1046529,
+      "logical_GM_bytes": 10465290,
+      "bytes_per_tile_element": 30,
+      "proposed_bytes_per_tile_element": 26,
+      "reserve_bytes": 10240,
+      "mask_bytes_formula": "ceil(ceil(T/8)/256)*256",
+      "tile_alignment_elements": 64
+    },
+    {
+      "case_id": "7",
+      "dtype": "float32",
+      "input_numel": 1030189,
+      "logical_GM_bytes": 20603780,
+      "bytes_per_tile_element": 20,
+      "proposed_bytes_per_tile_element": 20,
+      "reserve_bytes": 10240,
+      "mask_bytes_formula": "ceil(ceil(T/8)/256)*256",
+      "tile_alignment_elements": 64
+    },
+    {
+      "case_id": "8",
+      "dtype": "float16",
+      "input_numel": 1181953,
+      "logical_GM_bytes": 11819530,
+      "bytes_per_tile_element": 30,
+      "proposed_bytes_per_tile_element": 26,
+      "reserve_bytes": 10240,
+      "mask_bytes_formula": "ceil(ceil(T/8)/256)*256",
+      "tile_alignment_elements": 64
+    },
+    {
+      "case_id": "9",
+      "dtype": "bfloat16",
+      "input_numel": 49691433,
+      "logical_GM_bytes": 496914330,
+      "bytes_per_tile_element": 30,
+      "proposed_bytes_per_tile_element": 26,
+      "reserve_bytes": 10240,
+      "mask_bytes_formula": "ceil(ceil(T/8)/256)*256",
+      "tile_alignment_elements": 64
+    },
+    {
+      "case_id": "10",
+      "dtype": "float32",
+      "input_numel": 1051137,
+      "logical_GM_bytes": 21022740,
+      "bytes_per_tile_element": 20,
+      "proposed_bytes_per_tile_element": 20,
+      "reserve_bytes": 10240,
+      "mask_bytes_formula": "ceil(ceil(T/8)/256)*256",
+      "tile_alignment_elements": 64
+    },
+    {
+      "case_id": "11",
+      "dtype": "float16",
+      "input_numel": 1092273,
+      "logical_GM_bytes": 10922730,
+      "bytes_per_tile_element": 30,
+      "proposed_bytes_per_tile_element": 26,
+      "reserve_bytes": 10240,
+      "mask_bytes_formula": "ceil(ceil(T/8)/256)*256",
+      "tile_alignment_elements": 64
+    },
+    {
+      "case_id": "12",
+      "dtype": "bfloat16",
+      "input_numel": 1000003,
+      "logical_GM_bytes": 10000030,
+      "bytes_per_tile_element": 30,
+      "proposed_bytes_per_tile_element": 26,
+      "reserve_bytes": 10240,
+      "mask_bytes_formula": "ceil(ceil(T/8)/256)*256",
+      "tile_alignment_elements": 64
+    },
+    {
+      "case_id": "13",
+      "dtype": "float32",
+      "input_numel": 10912759,
+      "logical_GM_bytes": 218255180,
+      "bytes_per_tile_element": 20,
+      "proposed_bytes_per_tile_element": 20,
+      "reserve_bytes": 10240,
+      "mask_bytes_formula": "ceil(ceil(T/8)/256)*256",
+      "tile_alignment_elements": 64
+    },
+    {
+      "case_id": "14",
+      "dtype": "float16",
+      "input_numel": 3042039,
+      "logical_GM_bytes": 30420390,
+      "bytes_per_tile_element": 30,
+      "proposed_bytes_per_tile_element": 26,
+      "reserve_bytes": 10240,
+      "mask_bytes_formula": "ceil(ceil(T/8)/256)*256",
+      "tile_alignment_elements": 64
+    },
+    {
+      "case_id": "15",
+      "dtype": "float32",
+      "input_numel": 1049088,
+      "logical_GM_bytes": 20981760,
+      "bytes_per_tile_element": 20,
+      "proposed_bytes_per_tile_element": 20,
+      "reserve_bytes": 10240,
+      "mask_bytes_formula": "ceil(ceil(T/8)/256)*256",
+      "tile_alignment_elements": 64
+    },
+    {
+      "case_id": "16",
+      "dtype": "bfloat16",
+      "input_numel": 2089215,
+      "logical_GM_bytes": 20892150,
+      "bytes_per_tile_element": 30,
+      "proposed_bytes_per_tile_element": 26,
+      "reserve_bytes": 10240,
+      "mask_bytes_formula": "ceil(ceil(T/8)/256)*256",
+      "tile_alignment_elements": 64
+    },
+    {
+      "case_id": "17",
+      "dtype": "float16",
+      "input_numel": 2093567,
+      "logical_GM_bytes": 20935670,
+      "bytes_per_tile_element": 30,
+      "proposed_bytes_per_tile_element": 26,
+      "reserve_bytes": 10240,
+      "mask_bytes_formula": "ceil(ceil(T/8)/256)*256",
+      "tile_alignment_elements": 64
+    },
+    {
+      "case_id": "18",
+      "dtype": "float32",
+      "input_numel": 2094078,
+      "logical_GM_bytes": 41881560,
+      "bytes_per_tile_element": 20,
+      "proposed_bytes_per_tile_element": 20,
+      "reserve_bytes": 10240,
+      "mask_bytes_formula": "ceil(ceil(T/8)/256)*256",
+      "tile_alignment_elements": 64
+    },
+    {
+      "case_id": "19",
+      "dtype": "bfloat16",
+      "input_numel": 2089980,
+      "logical_GM_bytes": 20899800,
+      "bytes_per_tile_element": 30,
+      "proposed_bytes_per_tile_element": 26,
+      "reserve_bytes": 10240,
+      "mask_bytes_formula": "ceil(ceil(T/8)/256)*256",
+      "tile_alignment_elements": 64
+    },
+    {
+      "case_id": "20",
+      "dtype": "float32",
+      "input_numel": 10549248,
+      "logical_GM_bytes": 210984960,
+      "bytes_per_tile_element": 20,
+      "proposed_bytes_per_tile_element": 20,
+      "reserve_bytes": 10240,
+      "mask_bytes_formula": "ceil(ceil(T/8)/256)*256",
+      "tile_alignment_elements": 64
+    }
+  ],
+  "implemented": false,
+  "measurement": "not_measured"
+}

@@ -1,0 +1,1557 @@
+{
+  "schema_version": "aprof.action-decision/v2",
+  "task_id": "case-05",
+  "context_hash": "sha256:1d55bbaae949bc03292b50eca10df57e3cdc0476a5734e13246a3af3b85d74a5",
+  "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+  "reasoning_ref": {
+    "path": "reasoning-r1.json",
+    "sha256": "sha256:52d453b0878833927439ea4234c7e4ebd9ef4c3bb3ae6ef7f647b679775d0ca1"
+  },
+  "reasoning_hash": "sha256:8330bc0562cd6a8b23a7a347146857cebce6954245f7291b7ef4c4882c9d895f",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/ec82d8f535262a6e43869d71bce0e77d91aa71040c5f7f87a8e56f5adfd6f1e8.json",
+    "sha256": "sha256:fde21372195004f2ae06c2a295edd3ca726b0f00da220aa64ef8f1c0bc6507e2"
+  },
+  "round": 1,
+  "current_parent_ref": {
+    "path": "parent.json",
+    "sha256": "sha256:b063ee5d2f02e8c75c8be9933165e15a168644a335f62853da3f53f427be9078"
+  },
+  "opportunities": [
+    {
+      "id": "o-reuse",
+      "hypothesis_id": "h-reuse",
+      "action_id": "action.reuse_disjoint_onchip_buffers",
+      "action_instance_id": "i-reuse",
+      "case_ids": [
+        "2",
+        "5",
+        "8",
+        "11",
+        "14",
+        "17",
+        "3",
+        "6",
+        "9",
+        "12",
+        "16",
+        "19"
+      ],
+      "source_fact_ids": [
+        "source.path",
+        "source.host",
+        "source.matrix"
+      ],
+      "cost_mechanism": "16位raw输入arena与E分时共享：30T→26T字节（不含mask及预留），同容量允许更大64对齐T，减少整条链的tile发射",
+      "predictions": [
+        {
+          "id": "reuse-work",
+          "kind": "source_work",
+          "statement": "16位raw输入arena与E分时共享：30T→26T字节（不含mask及预留），同容量允许更大64对齐T，减少整条链的tile发射",
+          "check_method": "检查实现后的源/指令路径和逐域API计数；目前仅符号模型",
+          "on_support": "保留减少工作机制假设，不能据此确认性能",
+          "on_refute": "重开与最强替代的比较"
+        },
+        {
+          "id": "reuse-time",
+          "kind": "performance",
+          "statement": "有效完整Task时间可能改善，幅度未知；单tile/容量缩tile可能抵消",
+          "check_method": "未来同源正确性通过后按统一20轮L2清理计时和稳态timeline核验",
+          "on_support": "仅工程收益支持，机制仍依赖对应结构证据",
+          "on_refute": "比较新增事件、padding、tile变小及关键路径占比"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_source_ub_live_bytes_near_capacity",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "reuse-time",
+          "unknown_id": "reuse-perf-0",
+          "reason": "来源方法支持提出试验，未据静态模型伪造目标性能"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "reuse-time",
+          "unknown_id": "reuse-perf-1",
+          "reason": "来源方法支持提出试验，未据静态模型伪造目标性能"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "reuse-perf-0",
+          "kind": "performance",
+          "fact": "symptom.source.ub_live_bytes_near_capacity",
+          "expected_state": null,
+          "statement": "旧条件 symptom.source.ub_live_bytes_near_capacity 的期望状态为 true。接近容量上限影响收益与选择，不决定不重叠buffer复用是否合法；安全由生命周期、容量和语义约束负责。；本算子具体稳态成本及编译消除未测",
+          "affects": "该预测的收益大小和与替代方案排序，不决定地址/精度合法性",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "reuse-perf-1",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "复用可降低物理峰值，并可能使更合适tile或流水深度可行；若释放容量无用途，时延可能不变。；本算子具体稳态成本及编译消除未测",
+          "affects": "该预测的收益大小和与替代方案排序，不决定地址/精度合法性",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "reuse-safe-0",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "需按目标实际UB/API及所有异步消费者闭合：constraint.capacity",
+          "affects": "新增显式arena、alias证明与Cast完成到E首次写入事件；屏障可能丢失重叠；float域不收益",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "reuse-safe-1",
+          "kind": "implementation_safety",
+          "fact": "constraint.dependency_lifetime",
+          "expected_state": true,
+          "statement": "需按目标实际UB/API及所有异步消费者闭合：constraint.dependency_lifetime",
+          "affects": "新增显式arena、alias证明与Cast完成到E首次写入事件；屏障可能丢失重叠；float域不收益",
+          "resolution": "check_before_implementation"
+        }
+      ],
+      "strongest_alternative_id": "o-pipe",
+      "comparison": "Host已按容量取大tile；把五个raw队列改双槽会从30T升40T(float从20T升40T)并迫使缩tile，增加安全链发射。16位raw输入在Cast后死亡，E在CastInputs后首用有明确可分析的非重叠机会，可降低容量而保持数值链。异步完成和arena API仍需闭合。",
+      "disposition": "selected",
+      "reason": "Host已按容量取大tile；把五个raw队列改双槽会从30T升40T(float从20T升40T)并迫使缩tile，增加安全链发射。16位raw输入在Cast后死亡，E在CastInputs后首用有明确可分析的非重叠机会，可降低容量而保持数值链。异步完成和arena API仍需闭合。",
+      "analysis": {
+        "intent_gap": null,
+        "work_delta": [
+          {
+            "id": "reuse-benefit",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "float16",
+              "bfloat16"
+            ],
+            "change": "reduced",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "4*T",
+              "unit": "bytes/core",
+              "symbols": [
+                {
+                  "name": "T",
+                  "meaning": "原核内tile元素数；4096、2048或AdamW的64对齐容量解",
+                  "unit": "elements/tile"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.path"
+              ]
+            },
+            "explanation": "16位原8T raw输入与4T E明确共享8T arena后才减4T物理分配；FreeTensor不自动实现共享。"
+          },
+          {
+            "id": "reuse-retain-gm-float32",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "float32"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "5*N*s",
+              "unit": "bytes/call",
+              "symbols": [
+                {
+                  "name": "N",
+                  "meaning": "本次调用有效输出元素数",
+                  "unit": "elements"
+                },
+                {
+                  "name": "s",
+                  "meaning": "输入/输出数据dtype字节数",
+                  "unit": "bytes/element"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.path"
+              ]
+            },
+            "explanation": "方案不减少本域必要有效GM字节，未实现未测"
+          },
+          {
+            "id": "reuse-retain-gm-float16",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "float16"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "5*N*s",
+              "unit": "bytes/call",
+              "symbols": [
+                {
+                  "name": "N",
+                  "meaning": "本次调用有效输出元素数",
+                  "unit": "elements"
+                },
+                {
+                  "name": "s",
+                  "meaning": "输入/输出数据dtype字节数",
+                  "unit": "bytes/element"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.path"
+              ]
+            },
+            "explanation": "方案不减少本域必要有效GM字节，未实现未测"
+          },
+          {
+            "id": "reuse-retain-gm-bfloat16",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "bfloat16"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "5*N*s",
+              "unit": "bytes/call",
+              "symbols": [
+                {
+                  "name": "N",
+                  "meaning": "本次调用有效输出元素数",
+                  "unit": "elements"
+                },
+                {
+                  "name": "s",
+                  "meaning": "输入/输出数据dtype字节数",
+                  "unit": "bytes/element"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.path"
+              ]
+            },
+            "explanation": "方案不减少本域必要有效GM字节，未实现未测"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "reuse-coverage-float32",
+            "domain_id": "float32",
+            "status": "unchanged",
+            "region": "保持原实现，当前变换不覆盖该语义域",
+            "fact_ids": [
+              "source.path",
+              "source.matrix"
+            ]
+          },
+          {
+            "id": "reuse-coverage-float16",
+            "domain_id": "float16",
+            "status": "partial",
+            "region": "仅对16位路径比较四个raw输入8T字节arena与FP32 scratch E的4T字节分时共享，CastInputs最后读完成后才把arena当E；A-D与rawOut仍独立。静态分配从30T降为26T，再在64对齐和相同API预留下扩大T。float维持原路径。",
+            "fact_ids": [
+              "source.path",
+              "source.matrix"
+            ]
+          },
+          {
+            "id": "reuse-coverage-bfloat16",
+            "domain_id": "bfloat16",
+            "status": "partial",
+            "region": "仅对16位路径比较四个raw输入8T字节arena与FP32 scratch E的4T字节分时共享，CastInputs最后读完成后才把arena当E；A-D与rawOut仍独立。静态分配从30T降为26T，再在64对齐和相同API预留下扩大T。float维持原路径。",
+            "fact_ids": [
+              "source.path",
+              "source.matrix"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "reuse-cost",
+            "domain_ids": [
+              "float16",
+              "bfloat16"
+            ],
+            "dimension": "UB/同步/发射",
+            "change": {
+              "mode": "qualitative",
+              "expression": "新增显式arena、alias证明与Cast完成到E首次写入事件；屏障可能丢失重叠；float域不收益",
+              "unit": "implementation_complexity",
+              "symbols": [],
+              "basis": "inference",
+              "fact_ids": [
+                "source.path"
+              ]
+            },
+            "consequence": "新增显式arena、alias证明与Cast完成到E首次写入事件；屏障可能丢失重叠；float域不收益"
+          },
+          {
+            "id": "reuse-cost-float16",
+            "domain_ids": [
+              "float16"
+            ],
+            "dimension": "physical_UB_bytes",
+            "change": {
+              "mode": "symbolic",
+              "expression": "26*T+M+10240",
+              "unit": "bytes/core",
+              "symbols": [
+                {
+                  "name": "T",
+                  "meaning": "原核内tile元素数；4096、2048或AdamW的64对齐容量解",
+                  "unit": "elements/tile"
+                },
+                {
+                  "name": "M",
+                  "meaning": "Compare mask字节数256*ceil(ceil(T/8)/256)",
+                  "unit": "bytes"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.path"
+              ]
+            },
+            "consequence": "候选16位容量预算；T可扩大为最大64对齐解但未知B不填具体tile。"
+          },
+          {
+            "id": "reuse-cost-bfloat16",
+            "domain_ids": [
+              "bfloat16"
+            ],
+            "dimension": "physical_UB_bytes",
+            "change": {
+              "mode": "symbolic",
+              "expression": "26*T+M+10240",
+              "unit": "bytes/core",
+              "symbols": [
+                {
+                  "name": "T",
+                  "meaning": "原核内tile元素数；4096、2048或AdamW的64对齐容量解",
+                  "unit": "elements/tile"
+                },
+                {
+                  "name": "M",
+                  "meaning": "Compare mask字节数256*ceil(ceil(T/8)/256)",
+                  "unit": "bytes"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.path"
+              ]
+            },
+            "consequence": "候选16位容量预算；T可扩大为最大64对齐解但未知B不填具体tile。"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "reuse-residual-float32",
+            "domain_ids": [
+              "float32"
+            ],
+            "remaining_work": "float全路径保持不变；16位5次Cast、异常数Select链和5sGM不减。若新增barrier阻塞原来跨引擎重叠，则省容量可能不值，需要与单槽原T和双槽Tprime实际比较。",
+            "next_step": "未来根据源码实现情况、完整正确性和逐域有效计时重新比较；未测不晋升",
+            "fact_ids": [
+              "source.path"
+            ]
+          },
+          {
+            "id": "reuse-residual-float16",
+            "domain_ids": [
+              "float16"
+            ],
+            "remaining_work": "float全路径保持不变；16位5次Cast、异常数Select链和5sGM不减。若新增barrier阻塞原来跨引擎重叠，则省容量可能不值，需要与单槽原T和双槽Tprime实际比较。",
+            "next_step": "未来根据源码实现情况、完整正确性和逐域有效计时重新比较；未测不晋升",
+            "fact_ids": [
+              "source.path"
+            ]
+          },
+          {
+            "id": "reuse-residual-bfloat16",
+            "domain_ids": [
+              "bfloat16"
+            ],
+            "remaining_work": "float全路径保持不变；16位5次Cast、异常数Select链和5sGM不减。若新增barrier阻塞原来跨引擎重叠，则省容量可能不值，需要与单槽原T和双槽Tprime实际比较。",
+            "next_step": "未来根据源码实现情况、完整正确性和逐域有效计时重新比较；未测不晋升",
+            "fact_ids": [
+              "source.path"
+            ]
+          }
+        ],
+        "no_alternative_reason": null
+      }
+    },
+    {
+      "id": "o-pipe",
+      "hypothesis_id": "h-pipe",
+      "action_id": "action.software_pipeline_stages",
+      "action_instance_id": "i-pipe",
+      "case_ids": [
+        "1",
+        "4",
+        "7",
+        "10",
+        "13",
+        "15",
+        "18",
+        "20",
+        "2",
+        "5",
+        "8",
+        "11",
+        "14",
+        "17",
+        "3",
+        "6",
+        "9",
+        "12",
+        "16",
+        "19"
+      ],
+      "source_fact_ids": [
+        "source.path",
+        "source.host",
+        "source.matrix"
+      ],
+      "cost_mechanism": "两物理槽可解除相邻tile对同槽复用的部分依赖；这是可重叠窗口上界推导，不是实测等待或保证减少的时间。原单槽仍可能已有局部重叠。",
+      "predictions": [
+        {
+          "id": "pipe-work",
+          "kind": "source_work",
+          "statement": "两物理槽可解除相邻tile对同槽复用的部分依赖；这是可重叠窗口上界推导，不是实测等待或保证减少的时间。原单槽仍可能已有局部重叠。",
+          "check_method": "检查实现后的源/指令路径和逐域API计数；目前仅符号模型",
+          "on_support": "保留减少工作机制假设，不能据此确认性能",
+          "on_refute": "重开与最强替代的比较"
+        },
+        {
+          "id": "pipe-time",
+          "kind": "performance",
+          "statement": "有效完整Task时间可能改善，幅度未知；单tile/容量缩tile可能抵消",
+          "check_method": "未来同源正确性通过后按统一20轮L2清理计时和稳态timeline核验",
+          "on_support": "仅工程收益支持，机制仍依赖对应结构证据",
+          "on_refute": "比较新增事件、padding、tile变小及关键路径占比"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_overlap_low",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "pipe-time",
+          "unknown_id": "pipe-perf-0",
+          "reason": "来源方法支持提出试验，未据静态模型伪造目标性能"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "pipe-time",
+          "unknown_id": "pipe-perf-1",
+          "reason": "来源方法支持提出试验，未据静态模型伪造目标性能"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "pipe-perf-0",
+          "kind": "performance",
+          "fact": "symptom.profile.overlap_low",
+          "expected_state": null,
+          "statement": "旧条件 symptom.profile.overlap_low 的期望状态为 true。低重叠是性能假设/判别依据，依赖及生命周期正确才是重排的实施安全条件。；本算子具体稳态成本及编译消除未测",
+          "affects": "该预测的收益大小和与替代方案排序，不决定地址/精度合法性",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "pipe-perf-1",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "合法预取/计算/写回重排可能缩短稳态关键路径；短任务、单tile、最慢阶段不变或额外buffer成本会限制收益。；本算子具体稳态成本及编译消除未测",
+          "affects": "该预测的收益大小和与替代方案排序，不决定地址/精度合法性",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "pipe-safe-0",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "需按目标实际UB/API及所有异步消费者闭合：constraint.capacity",
+          "affects": "新增输入/输出物理槽、prolog/drain和回卷事件；若容量导致T缩小，tile和API次数增加",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "pipe-safe-1",
+          "kind": "implementation_safety",
+          "fact": "constraint.dependency_lifetime",
+          "expected_state": true,
+          "statement": "需按目标实际UB/API及所有异步消费者闭合：constraint.dependency_lifetime",
+          "affects": "新增输入/输出物理槽、prolog/drain和回卷事件；若容量导致T缩小，tile和API次数增加",
+          "resolution": "check_before_implementation"
+        }
+      ],
+      "strongest_alternative_id": "o-reuse",
+      "comparison": "新增输入/输出物理槽、prolog/drain和回卷事件；若容量导致T缩小，tile和API次数增加",
+      "disposition": "deferred",
+      "reason": "覆盖与成本有明确竞争性；当前首选理由见选择比较",
+      "analysis": {
+        "intent_gap": null,
+        "work_delta": [
+          {
+            "id": "pipe-benefit",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "float32",
+              "float16",
+              "bfloat16"
+            ],
+            "change": "reduced",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "max(L-C,0)",
+              "unit": "potential_reuse_boundaries/call",
+              "symbols": [
+                {
+                  "name": "L",
+                  "meaning": "全部有效核的原tile数量，连续域sum_c ceil(Nc/T)，SwiGLU按核与segment交集分别ceil",
+                  "unit": "tiles"
+                },
+                {
+                  "name": "C",
+                  "meaning": "实际启动的有效核数，未探测具体值",
+                  "unit": "cores"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.path"
+              ]
+            },
+            "explanation": "两物理槽可解除相邻tile对同槽复用的部分依赖；这是可重叠窗口上界推导，不是实测等待或保证减少的时间。原单槽仍可能已有局部重叠。"
+          },
+          {
+            "id": "pipe-retain-gm-float32",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "float32"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "5*N*s",
+              "unit": "bytes/call",
+              "symbols": [
+                {
+                  "name": "N",
+                  "meaning": "本次调用有效输出元素数",
+                  "unit": "elements"
+                },
+                {
+                  "name": "s",
+                  "meaning": "输入/输出数据dtype字节数",
+                  "unit": "bytes/element"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.path"
+              ]
+            },
+            "explanation": "方案不减少本域必要有效GM字节，未实现未测"
+          },
+          {
+            "id": "pipe-retain-gm-float16",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "float16"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "5*N*s",
+              "unit": "bytes/call",
+              "symbols": [
+                {
+                  "name": "N",
+                  "meaning": "本次调用有效输出元素数",
+                  "unit": "elements"
+                },
+                {
+                  "name": "s",
+                  "meaning": "输入/输出数据dtype字节数",
+                  "unit": "bytes/element"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.path"
+              ]
+            },
+            "explanation": "方案不减少本域必要有效GM字节，未实现未测"
+          },
+          {
+            "id": "pipe-retain-gm-bfloat16",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "bfloat16"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "5*N*s",
+              "unit": "bytes/call",
+              "symbols": [
+                {
+                  "name": "N",
+                  "meaning": "本次调用有效输出元素数",
+                  "unit": "elements"
+                },
+                {
+                  "name": "s",
+                  "meaning": "输入/输出数据dtype字节数",
+                  "unit": "bytes/element"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.path"
+              ]
+            },
+            "explanation": "方案不减少本域必要有效GM字节，未实现未测"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "pipe-coverage-float32",
+            "domain_id": "float32",
+            "status": "partial",
+            "region": "原owner下将raw输入输出物理槽变2，计算scratch单份并明确最后消费者；容量不足返回C2",
+            "fact_ids": [
+              "source.path",
+              "source.matrix"
+            ]
+          },
+          {
+            "id": "pipe-coverage-float16",
+            "domain_id": "float16",
+            "status": "partial",
+            "region": "原owner下将raw输入输出物理槽变2，计算scratch单份并明确最后消费者；容量不足返回C2",
+            "fact_ids": [
+              "source.path",
+              "source.matrix"
+            ]
+          },
+          {
+            "id": "pipe-coverage-bfloat16",
+            "domain_id": "bfloat16",
+            "status": "partial",
+            "region": "原owner下将raw输入输出物理槽变2，计算scratch单份并明确最后消费者；容量不足返回C2",
+            "fact_ids": [
+              "source.path",
+              "source.matrix"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "pipe-cost",
+            "domain_ids": [
+              "float32",
+              "float16",
+              "bfloat16"
+            ],
+            "dimension": "UB/同步/发射",
+            "change": {
+              "mode": "qualitative",
+              "expression": "新增输入/输出物理槽、prolog/drain和回卷事件；若容量导致T缩小，tile和API次数增加",
+              "unit": "implementation_complexity",
+              "symbols": [],
+              "basis": "inference",
+              "fact_ids": [
+                "source.path"
+              ]
+            },
+            "consequence": "新增输入/输出物理槽、prolog/drain和回卷事件；若容量导致T缩小，tile和API次数增加"
+          },
+          {
+            "id": "pipe-cost-float32",
+            "domain_ids": [
+              "float32"
+            ],
+            "dimension": "physical_UB_bytes",
+            "change": {
+              "mode": "symbolic",
+              "expression": "5*s*T",
+              "unit": "bytes/core",
+              "symbols": [
+                {
+                  "name": "s",
+                  "meaning": "输入/输出数据dtype字节数",
+                  "unit": "bytes/element"
+                },
+                {
+                  "name": "T",
+                  "meaning": "原核内tile元素数；4096、2048或AdamW的64对齐容量解",
+                  "unit": "elements/tile"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.path"
+              ]
+            },
+            "consequence": "只增加raw输入输出物理槽，计算scratch保持单份；若同T不可容纳必须比较更小T的新增发射。"
+          },
+          {
+            "id": "pipe-cost-float16",
+            "domain_ids": [
+              "float16"
+            ],
+            "dimension": "physical_UB_bytes",
+            "change": {
+              "mode": "symbolic",
+              "expression": "5*s*T",
+              "unit": "bytes/core",
+              "symbols": [
+                {
+                  "name": "s",
+                  "meaning": "输入/输出数据dtype字节数",
+                  "unit": "bytes/element"
+                },
+                {
+                  "name": "T",
+                  "meaning": "原核内tile元素数；4096、2048或AdamW的64对齐容量解",
+                  "unit": "elements/tile"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.path"
+              ]
+            },
+            "consequence": "只增加raw输入输出物理槽，计算scratch保持单份；若同T不可容纳必须比较更小T的新增发射。"
+          },
+          {
+            "id": "pipe-cost-bfloat16",
+            "domain_ids": [
+              "bfloat16"
+            ],
+            "dimension": "physical_UB_bytes",
+            "change": {
+              "mode": "symbolic",
+              "expression": "5*s*T",
+              "unit": "bytes/core",
+              "symbols": [
+                {
+                  "name": "s",
+                  "meaning": "输入/输出数据dtype字节数",
+                  "unit": "bytes/element"
+                },
+                {
+                  "name": "T",
+                  "meaning": "原核内tile元素数；4096、2048或AdamW的64对齐容量解",
+                  "unit": "elements/tile"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.path"
+              ]
+            },
+            "consequence": "只增加raw输入输出物理槽，计算scratch保持单份；若同T不可容纳必须比较更小T的新增发射。"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "pipe-residual-float32",
+            "domain_ids": [
+              "float32"
+            ],
+            "remaining_work": "float全路径保持不变；16位5次Cast、异常数Select链和5sGM不减。若新增barrier阻塞原来跨引擎重叠，则省容量可能不值，需要与单槽原T和双槽Tprime实际比较。",
+            "next_step": "未来根据源码实现情况、完整正确性和逐域有效计时重新比较；未测不晋升",
+            "fact_ids": [
+              "source.path"
+            ]
+          },
+          {
+            "id": "pipe-residual-float16",
+            "domain_ids": [
+              "float16"
+            ],
+            "remaining_work": "float全路径保持不变；16位5次Cast、异常数Select链和5sGM不减。若新增barrier阻塞原来跨引擎重叠，则省容量可能不值，需要与单槽原T和双槽Tprime实际比较。",
+            "next_step": "未来根据源码实现情况、完整正确性和逐域有效计时重新比较；未测不晋升",
+            "fact_ids": [
+              "source.path"
+            ]
+          },
+          {
+            "id": "pipe-residual-bfloat16",
+            "domain_ids": [
+              "bfloat16"
+            ],
+            "remaining_work": "float全路径保持不变；16位5次Cast、异常数Select链和5sGM不减。若新增barrier阻塞原来跨引擎重叠，则省容量可能不值，需要与单槽原T和双槽Tprime实际比较。",
+            "next_step": "未来根据源码实现情况、完整正确性和逐域有效计时重新比较；未测不晋升",
+            "fact_ids": [
+              "source.path"
+            ]
+          }
+        ],
+        "no_alternative_reason": null
+      }
+    }
+  ],
+  "evidence_requests": [
+    {
+      "id": "check-reuse-safe-0",
+      "opportunity_ids": [
+        "o-reuse"
+      ],
+      "unknown_ids": [
+        "reuse-safe-0"
+      ],
+      "method": "核验实际设备/SDK和明确tile、slots、scratch字节公式；逐边检查生产消费与arena最后读完成",
+      "discriminating_results": [
+        {
+          "outcome": "容量与依赖/API闭合",
+          "decision_effect": "可进入独立实现及正确性验证"
+        },
+        {
+          "outcome": "超容或不可表达合法完成边",
+          "decision_effect": "缩小参数域重新比较，必要时选择竞争机会"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "静态模型可计算，但本任务禁止SDK编译和设备执行",
+      "defer_reason": "无硬件回归仅提供条件方案，不声称可实施ready"
+    },
+    {
+      "id": "check-reuse-safe-1",
+      "opportunity_ids": [
+        "o-reuse"
+      ],
+      "unknown_ids": [
+        "reuse-safe-1"
+      ],
+      "method": "核验实际设备/SDK和明确tile、slots、scratch字节公式；逐边检查生产消费与arena最后读完成",
+      "discriminating_results": [
+        {
+          "outcome": "容量与依赖/API闭合",
+          "decision_effect": "可进入独立实现及正确性验证"
+        },
+        {
+          "outcome": "超容或不可表达合法完成边",
+          "decision_effect": "缩小参数域重新比较，必要时选择竞争机会"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "静态模型可计算，但本任务禁止SDK编译和设备执行",
+      "defer_reason": "无硬件回归仅提供条件方案，不声称可实施ready"
+    },
+    {
+      "id": "check-pipe-safe-0",
+      "opportunity_ids": [
+        "o-pipe"
+      ],
+      "unknown_ids": [
+        "pipe-safe-0"
+      ],
+      "method": "核验实际设备/SDK和明确tile、slots、scratch字节公式；逐边检查生产消费与arena最后读完成",
+      "discriminating_results": [
+        {
+          "outcome": "容量与依赖/API闭合",
+          "decision_effect": "可进入独立实现及正确性验证"
+        },
+        {
+          "outcome": "超容或不可表达合法完成边",
+          "decision_effect": "缩小参数域重新比较，必要时选择竞争机会"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "静态模型可计算，但本任务禁止SDK编译和设备执行",
+      "defer_reason": "无硬件回归仅提供条件方案，不声称可实施ready"
+    },
+    {
+      "id": "check-pipe-safe-1",
+      "opportunity_ids": [
+        "o-pipe"
+      ],
+      "unknown_ids": [
+        "pipe-safe-1"
+      ],
+      "method": "核验实际设备/SDK和明确tile、slots、scratch字节公式；逐边检查生产消费与arena最后读完成",
+      "discriminating_results": [
+        {
+          "outcome": "容量与依赖/API闭合",
+          "decision_effect": "可进入独立实现及正确性验证"
+        },
+        {
+          "outcome": "超容或不可表达合法完成边",
+          "decision_effect": "缩小参数域重新比较，必要时选择竞争机会"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "静态模型可计算，但本任务禁止SDK编译和设备执行",
+      "defer_reason": "无硬件回归仅提供条件方案，不声称可实施ready"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "o-reuse"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+        "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+      },
+      "locator": "lines:307-448",
+      "effect_kind": "plan",
+      "before": "从源码结构提出机会但未判断机制",
+      "after": "16位raw输入arena与E分时共享：30T→26T字节（不含mask及预留），同容量允许更大64对齐T，减少整条链的tile发射；正文要求把性能与容量/依赖合法性分开",
+      "applicability": "partial：机制推导适用，尚无目标profile因果证明"
+    },
+    {
+      "opportunity_ids": [
+        "o-reuse"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+        "sha256": "sha256:956301b3e9b43f9f4e8fd8074811f5723f43478b3b82c3591af1aef8aafabce4"
+      },
+      "locator": "lines:109-171",
+      "effect_kind": "plan",
+      "before": "初始只知道队列/存活或连续分块结构",
+      "after": "仅对16位路径比较四个raw输入8T字节arena与FP32 scratch E的4T字节分时共享，CastInputs最后读完成后才把arena当E；A-D与rawOut仍独立。静态分配从30T降为26T，再在64对齐和相同API预留下扩大T。float维持原路径。；新增显式arena、alias证明与Cast完成到E首次写入事件；屏障可能丢失重叠；float域不收益",
+      "applicability": "partial：正文给方法与完成边，具体SDK支持和资源未确认"
+    },
+    {
+      "opportunity_ids": [
+        "o-pipe"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+        "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+      },
+      "locator": "lines:271-407",
+      "effect_kind": "plan",
+      "before": "从源码结构提出机会但未判断机制",
+      "after": "减少跨tile可避免的串行等待窗口；源算法字节、算术及DMA次数不减少；仅多tile核有稳态机会；正文要求把性能与容量/依赖合法性分开",
+      "applicability": "partial：机制推导适用，尚无目标profile因果证明"
+    },
+    {
+      "opportunity_ids": [
+        "o-pipe"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+        "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+      },
+      "locator": "lines:89-207",
+      "effect_kind": "plan",
+      "before": "初始只知道队列/存活或连续分块结构",
+      "after": "原owner下将raw输入输出物理槽变2，计算scratch单份并明确最后消费者；容量不足返回C2；新增输入/输出物理槽、prolog/drain和回卷事件；若容量导致T缩小，tile和API次数增加",
+      "applicability": "partial：正文给方法与完成边，具体SDK支持和资源未确认"
+    },
+    {
+      "opportunity_ids": [
+        "o-reuse"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+      },
+      "locator": "lines:83-188",
+      "effect_kind": "plan",
+      "before": "原host已有连续分核，未有C2计划文件",
+      "after": "提取现有owner区间；区分分核粒度与UB tile，保留原核数公式；所有物理分配按字节计入，不能仅Free就从UB账上删除",
+      "applicability": "full：连续同形逐元素独占输出所有权适用；容量/API实例化仍待确认"
+    }
+  ],
+  "selection": {
+    "mode": "conditional_plan",
+    "opportunity_id": "o-reuse",
+    "action_instance_id": "i-reuse",
+    "reason": "Host已按容量取大tile；把五个raw队列改双槽会从30T升40T(float从20T升40T)并迫使缩tile，增加安全链发射。16位raw输入在Cast后死亡，E在CastInputs后首用有明确可分析的非重叠机会，可降低容量而保持数值链。异步完成和arena API仍需闭合。",
+    "concrete_plan": "仅对16位路径比较四个raw输入8T字节arena与FP32 scratch E的4T字节分时共享，CastInputs最后读完成后才把arena当E；A-D与rawOut仍独立。静态分配从30T降为26T，再在64对齐和相同API预留下扩大T。float维持原路径。",
+    "stop_reason": "已覆盖host/搬运/算术/同步/尾/分派主要机会，剩余动态成本需实施与测量，当前权限只允许静态条件规划",
+    "comparison_basis": [
+      {
+        "opportunity_id": "o-reuse",
+        "item_ids": [
+          "reuse-benefit"
+        ],
+        "role": "benefit",
+        "decision_effect": "Host已按容量取大tile；把五个raw队列改双槽会从30T升40T(float从20T升40T)并迫使缩tile，增加安全链发射。16位raw输入在Cast后死亡，E在CastInputs后首用有明确可分析的非重叠机会，可降低容量而保持数值链。异步完成和arena API仍需闭合。",
+        "reversal_condition": "若新增同步/更小tile的发射增长超过隐藏等待或节省发射，最强替代更优；单tile时流水收益消失"
+      },
+      {
+        "opportunity_id": "o-reuse",
+        "item_ids": [
+          "reuse-cost",
+          "reuse-cost-float16",
+          "reuse-cost-bfloat16"
+        ],
+        "role": "cost",
+        "decision_effect": "新增显式arena、alias证明与Cast完成到E首次写入事件；屏障可能丢失重叠；float域不收益",
+        "reversal_condition": "若新增同步/更小tile的发射增长超过隐藏等待或节省发射，最强替代更优；单tile时流水收益消失"
+      },
+      {
+        "opportunity_id": "o-reuse",
+        "item_ids": [
+          "reuse-coverage-float32",
+          "reuse-coverage-float16",
+          "reuse-coverage-bfloat16"
+        ],
+        "role": "coverage",
+        "decision_effect": "float全路径保持不变；16位5次Cast、异常数Select链和5sGM不减。若新增barrier阻塞原来跨引擎重叠，则省容量可能不值，需要与单槽原T和双槽Tprime实际比较。",
+        "reversal_condition": "若新增同步/更小tile的发射增长超过隐藏等待或节省发射，最强替代更优；单tile时流水收益消失"
+      },
+      {
+        "opportunity_id": "o-reuse",
+        "item_ids": [
+          "reuse-residual-float32",
+          "reuse-residual-float16",
+          "reuse-residual-bfloat16"
+        ],
+        "role": "residual",
+        "decision_effect": "float全路径保持不变；16位5次Cast、异常数Select链和5sGM不减。若新增barrier阻塞原来跨引擎重叠，则省容量可能不值，需要与单槽原T和双槽Tprime实际比较。",
+        "reversal_condition": "若新增同步/更小tile的发射增长超过隐藏等待或节省发射，最强替代更优；单tile时流水收益消失"
+      },
+      {
+        "opportunity_id": "o-pipe",
+        "item_ids": [
+          "pipe-benefit",
+          "pipe-cost",
+          "pipe-cost-float32",
+          "pipe-cost-float16",
+          "pipe-cost-bfloat16"
+        ],
+        "role": "alternative",
+        "decision_effect": "最强替代：减少跨tile可避免的串行等待窗口；源算法字节、算术及DMA次数不减少；仅多tile核有稳态机会；当前暂缓：Host已按容量取大tile；把五个raw队列改双槽会从30T升40T(float从20T升40T)并迫使缩tile，增加安全链发射。16位raw输入在Cast后死亡，E在CastInputs后首用有明确可分析的非重叠机会，可降低容量而保持数值链。异步完成和arena API仍需闭合。",
+        "reversal_condition": "若首选方案超容、API不支持或新增代价抵消预测，则重新选择此机会"
+      }
+    ]
+  },
+  "previous_feedback": null,
+  "path_overview": {
+    "workload_ref": {
+      "path": "source/matrix-20.json",
+      "sha256": "sha256:0bcdecc53621402511d6631fde12caa836a1980898e844da3f8e9bdc2bfd46bf"
+    },
+    "case_ids": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20"
+    ],
+    "domains": [
+      {
+        "id": "float32",
+        "case_ids": [
+          "1",
+          "4",
+          "7",
+          "10",
+          "13",
+          "15",
+          "18",
+          "20"
+        ],
+        "predicate": "dtype=float32",
+        "supported_scope": "原host声明的连续有效输出域；矩阵20项为当前覆盖，不代表全部API形态",
+        "fact_ids": [
+          "source.matrix",
+          "source.path"
+        ]
+      },
+      {
+        "id": "float16",
+        "case_ids": [
+          "2",
+          "5",
+          "8",
+          "11",
+          "14",
+          "17"
+        ],
+        "predicate": "dtype=float16",
+        "supported_scope": "原host声明的连续有效输出域；矩阵20项为当前覆盖，不代表全部API形态",
+        "fact_ids": [
+          "source.matrix",
+          "source.path"
+        ]
+      },
+      {
+        "id": "bfloat16",
+        "case_ids": [
+          "3",
+          "6",
+          "9",
+          "12",
+          "16",
+          "19"
+        ],
+        "predicate": "dtype=bfloat16",
+        "supported_scope": "原host声明的连续有效输出域；矩阵20项为当前覆盖，不代表全部API形态",
+        "fact_ids": [
+          "source.matrix",
+          "source.path"
+        ]
+      }
+    ],
+    "stages": [
+      {
+        "id": "host",
+        "domain_ids": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ],
+        "fact_ids": [
+          "source.host",
+          "source.matrix"
+        ],
+        "behavior": "Host查询核数/UB并以20T(float)或30T(16位)+mask+8192+2048预算最大合法64对齐tile"
+      },
+      {
+        "id": "kernel",
+        "domain_ids": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ],
+        "fact_ids": [
+          "source.path"
+        ],
+        "behavior": "Host查询核数/UB并以20T(float)或30T(16位)+mask+8192+2048预算最大合法64对齐tile；四输入一输出。float原地复用五队列，16位四输入Cast到A-D后释放raw输入，再A-E工作及输出Cast。SafeSqrt/SafeDiv保留异常数处理，weightDecay按属性分支。"
+      }
+    ],
+    "baseline_work": [
+      {
+        "id": "base-host",
+        "stage_id": "host",
+        "domain_ids": [
+          "float32",
+          "float16",
+          "bfloat16"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "exact",
+          "expression": "1",
+          "value": 1,
+          "unit": "kernel_launch/call",
+          "symbols": [],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.host"
+          ]
+        },
+        "explanation": "原host每次调用启动一次算子kernel；分配/H2D/检查不纳入kernel计时"
+      },
+      {
+        "id": "gm-float32",
+        "stage_id": "kernel",
+        "domain_ids": [
+          "float32"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "symbolic",
+          "expression": "5*N*s",
+          "unit": "bytes/call",
+          "symbols": [
+            {
+              "name": "N",
+              "meaning": "本次调用有效输出元素数",
+              "unit": "elements"
+            },
+            {
+              "name": "s",
+              "meaning": "输入/输出数据dtype字节数",
+              "unit": "bytes/element"
+            }
+          ],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.path"
+          ]
+        },
+        "explanation": "原始逻辑有效GM请求字节，不是HBM实测流量；N仅指该域的一次调用"
+      },
+      {
+        "id": "dma-float32",
+        "stage_id": "kernel",
+        "domain_ids": [
+          "float32"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "symbolic",
+          "expression": "5*L",
+          "unit": "DMA_calls/call",
+          "symbols": [
+            {
+              "name": "L",
+              "meaning": "全部有效核的原tile数量，连续域sum_c ceil(Nc/T)，SwiGLU按核与segment交集分别ceil",
+              "unit": "tiles"
+            }
+          ],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.path"
+          ]
+        },
+        "explanation": "DataCopyPad发射个数，真实硬件指令拆分未知"
+      },
+      {
+        "id": "vector-float32",
+        "stage_id": "kernel",
+        "domain_ids": [
+          "float32"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "symbolic",
+          "expression": "(32+5*I16+2*Iwd)*L",
+          "unit": "Vector_API_calls/call",
+          "symbols": [
+            {
+              "name": "L",
+              "meaning": "全部有效核的原tile数量，连续域sum_c ceil(Nc/T)，SwiGLU按核与segment交集分别ceil",
+              "unit": "tiles"
+            },
+            {
+              "name": "I16",
+              "meaning": "数据dtype为16位时1，否则0",
+              "unit": "dimensionless"
+            },
+            {
+              "name": "Iwd",
+              "meaning": "weightDecay非零时1，否则0",
+              "unit": "dimensionless"
+            }
+          ],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.path"
+          ]
+        },
+        "explanation": "源级API次数；Cast/Compare/Select包含在计数中，不等于指令数或耗时"
+      },
+      {
+        "id": "ub-float32",
+        "stage_id": "kernel",
+        "domain_ids": [
+          "float32"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "symbolic",
+          "expression": "20*T+M+10240",
+          "unit": "bytes/core",
+          "symbols": [
+            {
+              "name": "T",
+              "meaning": "原核内tile元素数；4096、2048或AdamW的64对齐容量解",
+              "unit": "elements/tile"
+            },
+            {
+              "name": "M",
+              "meaning": "Compare mask字节数256*ceil(ceil(T/8)/256)",
+              "unit": "bytes"
+            }
+          ],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.path"
+          ]
+        },
+        "explanation": "原InitBuffer按物理分配和dtype计字节；AdamW含host明确10240预留，其余算子未计未知API预留"
+      },
+      {
+        "id": "gm-float16",
+        "stage_id": "kernel",
+        "domain_ids": [
+          "float16"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "symbolic",
+          "expression": "5*N*s",
+          "unit": "bytes/call",
+          "symbols": [
+            {
+              "name": "N",
+              "meaning": "本次调用有效输出元素数",
+              "unit": "elements"
+            },
+            {
+              "name": "s",
+              "meaning": "输入/输出数据dtype字节数",
+              "unit": "bytes/element"
+            }
+          ],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.path"
+          ]
+        },
+        "explanation": "原始逻辑有效GM请求字节，不是HBM实测流量；N仅指该域的一次调用"
+      },
+      {
+        "id": "dma-float16",
+        "stage_id": "kernel",
+        "domain_ids": [
+          "float16"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "symbolic",
+          "expression": "5*L",
+          "unit": "DMA_calls/call",
+          "symbols": [
+            {
+              "name": "L",
+              "meaning": "全部有效核的原tile数量，连续域sum_c ceil(Nc/T)，SwiGLU按核与segment交集分别ceil",
+              "unit": "tiles"
+            }
+          ],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.path"
+          ]
+        },
+        "explanation": "DataCopyPad发射个数，真实硬件指令拆分未知"
+      },
+      {
+        "id": "vector-float16",
+        "stage_id": "kernel",
+        "domain_ids": [
+          "float16"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "symbolic",
+          "expression": "(32+5*I16+2*Iwd)*L",
+          "unit": "Vector_API_calls/call",
+          "symbols": [
+            {
+              "name": "L",
+              "meaning": "全部有效核的原tile数量，连续域sum_c ceil(Nc/T)，SwiGLU按核与segment交集分别ceil",
+              "unit": "tiles"
+            },
+            {
+              "name": "I16",
+              "meaning": "数据dtype为16位时1，否则0",
+              "unit": "dimensionless"
+            },
+            {
+              "name": "Iwd",
+              "meaning": "weightDecay非零时1，否则0",
+              "unit": "dimensionless"
+            }
+          ],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.path"
+          ]
+        },
+        "explanation": "源级API次数；Cast/Compare/Select包含在计数中，不等于指令数或耗时"
+      },
+      {
+        "id": "ub-float16",
+        "stage_id": "kernel",
+        "domain_ids": [
+          "float16"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "symbolic",
+          "expression": "30*T+M+10240",
+          "unit": "bytes/core",
+          "symbols": [
+            {
+              "name": "T",
+              "meaning": "原核内tile元素数；4096、2048或AdamW的64对齐容量解",
+              "unit": "elements/tile"
+            },
+            {
+              "name": "M",
+              "meaning": "Compare mask字节数256*ceil(ceil(T/8)/256)",
+              "unit": "bytes"
+            }
+          ],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.path"
+          ]
+        },
+        "explanation": "原InitBuffer按物理分配和dtype计字节；AdamW含host明确10240预留，其余算子未计未知API预留"
+      },
+      {
+        "id": "gm-bfloat16",
+        "stage_id": "kernel",
+        "domain_ids": [
+          "bfloat16"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "symbolic",
+          "expression": "5*N*s",
+          "unit": "bytes/call",
+          "symbols": [
+            {
+              "name": "N",
+              "meaning": "本次调用有效输出元素数",
+              "unit": "elements"
+            },
+            {
+              "name": "s",
+              "meaning": "输入/输出数据dtype字节数",
+              "unit": "bytes/element"
+            }
+          ],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.path"
+          ]
+        },
+        "explanation": "原始逻辑有效GM请求字节，不是HBM实测流量；N仅指该域的一次调用"
+      },
+      {
+        "id": "dma-bfloat16",
+        "stage_id": "kernel",
+        "domain_ids": [
+          "bfloat16"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "symbolic",
+          "expression": "5*L",
+          "unit": "DMA_calls/call",
+          "symbols": [
+            {
+              "name": "L",
+              "meaning": "全部有效核的原tile数量，连续域sum_c ceil(Nc/T)，SwiGLU按核与segment交集分别ceil",
+              "unit": "tiles"
+            }
+          ],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.path"
+          ]
+        },
+        "explanation": "DataCopyPad发射个数，真实硬件指令拆分未知"
+      },
+      {
+        "id": "vector-bfloat16",
+        "stage_id": "kernel",
+        "domain_ids": [
+          "bfloat16"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "symbolic",
+          "expression": "(32+5*I16+2*Iwd)*L",
+          "unit": "Vector_API_calls/call",
+          "symbols": [
+            {
+              "name": "L",
+              "meaning": "全部有效核的原tile数量，连续域sum_c ceil(Nc/T)，SwiGLU按核与segment交集分别ceil",
+              "unit": "tiles"
+            },
+            {
+              "name": "I16",
+              "meaning": "数据dtype为16位时1，否则0",
+              "unit": "dimensionless"
+            },
+            {
+              "name": "Iwd",
+              "meaning": "weightDecay非零时1，否则0",
+              "unit": "dimensionless"
+            }
+          ],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.path"
+          ]
+        },
+        "explanation": "源级API次数；Cast/Compare/Select包含在计数中，不等于指令数或耗时"
+      },
+      {
+        "id": "ub-bfloat16",
+        "stage_id": "kernel",
+        "domain_ids": [
+          "bfloat16"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "symbolic",
+          "expression": "30*T+M+10240",
+          "unit": "bytes/core",
+          "symbols": [
+            {
+              "name": "T",
+              "meaning": "原核内tile元素数；4096、2048或AdamW的64对齐容量解",
+              "unit": "elements/tile"
+            },
+            {
+              "name": "M",
+              "meaning": "Compare mask字节数256*ceil(ceil(T/8)/256)",
+              "unit": "bytes"
+            }
+          ],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.path"
+          ]
+        },
+        "explanation": "原InitBuffer按物理分配和dtype计字节；AdamW含host明确10240预留，其余算子未计未知API预留"
+      }
+    ]
+  }
+}

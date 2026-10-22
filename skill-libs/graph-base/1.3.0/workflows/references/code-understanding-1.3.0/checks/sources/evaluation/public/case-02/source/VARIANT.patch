@@ -1,0 +1,99 @@
+--- upstream/data_copy_pad.asc
++++ current/data_copy_pad.asc
+@@ -17,12 +17,12 @@
+ #include "data_utils.h"
+ #include "kernel_operator.h"
+ 
+-constexpr uint32_t scenarioNum = SCENARIO_NUM;
++constexpr uint32_t scenarioNum = 2;
+ 
+ constexpr uint32_t CeilAlignConst(uint32_t value, uint32_t align) { return (value + align - 1) / align * align; }
+ 
+ // 场景1：输入[1, 20]，输出[1, 32]，使用SetPadValue进行自定义填充
+-// 场景2：输入[32, 59]，输出[32, 64]，使用rightPadding进行默认
++// 场景2：测试参数由main给定。
+ // 场景3：输入[3, 24]，输出[1, 80]，使用Compact模式，仅支持 Ascend 950PR/Ascend 950DT
+ // 场景4：输入[1, 320]，输出[1, 576]个int8元素，使用SetLoopModePara使能loop mode（Compact模式），
+ //        实现GM→UB非连续stride搬运，仅支持 Ascend 950PR/Ascend 950DT
+@@ -59,10 +59,13 @@
+     {
+         AscendC::LocalMemAllocator<AscendC::Hardware::UB> ubAllocator;
+         AscendC::LocalTensor<T> srcLocal = ubAllocator.Alloc<T, dstTotalLength>();
++        AscendC::Duplicate<T>(srcLocal, (T)0, dstTotalLength);
++        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(EVENT_ID0);
++        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(EVENT_ID0);
+         CopyIn(srcLocal);
+         AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE3>(EVENT_ID0);
+         AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE3>(EVENT_ID0);
+-        AscendC::DataCopyExtParams copyParams{1, dstTotalLength * sizeof(T), 0, 0, 0};
++        AscendC::DataCopyExtParams copyParams{srcRows, srcCols * sizeof(T), 1, 20, 0};
+         AscendC::DataCopyPad(dstGlobal, srcLocal, copyParams);
+     }
+ 
+@@ -91,14 +94,13 @@
+             AscendC::DataCopyPad(srcLocal, srcGlobal, copyParams, padParams);
+         } else if constexpr (scenarioNum == 2) {
+             // 场景2：使用rightPadding进行默认填充
+-            // DataCopyExtParams参数：blockCount=32, blockLen=59*sizeof(float), srcStride=0, dstStride=0, rsv=0
+-            // DataCopyPadExtParams参数：isPad=true, leftPadding=0, rightPadding=5
+             // isPad=true时填充值为0，不使用SetPadValue
+-            AscendC::DataCopyExtParams copyParams{srcRows, srcCols * sizeof(float), 0, 0, 0};
++            AscendC::DataCopyExtParams copyParams{srcRows, srcCols * sizeof(float), 28, 1, 0};
+             AscendC::DataCopyPadExtParams<T> padParams;
+             padParams.isPad = true;
+             padParams.leftPadding = 0;
+             padParams.rightPadding = dstCols - srcCols;
++            padParams.paddingValue = (T)0;
+ 
+             AscendC::DataCopyPad(srcLocal, srcGlobal, copyParams, padParams);
+         }
+@@ -215,22 +217,10 @@
+     // 场景4/5：使用SetLoopModePara，数据类型int8，输入320个元素，输出576个元素
+     // blockLen=40, blockCount=2，每次搬运40Bytes，连续搬运2块
+     // loop1Size=2, loop2Size=2，内层循环2次，外层循环2次，总共搬运 40*2*2*2=320Bytes
+-    constexpr uint32_t SRC_ROWS = (scenarioNum == 2) ? 32 : (scenarioNum == 3) ? 3 : (scenarioNum == 6) ? 2 : 1;
+-    constexpr uint32_t SRC_COLS = (scenarioNum == 1)                     ? 20 :
+-                                  (scenarioNum == 2)                     ? 59 :
+-                                  (scenarioNum == 3)                     ? 24 :
+-                                  (scenarioNum == 4 || scenarioNum == 5) ? 320 :
+-                                  (scenarioNum == 6)                     ? 4 * 3 * 128 * 126 :
+-                                                       20; // 场景6: 2*4*3*128*126，但只搬运2*2*2*64*126
+-    constexpr uint32_t DST_COLS = (scenarioNum == 1)                     ? 32 :
+-                                  (scenarioNum == 2)                     ? 64 :
+-                                  (scenarioNum == 3)                     ? 80 :
+-                                  (scenarioNum == 4 || scenarioNum == 5) ? 576 :
+-                                  (scenarioNum == 6)                     ? 128 :
+-                                                                           32;
+-    constexpr uint32_t DST_TOTAL_LENGTH = (scenarioNum >= 3 && scenarioNum != 6) ? DST_COLS :
+-                                          (scenarioNum == 6)                     ? 512 * 128 :
+-                                                                                   SRC_ROWS * DST_COLS;
++    constexpr uint32_t SRC_ROWS = 5;
++    constexpr uint32_t SRC_COLS = 13;
++    constexpr uint32_t DST_COLS = 16;
++    constexpr uint32_t DST_TOTAL_LENGTH = SRC_ROWS * 24;
+ 
+     uint32_t numBlocks = 1;
+     size_t elementSize = 0;
+@@ -248,10 +238,10 @@
+         // 场景6：GM形状[2, 4, 3, 128, 126]int8
+         inputByteSize = 2 * 4 * 3 * 128 * 126 * sizeof(int8_t);
+     } else {
+-        inputByteSize = SRC_ROWS * SRC_COLS * elementSize;
+-    }
+-
+-    size_t outputByteSize = DST_TOTAL_LENGTH * elementSize;
++        inputByteSize = SRC_ROWS * 20 * elementSize;
++    }
++
++    size_t outputByteSize = SRC_ROWS * 18 * elementSize;
+ 
+     int32_t deviceId = 0;
+     aclrtSetDevice(deviceId);
+@@ -266,6 +256,7 @@
+     aclrtMalloc((void**)&xDevice, inputByteSize, ACL_MEM_MALLOC_HUGE_FIRST);
+     aclrtMalloc((void**)&zDevice, outputByteSize, ACL_MEM_MALLOC_HUGE_FIRST);
+ 
++    aclrtMemset(zDevice, outputByteSize, 0xA5, outputByteSize);
+     ReadFile("./input/input_x.bin", inputByteSize, xHost, inputByteSize);
+ 
+     aclrtMemcpy(xDevice, inputByteSize, xHost, inputByteSize, ACL_MEMCPY_HOST_TO_DEVICE);

@@ -1,0 +1,148 @@
+{
+  "task_id": "raw-case-11",
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "o1"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+        "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+      },
+      "locator": "lines:285-297",
+      "effect_kind": "mechanism",
+      "before": "源码显示：Process明确CopyIn→Compute→CopyOut；4个TQue均num=1，2048元素tile；输入3读输出1写。",
+      "after": "跨tile预取释放单槽依赖，必要GM流量仍为4Ns，代价是更多raw槽及序言尾声。",
+      "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+    },
+    {
+      "opportunity_ids": [
+        "o2"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+        "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+      },
+      "locator": "lines:320-332",
+      "effect_kind": "mechanism",
+      "before": "源码显示：低精度Cast三输入至fp1/fp2/fp3，Div写fpOut再Muls/Add并最终Cast；不是连续宽窄往返。",
+      "after": "将Div后的fc区用于之后Cast(a)可从四FP32 scratch降至三块，但需先延后Cast(a)并核对API alias/事件；尚未知道容量是否限制tile。",
+      "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+    },
+    {
+      "opportunity_ids": [
+        "o3"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.redundant_cast.md",
+        "sha256": "sha256:c7f8ace396cc0a0f53f4bc0a5b9f0883cbd8b439d45dce74edc1e4f50b1b326d"
+      },
+      "locator": "lines:303-315",
+      "effect_kind": "mechanism",
+      "before": "源码显示：低精度Cast三输入至fp1/fp2/fp3，Div写fpOut再Muls/Add并最终Cast；不是连续宽窄往返。",
+      "after": "三输入各只扩位一次、输出只缩位一次；删除Cast会变更FP32除法路径，case12/13异常值不允许用scalar特化跳过算术。",
+      "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+    },
+    {
+      "opportunity_ids": [
+        "o1"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+      },
+      "locator": "lines:78-90",
+      "effect_kind": "parameters",
+      "before": "尚未把源循环转换为有界任务/内存方案。",
+      "after": "连续输出模板要求每输出唯一owner与总分配预算；保留host chunk和现有所有权，双raw槽+四FP32 scratch按65536B(U=2048)计，不把活跃下界当物理分配。",
+      "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+    },
+    {
+      "opportunity_ids": [
+        "o1"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+        "sha256": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603"
+      },
+      "locator": "lines:62-74",
+      "effect_kind": "parameters",
+      "before": "尚未把源循环转换为有界任务/内存方案。",
+      "after": "foreach中物理num=2与depth=1分别计；每次DeQue后再预取，并闭合输入最后读和MTE3读完后的回收；SDK队列能力另为unknown。",
+      "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+    },
+    {
+      "opportunity_ids": [
+        "o1",
+        "o2"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+        "sha256": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603"
+      },
+      "locator": "lines:62-74",
+      "effect_kind": "alternative",
+      "before": "此前尚未比较该方法的边界。",
+      "after": "foreach中物理num=2与depth=1分别计；每次DeQue后再预取，并闭合输入最后读和MTE3读完后的回收；SDK队列能力另为unknown。",
+      "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+    },
+    {
+      "opportunity_ids": [
+        "o1",
+        "o2"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+        "sha256": "sha256:04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483"
+      },
+      "locator": "lines:80-92",
+      "effect_kind": "alternative",
+      "before": "此前尚未比较该方法的边界。",
+      "after": "独立InitBuffer不因词法作用域而自动共享；foreach只有重排Cast(a)并物理合并fc/fa后才从四FP32区降至三，目标API alias与完成边须核对。",
+      "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+    }
+  ],
+  "adopted_routes": {
+    "P": "planning.elementwise.continuous",
+    "O": "implementation.pipeline-sync.pipeline"
+  },
+  "scope": "conditional method adoption; no C3 implementation",
+  "complete_directory_reviewed": [
+    "problem.broadcast_strategy_mismatch",
+    "problem.cache_policy_mismatch",
+    "problem.chunk_merge_overhead",
+    "problem.control_metadata_overhead",
+    "problem.core_tail_imbalance",
+    "problem.dynamic_shape_mismatch",
+    "problem.excessive_sync_scope",
+    "problem.fragmented_writeback",
+    "problem.insufficient_input_reuse",
+    "problem.l1_l0_reuse_deficit",
+    "problem.memory_bandwidth_saturation",
+    "problem.missing_kernel_fusion",
+    "problem.mixed_pipeline_imbalance",
+    "problem.noncontiguous_access",
+    "problem.onchip_capacity_pressure",
+    "problem.pipeline_serialization",
+    "problem.reduction_strategy_mismatch",
+    "problem.redundant_cast",
+    "problem.redundant_gm_round_trip",
+    "problem.register_spill",
+    "problem.scalar_control_hot_loop",
+    "problem.tail_slow_path",
+    "problem.tiny_transfer_setup_amplification",
+    "problem.transfer_compute_contention",
+    "problem.ub_bank_conflict",
+    "problem.underused_task_parallelism",
+    "problem.vector_api_fragmentation",
+    "problem.workspace_overallocation"
+  ],
+  "stopping_reason": "当前主体数据路径与竞争机会已比较，剩余合法性/性能问题不能由文档替代当前设备证据。"
+}

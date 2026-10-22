@@ -1,0 +1,96 @@
+{
+  "architecture_profile_ref": "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+  "groups": [
+    {
+      "algorithm": "Reuse nearest coordinate/padding computation across channels",
+      "alternatives": [
+        "Keep flat output fallback for unaligned spatial planes",
+        "Compare geometry reuse against strided channel traffic"
+      ],
+      "group_id": "nearest_geometry",
+      "memory_requirements": {
+        "UB": 16384
+      },
+      "ownership": "Aligned spatial output intervals in every channel plane",
+      "reduction": "none",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:4e583b489d23efa16985429318737667a85960af5b3acc569bcc4018650b373e",
+        "sha256:1aba1adbdfec9aaea64cb522d9da2abd9e4d0f2084fc3c3414458ec6df4da120",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:7a3d37504bb03fcdf1a0e0a9ea65eb0332fa3bf6219d25d5eb8187bc06869cb7"
+      ],
+      "synchronization": "Same explicit runner stream; retain source producer/consumer barriers until separately justified",
+      "task_partition": "Spatial tiles per batch distributed across AIV, then process channels using the same geometry",
+      "workspace_bytes": 0,
+      "workspace_formula": "0; future geometry remains bounded in private UB; new global workspace requires a revised plan"
+    },
+    {
+      "algorithm": "Reuse coordinate floors and three separate interpolation fractions across channels",
+      "alternatives": [
+        "Preserve x*wx*wy*wz term order instead of precombining weights",
+        "Full original interpolation fallback"
+      ],
+      "group_id": "trilinear_geometry",
+      "memory_requirements": {
+        "UB": 32768
+      },
+      "ownership": "Aligned spatial ownership for every channel; no reduction between cores",
+      "reduction": "none",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:4e583b489d23efa16985429318737667a85960af5b3acc569bcc4018650b373e",
+        "sha256:1aba1adbdfec9aaea64cb522d9da2abd9e4d0f2084fc3c3414458ec6df4da120",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:7a3d37504bb03fcdf1a0e0a9ea65eb0332fa3bf6219d25d5eb8187bc06869cb7"
+      ],
+      "synchronization": "Same explicit runner stream; retain source producer/consumer barriers until separately justified",
+      "task_partition": "Spatial tiles across AIV with bounded local coordinate data",
+      "workspace_bytes": 0,
+      "workspace_formula": "0; future geometry remains bounded in private UB; new global workspace requires a revised plan"
+    },
+    {
+      "algorithm": "Original flat output evaluation",
+      "alternatives": [
+        "Nearest-only branch specialization",
+        "Hoist plane and grid base calculations"
+      ],
+      "group_id": "generic",
+      "memory_requirements": {
+        "UB": 6144
+      },
+      "ownership": "One core owns every output cache line",
+      "reduction": "none",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:4e583b489d23efa16985429318737667a85960af5b3acc569bcc4018650b373e",
+        "sha256:1aba1adbdfec9aaea64cb522d9da2abd9e4d0f2084fc3c3414458ec6df4da120",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:7a3d37504bb03fcdf1a0e0a9ea65eb0332fa3bf6219d25d5eb8187bc06869cb7"
+      ],
+      "synchronization": "Same explicit runner stream; retain source producer/consumer barriers until separately justified",
+      "task_partition": "64-byte-aligned contiguous output intervals over available AIV",
+      "workspace_bytes": 0,
+      "workspace_formula": "0; future geometry remains bounded in private UB; new global workspace requires a revised plan"
+    }
+  ],
+  "operator": "grid_sampler_3d",
+  "plan_id": "grid-r1-channel-shared-geometry",
+  "precision_invariants": [
+    "Preserve original source floating operation order in eight weighted terms; precomputed combined weights change rounding and are not assumed equivalent.",
+    "Retain half input conversion and vector output casting mode; handle all supported padding boundary coordinates."
+  ],
+  "schema_version": "1.0.0",
+  "semantic_invariants": [
+    "Sample NCDHW input using NDHWC grid; preserve nearest or trilinear interpolation and zeros/border/reflection padding.",
+    "Normalize coordinates with align_corners exactly as source; nearest uses ties-to-even.",
+    "Each output element has one writer; grid geometry may be reused across channels."
+  ],
+  "source_hash": "sha256:b33346d36c03a3ce03c288670a2eee01d282e74b379cc5d260a8989573e166f2"
+}

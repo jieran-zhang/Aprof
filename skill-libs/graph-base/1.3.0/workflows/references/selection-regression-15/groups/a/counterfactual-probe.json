@@ -1,0 +1,14 @@
+{
+  "kind": "counterfactual_static_probe",
+  "not_measured": true,
+  "case": "case-01",
+  "original": "N大且每核多tile时优先两物理槽流水",
+  "changed_condition": "反事实合法输入N=1024且C=1、T=4096；其他语义与dtype保持",
+  "comparison_changes": {
+    "benefit": "tileCount=1，无跨tile等待可隐藏",
+    "cost": "双槽占用依旧增加；prolog/drain仍存在",
+    "alternative": "tile合并也无可减少的第二tile，因此两者均失去本例收益依据"
+  },
+  "conclusion": "本反事实保留原单槽计划；不是生产阈值、不是新实测结论，不强制改选另一个Action",
+  "case_rename_invariance": "所有判据由N/C/T/dtype/segment与生命周期决定；替换case名称或重排矩阵不改变比较"
+}

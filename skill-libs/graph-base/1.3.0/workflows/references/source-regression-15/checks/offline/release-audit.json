@@ -1,0 +1,123 @@
+{
+  "mode": "release",
+  "timestamp_utc": "2026-10-21T04:39:42.275053+00:00",
+  "python_isolated": true,
+  "dont_write_bytecode": true,
+  "root": "/dev/shm/aprof-offline-review-20261021-9jxz7nc8/graph-base-1.3.0",
+  "cwd": "/dev/shm/aprof-offline-review-20261021-9jxz7nc8/graph-base-1.3.0",
+  "argv": [
+    "/dev/shm/aprof-offline-review-20261021-9jxz7nc8/graph-base-1.3.0/tools/release.py",
+    "--root",
+    "/dev/shm/aprof-offline-review-20261021-9jxz7nc8/graph-base-1.3.0",
+    "--allow-unsealed"
+  ],
+  "python_runtime_allowlist": [
+    "/usr/local/python3.11.15"
+  ],
+  "read_allowlist": [
+    "/dev/shm/aprof-offline-review-20261021-9jxz7nc8/graph-base-1.3.0",
+    "/tmp/aprof-selection-review-20261021/offline",
+    "/usr/local/python3.11.15"
+  ],
+  "write_allowlist": [
+    "/tmp/aprof-selection-review-20261021/offline"
+  ],
+  "rules": [
+    "Resolve paths via realpath; deny reads/directory visits/import files outside allowlist",
+    "Deny all copied package writes; only review output writes allowed",
+    "Deny all socket.* audit events",
+    "Deny subprocess/exec/spawn/fork and ctypes.*",
+    "No symlinks in copied package; deny new symlinks"
+  ],
+  "self_tests": [
+    {
+      "test": "original_repository",
+      "blocked": true
+    },
+    {
+      "test": "raw_task_input",
+      "blocked": true
+    },
+    {
+      "test": "execution_output",
+      "blocked": true
+    },
+    {
+      "test": "maintenance_workspace",
+      "blocked": true
+    },
+    {
+      "test": "upstream_checkout_anywhere_outside_allowlist",
+      "blocked": true
+    },
+    {
+      "test": "socket_creation",
+      "blocked": true
+    }
+  ],
+  "blocked_events": [
+    {
+      "phase": "self_test",
+      "event": "open",
+      "target": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/README.md",
+      "reason": "read/visit outside copied package, review output and Python runtime"
+    },
+    {
+      "phase": "self_test",
+      "event": "open",
+      "target": "/tmp/aprof-raw15-suoslncl/SOURCE-FILES.json",
+      "reason": "read/visit outside copied package, review output and Python runtime"
+    },
+    {
+      "phase": "self_test",
+      "event": "open",
+      "target": "/tmp/aprof-raw15-autonomous-c/case-14/R2-reasoning.json",
+      "reason": "read/visit outside copied package, review output and Python runtime"
+    },
+    {
+      "phase": "self_test",
+      "event": "open",
+      "target": "/tmp/aprof-selection-maintenance-vdxp89ro/README.md",
+      "reason": "read/visit outside copied package, review output and Python runtime"
+    },
+    {
+      "phase": "self_test",
+      "event": "open",
+      "target": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/cannbot-skills/README.md",
+      "reason": "read/visit outside copied package, review output and Python runtime"
+    },
+    {
+      "phase": "self_test",
+      "event": "socket.__new__",
+      "target": "(<socket.socket fd=-1, family=0, type=0, proto=0>, 2, 1, 0)",
+      "reason": "network/socket operations forbidden"
+    }
+  ],
+  "tool_execution_blocked_count": 0,
+  "audit_event_counts": {
+    "open": 16307,
+    "import": 189,
+    "marshal.loads": 126,
+    "exec": 406,
+    "compile": 284,
+    "sys._getframe": 80,
+    "object.__setattr__": 68,
+    "socket.__new__": 1,
+    "os.listdir": 25,
+    "pathlib.Path.rglob": 24,
+    "os.scandir": 4016,
+    "pathlib.Path.glob": 10,
+    "builtins.id": 7950,
+    "object.__getattr__": 49,
+    "code.__new__": 3
+  },
+  "elapsed_seconds": 37.757,
+  "exit_code": 0,
+  "error": null,
+  "limitations": [
+    "Python audit policy is not an OS-level sandbox.",
+    "Hook starts after isolated interpreter initialization and standard runner imports.",
+    "Python stat/access metadata operations are not all audited; native code outside audited interfaces is not comprehensively sandboxed.",
+    "Python standard library and installed runtime dependencies remain readable; package data/code must come from the copy."
+  ]
+}

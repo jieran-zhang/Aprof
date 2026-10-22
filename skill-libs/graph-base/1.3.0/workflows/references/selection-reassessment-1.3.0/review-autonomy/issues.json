@@ -1,0 +1,51 @@
+[
+  {
+    "id": "A01-UB-DTYPE",
+    "priority": "P3",
+    "status": "resolved",
+    "case": "case-01",
+    "file": "autonomy-a/case-01/decision-r2.json",
+    "locator": "opportunities[o-pipe].comparison (also R1/REPORT)",
+    "issue": "比将T加倍更小的额外UB没有限定16位；float在T=4096下双槽及T翻倍均从32768增加至65536B。",
+    "requested_change": "限定容量优势到16位；float容量打平，保留流水优先为待测重叠假设，不要求换Action。",
+    "resolution": "已复核 review-correction.json 及 R1/R2/REPORT，float容量打平、16位容量优势分开，选择不变。"
+  },
+  {
+    "id": "C12-MAX-SEMANTICS",
+    "priority": "P2",
+    "status": "resolved",
+    "case": "case-12",
+    "file": "autonomy-c/case-12/decision-r2.json",
+    "lines": [
+      75,
+      89
+    ],
+    "locator": "primary-safe-2.affects and primary plan; R1 likewise",
+    "issue": "FP32广播主方案写Vector Max，原scalar为av>bv?av:bv。泛化semantic_equivalence unknown未具体识别NaN/相等±0等数值选择边界，新CompareSelect正文仅出现笼统尾部警告。",
+    "requested_change": "保持广播重构选择；明确int32和FP32路径，FP32 Max需证明原三元特殊值行为，或构造GT+Select；若采用后者按256B compare域、有效n、predicate模式2及8KB API暂存列成本和边界。",
+    "resolution": "独立复核修回R1/R2及consultation：FP32 GT+Select与int32 Max分离、NaN/±0及oracle差异明示，c/M/8192B和有效尾写闭合；N比较与新增Lbatch/repeats分列，row-owner交集已纳入。513/37/101的15200/8992/9760B预算独立复算正确，选择不变。"
+  },
+  {
+    "id": "C12-COMPARISON-UNIT",
+    "priority": "P2",
+    "status": "resolved",
+    "case": "case-12",
+    "file": "autonomy-c/case-12/decision-r2.json",
+    "locator": "opportunities[alternative].analysis.work_delta[alternative-reduced].quantity (R1 likewise)",
+    "issue": "N-ceil(N/T)被标为scalar comparison loop iterations replaced，混减被替换scalar比较与新增batch循环；真实batch还受owner/行边界。",
+    "requested_change": "减少项写N个scalar comparison，新增batch/API/repeat按sum_owner,row ceil(valid/T)独立核算，不要求换Action。",
+    "resolution": "独立复核修回R1/R2及consultation：FP32 GT+Select与int32 Max分离、NaN/±0及oracle差异明示，c/M/8192B和有效尾写闭合；N比较与新增Lbatch/repeats分列，row-owner交集已纳入。513/37/101的15200/8992/9760B预算独立复算正确，选择不变。"
+  },
+  {
+    "id": "RUNTIME-TIMING-WORKLOAD-BRIDGE",
+    "priority": "P2",
+    "status": "resolved",
+    "case": null,
+    "file": "runtime/src/aprof_runtime/action_decision_v2.py",
+    "locator": "validate_reassessment valid timing actual_cases/actual_domains and scoped_evidence result_ref exception; action_decision._feedback; unified_timing workload_ref comparison",
+    "issue": "已测反馈验证统一计时A/B彼此workload一致与decision case ID集合，但未见从decision完整workload到每例capture workload的绑定。不可将case ID核验称shape/属性核验。",
+    "requested_change": "如要自动采纳已测反馈，显式绑定完整清单到每例workload引用或语义；至少如实保留该限制。当前15例均not_measured，静态回执三元身份不受影响。",
+    "limits": "静态代码审读，未制造计时链或运行设备；合法result_ref不重包attempt_identity的例外本身合理。",
+    "resolution": "root补入v2 valid专用完整cases[{case_id,workload}]桥；已独立审读：唯一完整清单、attempt hash、每candidate capture完整payload比对，沿用已验证A/B workload一致。已读matching/异shape/异oracle/缺映射测试，不重复全量测试。"
+  }
+]

@@ -1,0 +1,67 @@
+{
+  "answer_id": "answer-6b29025ab673",
+  "case": "case-04",
+  "facts": [
+    {
+      "id": "CU04.A01",
+      "status": "correct",
+      "rationale": "完整说明 half 输入、float L0C 累加、Fixpipe 先转换为 half、随后执行 half LeakyReLU，斜率约为 0.001；后文也明确无偏置依赖。",
+      "answer_span": "对每个输出位置，先由 Cube 计算 S[m,n]=Σ(k=0…127) A[m,k]B[k,n]，在 float L0C 中累加；再由 Fixpipe 按 F322F16（文档规定 CAST_RINT）转换为 half 值 H；最后 Vector 对 H≥0 保留原值，对 H<0 计算 half 斜率乘 H。斜率是源码的 `(half)0.001`，其值约为 0.0010004043579101562。因此实际精度顺序包含激活前的一次 float→half 转换，不能直接等同于先在 float 中完成激活再转 half。"
+    },
+    {
+      "id": "CU04.A02",
+      "status": "correct",
+      "rationale": "明确混合比例、两个 AIC 和四个 AIV；结合随后给出的互不重叠行区间及完整 K 范围，完整说明每个 AIC 的 256×128 块由两个 AIV 各处理一半。",
+      "answer_span": "`numBlocks=(512/256)×(128/128)=2`，入口 `mmad_vec_custom`（188–195 行）使用 `__mix__(1,2)`：启动两个组合，每组一个 AIC、两个 AIV，共两个 AIC、四个 AIV。这是本次启动的分工，不是芯片总核数。"
+    },
+    {
+      "id": "CU04.A03",
+      "status": "correct",
+      "rationale": "明确每核仅调用一次完整尺寸的 Mmad，初始化累加器且无重复 K 累加；全文将矩阵乘定位于 L0A/L0B/L0C，将 UB 用于后续激活。",
+      "answer_span": "`Mmad`（115 行）只调用一次，参数为 m=256、n=128、k=128，`cmatrixSource=false`、`cmatrixInitVal=true`，因此从零开始得到完整单核结果，不依赖 L0C 旧值或偏置。没有跨 tile 的 K 累加循环；两核总计完成 512×128×128=8388608 次乘加。C 在 L0C 中为 float NZ。"
+    },
+    {
+      "id": "CU04.E01",
+      "status": "correct",
+      "rationale": "给出 A、C 每核偏移 32768 个 half 的等价表达、完整的 256 行覆盖和共享 B；前文也明确 numBlocks=2 对应两个 AIC、四个 AIV。",
+      "answer_span": "`KernelMatmul::Init`（31–45 行）中，AIC g 的 A、C 基址均偏移 g×256×128 个 half，即 g×65536B。AIC0 负责输出行 [0,256)，AIC1 负责 [256,512)，都覆盖全部 128 列和全部 K。B 不偏移，两核各读取完整 B。"
+    },
+    {
+      "id": "CU04.E02",
+      "status": "correct",
+      "rationale": "完整给出整数除法映射、奇偶半块偏移、四个绝对元素起点、每核元素数和无重叠的全部行覆盖。",
+      "answer_span": "AIV v 先用整数除法 v/2 找到所属 Cube 块，再在 `LeakyReluCompute`（143–176 行）中按 v%2 偏移 128×128 个 half。四个 AIV 依次处理行 [0,128)、[128,256)、[256,384)、[384,512)，在整个 C 中的起始元素偏移为 0、16384、32768、49152，字节偏移为 0、32768、65536、98304。各自覆盖 16384 个 half，输出范围互不重叠。"
+    },
+    {
+      "id": "CU04.E03",
+      "status": "correct",
+      "rationale": "各层分配量与冻结字节数完全一致，并明确输入块尺寸；后文另完整给出 AIV 的 128 行、每行 256B、GM 和 UB 间隙均为零。",
+      "answer_span": "每核 L1 的 A1 为 32768 个 half（64KiB），B1 为 16384 个 half（32KiB），合计 96KiB；L0A 的 A2 为 half、64KiB，L0B 的 B2 为 half、32KiB，L0C 的 C 为 32768 个 float、128KiB。每个 AIV 的 UB 是 16384 个 half、32KiB。"
+    },
+    {
+      "id": "CU04.H01",
+      "status": "correct",
+      "rationale": "完整描述 2201 的 GM ND→L1 NZ、A 到 L0A Zz、B 内分形转置到 L0B Zn、Mmad 产生 float NZ L0C、Fixpipe 转为 half ND GM，以及随后 GM→UB→GM 的 Vector 路径，没有声称 L0C 直接到 UB。",
+      "answer_span": "2201 的 L1→L0 使用 `LoadData2DParams`（75–91 行）。half 分形为 16×16，即 256 个元素、512B。A 循环 16 次，每次搬 8 个分形：源起点 i×256 个 half，相邻 repeat 源起点相距 16×512=8192B；目的起点 i×2048 个 half，目的分形连续、不转置。合计 128 个分形，形成 L0A 的 Zz 排布。B 循环 8 次，每次也搬 8 个分形，源起点 i×256 个 half，源 repeat 间距 8×512=4096B，目的起点 i×2048 个 half；每个 16×16 分形转置，形成 L0B 的 Zn 排布。"
+    },
+    {
+      "id": "CU04.H02",
+      "status": "correct",
+      "rationale": "完整列出并解释各核内生产者/消费者事件，以及 FIX 上 mode2、flag0 的配对核间通知和等待；明确等待发生在 AIV 读取 GM 之前。",
+      "answer_span": "依赖保障来自显式事件，而不是函数调用顺序本身。AIC 依次以成对 SetFlag/WaitFlag 建立 MTE2_MTE1、MTE1_M、M_FIX，使 GM→L1 完成后才能读取 L1，L1→L0 完成后才能矩阵计算，矩阵计算完成后才能由 FIX 读取 L0C。之后 `CrossCoreSetFlag<0x2,PIPE_FIX>(0)` 在 FIX 前序操作完成后通知本组合的两个 AIV。A3 支持模式 2；其配对 `CrossCoreWaitFlag<0x2>(0)` 阻塞后续所有流水指令下发，所以 AIV 的 GM 读取在 Cube 写回完成之后。它不是两个组合间的全局屏障。AIV 再以 MTE2_V 和 V_MTE3 事件保证 UB 输入就绪、激活完成后才写回。"
+    },
+    {
+      "id": "CU04.H03",
+      "status": "correct",
+      "rationale": "明确 GM 中间结果和 AIV 对同一区域的最终写回；结合每个 AIV 独立 UB 的分配与核间等待说明，完整体现同步只建立就绪关系，并未消除 GM 中转或引入共享 UB。",
+      "answer_span": "按 API 请求的数据量，两个 AIC 共读 A/B 192KiB、写中间 C 128KiB，四个 AIV 共读写 C 256KiB，合计 GM 搬运 576KiB；这不等于实测 HBM 流量，缓存及实际调度未观测。两组之间没有数据依赖，具备独立执行条件；组内 Vector 要等整个 Cube 块写回。源码没有双缓冲或多 tile 流水。"
+    },
+    {
+      "id": "CU04.H04",
+      "status": "correct",
+      "rationale": "明确 3510 使用独立的 V2/NZ 分支、本次选择 2201，且分支存在不能证明跨平台构建或运行；结尾也明确性能未经验证。",
+      "answer_span": "3510 分支采用 LoadData2DParamsV2，L0A 注释为 Nz，只是另一平台的静态对照，不参与本次 2201 数据路径，也不能据此证明完整源码在 3510 可运行。"
+    }
+  ],
+  "critical_errors": []
+}

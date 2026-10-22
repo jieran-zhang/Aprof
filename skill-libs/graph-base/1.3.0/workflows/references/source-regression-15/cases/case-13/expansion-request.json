@@ -1,0 +1,35 @@
+{
+  "task_id": "raw-case-13",
+  "context_hash": "sha256:4f48ecc8cc9fd4cb20063fd32d154db8951bba19389b6ac251d856e891c2ca00",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "graph_version": "v0005",
+  "source_context_ref": {
+    "path": "C0-source-only.json",
+    "sha256": "sha256:428b0c80bb8d5c839aefa39f684f36db08c161c6ee765d755d9fc2e7e4b7a15a"
+  },
+  "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+  "retrieval_hash": "sha256:9c24b5d642e5897157f5745c20723d5c271fd29fee138c49fc2fde73917bb953",
+  "selections": [
+    {
+      "problem_id": "problem.scalar_control_hot_loop",
+      "reason": "Row读入UB后逐d GetValue/SetValue及算术，比较向量半区算术",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": []
+    },
+    {
+      "problem_id": "problem.insufficient_input_reuse",
+      "reason": "同BS下N个头重复读cos/sin，比较驻留",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": []
+    },
+    {
+      "problem_id": "problem.excessive_sync_scope",
+      "reason": "每Row多次PIPE_ALL，判断缩同步是否可独立采用",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": []
+    }
+  ]
+}

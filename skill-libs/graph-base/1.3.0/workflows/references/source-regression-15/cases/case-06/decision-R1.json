@@ -1,0 +1,274 @@
+{
+  "schema_version": "aprof.action-decision/v1",
+  "task_id": "case-06",
+  "context_hash": "sha256:7407f9d3bbd5f9133112ad568c54751898fd72e52496418a0dfe04497d9056eb",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "reasoning_ref": {
+    "path": "reasoning-R1.json",
+    "sha256": "sha256:820d04009f1b00ecaf94d06962bdf5275e734a465a3342b964a5e04aa16e88ff"
+  },
+  "reasoning_hash": "sha256:41c49d8625b8f72d4b8056a4c8108f15a6e782872007dd20bbe56681cc80b0f2",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/f3a6d55be57ea647180e624b4fffe6a25b55beea2b35d140d50fe71108f4232d.json",
+    "sha256": "sha256:02d64ca8cc4efafae4665940ea3cfd6bf955b40e79d76125906445f4337450a4"
+  },
+  "round": 1,
+  "current_parent_ref": {
+    "path": "source-index.json",
+    "sha256": "sha256:ce0841c9e0898cdb186a4c133ab1ef9bd2c84f05e93fd127aa9954d46cad571d"
+  },
+  "opportunities": [
+    {
+      "id": "opportunity.primary",
+      "hypothesis_id": "hypothesis.primary",
+      "action_id": "action.hoist_invariant_control",
+      "action_instance_id": "instance.primary",
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "source.matrix",
+        "source.oracle"
+      ],
+      "cost_mechanism": "GatherScalar 对每输出读取一个 index 和一个 x 并写一个 y；rank=r 时源码含2*r*N个64位除/模表达式，另有r*N次stride乘加。必要逻辑请求N*(indexBytes+2*xBytes)不等于HBM。主机逐index拒绝越界；kernel另有guard。tiling=ceil(N/C)，C=min(ceil(N/4096),actualAIV)。",
+      "predictions": [
+        {
+          "id": "primary.source-work",
+          "kind": "source_work",
+          "statement": "每个核从2*r*length个源码除模表达式降为起点解码2*r，之后为加法和进位比较；rank1全删解码。访问地址及Raw位模式保持。",
+          "check_method": "当前源码审读与完整20case公式；R2静态证据，后续真实patch/编译检查",
+          "on_support": "保留结构预测，按参数域继续条件规划",
+          "on_refute": "修订地址/分配公式或降低该候选优先级"
+        },
+        {
+          "id": "primary.performance",
+          "kind": "performance",
+          "statement": "若目标编译器未强度削减这些运行时64位除模，Scalar地址指令和Task时长应下降；随机读取或新增coord寄存器spill可能抵消。",
+          "check_method": "未来完整正确性后，同源20case Task计时及针对性timeline/编译检查；本任务未测",
+          "on_support": "按组检查收益与回归后决定是否保留",
+          "on_refute": "保留失败与父本，按最强替代进一步判别"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "primary.performance",
+          "unknown_id": "primary.performance-unknown-1",
+          "reason": "当前仅有可适用来源及源码工作量；没有该项当前性能观察。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "primary.performance-unknown-1",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "若目标编译器未强度削减这些运行时64位除模，Scalar地址指令和Task时长应下降；随机读取或新增coord寄存器spill可能抵消。；具体政策假设 cost_reduction 尚无当前编译/Task证据。",
+          "affects": "决定该变化是否缩短当前关键路径，不能从源码工作量直接推出时延。",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "primary.safety-1",
+          "kind": "implementation_safety",
+          "fact": "constraint.output_ownership",
+          "expected_state": true,
+          "statement": "原gather tiling的blockLength=ceil(N/C)，未像slice/grid向64B对齐；Scalar GM写在目标SDK/设备上的物理写粒度及实际C对应边界未知。须确认邻核不会共享写改写粒度；不由数学区间互斥推出物理安全。",
+          "affects": "限制具体参数/路径实施合法性，不否决条件方案或性能假设。",
+          "resolution": "check_before_implementation"
+        }
+      ],
+      "strongest_alternative_id": "opportunity.alt1",
+      "comparison": "相比仅缓存TilingData字段，这会删除整个每元素rank除模；相比尾轴UB Gather，它覆盖全部20case且不为稀疏随机源做整行/窗口读放大。随机x访问可能仍主导，因此不声称当前瓶颈或收益。",
+      "disposition": "selected",
+      "reason": "相比仅缓存TilingData字段，这会删除整个每元素rank除模；相比尾轴UB Gather，它覆盖全部20case且不为稀疏随机源做整行/窗口读放大。随机x访问可能仍主导，因此不声称当前瓶颈或收益。"
+    },
+    {
+      "id": "opportunity.alt1",
+      "hypothesis_id": "hypothesis.alt1",
+      "action_id": "action.vectorize_scalar_loop",
+      "action_instance_id": null,
+      "case_ids": [
+        "7",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "source.matrix",
+        "source.oracle"
+      ],
+      "cost_mechanism": "尾轴case7/20每源行放UB并Gather索引片；case13源行过大，源窗口反复扫描成本需另算。非尾轴转置会增加workspace流量，不能默认为只需UB。",
+      "predictions": [
+        {
+          "id": "alt1.source-work",
+          "kind": "source_work",
+          "statement": "尾轴case7/20每源行放UB并Gather索引片；case13源行过大，源窗口反复扫描成本需另算。非尾轴转置会增加workspace流量，不能默认为只需UB。",
+          "check_method": "当前源码审读与完整20case公式；R2静态证据，后续真实patch/编译检查",
+          "on_support": "保留结构预测，按参数域继续条件规划",
+          "on_refute": "修订地址/分配公式或降低该候选优先级"
+        },
+        {
+          "id": "alt1.performance",
+          "kind": "performance",
+          "statement": "尾轴case7/20每源行放UB并Gather索引片；case13源行过大，源窗口反复扫描成本需另算。非尾轴转置会增加workspace流量，不能默认为只需UB。：收益未知。",
+          "check_method": "未来完整正确性后，同源20case Task计时及针对性timeline/编译检查；本任务未测",
+          "on_support": "按组检查收益与回归后决定是否保留",
+          "on_refute": "保留失败与父本，按最强替代进一步判别"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_scalar_hot",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "alt1.performance",
+          "unknown_id": "alt1.performance-unknown-1",
+          "reason": "当前仅有可适用来源及源码工作量；没有该项当前性能观察。"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "alt1.performance",
+          "unknown_id": "alt1.performance-unknown-2",
+          "reason": "当前仅有可适用来源及源码工作量；没有该项当前性能观察。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "alt1.performance-unknown-1",
+          "kind": "performance",
+          "fact": "symptom.profile.scalar_hot",
+          "expected_state": null,
+          "statement": "尾轴case7/20每源行放UB并Gather索引片；case13源行过大，源窗口反复扫描成本需另算。非尾轴转置会增加workspace流量，不能默认为只需UB。；具体政策假设 legacy_symptom_profile_scalar_hot 尚无当前编译/Task证据。",
+          "affects": "决定该变化是否缩短当前关键路径，不能从源码工作量直接推出时延。",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "alt1.performance-unknown-2",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "尾轴case7/20每源行放UB并Gather索引片；case13源行过大，源窗口反复扫描成本需另算。非尾轴转置会增加workspace流量，不能默认为只需UB。；具体政策假设 cost_reduction 尚无当前编译/Task证据。",
+          "affects": "决定该变化是否缩短当前关键路径，不能从源码工作量直接推出时延。",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "opportunity.primary",
+      "comparison": "尾轴case7/20每源行放UB并Gather索引片；case13源行过大，源窗口反复扫描成本需另算。非尾轴转置会增加workspace流量，不能默认为只需UB。",
+      "disposition": "deferred",
+      "reason": "尾轴case7/20每源行放UB并Gather索引片；case13源行过大，源窗口反复扫描成本需另算。非尾轴转置会增加workspace流量，不能默认为只需UB。"
+    }
+  ],
+  "evidence_requests": [
+    {
+      "id": "request.safety-1",
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "unknown_ids": [
+        "primary.safety-1"
+      ],
+      "method": "在允许硬件/SDK阶段读取真实平台/API证据并对照方案逐项证明：原gather tiling的blockLength=ceil(N/C)，未像slice/grid向64B对齐；Scalar GM写在目标SDK/设备上的物理写粒度及实际C对应边界未知。须确认邻核不会共享写改写粒度；不由数学区间互斥推出物理安全。",
+      "discriminating_results": [
+        {
+          "outcome": "条件与所给参数域成立",
+          "decision_effect": "允许构建候选并完整20case验证；仍不代表性能改善"
+        },
+        {
+          "outcome": "条件不满足",
+          "decision_effect": "缩小参数域或走原fallback；不把失败解释为性能机制反证"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行硬件/构建；当前任务禁止相关动作。",
+      "defer_reason": "用户限定CPU源码/公式分析，保留具体补项交后继。"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+        "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+      },
+      "locator": "lines:297-344",
+      "effect_kind": "mechanism",
+      "before": "考虑仅缓存几项字段",
+      "after": "重复地址前缀是同等可选意图，选择mixed-radix增量地址以删除每输出rank除模；编译器CSE和spill留待检验。",
+      "applicability": "gather当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+        "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+      },
+      "locator": "lines:85-126",
+      "effect_kind": "plan",
+      "before": "展平P/J/Q可直接套地址",
+      "after": "非gather轴可小于X，必须保留逐维xStride；尾轴Gather与非尾轴transpose是不同代价，优先所有case地址递增。",
+      "applicability": "gather当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+        "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+      },
+      "locator": "lines:57-104",
+      "effect_kind": "parameters",
+      "before": "用固定rank特化替换整个实现",
+      "after": "按最小不变域初始化和进位，保持原每核序列，不复制无关平台指令；rank1单独删掉无用坐标。",
+      "applicability": "gather当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    }
+  ],
+  "selection": {
+    "mode": "conditional_plan",
+    "opportunity_id": "opportunity.primary",
+    "action_instance_id": "instance.primary",
+    "reason": "相比仅缓存TilingData字段，这会删除整个每元素rank除模；相比尾轴UB Gather，它覆盖全部20case且不为稀疏随机源做整行/窗口读放大。随机x访问可能仍主导，因此不声称当前瓶颈或收益。",
+    "concrete_plan": "保持原每核输出区间和Raw按位拷贝；每核begin只解码一次indexShape坐标，base=Σ(d≠dim)coord[d]*xStride[d]。逐元素用base+index[linear]*xStride[dim]读取；mixed-radix odometer按indexShape进位，以xStride加/减更新base，gather轴不加入base。rank1直接x[index]。只缓存rank、dim及实际使用stride/shape，最多8轴；不引入全量索引表、workspace或UB分配。保留host拒绝/设备guard及各dtype位模式；源shape非gather轴不等长仍用原xStride。",
+    "stop_reason": null
+  },
+  "previous_feedback": null
+}

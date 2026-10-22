@@ -1,0 +1,92 @@
+# 代码理解说明：Matmul + LeakyReLU（910C/2201）
+
+以下源码定位中，`asc` 指 `source/matmul_leakyrelu_basic_api.asc`。执行范围采用题面给定的 device 宏 `__NPU_ARCH__=2201`；数值和地址推导均针对本次固定 workload，不代表实测结果。
+
+## 1. 输入输出与数值语义
+
+输入为连续 ND、half 类型的 `A[512,128]`、`B[128,128]`；输出为连续 ND、half 类型的 `C[512,128]`。理想数学关系为：
+
+\[
+S_{mn}=\sum_{k=0}^{127}A_{mk}B_{kn},\qquad
+C_{mn}=\begin{cases}S_{mn},&S_{mn}\ge0\\0.001S_{mn},&S_{mn}<0.\end{cases}
+\]
+
+实际实现有明确的中间精度边界：half 操作数进入 Mmad，结果存于 **float L0C**；Fixpipe 先用 `F322F16` 转成 half 写入 GM，再由 Vector 对这个 **已转换的 half 中间值**执行 LeakyReLU，斜率也是 `(half)0.001`，最终仍输出 half（`asc:61,115,125–127,166`）。因此不能等同于“对 float GEMM 结果激活后只转一次 half”。浮点累加顺序、特殊值、舍入和溢出细节未由这些源码完整规定，不承诺与某个参考实现逐位一致。
+
+无 bias、无跨核归约。`MmadParams` 的初始化标志为 `true`，本次一次覆盖完整 K，不依赖旧 C 内容（`asc:115`）。
+
+## 2. Host、实际分派与覆盖范围
+
+`main` 的模板常量就是本工程的静态切分来源，没有独立 tiling 结构或运行时 tiling 算法。`numBlocks=(512/256)*(128/128)=2`，启动 `__mix__(1,2)` kernel，形成 **2 个 AIC 任务和对应 4 个 AIV 任务**，不是设备物理核数声明（`asc:188–195,200–215,242–243`）。
+
+AIC 按 `GetBlockIdx()` 沿 M 分核；AIV 用 `GetBlockIdx()/2` 选择所属 Cube 输出块，用 `%2` 选择上下半块（`Init:33–44`、`LeakyReluCompute:150`）。
+
+| 角色及核号 | 输入/输出范围，行区间为半开区间 |
+|---|---|
+| AIC 0 | 读 A 行 `[0,256)`、完整 B；生成 C 行 `[0,256)` |
+| AIC 1 | 读 A 行 `[256,512)`、完整 B；生成 C 行 `[256,512)` |
+| AIV 0、1 | 分别激活 C 行 `[0,128)`、`[128,256)` |
+| AIV 2、3 | 分别激活 C 行 `[256,384)`、`[384,512)` |
+
+所有任务均覆盖全部 128 列。`GlobalTensor<half>` 切片偏移以**元素**计：AIC 1 的 A/C 起点都是 32768 个 half，即 65536B；四个 AIV 的最终 C 起点分别为 0、16384、32768、49152 个 half，即 0、32768、65536、98304B。每个 AIV 处理 16384 个元素，相互不重叠，合起来覆盖完整输出。
+
+每个 AIC **只处理一个 `256×128×128` GEMM tile**，每个 AIV 只调用一次 `LeakyReluCompute(...,0,0,16384)`。源码没有 M/N tile 循环、没有 K 分段累加；两个 LoadData 循环只是格式搬运。当前各维整除 16，256 行又可二等分，没有尾块或有效尾长分支。`singleCoreK/N` 未用于 device 内部迭代，模板形式不意味着任意参数组合都被支持。
+
+Host 分配 A/C 各 131072B、B 32768B；读取两个输入文件并 H2D，启动一次 kernel，等待 stream 后 D2H，写出 `output.bin`，最后释放资源（`asc:212–258`）。
+
+## 3. 存储、布局与实际搬运
+
+依据给定的 A3/2201 硬件/API 资料，AIC 与 AIV 是不同执行角色，片上存储不共享；本例通过 **GM 中的同一份 C**传递中间结果，而非片上 CV 直通。
+
+每个 AIC 的显式用户数据分配如下（`asc:52–61`，`Alloc` 数量为元素数）：
+
+| 对象 | 类型、布局和大小 |
+|---|---|
+| L1 `a1Local` | half、NZ；32768 元素，65536B |
+| L1 `b1Local` | half、NZ；16384 元素，32768B |
+| L0A `a2Local` | half、ZZ；32768 元素，65536B |
+| L0B `b2Local` | half、ZN；16384 元素，32768B |
+| L0C `cLocal` | float、NZ；32768 元素，131072B |
+
+A/B 的 L1 区域由同一个 allocator 顺序分配，合计 98304B；L0A/B/C 是不同存储，不能合算为 UB。每个 AIV 另分配 half UB 16384 元素、32768B（`asc:133–134`）。没有 TQue、双缓冲或跨 tile 地址轮换；各区一次生产、供下游消费，不存在下一轮复用覆盖。
+
+实际数据流为：
+
+```text
+A/B GM ND → MTE2/ND转NZ → L1
+          → MTE1/LoadData → L0A ZZ / L0B ZN
+          → M/Mmad → float L0C NZ
+          → FIX/转ND及half → GM C
+          → AIV MTE2 → half UB → V/LeakyRelu
+          → MTE3 → 原 GM C
+```
+
+具体搬运依据：
+
+- **GM→L1**：`Nd2NzParams` 对 A 读取 256 行、每行 128 元素，源行跨度 K=128；B 读取 128 行、每行 128 元素，源行跨度 N=128（`asc:65–68`）。没有额外有效维度 padding。
+- **2201 的 L1→L0**（`asc:75–91`）：half 的 16×16 分形为 256 元素、512B。A 循环 16 次，每次读取 K 方向 8 个分形，源分形步距 16；源起点 `i*256` 元素，目的起点 `i*2048` 元素，得到 ZZ。B 循环 8 次，每次读取 N 方向 8 个分形，源分形步距 8，起点同样分别为 `i*256`、`i*2048` 元素，并用 `ifTranspose=true` 得到 ZN。这里是**物理布局转换，不是数学上计算 \(AB^T\)**。
+- **L0C→GM**：Fixpipe 写 256×128 元素，GM 目标行跨度 N=128，关闭其 ReLU 功能，同时完成 NZ→ND、float→half（`asc:121–127`）。
+- **GM↔UB**：每个 AIV 的 `DataCopyPad` 有 128 个块，每块 `blockLen=128*2=256B`，GM 行间空隙 `srcStride=(N-baseN)*2=0B`；UB 侧块间间隔为零。写回反向配置相同有效范围（`asc:146–158,174–176`）。256B 已满足 32B 对齐，左右 padding 都为零，因此这里没有新增有效元素。A3 API 中 GM 间隔按字节、UB 间隔按 32B 块计，本例二者均为零。
+
+## 4. 关键依赖如何得到保证
+
+核内事件采用“源流水前序完成后置位、目标流水等待”的 API 语义；相同 `EVENT_ID0` 配合不同事件方向，不是同一个全局屏障。
+
+| 同步位置 | 保护的依赖 |
+|---|---|
+| `MTE2_MTE1`，`asc:72–73` | A/B 完成 GM→L1 后，LoadData 才读 L1 |
+| `MTE1_M`，`asc:110–111` | 所有 LoadData 完成后，Mmad 才读 L0A/B |
+| `M_FIX`，`asc:119–120` | Mmad 产生 L0C 后，Fixpipe 才读取输出 |
+| `CrossCoreSetFlag<0x2,PIPE_FIX>(0)` / `WaitFlag<0x2>(0)`，`asc:129,136` | 对应 AIC 的 FIX 写回完成后，其两个 AIV 才读取 GM 中间结果 |
+| `MTE2_V`，`asc:162–163` | 当前半块搬入 UB 后，Vector 才激活 |
+| `V_MTE3`，`asc:170–171` | 原地激活完成后，MTE3 才读取 UB 写回 |
+
+AIC 写完整块后才发布，两个 AIV 只修改各自半块；AIC 不再读写该块，因此不需要 Vector→Cube 的下一轮复用握手。入口结尾的 `PipeBarrier<PIPE_ALL>()` 完成核内流水收尾；host 的 `aclrtSynchronizeStream` 则保证整个 kernel 完成后才取回最终结果，不能代替前述核间生产者—消费者同步。
+
+## 5. 平台地位与证据边界
+
+`asc:92–106` 的 3510 分支本次不执行；它使用 V2 LoadData，A 在 L0A 为 NZ，而不是 2201 的 ZZ。它仅是其他架构的源码分支，不能据此解释本次硬件行为。源码没有 host `NPU_ARCH` 分派，不应把 host 配置与 device 宏混用。
+
+上述流水归属、布局及事件解释来自内联 `910c-hardware.md` 的 A3/2201 内容；任务范围和容量是源码推导。131072B 的 L0C 数据区为 128KiB，但不能因此声称完整编译产物已通过资源检查。
+
+正确输入还要求文件完整、ACL 调用成功：`data_utils.h:25–61` 的 `ReadFile` 会修改实际读取大小，且 main 未检查其返回值，也未验证恰好读满预期长度。没有编译、运行或 profiling 证据，故不裁定实际并发程度、缓存命中、耗时或瓶颈；显式依赖与独立输出范围只证明执行关系，不证明有效流水重叠。

@@ -1,0 +1,61 @@
+{
+  "answer_id": "answer-8b4db4075018",
+  "case": "case-02",
+  "facts": [
+    {
+      "id": "CU02.A01",
+      "status": "correct",
+      "rationale": "明确说明从5×20的输入逐行取前13个float，写入5×18输出的行前缀，并给出100*r+c的结果公式；分析的是分阶段行复制，没有引入数值激活。",
+      "answer_span": "该实现完成按行选取、带间隔暂存和带间隔写回。输入为5×20个float，取每行前13个元素；输出按5×18个float分配，每行前13个元素接收输入，其余5个元素所在字节保留初始化值0xA5。UB中虽然补了零，但这些零没有写入输出。"
+    },
+    {
+      "id": "CU02.A02",
+      "status": "correct",
+      "rationale": "说明Duplicate先清零整个UB，每行包含13个数据float、3个右补零float及32B保留零间隔；写回只传13个数据float，五处输出间隔及末尾保留0xA5。",
+      "answer_span": "输入第r行完整物理范围是[80r,80r+80)，未读取部分为[80r+52,80r+80)。UB的四处32B块间隔及最后32B余量均保持`Duplicate`写入的零；这些间隔不是DataCopyPad的右padding。五行总计260B有效数据、60B右padding，另有160B仅由初始化保持为零。"
+    },
+    {
+      "id": "CU02.A03",
+      "status": "correct",
+      "rationale": "采用当前固定场景2及修改后的常量、搬入步长和逐行搬出参数，未以旧场景2尺寸或平铺写回替代，并明确排除其它场景分支。",
+      "answer_span": "依据是[source/current/data_copy_pad.asc](/tmp/eval/source/current/data_copy_pad.asc)中的`main`、`KernelDataCopyPad::Process/CopyIn`和`data_copy_pad_custom`。`main`第220—244行固定`SRC_ROWS=5、SRC_COLS=13、DST_COLS=16、DST_TOTAL_LENGTH=120`，当前`scenarioNum=2`使元素类型为float，每元素4字节。因此输入分配400B，输出分配360B，UB请求120个float，即480B。三个空间的行跨度各不相同，不能把`DST_COLS=16`理解成输出的物理列数。"
+    },
+    {
+      "id": "CU02.E01",
+      "status": "correct",
+      "rationale": "正确计算52B数据加28B源间隔形成80B输入行跨度；表格列出全部五个读取区间，末次终点372B，并明确处于400B分配内。",
+      "answer_span": "因此，每次从GM搬52B，即13个float；下一次GM起点增加52+28=80B，恰好跨过物理一行。每行后7个float对应的28B均不读取。"
+    },
+    {
+      "id": "CU02.E02",
+      "status": "correct",
+      "rationale": "正确说明52B数据加12B右padding得到64B，再加一个32B的UB间隔形成96B行跨度；表格完整列出五行数据、padding及间隔区间，并给出480B分配。",
+      "answer_span": "UB中每块追加3个float零，共12B，得到52+12=64B，已经32B对齐，无须额外dummy。随后跳过dstStride指定的32B，下一块UB起点增加64+32=96B。`isPad=true`表示采用`paddingValue`字段；本例填零的依据是该字段被显式赋零。"
+    },
+    {
+      "id": "CU02.E03",
+      "status": "correct",
+      "rationale": "正确解释搬出UB源行跨度为64+32=96B、GM目的行跨度为52+20=72B；表格列出五个写入区间，且说明末次写至340B，位于360B输出分配内。",
+      "answer_span": "写回位于`Process`第68—69行，参数为`{5,52,1,20,0}`。固定原文`DataCopyPad_UBToGM.md`表4规定，反向搬运的UB侧srcStride以32B计，GM侧dstStride以字节计。52B块在UB侧按64B对齐跨度处理，再加32B源间隔，故写回读取的块起点也是0、96、192、288、384，与搬入布局一致。每块只向GM写52B；非对齐搬出的对齐dummy会被丢弃，不会把长度扩成64B。目的块起点增加52+20=72B，恰好对应输出的18个float物理跨度。"
+    },
+    {
+      "id": "CU02.H01",
+      "status": "correct",
+      "rationale": "准确区分blockLen的字节单位、GM两方向stride的字节间隔、UB两方向stride的32B块单位和padding的元素单位，并区分逻辑数据、GM行跨度、UB布局及分配大小。",
+      "answer_span": "`CopyIn`第98—105行的搬入参数为`{5,52,28,1,0}`，padding参数为`{true,0,3,0.0f}`。固定原文`DataCopyPad_GMToUB.md`表4、表5规定：blockLen和GM侧srcStride以字节计，UB侧dstStride以32B数据块计，左右padding以元素计；stride表示块尾至下一块头的间隔。"
+    },
+    {
+      "id": "CU02.H02",
+      "status": "correct",
+      "rationale": "准确区分Vector清零到MTE2覆盖的V_MTE2依赖，以及MTE2搬入到MTE3搬出的MTE2_MTE3依赖；整体数据路径没有在两次搬运间执行数值激活。",
+      "answer_span": "同步对应三个执行阶段。第63—64行`V_MTE2`事件的前序生产者是Vector流水上的清零，后序访问者是MTE2搬入：它保证清零完成后才覆盖有效数据和padding，避免迟到的清零破坏搬入结果。第66—67行`MTE2_MTE3`事件使MTE3等待MTE2写完UB后再读取并写回GM。"
+    },
+    {
+      "id": "CU02.H03",
+      "status": "correct",
+      "rationale": "明确采用A3支持的普通搬运路径，排除3510专用Compact和loop-mode分支；逐项核对当前缓冲区边界，并将结论限定为静态分析，没有声称已证明硬件编译运行成功或具体时序。",
+      "answer_span": "目标按题面固定为910C/Atlas A3、`__NPU_ARCH__=2201`。固定API原文明确支持A3上的float非对齐GM↔UB搬运及上述两种同步组合。数据路径是Vector清零UB、MTE2执行GM→UB及填充、MTE3执行UB→GM；没有Cube矩阵计算或数值归约。3510专用的Compact与loop-mode分支被预处理条件排除，不能用于解释当前行为。"
+    }
+  ],
+  "critical_errors": []
+}

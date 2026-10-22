@@ -1,0 +1,562 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aprof:knowledge-record:v1",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "aprof.knowledge-record/v1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]+$"
+    },
+    "kind": {
+      "enum": [
+        "symptom",
+        "problem",
+        "action",
+        "edge",
+        "router",
+        "strategy",
+        "template",
+        "recipe",
+        "example"
+      ]
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "status": {
+      "enum": [
+        "active",
+        "deprecated"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "platforms": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "workloads": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "dtypes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "platforms",
+        "workloads",
+        "dtypes"
+      ],
+      "additionalProperties": false
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "original_path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "revision": {
+            "type": "string",
+            "minLength": 1
+          },
+          "lines": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "integer",
+                "minimum": 1
+              }
+            ],
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "excerpt_sha256": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "path",
+          "original_path",
+          "revision",
+          "lines",
+          "sha256",
+          "excerpt_sha256"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "learning": {
+      "type": "object",
+      "properties": {
+        "gain": {
+          "type": "number"
+        },
+        "bias": {
+          "type": "number"
+        },
+        "weight": {
+          "type": "number"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "seed_reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "view": {
+      "enum": [
+        "source",
+        "profile",
+        "workload"
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "units": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "extractor": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unknown_when": {
+          "type": "string",
+          "minLength": 1
+        },
+        "threshold_scope": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "rule",
+        "fields",
+        "units",
+        "extractor",
+        "unknown_when",
+        "threshold_scope"
+      ],
+      "additionalProperties": false
+    },
+    "mechanism": {
+      "type": "string",
+      "minLength": 1
+    },
+    "alternatives": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "transformation": {
+      "type": "string",
+      "minLength": 1
+    },
+    "preconditions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "fact": {
+            "type": "string",
+            "minLength": 1
+          },
+          "state": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "fact",
+          "state"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "invariants": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "expected_effect": {
+      "type": "string",
+      "minLength": 1
+    },
+    "relation": {
+      "enum": [
+        "supports",
+        "refutes",
+        "mitigated_by"
+      ]
+    },
+    "from": {
+      "type": "string",
+      "minLength": 1
+    },
+    "to": {
+      "type": "string",
+      "minLength": 1
+    },
+    "conditions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "minLength": 1
+          },
+          "op": {
+            "enum": [
+              "eq",
+              "in",
+              "contains"
+            ]
+          },
+          "value": {}
+        },
+        "required": [
+          "field",
+          "op",
+          "value"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "parent": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "references": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "routes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string",
+            "minLength": 1
+          },
+          "match": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "op": {
+                  "enum": [
+                    "eq",
+                    "in",
+                    "contains"
+                  ]
+                },
+                "value": {}
+              },
+              "required": [
+                "field",
+                "op",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "exclude": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "op": {
+                  "enum": [
+                    "eq",
+                    "in",
+                    "contains"
+                  ]
+                },
+                "value": {}
+              },
+              "required": [
+                "field",
+                "op",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required_evidence": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "prior_score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3
+          },
+          "fallback": {
+            "type": "boolean"
+          },
+          "seed_reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "target",
+          "match",
+          "exclude",
+          "required_evidence",
+          "prior_score",
+          "fallback",
+          "seed_reason"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "evidence_status": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "schema_version",
+    "id",
+    "kind",
+    "version",
+    "status",
+    "title",
+    "scope",
+    "sources",
+    "learning",
+    "tags",
+    "seed_reason"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "symptom"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "view",
+          "evidence"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "problem"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "mechanism",
+          "alternatives"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "action"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "transformation",
+          "preconditions",
+          "invariants",
+          "expected_effect"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "edge"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "relation",
+          "from",
+          "to",
+          "conditions"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "router"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "parent",
+          "references",
+          "routes",
+          "evidence_status"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "strategy"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "parent",
+          "references",
+          "evidence_status"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "template"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "parent",
+          "references",
+          "evidence_status"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "recipe"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "parent",
+          "references",
+          "evidence_status"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "example"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "parent",
+          "references",
+          "evidence_status"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,458 @@
+{
+  "schema_version": "aprof.action-decision/v1",
+  "task_id": "case-08",
+  "context_hash": "sha256:8f6c8434a7ea0a4c5e6fa41b6575356c6e7688d00f64a2bbb54859861e2d685c",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "reasoning_ref": {
+    "path": "reasoning-R2.json",
+    "sha256": "sha256:ed60037bb7988e02631497de52f3fbe764e4d4d271fd8269d89c975f5e6e8be1"
+  },
+  "reasoning_hash": "sha256:b43ffe48936a24bf73aaa5e39142b09f4841f45f0b86100b21bb9a3147c714e6",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/f3a6d55be57ea647180e624b4fffe6a25b55beea2b35d140d50fe71108f4232d.json",
+    "sha256": "sha256:02d64ca8cc4efafae4665940ea3cfd6bf955b40e79d76125906445f4337450a4"
+  },
+  "round": 2,
+  "current_parent_ref": {
+    "path": "source-index.json",
+    "sha256": "sha256:7adf9ac9ba37e9b1c47b909daaaf7b0ed86e6c5d9029490dc939b569e6e263c1"
+  },
+  "opportunities": [
+    {
+      "id": "opportunity.primary",
+      "hypothesis_id": "hypothesis.primary",
+      "action_id": "action.hoist_invariant_control",
+      "action_instance_id": "instance.primary",
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "source.matrix",
+        "source.oracle"
+      ],
+      "cost_mechanism": "每个(N,C,S)输出都重复读取同一(n,s)三坐标、半精度转FP32、unnormalize、padding与floor/round；nearest再读1个x，trilinear最多8个x并保持8项加法。原坐标计算N*C*S次，grid逻辑读3*b*N*C*S；FP16输出1024tile占显式6144B并3次PIPE_ALL，FP32单元素写。",
+      "predictions": [
+        {
+          "id": "primary.source-work",
+          "kind": "source_work",
+          "statement": "逻辑H分组模型的坐标计算由N*C*S降为N*S*ceil(C/H)，其物理输出边界合法性尚未证明；源x读上界和output写字节不变。",
+          "check_method": "当前源码审读与完整20case公式；R2静态证据，后续真实patch/编译检查",
+          "on_support": "保留结构预测，按参数域继续条件规划",
+          "on_refute": "修订地址/分配公式或降低该候选优先级"
+        },
+        {
+          "id": "primary.performance",
+          "kind": "performance",
+          "statement": "reflection/trilinear且C较大的case预计有更大坐标摊销机会；x缓存行为、较少task和geometry暂存可能抵消，需按分组查看Task时间。",
+          "check_method": "未来完整正确性后，同源20case Task计时及针对性timeline/编译检查；本任务未测",
+          "on_support": "按组检查收益与回归后决定是否保留",
+          "on_refute": "保留失败与父本，按最强替代进一步判别"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "primary.performance",
+          "unknown_id": "primary.performance-unknown-1",
+          "reason": "当前仅有可适用来源及源码工作量；没有该项当前性能观察。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "primary.performance-unknown-1",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "reflection/trilinear且C较大的case预计有更大坐标摊销机会；x缓存行为、较少task和geometry暂存可能抵消，需按分组查看Task时间。；具体政策假设 cost_reduction 尚无当前编译/Task证据。",
+          "affects": "决定该变化是否缩短当前关键路径，不能从源码工作量直接推出时延。",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "primary.safety-1",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "geometry缓存24/72字节每空间点、grid/output区及API保留的总预算需与真实UB比对。",
+          "affects": "限制具体参数/路径实施合法性，不否决条件方案或性能假设。",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "primary.safety-2",
+          "kind": "implementation_safety",
+          "fact": "constraint.output_ownership",
+          "expected_state": true,
+          "statement": "空间tile/通道组重规划后跨channel的非64B末首边界需目标搬出物理写粒度证明；R2给出同owner保守域但尚无SDK回执。",
+          "affects": "限制具体参数/路径实施合法性，不否决条件方案或性能假设。",
+          "resolution": "check_before_implementation"
+        }
+      ],
+      "strongest_alternative_id": "opportunity.alt1",
+      "comparison": "所有case C=7..256，重复坐标工作是明确源码成本；相比仅驻留原grid，几何共享同时删去floor/reflection/权重，x随机读取和原算术保留。相比全向量化采样，它较少改变数值API及64位索引路径。",
+      "disposition": "selected",
+      "reason": "所有case C=7..256，重复坐标工作是明确源码成本；相比仅驻留原grid，几何共享同时删去floor/reflection/权重，x随机读取和原算术保留。相比全向量化采样，它较少改变数值API及64位索引路径。"
+    },
+    {
+      "id": "opportunity.alt1",
+      "hypothesis_id": "hypothesis.alt1",
+      "action_id": "action.reuse_input_tiles",
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "source.matrix",
+        "source.oracle"
+      ],
+      "cost_mechanism": "只驻留原grid三坐标片，仍各channel重做padding/floor/权重；省逻辑读但保留更多Scalar算术，生命期更长。",
+      "predictions": [
+        {
+          "id": "alt1.source-work",
+          "kind": "source_work",
+          "statement": "只驻留原grid三坐标片，仍各channel重做padding/floor/权重；省逻辑读但保留更多Scalar算术，生命期更长。",
+          "check_method": "当前源码审读与完整20case公式；R2静态证据，后续真实patch/编译检查",
+          "on_support": "保留结构预测，按参数域继续条件规划",
+          "on_refute": "修订地址/分配公式或降低该候选优先级"
+        },
+        {
+          "id": "alt1.performance",
+          "kind": "performance",
+          "statement": "只驻留原grid三坐标片，仍各channel重做padding/floor/权重；省逻辑读但保留更多Scalar算术，生命期更长。：收益未知。",
+          "check_method": "未来完整正确性后，同源20case Task计时及针对性timeline/编译检查；本任务未测",
+          "on_support": "按组检查收益与回归后决定是否保留",
+          "on_refute": "保留失败与父本，按最强替代进一步判别"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "alt1.performance",
+          "unknown_id": "alt1.performance-unknown-1",
+          "reason": "当前仅有可适用来源及源码工作量；没有该项当前性能观察。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "alt1.performance-unknown-1",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "只驻留原grid三坐标片，仍各channel重做padding/floor/权重；省逻辑读但保留更多Scalar算术，生命期更长。；具体政策假设 cost_reduction 尚无当前编译/Task证据。",
+          "affects": "决定该变化是否缩短当前关键路径，不能从源码工作量直接推出时延。",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "opportunity.primary",
+      "comparison": "只驻留原grid三坐标片，仍各channel重做padding/floor/权重；省逻辑读但保留更多Scalar算术，生命期更长。",
+      "disposition": "deferred",
+      "reason": "只驻留原grid三坐标片，仍各channel重做padding/floor/权重；省逻辑读但保留更多Scalar算术，生命期更长。"
+    },
+    {
+      "id": "opportunity.alt2",
+      "hypothesis_id": "hypothesis.alt2",
+      "action_id": "action.vectorize_scalar_loop",
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "source.matrix",
+        "source.oracle"
+      ],
+      "cost_mechanism": "向量坐标与Gather采样可更全面替换Scalar，但nearest RNE、half转换subnormal、reflection和64位地址的等价API需证明。",
+      "predictions": [
+        {
+          "id": "alt2.source-work",
+          "kind": "source_work",
+          "statement": "向量坐标与Gather采样可更全面替换Scalar，但nearest RNE、half转换subnormal、reflection和64位地址的等价API需证明。",
+          "check_method": "当前源码审读与完整20case公式；R2静态证据，后续真实patch/编译检查",
+          "on_support": "保留结构预测，按参数域继续条件规划",
+          "on_refute": "修订地址/分配公式或降低该候选优先级"
+        },
+        {
+          "id": "alt2.performance",
+          "kind": "performance",
+          "statement": "向量坐标与Gather采样可更全面替换Scalar，但nearest RNE、half转换subnormal、reflection和64位地址的等价API需证明。：收益未知。",
+          "check_method": "未来完整正确性后，同源20case Task计时及针对性timeline/编译检查；本任务未测",
+          "on_support": "按组检查收益与回归后决定是否保留",
+          "on_refute": "保留失败与父本，按最强替代进一步判别"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_scalar_hot",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "alt2.performance",
+          "unknown_id": "alt2.performance-unknown-1",
+          "reason": "当前仅有可适用来源及源码工作量；没有该项当前性能观察。"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "alt2.performance",
+          "unknown_id": "alt2.performance-unknown-2",
+          "reason": "当前仅有可适用来源及源码工作量；没有该项当前性能观察。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "alt2.performance-unknown-1",
+          "kind": "performance",
+          "fact": "symptom.profile.scalar_hot",
+          "expected_state": null,
+          "statement": "向量坐标与Gather采样可更全面替换Scalar，但nearest RNE、half转换subnormal、reflection和64位地址的等价API需证明。；具体政策假设 legacy_symptom_profile_scalar_hot 尚无当前编译/Task证据。",
+          "affects": "决定该变化是否缩短当前关键路径，不能从源码工作量直接推出时延。",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "alt2.performance-unknown-2",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "向量坐标与Gather采样可更全面替换Scalar，但nearest RNE、half转换subnormal、reflection和64位地址的等价API需证明。；具体政策假设 cost_reduction 尚无当前编译/Task证据。",
+          "affects": "决定该变化是否缩短当前关键路径，不能从源码工作量直接推出时延。",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "opportunity.primary",
+      "comparison": "向量坐标与Gather采样可更全面替换Scalar，但nearest RNE、half转换subnormal、reflection和64位地址的等价API需证明。",
+      "disposition": "deferred",
+      "reason": "向量坐标与Gather采样可更全面替换Scalar，但nearest RNE、half转换subnormal、reflection和64位地址的等价API需证明。"
+    }
+  ],
+  "evidence_requests": [
+    {
+      "id": "request.safety-1",
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "unknown_ids": [
+        "primary.safety-1"
+      ],
+      "method": "在允许硬件/SDK阶段读取真实平台/API证据并对照方案逐项证明：geometry缓存24/72字节每空间点、grid/output区及API保留的总预算需与真实UB比对。",
+      "discriminating_results": [
+        {
+          "outcome": "条件与所给参数域成立",
+          "decision_effect": "允许构建候选并完整20case验证；仍不代表性能改善"
+        },
+        {
+          "outcome": "条件不满足",
+          "decision_effect": "缩小参数域或走原fallback；不把失败解释为性能机制反证"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行硬件/构建；当前任务禁止相关动作。",
+      "defer_reason": "用户限定CPU源码/公式分析，保留具体补项交后继。"
+    },
+    {
+      "id": "request.safety-2",
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "unknown_ids": [
+        "primary.safety-2"
+      ],
+      "method": "在允许硬件/SDK阶段读取真实平台/API证据并对照方案逐项证明：空间tile/通道组重规划后跨channel的非64B末首边界需目标搬出物理写粒度证明；R2给出同owner保守域但尚无SDK回执。",
+      "discriminating_results": [
+        {
+          "outcome": "条件与所给参数域成立",
+          "decision_effect": "允许构建候选并完整20case验证；仍不代表性能改善"
+        },
+        {
+          "outcome": "条件不满足",
+          "decision_effect": "缩小参数域或走原fallback；不把失败解释为性能机制反证"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行硬件/构建；当前任务禁止相关动作。",
+      "defer_reason": "用户限定CPU源码/公式分析，保留具体补项交后继。"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+        "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+      },
+      "locator": "lines:297-344",
+      "effect_kind": "mechanism",
+      "before": "三个坐标load是主要可删工作",
+      "after": "同一(n,s)坐标变换和权重也与channel不变，因此选共享几何而非只缓存字段或原值。",
+      "applicability": "grid_sampler_3d当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+        "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+      },
+      "locator": "lines:85-126",
+      "effect_kind": "plan",
+      "before": "索引采样似乎需要原子或跨核共享",
+      "after": "采用输出唯一owner和只读源的原则；GridSampler带插值，不直接套GatherElements地址式；明确任务内扩展并保留原数值链。",
+      "applicability": "grid_sampler_3d当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+        "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+      },
+      "locator": "lines:57-104",
+      "effect_kind": "parameters",
+      "before": "可以把所有坐标量全局缓存",
+      "after": "缓存域必须限定batch/spatial/padding/align；在channel组外计算，跨组/空间重算，不能预乘浮点权重。",
+      "applicability": "grid_sampler_3d当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+        "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+      },
+      "locator": "lines:70-110",
+      "effect_kind": "applicability",
+      "before": "数学等价即可合并权重乘积",
+      "after": "保留原每项乘法及累加舍入，half最后Cast，NaN/Inf掩码和原oracle阈值不变。",
+      "applicability": "grid_sampler_3d当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    }
+  ],
+  "selection": {
+    "mode": "conditional_plan",
+    "opportunity_id": "opportunity.primary",
+    "action_instance_id": "instance.primary",
+    "reason": "所有case C=7..256，重复坐标工作是明确源码成本；相比仅驻留原grid，几何共享同时删去floor/reflection/权重，x随机读取和原算术保留。相比全向量化采样，它较少改变数值API及64位索引路径。 R2：20case逻辑H=4/8/16分组边界共240次断言仅证明逻辑索引覆盖，不能证明物理写独占。进一步审读发现奇数S使同一个T空间切点在不同channel具有不同64B余数，H=C也不能使跨空间task安全。R2保留原64B线性owner，只复用其内部完整channel平面，头尾残片fallback；因此削弱R1全覆盖ceil(C/H)坐标计数预测，改为逐owner实际计数。保留独立轴权重和原累加顺序。",
+    "concrete_plan": "新P按(n,channel-group,spatial-tile)拥有互斥输出，H∈{4,8,16}, T∈{64,128,256,512}。同一个空间tile先算一次坐标几何，再按channel顺序采样，保留原GridRead边界和三线性八项相加/乘法顺序；只缓存x0/x1,y0/y1,z0/z1与6个独立FP32轴权重，禁止预乘权重改变舍入。nearest缓存3个int64坐标。U≤Align32(3*b*T)+Align32(geometry*T)+Align32((b+4)*T)+reserve，geometry=72或24B；输出每次只保留一个channel的T元素；不新增GM workspace。R2收紧输出所有权：S*b可64B整除时按H组与64B空间边界分区。否则复用原64B对齐线性owner区间[B,E)，只在同一batch、完整落在此owner内的channel平面之间共享几何；头尾不完整平面保留原GridSampler3DOne。各完整平面内部切T不会跨owner；禁止为了共享几何把别的owner输出移进来。若owner包含不足2个完整channel，则直接fallback。实际坐标求值数按每owner完整平面数量与头尾残片求和，不能沿用理想ceil(C/H)全覆盖节省量。",
+    "stop_reason": null
+  },
+  "previous_feedback": {
+    "previous_decision_ref": {
+      "path": "decision-R1.json",
+      "sha256": "sha256:c1a81efb546af7c833aa57dc7a1010ab32e1b9712e29570fd09a5481fb6a2c36"
+    },
+    "result_ref": null,
+    "measurement": "not_measured",
+    "result_limits": "无候选实现、native/正确性执行或性能结果。新增静态分析只能更新源码工作量预测。",
+    "prediction_updates": [
+      {
+        "prediction_id": "primary.source-work",
+        "judgement": "weakened",
+        "reason": "20case逻辑H=4/8/16分组边界共240次断言仅证明逻辑索引覆盖，不能证明物理写独占。进一步审读发现奇数S使同一个T空间切点在不同channel具有不同64B余数，H=C也不能使跨空间task安全。R2保留原64B线性owner，只复用其内部完整channel平面，头尾残片fallback；因此削弱R1全覆盖ceil(C/H)坐标计数预测，改为逐owner实际计数。保留独立轴权重和原累加顺序。",
+        "evidence_refs": [
+          {
+            "path": "static-evidence-R2.json",
+            "sha256": "sha256:53656d9f2a0d795d5b697ddf50271e4b4daa930897ba9c345dc82c3c310c665d"
+          },
+          {
+            "path": "review-R2.md",
+            "sha256": "sha256:c0331bbe32077a39cf04afdc23e6399dc169884cf4474f1f08a4d0f276263794"
+          }
+        ]
+      },
+      {
+        "prediction_id": "primary.performance",
+        "judgement": "not_tested",
+        "reason": "禁止硬件/性能执行，无真实measurement。",
+        "evidence_refs": []
+      }
+    ],
+    "current_parent_ref": {
+      "path": "source-index.json",
+      "sha256": "sha256:7adf9ac9ba37e9b1c47b909daaaf7b0ed86e6c5d9029490dc939b569e6e263c1"
+    },
+    "parent_reason": "没有实现并验证的新候选，继续原始源码父本。",
+    "same_action_reason": "20case逻辑H=4/8/16分组边界共240次断言仅证明逻辑索引覆盖，不能证明物理写独占。进一步审读发现奇数S使同一个T空间切点在不同channel具有不同64B余数，H=C也不能使跨空间task安全。R2保留原64B线性owner，只复用其内部完整channel平面，头尾残片fallback；因此削弱R1全覆盖ceil(C/H)坐标计数预测，改为逐owner实际计数。保留独立轴权重和原累加顺序。；仍选择相同意图但按新增边界收紧，而非为轮次强制换Action。",
+    "new_information": "20case逻辑H=4/8/16分组边界共240次断言仅证明逻辑索引覆盖，不能证明物理写独占。进一步审读发现奇数S使同一个T空间切点在不同channel具有不同64B余数，H=C也不能使跨空间task安全。R2保留原64B线性owner，只复用其内部完整channel平面，头尾残片fallback；因此削弱R1全覆盖ceil(C/H)坐标计数预测，改为逐owner实际计数。保留独立轴权重和原累加顺序。"
+  }
+}

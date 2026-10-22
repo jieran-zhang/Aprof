@@ -1,0 +1,316 @@
+{
+  "schema": "aprof.code-understanding-gold/v1",
+  "case": "case-06",
+  "title_private": "Identifier transfer and platform boundary without broad portability claims",
+  "max_score": 30,
+  "dimensions": {
+    "algorithm_strategy": 10,
+    "execution": 10,
+    "hardware": 10
+  },
+  "facts": [
+    {
+      "id": "CU06.A01",
+      "dimension": "algorithm_strategy",
+      "points": 3,
+      "expected": "Entry V is the same unary y=2^(0.5*x-1) mathematical transform. BF16 is converted to float for Muls/Adds/Exp and converted back with CAST_RINT. Neutral identifiers do not change this computation.",
+      "sources": [
+        {
+          "file": "case-06/source/vector/op_kernel/nacre_plan.h",
+          "line_start": 27,
+          "line_end": 28,
+          "sha256": "9acbcbe5cef9f3b4aded77176642e3972bbd342ddbac724a7e35efc29f7a2a87"
+        },
+        {
+          "file": "case-06/source/vector/op_kernel/nacre_stage.asc",
+          "line_start": 55,
+          "line_end": 63,
+          "sha256": "df684c39e50dd58e42c115ca67a1e2755f3e46de3123a7203590e938905c8d2d"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU06.A02",
+      "dimension": "algorithm_strategy",
+      "points": 3,
+      "expected": "Entry C is the same half-input matmul followed by half-output LeakyRelu, slope approximately 0.001, with float accumulation followed by half Fixpipe storage before Vector activation. It has the same one-tile-per-AIC and paired AIV split.",
+      "sources": [
+        {
+          "file": "case-06/source/cube/mica.asc",
+          "line_start": 115,
+          "line_end": 115,
+          "sha256": "3b8d2c6804e41853512491e34804c8abc4cce0da71327056fa571593ae9ef765"
+        },
+        {
+          "file": "case-06/source/cube/mica.asc",
+          "line_start": 127,
+          "line_end": 127,
+          "sha256": "3b8d2c6804e41853512491e34804c8abc4cce0da71327056fa571593ae9ef765"
+        },
+        {
+          "file": "case-06/source/cube/mica.asc",
+          "line_start": 166,
+          "line_end": 166,
+          "sha256": "3b8d2c6804e41853512491e34804c8abc4cce0da71327056fa571593ae9ef765"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU06.A03",
+      "dimension": "algorithm_strategy",
+      "points": 4,
+      "expected": "The recorded test delta changes identifiers and include filenames only; shape/tile constants, datatype/API calls and control flow are preserved. Therefore renaming is not evidence of a new algorithm, a new buffer count or a new synchronization scheme. V and C are separate entries with separate outputs.",
+      "sources": [
+        {
+          "file": "case-06/source/DELTA.json",
+          "line_start": 40,
+          "line_end": 40,
+          "sha256": "33a18c3125a723967b6773eb13fc53d9b5f695ebf58242ade9a58df64fcde98d"
+        },
+        {
+          "file": "case-06/source/DELTA.json",
+          "line_start": 41,
+          "line_end": 41,
+          "sha256": "33a18c3125a723967b6773eb13fc53d9b5f695ebf58242ade9a58df64fcde98d"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU06.E01",
+      "dimension": "execution",
+      "points": 4,
+      "expected": "V launches 3 blocks with laneExtent=8340/windowElements=4096; element starts [0,8340,16680], lengths [8340,8340,8339], tail counts [148,148,147]. It retains single input/output slots and 49152 explicit UB bytes for BF16.",
+      "sources": [
+        {
+          "file": "case-06/source/vector/op_kernel/nacre_plan.h",
+          "line_start": 23,
+          "line_end": 25,
+          "sha256": "9acbcbe5cef9f3b4aded77176642e3972bbd342ddbac724a7e35efc29f7a2a87"
+        },
+        {
+          "file": "case-06/source/vector/op_kernel/nacre_stage.asc",
+          "line_start": 11,
+          "line_end": 15,
+          "sha256": "df684c39e50dd58e42c115ca67a1e2755f3e46de3123a7203590e938905c8d2d"
+        },
+        {
+          "file": "case-06/source/vector/op_kernel/nacre_stage.asc",
+          "line_start": 16,
+          "line_end": 22,
+          "sha256": "df684c39e50dd58e42c115ca67a1e2755f3e46de3123a7203590e938905c8d2d"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU06.E02",
+      "dimension": "execution",
+      "points": 3,
+      "expected": "C still has 2 AIC and 4 AIV under __mix__(1,2); AIC C starts [0,32768] half elements and AIV C starts [0,16384,32768,49152], each AIV 16384 elements. Renamed ApplyGate still computes the same GM offsets.",
+      "sources": [
+        {
+          "file": "case-06/source/cube/mica.asc",
+          "line_start": 188,
+          "line_end": 188,
+          "sha256": "3b8d2c6804e41853512491e34804c8abc4cce0da71327056fa571593ae9ef765"
+        },
+        {
+          "file": "case-06/source/cube/mica.asc",
+          "line_start": 44,
+          "line_end": 44,
+          "sha256": "3b8d2c6804e41853512491e34804c8abc4cce0da71327056fa571593ae9ef765"
+        },
+        {
+          "file": "case-06/source/cube/mica.asc",
+          "line_start": 150,
+          "line_end": 150,
+          "sha256": "3b8d2c6804e41853512491e34804c8abc4cce0da71327056fa571593ae9ef765"
+        },
+        {
+          "file": "case-06/source/cube/mica.asc",
+          "line_start": 138,
+          "line_end": 138,
+          "sha256": "3b8d2c6804e41853512491e34804c8abc4cce0da71327056fa571593ae9ef765"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU06.E03",
+      "dimension": "execution",
+      "points": 3,
+      "expected": "C preserves the physical path GM half ND -> L1 half NZ -> L0A/L0B half -> float NZ L0C -> half ND GM -> UB half -> same GM regions. Vector V uses raw BF16 queues plus FP32 scratch. No renamed tensor is a new memory allocation merely because its name differs.",
+      "sources": [
+        {
+          "file": "case-06/source/cube/mica.asc",
+          "line_start": 57,
+          "line_end": 61,
+          "sha256": "3b8d2c6804e41853512491e34804c8abc4cce0da71327056fa571593ae9ef765"
+        },
+        {
+          "file": "case-06/source/cube/mica.asc",
+          "line_start": 134,
+          "line_end": 134,
+          "sha256": "3b8d2c6804e41853512491e34804c8abc4cce0da71327056fa571593ae9ef765"
+        },
+        {
+          "file": "case-06/source/vector/op_kernel/nacre_stage.asc",
+          "line_start": 18,
+          "line_end": 22,
+          "sha256": "df684c39e50dd58e42c115ca67a1e2755f3e46de3123a7203590e938905c8d2d"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU06.H01",
+      "dimension": "hardware",
+      "points": 3,
+      "expected": "910C/A3 selects 2201 according to the fixed platform contract. 3510 is Ascend 950PR/950DT in these documents. A macro guard or common API name cannot establish that 3510 behavior ran on the 910C target.",
+      "sources": [
+        {
+          "file": "shared/rawdocs/docs/zh/guide/programming_guide/language_extension/simd_builtin_keywords.md",
+          "line_start": 12,
+          "line_end": 12,
+          "sha256": "2257e8b42d59119dd45bb132eff1eb3958c01b70a3554e9fa566510442e669cb"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/guide/programming_guide/language_extension/simd_builtin_keywords.md",
+          "line_start": 15,
+          "line_end": 15,
+          "sha256": "2257e8b42d59119dd45bb132eff1eb3958c01b70a3554e9fa566510442e669cb"
+        },
+        {
+          "file": "case-06/source/cube/mica.asc",
+          "line_start": 75,
+          "line_end": 75,
+          "sha256": "3b8d2c6804e41853512491e34804c8abc4cce0da71327056fa571593ae9ef765"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU06.H02",
+      "dimension": "hardware",
+      "points": 3,
+      "expected": "For C A input, 2201 loops LoadData2DParams to convert NZ L1 to Zz L0A; 3510 calls LoadData2DParamsV2 to load NZ L1 to NZ L0A. The actual packed A representation and parameter structure differ across branches; one branch must not be assigned to both targets.",
+      "sources": [
+        {
+          "file": "case-06/source/cube/mica.asc",
+          "line_start": 75,
+          "line_end": 92,
+          "sha256": "3b8d2c6804e41853512491e34804c8abc4cce0da71327056fa571593ae9ef765"
+        },
+        {
+          "file": "case-06/source/cube/mica.asc",
+          "line_start": 92,
+          "line_end": 100,
+          "sha256": "3b8d2c6804e41853512491e34804c8abc4cce0da71327056fa571593ae9ef765"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU06.H03",
+      "dimension": "hardware",
+      "points": 2,
+      "expected": "Both C branches express the B NZ->Zn route with transpose=true, but 2201 uses looped LoadData2DParams and 3510 uses LoadData2DParamsV2. Mmad, Fixpipe to GM and the subsequent mixed-core activation are outside that load branch and preserve the source-level logical pipeline.",
+      "sources": [
+        {
+          "file": "case-06/source/cube/mica.asc",
+          "line_start": 84,
+          "line_end": 92,
+          "sha256": "3b8d2c6804e41853512491e34804c8abc4cce0da71327056fa571593ae9ef765"
+        },
+        {
+          "file": "case-06/source/cube/mica.asc",
+          "line_start": 101,
+          "line_end": 107,
+          "sha256": "3b8d2c6804e41853512491e34804c8abc4cce0da71327056fa571593ae9ef765"
+        },
+        {
+          "file": "case-06/source/cube/mica.asc",
+          "line_start": 115,
+          "line_end": 115,
+          "sha256": "3b8d2c6804e41853512491e34804c8abc4cce0da71327056fa571593ae9ef765"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU06.H04",
+      "dimension": "hardware",
+      "points": 2,
+      "expected": "Platform contracts have behavioral boundaries beyond identifier compatibility: for example CrossCoreWaitFlag blocks all following pipelines on A3/A2 despite the optional pipe argument, whereas 3510/950 uses the configured blocking pipeline. Both source branches may be explained statically, but neither new platform compilation nor comparative performance is verified.",
+      "sources": [
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/sync_control/inter_core_sync/CrossCoreWaitFlag_ISASI.md",
+          "line_start": 79,
+          "line_end": 79,
+          "sha256": "69845e8fa794040e321959eaa57105a79cdf880c2d9460b7bf65a53f3c644827"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/sync_control/inter_core_sync/CrossCoreWaitFlag_ISASI.md",
+          "line_start": 62,
+          "line_end": 62,
+          "sha256": "69845e8fa794040e321959eaa57105a79cdf880c2d9460b7bf65a53f3c644827"
+        }
+      ],
+      "accept": [
+        "Another precise platform-specific contract boundary from the fixed files, while keeping the main load layout difference and uncertainty."
+      ],
+      "reject": [],
+      "units": "as stated in expected fact"
+    }
+  ],
+  "critical_errors": [
+    {
+      "id": "CU06.C01",
+      "dimension": "hardware",
+      "cap": 2,
+      "explicit_claim_trigger": "Maps 910C/A3 to 3510 or claims 2201 and 3510 physical A layouts are identical.",
+      "omission_does_not_trigger": true
+    },
+    {
+      "id": "CU06.C02",
+      "dimension": "algorithm_strategy",
+      "cap": 2,
+      "explicit_claim_trigger": "Treats identifier renaming as changing the mathematical operation or adds a new fusion/reduction.",
+      "omission_does_not_trigger": true
+    },
+    {
+      "id": "CU06.C03",
+      "dimension": "hardware",
+      "cap": 2,
+      "explicit_claim_trigger": "Claims code existence proves cross-architecture compilation, timing or deployment compatibility.",
+      "omission_does_not_trigger": true
+    }
+  ],
+  "acceptable_unknowns": [
+    "Exact compiler acceptance for 3510 is not assumed; all 3510 discussion is static.",
+    "No requirement to assert the original source is invalid on 3510.",
+    "Equivalent concise description may refer to structure without repeating every original symbol name."
+  ],
+  "grading": "Use private/GRADING_PROTOCOL.md; do not infer unsupported measurements or penalize brevity."
+}

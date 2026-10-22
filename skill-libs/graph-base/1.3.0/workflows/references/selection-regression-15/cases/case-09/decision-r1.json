@@ -1,0 +1,1296 @@
+{
+  "schema_version": "aprof.action-decision/v2",
+  "task_id": "case-09",
+  "context_hash": "sha256:e1c537c9e30231a3cb13d4d9acc78ec90357eaf88bb3ac6a863ca5cdd588dce5",
+  "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+  "reasoning_ref": {
+    "path": "reasoning-r1.json",
+    "sha256": "sha256:ac515369dfef0bc363ff9473d527a4202671f518d82af07a70a9c2a2b3ba3519"
+  },
+  "reasoning_hash": "sha256:08ec46bf1b4e46bdfacbe66f0e91cfeac39cbfbc032348e1085748fb5066dc1b",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/ec82d8f535262a6e43869d71bce0e77d91aa71040c5f7f87a8e56f5adfd6f1e8.json",
+    "sha256": "sha256:fde21372195004f2ae06c2a295edd3ca726b0f00da220aa64ef8f1c0bc6507e2"
+  },
+  "round": 1,
+  "current_parent_ref": {
+    "path": "source-identity.json",
+    "sha256": "sha256:ad8a00b8c4bad6c2cf31ef2723082050b7c27525b0ff1b6d6d891ea0e3290675"
+  },
+  "opportunities": [
+    {
+      "id": "batch",
+      "hypothesis_id": "h-batch",
+      "action_id": "action.batch_vector_api_calls",
+      "action_instance_id": "batch-r1",
+      "case_ids": [
+        "1",
+        "7",
+        "2",
+        "11",
+        "13",
+        "15",
+        "18",
+        "20",
+        "3",
+        "9",
+        "16",
+        "4",
+        "10",
+        "14",
+        "17",
+        "5",
+        "8",
+        "6",
+        "12",
+        "19"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "workload.matrix"
+      ],
+      "cost_mechanism": "保留模式和dtype所有数值步骤，扩大合法T使相邻tile同一API用更大count；不给tanh省略RINT，不替换Erfc近似。",
+      "predictions": [
+        {
+          "id": "batch-work",
+          "kind": "source_work",
+          "statement": "每核ceil(L/1024)*V次显式API降为ceil(L/T)*V；元素算术和GM字节不变",
+          "check_method": "逐域静态计数并核对原地址/运算次序；实施后再对照差异",
+          "on_support": "支持该工作减少预测，尚不证明时间收益",
+          "on_refute": "若工作已被编译消除或新增代价抵消，重开比较"
+        },
+        {
+          "id": "batch-time",
+          "kind": "performance",
+          "statement": "在合法完整正确性后检验 保留模式和dtype所有数值步骤，扩大合法T使相邻tile同一API用更大count；不给tanh省略RINT，不替换Erfc近似。 是否降低同协议Task时间",
+          "check_method": "本轮禁止硬件；将来完整matrix20按统一Task协议测量，分域观察",
+          "on_support": "工程收益证据仍与机制归因分开",
+          "on_refute": "若API已内部高效批处理且搬运等待占主导，pipeline比扩T更优"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_vector_granularity_low",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "batch-time",
+          "unknown_id": "batch-perf-legacy_symptom_profile_vector_granularity_low",
+          "reason": "源码支持结构假设，编译器/关键路径和实际时间未测；不作为实施门禁"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "batch-time",
+          "unknown_id": "batch-perf-cost_reduction",
+          "reason": "源码支持结构假设，编译器/关键路径和实际时间未测；不作为实施门禁"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "batch-constraint.capacity",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "显式分配随T增加：(2*b+32)*T+Align256(ceil(T/8))+API_tmp+F≤UB_available；Compare补齐与Select预留并计；实际可用UB、API tmp及保留区尚未查询，只有公式不授权容量。",
+          "affects": "implementation_legality",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "batch-constraint.vector_batch_compatibility",
+          "kind": "implementation_safety",
+          "fact": "constraint.vector_batch_compatibility",
+          "expected_state": true,
+          "statement": "核验每个所用API的count上限、尾部读写域、alias和相同操作参数。",
+          "affects": "implementation_legality",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "batch-perf-legacy_symptom_profile_vector_granularity_low",
+          "kind": "performance",
+          "fact": "symptom.profile.vector_granularity_low",
+          "expected_state": null,
+          "statement": "尚未测量 保留模式和dtype所有数值步骤，扩大合法T使相邻tile同一API用更大count；不给tanh省略RINT，不替换Erfc近似。 的实际指令/等待减少是否超过 显式分配随T增加：(2*b+32)*T+Align256(ceil(T/8))+API_tmp+F≤UB_available；Compare补齐与Select预留并计",
+          "affects": "benefit_magnitude and priority",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "batch-perf-cost_reduction",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "尚未测量 保留模式和dtype所有数值步骤，扩大合法T使相邻tile同一API用更大count；不给tanh省略RINT，不替换Erfc近似。 的实际指令/等待减少是否超过 显式分配随T增加：(2*b+32)*T+Align256(ceil(T/8))+API_tmp+F≤UB_available；Compare补齐与Select预留并计",
+          "affects": "benefit_magnitude and priority",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "pipeline",
+      "comparison": "每核ceil(L/1024)*V次显式API降为ceil(L/T)*V；元素算术和GM字节不变；付出 显式分配随T增加：(2*b+32)*T+Align256(ceil(T/8))+API_tmp+F≤UB_available；Compare补齐与Select预留并计；替代敏感条件：若API已内部高效批处理且搬运等待占主导，pipeline比扩T更优",
+      "disposition": "selected",
+      "reason": "保留模式和dtype所有数值步骤，扩大合法T使相邻tile同一API用更大count；不给tanh省略RINT，不替换Erfc近似。；若API已内部高效批处理且搬运等待占主导，pipeline比扩T更优",
+      "analysis": {
+        "intent_gap": null,
+        "work_delta": [
+          {
+            "id": "batch-reduced",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "float16_none",
+              "float32_none",
+              "bfloat16_none",
+              "float16_tanh",
+              "float32_tanh",
+              "bfloat16_tanh"
+            ],
+            "change": "reduced",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "max(V*(ceil(L/1024)-ceil(L/T)),0)",
+              "unit": "removed explicit Vector API call/core",
+              "symbols": [
+                {
+                  "name": "V",
+                  "meaning": "none=12/tanh=15显式Vector API调用数，含输入/输出操作",
+                  "unit": "call/tile"
+                },
+                {
+                  "name": "L",
+                  "meaning": "单核有效元素数",
+                  "unit": "element"
+                },
+                {
+                  "name": "T",
+                  "meaning": "候选tile有效元素上限",
+                  "unit": "element"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "保留模式和dtype所有数值步骤，扩大合法T使相邻tile同一API用更大count；不给tanh省略RINT，不替换Erfc近似。"
+          },
+          {
+            "id": "batch-retained",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "float16_none",
+              "float32_none",
+              "bfloat16_none",
+              "float16_tanh",
+              "float32_tanh",
+              "bfloat16_tanh"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "qualitative",
+              "expression": "Erfc/Tanh服务时间和单槽链仍在；容量不足时只能选原T或更小T，不能保证更大T合法",
+              "unit": "separate logical operations/bytes",
+              "symbols": [],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "保留项不能消失在整体覆盖声明中"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "batch-coverage-float16_none",
+            "domain_id": "float16_none",
+            "status": "partial",
+            "region": "保留模式和dtype所有数值步骤，扩大合法T使相邻tile同一API用更大count；不给tanh省略RINT，不替换Erfc近似。；域=float16_none",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "batch-coverage-float32_none",
+            "domain_id": "float32_none",
+            "status": "partial",
+            "region": "保留模式和dtype所有数值步骤，扩大合法T使相邻tile同一API用更大count；不给tanh省略RINT，不替换Erfc近似。；域=float32_none",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "batch-coverage-bfloat16_none",
+            "domain_id": "bfloat16_none",
+            "status": "partial",
+            "region": "保留模式和dtype所有数值步骤，扩大合法T使相邻tile同一API用更大count；不给tanh省略RINT，不替换Erfc近似。；域=bfloat16_none",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "batch-coverage-float16_tanh",
+            "domain_id": "float16_tanh",
+            "status": "partial",
+            "region": "保留模式和dtype所有数值步骤，扩大合法T使相邻tile同一API用更大count；不给tanh省略RINT，不替换Erfc近似。；域=float16_tanh",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "batch-coverage-float32_tanh",
+            "domain_id": "float32_tanh",
+            "status": "partial",
+            "region": "保留模式和dtype所有数值步骤，扩大合法T使相邻tile同一API用更大count；不给tanh省略RINT，不替换Erfc近似。；域=float32_tanh",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "batch-coverage-bfloat16_tanh",
+            "domain_id": "bfloat16_tanh",
+            "status": "partial",
+            "region": "保留模式和dtype所有数值步骤，扩大合法T使相邻tile同一API用更大count；不给tanh省略RINT，不替换Erfc近似。；域=bfloat16_tanh",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "batch-cost",
+            "domain_ids": [
+              "float16_none",
+              "float32_none",
+              "bfloat16_none",
+              "float16_tanh",
+              "float32_tanh",
+              "bfloat16_tanh"
+            ],
+            "dimension": "resource_access_sync",
+            "change": {
+              "mode": "symbolic",
+              "expression": "(2*b+32)*T+M+Tmp+F",
+              "unit": "UB allocation byte",
+              "symbols": [
+                {
+                  "name": "b",
+                  "meaning": "输入输出存储宽",
+                  "unit": "byte/element"
+                },
+                {
+                  "name": "T",
+                  "meaning": "候选tile有效元素上限",
+                  "unit": "element"
+                },
+                {
+                  "name": "M",
+                  "meaning": "GELU mask固定256字节分配对齐后的字节数",
+                  "unit": "byte"
+                },
+                {
+                  "name": "Tmp",
+                  "meaning": "目标SDK/API要求的临时区",
+                  "unit": "byte"
+                },
+                {
+                  "name": "F",
+                  "meaning": "对齐外固定保留区",
+                  "unit": "byte"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "consequence": "若API已内部高效批处理且搬运等待占主导，pipeline比扩T更优"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "batch-residual",
+            "domain_ids": [
+              "float16_none",
+              "float32_none",
+              "bfloat16_none",
+              "float16_tanh",
+              "float32_tanh",
+              "bfloat16_tanh"
+            ],
+            "remaining_work": "Erfc/Tanh服务时间和单槽链仍在；容量不足时只能选原T或更小T，不能保证更大T合法",
+            "next_step": "若API已内部高效批处理且搬运等待占主导，pipeline比扩T更优",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling"
+            ]
+          }
+        ],
+        "no_alternative_reason": null
+      }
+    },
+    {
+      "id": "pipeline",
+      "hypothesis_id": "h-pipeline",
+      "action_id": "action.software_pipeline_stages",
+      "action_instance_id": "pipeline-r1",
+      "case_ids": [
+        "1",
+        "7",
+        "2",
+        "11",
+        "13",
+        "15",
+        "18",
+        "20",
+        "3",
+        "9",
+        "16",
+        "4",
+        "10",
+        "14",
+        "17",
+        "5",
+        "8",
+        "6",
+        "12",
+        "19"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "workload.matrix"
+      ],
+      "cost_mechanism": "两输入/输出物理槽配首轮预置与排空，FP32工作区串行一次只处理一个tile；独立搬运与Vector尝试重叠。",
+      "predictions": [
+        {
+          "id": "pipeline-work",
+          "kind": "source_work",
+          "statement": "减少跨tile必须串行等槽的依赖窗口，算术/GM字节不变；潜在隐藏搬运服务时间，未测",
+          "check_method": "逐域静态计数并核对原地址/运算次序；实施后再对照差异",
+          "on_support": "支持该工作减少预测，尚不证明时间收益",
+          "on_refute": "若工作已被编译消除或新增代价抵消，重开比较"
+        },
+        {
+          "id": "pipeline-time",
+          "kind": "performance",
+          "statement": "在合法完整正确性后检验 两输入/输出物理槽配首轮预置与排空，FP32工作区串行一次只处理一个tile；独立搬运与Vector尝试重叠。 是否降低同协议Task时间",
+          "check_method": "本轮禁止硬件；将来完整matrix20按统一Task协议测量，分域观察",
+          "on_support": "工程收益证据仍与机制归因分开",
+          "on_refute": "当API发射是主要可消除项且扩T空间充足，batch更优"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_overlap_low",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "pipeline-time",
+          "unknown_id": "pipeline-perf-legacy_symptom_profile_overlap_low",
+          "reason": "源码支持结构假设，编译器/关键路径和实际时间未测；不作为实施门禁"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "pipeline-time",
+          "unknown_id": "pipeline-perf-cost_reduction",
+          "reason": "源码支持结构假设，编译器/关键路径和实际时间未测；不作为实施门禁"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "pipeline-constraint.capacity",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "再增加2*T*b队列字节及事件；若为双槽缩T则ceil(L/T)和API次数升高；实际可用UB、API tmp及保留区尚未查询，只有公式不授权容量。",
+          "affects": "implementation_legality",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "pipeline-constraint.dependency_lifetime",
+          "kind": "implementation_safety",
+          "fact": "constraint.dependency_lifetime",
+          "expected_state": true,
+          "statement": "核验每输入/输出槽代次的ready/free和排空；工作区不可被异步消费者未完成时覆盖。",
+          "affects": "implementation_legality",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "pipeline-perf-legacy_symptom_profile_overlap_low",
+          "kind": "performance",
+          "fact": "symptom.profile.overlap_low",
+          "expected_state": null,
+          "statement": "尚未测量 两输入/输出物理槽配首轮预置与排空，FP32工作区串行一次只处理一个tile；独立搬运与Vector尝试重叠。 的实际指令/等待减少是否超过 再增加2*T*b队列字节及事件；若为双槽缩T则ceil(L/T)和API次数升高",
+          "affects": "benefit_magnitude and priority",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "pipeline-perf-cost_reduction",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "尚未测量 两输入/输出物理槽配首轮预置与排空，FP32工作区串行一次只处理一个tile；独立搬运与Vector尝试重叠。 的实际指令/等待减少是否超过 再增加2*T*b队列字节及事件；若为双槽缩T则ceil(L/T)和API次数升高",
+          "affects": "benefit_magnitude and priority",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "batch",
+      "comparison": "减少跨tile必须串行等槽的依赖窗口，算术/GM字节不变；潜在隐藏搬运服务时间，未测；付出 再增加2*T*b队列字节及事件；若为双槽缩T则ceil(L/T)和API次数升高；替代敏感条件：当API发射是主要可消除项且扩T空间充足，batch更优",
+      "disposition": "deferred",
+      "reason": "两输入/输出物理槽配首轮预置与排空，FP32工作区串行一次只处理一个tile；独立搬运与Vector尝试重叠。；当API发射是主要可消除项且扩T空间充足，batch更优",
+      "analysis": {
+        "intent_gap": null,
+        "work_delta": [
+          {
+            "id": "pipeline-reduced",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "float16_none",
+              "float32_none",
+              "bfloat16_none",
+              "float16_tanh",
+              "float32_tanh",
+              "bfloat16_tanh"
+            ],
+            "change": "reduced",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "max(ceil(L/T)-1,0)",
+              "unit": "potential cross-tile serialization boundary/core",
+              "symbols": [
+                {
+                  "name": "L",
+                  "meaning": "单核有效元素数",
+                  "unit": "element"
+                },
+                {
+                  "name": "T",
+                  "meaning": "候选tile有效元素上限",
+                  "unit": "element"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "两输入/输出物理槽配首轮预置与排空，FP32工作区串行一次只处理一个tile；独立搬运与Vector尝试重叠。"
+          },
+          {
+            "id": "pipeline-retained",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "float16_none",
+              "float32_none",
+              "bfloat16_none",
+              "float16_tanh",
+              "float32_tanh",
+              "bfloat16_tanh"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "qualitative",
+              "expression": "复杂GELU计算内部可能主导；Erfc临时区不能随意被下一tile覆盖",
+              "unit": "separate logical operations/bytes",
+              "symbols": [],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "保留项不能消失在整体覆盖声明中"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "pipeline-coverage-float16_none",
+            "domain_id": "float16_none",
+            "status": "partial",
+            "region": "两输入/输出物理槽配首轮预置与排空，FP32工作区串行一次只处理一个tile；独立搬运与Vector尝试重叠。；域=float16_none",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "pipeline-coverage-float32_none",
+            "domain_id": "float32_none",
+            "status": "partial",
+            "region": "两输入/输出物理槽配首轮预置与排空，FP32工作区串行一次只处理一个tile；独立搬运与Vector尝试重叠。；域=float32_none",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "pipeline-coverage-bfloat16_none",
+            "domain_id": "bfloat16_none",
+            "status": "partial",
+            "region": "两输入/输出物理槽配首轮预置与排空，FP32工作区串行一次只处理一个tile；独立搬运与Vector尝试重叠。；域=bfloat16_none",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "pipeline-coverage-float16_tanh",
+            "domain_id": "float16_tanh",
+            "status": "partial",
+            "region": "两输入/输出物理槽配首轮预置与排空，FP32工作区串行一次只处理一个tile；独立搬运与Vector尝试重叠。；域=float16_tanh",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "pipeline-coverage-float32_tanh",
+            "domain_id": "float32_tanh",
+            "status": "partial",
+            "region": "两输入/输出物理槽配首轮预置与排空，FP32工作区串行一次只处理一个tile；独立搬运与Vector尝试重叠。；域=float32_tanh",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "pipeline-coverage-bfloat16_tanh",
+            "domain_id": "bfloat16_tanh",
+            "status": "partial",
+            "region": "两输入/输出物理槽配首轮预置与排空，FP32工作区串行一次只处理一个tile；独立搬运与Vector尝试重叠。；域=bfloat16_tanh",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "pipeline-cost",
+            "domain_ids": [
+              "float16_none",
+              "float32_none",
+              "bfloat16_none",
+              "float16_tanh",
+              "float32_tanh",
+              "bfloat16_tanh"
+            ],
+            "dimension": "resource_access_sync",
+            "change": {
+              "mode": "symbolic",
+              "expression": "(4*b+32)*T+M+Tmp+F",
+              "unit": "UB allocation byte",
+              "symbols": [
+                {
+                  "name": "b",
+                  "meaning": "输入输出存储宽",
+                  "unit": "byte/element"
+                },
+                {
+                  "name": "T",
+                  "meaning": "候选tile有效元素上限",
+                  "unit": "element"
+                },
+                {
+                  "name": "M",
+                  "meaning": "GELU mask固定256字节分配对齐后的字节数",
+                  "unit": "byte"
+                },
+                {
+                  "name": "Tmp",
+                  "meaning": "目标SDK/API要求的临时区",
+                  "unit": "byte"
+                },
+                {
+                  "name": "F",
+                  "meaning": "对齐外固定保留区",
+                  "unit": "byte"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "consequence": "当API发射是主要可消除项且扩T空间充足，batch更优"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "pipeline-residual",
+            "domain_ids": [
+              "float16_none",
+              "float32_none",
+              "bfloat16_none",
+              "float16_tanh",
+              "float32_tanh",
+              "bfloat16_tanh"
+            ],
+            "remaining_work": "复杂GELU计算内部可能主导；Erfc临时区不能随意被下一tile覆盖",
+            "next_step": "当API发射是主要可消除项且扩T空间充足，batch更优",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling"
+            ]
+          }
+        ],
+        "no_alternative_reason": null
+      }
+    }
+  ],
+  "evidence_requests": [
+    {
+      "id": "request-batch-constraint.capacity",
+      "opportunity_ids": [
+        "batch"
+      ],
+      "unknown_ids": [
+        "batch-constraint.capacity"
+      ],
+      "method": "显式分配随T增加：(2*b+32)*T+Align256(ceil(T/8))+API_tmp+F≤UB_available；Compare补齐与Select预留并计；实际可用UB、API tmp及保留区尚未查询，只有公式不授权容量。",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "若API已内部高效批处理且搬运等待占主导，pipeline比扩T更优"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-batch-constraint.vector_batch_compatibility",
+      "opportunity_ids": [
+        "batch"
+      ],
+      "unknown_ids": [
+        "batch-constraint.vector_batch_compatibility"
+      ],
+      "method": "核验每个所用API的count上限、尾部读写域、alias和相同操作参数。",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "若API已内部高效批处理且搬运等待占主导，pipeline比扩T更优"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-batch-perf-legacy_symptom_profile_vector_granularity_low",
+      "opportunity_ids": [
+        "batch"
+      ],
+      "unknown_ids": [
+        "batch-perf-legacy_symptom_profile_vector_granularity_low"
+      ],
+      "method": "尚未测量 保留模式和dtype所有数值步骤，扩大合法T使相邻tile同一API用更大count；不给tanh省略RINT，不替换Erfc近似。 的实际指令/等待减少是否超过 显式分配随T增加：(2*b+32)*T+Align256(ceil(T/8))+API_tmp+F≤UB_available；Compare补齐与Select预留并计",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "若API已内部高效批处理且搬运等待占主导，pipeline比扩T更优"
+        }
+      ],
+      "required_before_implementation": false,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-batch-perf-cost_reduction",
+      "opportunity_ids": [
+        "batch"
+      ],
+      "unknown_ids": [
+        "batch-perf-cost_reduction"
+      ],
+      "method": "尚未测量 保留模式和dtype所有数值步骤，扩大合法T使相邻tile同一API用更大count；不给tanh省略RINT，不替换Erfc近似。 的实际指令/等待减少是否超过 显式分配随T增加：(2*b+32)*T+Align256(ceil(T/8))+API_tmp+F≤UB_available；Compare补齐与Select预留并计",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "若API已内部高效批处理且搬运等待占主导，pipeline比扩T更优"
+        }
+      ],
+      "required_before_implementation": false,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-pipeline-constraint.capacity",
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "unknown_ids": [
+        "pipeline-constraint.capacity"
+      ],
+      "method": "再增加2*T*b队列字节及事件；若为双槽缩T则ceil(L/T)和API次数升高；实际可用UB、API tmp及保留区尚未查询，只有公式不授权容量。",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "当API发射是主要可消除项且扩T空间充足，batch更优"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-pipeline-constraint.dependency_lifetime",
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "unknown_ids": [
+        "pipeline-constraint.dependency_lifetime"
+      ],
+      "method": "核验每输入/输出槽代次的ready/free和排空；工作区不可被异步消费者未完成时覆盖。",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "当API发射是主要可消除项且扩T空间充足，batch更优"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-pipeline-perf-legacy_symptom_profile_overlap_low",
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "unknown_ids": [
+        "pipeline-perf-legacy_symptom_profile_overlap_low"
+      ],
+      "method": "尚未测量 两输入/输出物理槽配首轮预置与排空，FP32工作区串行一次只处理一个tile；独立搬运与Vector尝试重叠。 的实际指令/等待减少是否超过 再增加2*T*b队列字节及事件；若为双槽缩T则ceil(L/T)和API次数升高",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "当API发射是主要可消除项且扩T空间充足，batch更优"
+        }
+      ],
+      "required_before_implementation": false,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-pipeline-perf-cost_reduction",
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "unknown_ids": [
+        "pipeline-perf-cost_reduction"
+      ],
+      "method": "尚未测量 两输入/输出物理槽配首轮预置与排空，FP32工作区串行一次只处理一个tile；独立搬运与Vector尝试重叠。 的实际指令/等待减少是否超过 再增加2*T*b队列字节及事件；若为双槽缩T则ceil(L/T)和API次数升高",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "当API发射是主要可消除项且扩T空间充足，batch更优"
+        }
+      ],
+      "required_before_implementation": false,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "batch",
+        "pipeline"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+      },
+      "locator": "lines:83-188",
+      "effect_kind": "plan",
+      "before": "从原源码识别 Host一维展平，block=min(core,ceil(N/4096))，tile=1024。两种GELU模式均FP32链，none含Erfc与tail修正，tanh含RINT格点；输入/输出队列各一槽，分离FP32临时与5倍Erfc暂存始终分配。",
+      "after": "提取原连续分核骨架；预算全部静态分配与高阶API tmp，不拿例子容量当真值",
+      "applicability": "full：连续逐元素owner骨架；容量仍条件化"
+    },
+    {
+      "opportunity_ids": [
+        "batch"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+        "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+      },
+      "locator": "lines:90-131",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host一维展平，block=min(core,ceil(N/4096))，tile=1024。两种GELU模式均FP32链，none含Erfc与tail修正，tanh含RINT格点；输入/输出队列各一槽，分离FP32临时与5倍Erfc暂存始终分配。",
+      "after": "合并相邻tile同一操作用较大count，不合并有依赖的不同GELU算术，不删RINT",
+      "applicability": "full：batch意图与保持每元素运算顺序匹配；count合法性待核"
+    },
+    {
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+        "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+      },
+      "locator": "lines:89-207",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host一维展平，block=min(core,ceil(N/4096))，tile=1024。两种GELU模式均FP32链，none含Erfc与tail修正，tanh含RINT格点；输入/输出队列各一槽，分离FP32临时与5倍Erfc暂存始终分配。",
+      "after": "双槽增加队列物理字节，须比较被迫减T的调用放大，不能把num=2叫实测重叠",
+      "applicability": "full：独立输入输出tile流水骨架，事件/API仍需实现核验"
+    },
+    {
+      "opportunity_ids": [
+        "batch"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/compare-select-tail.md",
+        "sha256": "sha256:e0cf231e0bd3c6f821342c3d96c262230f009a68e19fc86e0136bf75e2885d62"
+      },
+      "locator": "lines:68-115",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host一维展平，block=min(core,ceil(N/4096))，tile=1024。两种GELU模式均FP32链，none含Erfc与tail修正，tanh含RINT格点；输入/输出队列各一槽，分离FP32临时与5倍Erfc暂存始终分配。",
+      "after": "Select模式2有额外8192B预算；比较实际读取的补齐尾域须定义；Compare与CompareScalar重载不能混同",
+      "applicability": "partial：Select临时区与尾域原则；CompareScalar的具体API另核验"
+    },
+    {
+      "opportunity_ids": [
+        "batch"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.vector_api_fragmentation.md",
+        "sha256": "sha256:e5c0882f45cb270a9fd555e570428ba6f942efbb8c888972f3aadb655c09a34a"
+      },
+      "locator": "lines:258-392",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host一维展平，block=min(core,ceil(N/4096))，tile=1024。两种GELU模式均FP32链，none含Erfc与tail修正，tanh含RINT格点；输入/输出队列各一槽，分离FP32临时与5倍Erfc暂存始终分配。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；可批处理的Vector工作被拆成大量小count/repeat调用",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    },
+    {
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+        "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+      },
+      "locator": "lines:271-407",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host一维展平，block=min(core,ceil(N/4096))，tile=1024。两种GELU模式均FP32链，none含Erfc与tail修正，tanh含RINT格点；输入/输出队列各一槽，分离FP32临时与5倍Erfc暂存始终分配。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；不同tile本可独立的搬运与计算使用同buffer或被过早等待阻断",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    },
+    {
+      "opportunity_ids": [
+        "batch"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+        "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+      },
+      "locator": "lines:307-448",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host一维展平，block=min(core,ceil(N/4096))，tile=1024。两种GELU模式均FP32链，none含Erfc与tail修正，tanh含RINT格点；输入/输出队列各一槽，分离FP32临时与5倍Erfc暂存始终分配。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；按dtype、对齐和深度求出的同时存活物理字节接近合法可用容量",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    }
+  ],
+  "selection": {
+    "mode": "conditional_plan",
+    "opportunity_id": "batch",
+    "action_instance_id": "batch-r1",
+    "reason": "每核ceil(L/1024)*V次显式API降为ceil(L/T)*V；元素算术和GM字节不变；付出 显式分配随T增加：(2*b+32)*T+Align256(ceil(T/8))+API_tmp+F≤UB_available；Compare补齐与Select预留并计；替代敏感条件：若API已内部高效批处理且搬运等待占主导，pipeline比扩T更优",
+    "concrete_plan": "条件范围T为满足原API count/Compare执行域、分核有效长和完整UB预算的正对齐值；先比较T=1024与较大可行T，不预设最优值。P提取原continuous骨架并重建合法计划；不把提取计作并行优化。",
+    "stop_reason": null,
+    "comparison_basis": [
+      {
+        "opportunity_id": "batch",
+        "item_ids": [
+          "batch-reduced"
+        ],
+        "role": "benefit",
+        "decision_effect": "每核ceil(L/1024)*V次显式API降为ceil(L/T)*V；元素算术和GM字节不变",
+        "reversal_condition": "若API已内部高效批处理且搬运等待占主导，pipeline比扩T更优"
+      },
+      {
+        "opportunity_id": "batch",
+        "item_ids": [
+          "batch-cost"
+        ],
+        "role": "cost",
+        "decision_effect": "显式分配随T增加：(2*b+32)*T+Align256(ceil(T/8))+API_tmp+F≤UB_available；Compare补齐与Select预留并计",
+        "reversal_condition": "若API已内部高效批处理且搬运等待占主导，pipeline比扩T更优"
+      },
+      {
+        "opportunity_id": "batch",
+        "item_ids": [
+          "batch-coverage-float16_none",
+          "batch-coverage-float32_none",
+          "batch-coverage-bfloat16_none",
+          "batch-coverage-float16_tanh",
+          "batch-coverage-float32_tanh",
+          "batch-coverage-bfloat16_tanh"
+        ],
+        "role": "coverage",
+        "decision_effect": "按上述语义域部分覆盖，未改变的主要工作明确保留；不以case数自动胜出",
+        "reversal_condition": "若API已内部高效批处理且搬运等待占主导，pipeline比扩T更优"
+      },
+      {
+        "opportunity_id": "batch",
+        "item_ids": [
+          "batch-residual"
+        ],
+        "role": "residual",
+        "decision_effect": "Erfc/Tanh服务时间和单槽链仍在；容量不足时只能选原T或更小T，不能保证更大T合法",
+        "reversal_condition": "若API已内部高效批处理且搬运等待占主导，pipeline比扩T更优"
+      },
+      {
+        "opportunity_id": "pipeline",
+        "item_ids": [
+          "pipeline-reduced",
+          "pipeline-cost"
+        ],
+        "role": "alternative",
+        "decision_effect": "最强替代：减少跨tile必须串行等槽的依赖窗口，算术/GM字节不变；潜在隐藏搬运服务时间，未测；付出 再增加2*T*b队列字节及事件；若为双槽缩T则ceil(L/T)和API次数升高；替代敏感条件：当API发射是主要可消除项且扩T空间充足，batch更优",
+        "reversal_condition": "当API发射是主要可消除项且扩T空间充足，batch更优"
+      }
+    ]
+  },
+  "previous_feedback": null,
+  "path_overview": {
+    "workload_ref": {
+      "path": "source/matrix-20.json",
+      "sha256": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8"
+    },
+    "case_ids": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20"
+    ],
+    "domains": [
+      {
+        "id": "float16_none",
+        "case_ids": [
+          "1",
+          "7"
+        ],
+        "predicate": "float16_none（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      },
+      {
+        "id": "float32_none",
+        "case_ids": [
+          "2",
+          "11",
+          "13",
+          "15",
+          "18",
+          "20"
+        ],
+        "predicate": "float32_none（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      },
+      {
+        "id": "bfloat16_none",
+        "case_ids": [
+          "3",
+          "9",
+          "16"
+        ],
+        "predicate": "bfloat16_none（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      },
+      {
+        "id": "float16_tanh",
+        "case_ids": [
+          "4",
+          "10",
+          "14",
+          "17"
+        ],
+        "predicate": "float16_tanh（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      },
+      {
+        "id": "float32_tanh",
+        "case_ids": [
+          "5",
+          "8"
+        ],
+        "predicate": "float32_tanh（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      },
+      {
+        "id": "bfloat16_tanh",
+        "case_ids": [
+          "6",
+          "12",
+          "19"
+        ],
+        "predicate": "bfloat16_tanh（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      }
+    ],
+    "stages": [
+      {
+        "id": "host",
+        "domain_ids": [
+          "float16_none",
+          "float32_none",
+          "bfloat16_none",
+          "float16_tanh",
+          "float32_tanh",
+          "bfloat16_tanh"
+        ],
+        "fact_ids": [
+          "source.host",
+          "source.tiling"
+        ],
+        "behavior": "参数验证、shape/stride/分核与tiling；分配/H2D和输出D2H在kernel外"
+      },
+      {
+        "id": "kernel",
+        "domain_ids": [
+          "float16_none",
+          "float32_none",
+          "bfloat16_none",
+          "float16_tanh",
+          "float32_tanh",
+          "bfloat16_tanh"
+        ],
+        "fact_ids": [
+          "source.kernel"
+        ],
+        "behavior": "Host一维展平，block=min(core,ceil(N/4096))，tile=1024。两种GELU模式均FP32链，none含Erfc与tail修正，tanh含RINT格点；输入/输出队列各一槽，分离FP32临时与5倍Erfc暂存始终分配。"
+      },
+      {
+        "id": "oracle",
+        "domain_ids": [
+          "float16_none",
+          "float32_none",
+          "bfloat16_none",
+          "float16_tanh",
+          "float32_tanh",
+          "bfloat16_tanh"
+        ],
+        "fact_ids": [
+          "source.oracle"
+        ],
+        "behavior": "读取全输出，保留原精度/特殊值/按位契约，本轮不运行"
+      }
+    ],
+    "baseline_work": [
+      {
+        "id": "base-host",
+        "stage_id": "host",
+        "domain_ids": [
+          "float16_none",
+          "float32_none",
+          "bfloat16_none",
+          "float16_tanh",
+          "float32_tanh",
+          "bfloat16_tanh"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "qualitative",
+          "expression": "每次调用一次host tiling与kernel launch；设备核心数动态查询但本轮未查询",
+          "unit": "separate logical operations/bytes",
+          "symbols": [],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.kernel",
+            "source.tiling",
+            "workload.matrix"
+          ]
+        },
+        "explanation": "不把host墙钟当kernel热点"
+      },
+      {
+        "id": "base-kernel",
+        "stage_id": "kernel",
+        "domain_ids": [
+          "float16_none",
+          "float32_none",
+          "bfloat16_none",
+          "float16_tanh",
+          "float32_tanh",
+          "bfloat16_tanh"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "symbolic",
+          "expression": "V*ceil(L/1024)",
+          "unit": "explicit Vector API call/core",
+          "symbols": [
+            {
+              "name": "V",
+              "meaning": "none=12/tanh=15显式Vector API调用数，含输入/输出操作",
+              "unit": "call/tile"
+            },
+            {
+              "name": "L",
+              "meaning": "单核有效元素数",
+              "unit": "element"
+            }
+          ],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.kernel",
+            "source.tiling",
+            "workload.matrix"
+          ]
+        },
+        "explanation": "各域具体N/d/stride/C/K与已分配字节由metrics列出，逻辑工作非时间占比"
+      },
+      {
+        "id": "base-oracle",
+        "stage_id": "oracle",
+        "domain_ids": [
+          "float16_none",
+          "float32_none",
+          "bfloat16_none",
+          "float16_tanh",
+          "float32_tanh",
+          "bfloat16_tanh"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "qualitative",
+          "expression": "完整输出元素比对；不参与目标Task时间",
+          "unit": "separate logical operations/bytes",
+          "symbols": [],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.kernel",
+            "source.tiling",
+            "workload.matrix"
+          ]
+        },
+        "explanation": "未实施未测试，不伪造passed"
+      }
+    ]
+  }
+}

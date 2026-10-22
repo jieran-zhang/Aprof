@@ -1,0 +1,457 @@
+{
+  "schema_version": "aprof.action-decision/v1",
+  "task_id": "raw-case-11",
+  "context_hash": "sha256:3fea6a2634c83525f1111cd72829e945893e4d1c15a89f6be6501ede1bc45a03",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "reasoning_ref": {
+    "path": "R1-reasoning.json",
+    "sha256": "sha256:f08f305f2a0462c4a4c5dbec507c56193756cb8df2faf1d81f090e58e6e165da"
+  },
+  "reasoning_hash": "sha256:99531553e9b2b33ee1bc91acdf120afb45f6082300ea7af711f943be9f1d5a28",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/f3a6d55be57ea647180e624b4fffe6a25b55beea2b35d140d50fe71108f4232d.json",
+    "sha256": "sha256:02d64ca8cc4efafae4665940ea3cfd6bf955b40e79d76125906445f4337450a4"
+  },
+  "round": 1,
+  "current_parent_ref": {
+    "path": "source/SOURCE-MANIFEST.json",
+    "sha256": "sha256:ec774dafa48c6b48755c468681135fae13bc13d7519d70dfc3d87699fcefeba8"
+  },
+  "opportunities": [
+    {
+      "id": "o1",
+      "hypothesis_id": "h1",
+      "action_id": "action.software_pipeline_stages",
+      "action_instance_id": "intent-1",
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.observation_1"
+      ],
+      "cost_mechanism": "跨tile预取释放单槽依赖，必要GM流量仍为4Ns，代价是更多raw槽及序言尾声。",
+      "predictions": [
+        {
+          "id": "o1-work",
+          "kind": "source_work",
+          "statement": "跨tile预取释放单槽依赖，必要GM流量仍为4Ns，代价是更多raw槽及序言尾声。",
+          "check_method": "源码与完整case形状的逻辑访问/运算量复核；R2静态证据文件",
+          "on_support": "继续具体参数与API合法性核对",
+          "on_refute": "修订目标或保留fallback"
+        },
+        {
+          "id": "o1-perf",
+          "kind": "performance",
+          "statement": "满足合法性并通过完整oracle后，比较本机会对所列case的Task时间；不预设加速比。",
+          "check_method": "未来同协议原20case清L2 Task计时，必要时补指令/timeline；本次不运行",
+          "on_support": "记录同源合法结果并确认是否有回归",
+          "on_refute": "检查新增资源/控制成本，重新比较该机会"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_overlap_low",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "o1-perf",
+          "unknown_id": "o1-performance",
+          "reason": "当前单槽循环的DMA/Vector是否已有编译调度重叠，Div是否主导，额外槽/较短tile是否增大控制成本。"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "o1-perf",
+          "unknown_id": "o1-performance",
+          "reason": "当前单槽循环的DMA/Vector是否已有编译调度重叠，Div是否主导，额外槽/较短tile是否增大控制成本。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "o1-performance",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "当前单槽循环的DMA/Vector是否已有编译调度重叠，Div是否主导，额外槽/较短tile是否增大控制成本。",
+          "affects": "该机会的收益及优先级，不决定结构合法性",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "o1-safety-0",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "缺实际可用UB及编译器/API预留R；需比较候选65536/131072B加R而非把配置示例当实值。",
+          "affects": "具体参数/API实施是否合法",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "o1-safety-1",
+          "kind": "implementation_safety",
+          "fact": "constraint.target_api",
+          "expected_state": true,
+          "statement": "目标安装SDK的TQue物理num=2、depth=1交错EnQue/DeQue与尾DataCopyPad支持尚未核验。",
+          "affects": "具体参数/API实施是否合法",
+          "resolution": "check_before_implementation"
+        }
+      ],
+      "strongest_alternative_id": "o2",
+      "comparison": "软件流水针对每个长tile调用的搬运/计算重叠；最强替代scratch复用仅降低分配，只有容量限制tile时更优，且须延后Cast(a)并核对alias。",
+      "disposition": "selected",
+      "reason": "跨tile预取释放单槽依赖，必要GM流量仍为4Ns，代价是更多raw槽及序言尾声。"
+    },
+    {
+      "id": "o2",
+      "hypothesis_id": "h2",
+      "action_id": "action.reuse_disjoint_onchip_buffers",
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.observation_2"
+      ],
+      "cost_mechanism": "将Div后的fc区用于之后Cast(a)可从四FP32 scratch降至三块，但需先延后Cast(a)并核对API alias/事件；尚未知道容量是否限制tile。",
+      "predictions": [
+        {
+          "id": "o2-work",
+          "kind": "source_work",
+          "statement": "将Div后的fc区用于之后Cast(a)可从四FP32 scratch降至三块，但需先延后Cast(a)并核对API alias/事件；尚未知道容量是否限制tile。",
+          "check_method": "源码与完整case形状的逻辑访问/运算量复核；R2静态证据文件",
+          "on_support": "继续具体参数与API合法性核对",
+          "on_refute": "修订目标或保留fallback"
+        },
+        {
+          "id": "o2-perf",
+          "kind": "performance",
+          "statement": "满足合法性并通过完整oracle后，比较本机会对所列case的Task时间；不预设加速比。",
+          "check_method": "未来同协议原20case清L2 Task计时，必要时补指令/timeline；本次不运行",
+          "on_support": "记录同源合法结果并确认是否有回归",
+          "on_refute": "检查新增资源/控制成本，重新比较该机会"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_source_ub_live_bytes_near_capacity",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "o2-perf",
+          "unknown_id": "o2-performance",
+          "reason": "将Div后的fc区用于之后Cast(a)可从四FP32 scratch降至三块，但需先延后Cast(a)并核对API alias/事件；尚未知道容量是否限制tile。"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "o2-perf",
+          "unknown_id": "o2-performance",
+          "reason": "将Div后的fc区用于之后Cast(a)可从四FP32 scratch降至三块，但需先延后Cast(a)并核对API alias/事件；尚未知道容量是否限制tile。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "o2-performance",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "将Div后的fc区用于之后Cast(a)可从四FP32 scratch降至三块，但需先延后Cast(a)并核对API alias/事件；尚未知道容量是否限制tile。 当前源结构可估算，实际主导程度/代价尚未测得。",
+          "affects": "该机会的收益及优先级，不决定结构合法性",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "o1",
+      "comparison": "将Div后的fc区用于之后Cast(a)可从四FP32 scratch降至三块，但需先延后Cast(a)并核对API alias/事件；尚未知道容量是否限制tile。 与主方案比较：跨tile预取释放单槽依赖，必要GM流量仍为4Ns，代价是更多raw槽及序言尾声。",
+      "disposition": "deferred",
+      "reason": "将Div后的fc区用于之后Cast(a)可从四FP32 scratch降至三块，但需先延后Cast(a)并核对API alias/事件；尚未知道容量是否限制tile。"
+    },
+    {
+      "id": "o3",
+      "hypothesis_id": "h3",
+      "action_id": "action.coalesce_cast",
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.observation_2"
+      ],
+      "cost_mechanism": "三输入各只扩位一次、输出只缩位一次；删除Cast会变更FP32除法路径，case12/13异常值不允许用scalar特化跳过算术。",
+      "predictions": [
+        {
+          "id": "o3-work",
+          "kind": "source_work",
+          "statement": "三输入各只扩位一次、输出只缩位一次；删除Cast会变更FP32除法路径，case12/13异常值不允许用scalar特化跳过算术。",
+          "check_method": "源码与完整case形状的逻辑访问/运算量复核；R2静态证据文件",
+          "on_support": "继续具体参数与API合法性核对",
+          "on_refute": "修订目标或保留fallback"
+        },
+        {
+          "id": "o3-perf",
+          "kind": "performance",
+          "statement": "满足合法性并通过完整oracle后，比较本机会对所列case的Task时间；不预设加速比。",
+          "check_method": "未来同协议原20case清L2 Task计时，必要时补指令/timeline；本次不运行",
+          "on_support": "记录同源合法结果并确认是否有回归",
+          "on_refute": "检查新增资源/控制成本，重新比较该机会"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "o3-perf",
+          "unknown_id": "o3-performance",
+          "reason": "三输入各只扩位一次、输出只缩位一次；删除Cast会变更FP32除法路径，case12/13异常值不允许用scalar特化跳过算术。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "o3-performance",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "三输入各只扩位一次、输出只缩位一次；删除Cast会变更FP32除法路径，case12/13异常值不允许用scalar特化跳过算术。 当前源结构可估算，实际主导程度/代价尚未测得。",
+          "affects": "该机会的收益及优先级，不决定结构合法性",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "o1",
+      "comparison": "三输入各只扩位一次、输出只缩位一次；删除Cast会变更FP32除法路径，case12/13异常值不允许用scalar特化跳过算术。 与主方案比较：跨tile预取释放单槽依赖，必要GM流量仍为4Ns，代价是更多raw槽及序言尾声。",
+      "disposition": "rejected",
+      "reason": "三输入各只扩位一次、输出只缩位一次；删除Cast会变更FP32除法路径，case12/13异常值不允许用scalar特化跳过算术。"
+    }
+  ],
+  "evidence_requests": [
+    {
+      "id": "request-o1-safety-0",
+      "opportunity_ids": [
+        "o1"
+      ],
+      "unknown_ids": [
+        "o1-safety-0"
+      ],
+      "method": "缺实际可用UB及编译器/API预留R；需比较候选65536/131072B加R而非把配置示例当实值。 核验对象：全部适用case；后续允许设备/SDK只读查询及候选代码审查。",
+      "discriminating_results": [
+        {
+          "outcome": "证据满足计划公式及API/语义条件",
+          "decision_effect": "允许以该参数形成严格C2并隔离实施"
+        },
+        {
+          "outcome": "不满足或未知",
+          "decision_effect": "减tile/缩适用域或保留原fallback，不伪造ready"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本轮仅源码/CPU权限，保留明确参数域。",
+      "defer_reason": "禁止SDK build、native、设备probe；实际architecture缺项不能靠目标名称补齐。"
+    },
+    {
+      "id": "request-o1-safety-1",
+      "opportunity_ids": [
+        "o1"
+      ],
+      "unknown_ids": [
+        "o1-safety-1"
+      ],
+      "method": "目标安装SDK的TQue物理num=2、depth=1交错EnQue/DeQue与尾DataCopyPad支持尚未核验。 核验对象：全部适用case；后续允许设备/SDK只读查询及候选代码审查。",
+      "discriminating_results": [
+        {
+          "outcome": "证据满足计划公式及API/语义条件",
+          "decision_effect": "允许以该参数形成严格C2并隔离实施"
+        },
+        {
+          "outcome": "不满足或未知",
+          "decision_effect": "减tile/缩适用域或保留原fallback，不伪造ready"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本轮仅源码/CPU权限，保留明确参数域。",
+      "defer_reason": "禁止SDK build、native、设备probe；实际architecture缺项不能靠目标名称补齐。"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "o1"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+        "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+      },
+      "locator": "lines:285-297",
+      "effect_kind": "mechanism",
+      "before": "源码显示：Process明确CopyIn→Compute→CopyOut；4个TQue均num=1，2048元素tile；输入3读输出1写。",
+      "after": "跨tile预取释放单槽依赖，必要GM流量仍为4Ns，代价是更多raw槽及序言尾声。",
+      "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+    },
+    {
+      "opportunity_ids": [
+        "o2"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+        "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+      },
+      "locator": "lines:320-332",
+      "effect_kind": "mechanism",
+      "before": "源码显示：低精度Cast三输入至fp1/fp2/fp3，Div写fpOut再Muls/Add并最终Cast；不是连续宽窄往返。",
+      "after": "将Div后的fc区用于之后Cast(a)可从四FP32 scratch降至三块，但需先延后Cast(a)并核对API alias/事件；尚未知道容量是否限制tile。",
+      "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+    },
+    {
+      "opportunity_ids": [
+        "o3"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.redundant_cast.md",
+        "sha256": "sha256:c7f8ace396cc0a0f53f4bc0a5b9f0883cbd8b439d45dce74edc1e4f50b1b326d"
+      },
+      "locator": "lines:303-315",
+      "effect_kind": "mechanism",
+      "before": "源码显示：低精度Cast三输入至fp1/fp2/fp3，Div写fpOut再Muls/Add并最终Cast；不是连续宽窄往返。",
+      "after": "三输入各只扩位一次、输出只缩位一次；删除Cast会变更FP32除法路径，case12/13异常值不允许用scalar特化跳过算术。",
+      "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+    },
+    {
+      "opportunity_ids": [
+        "o1"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+      },
+      "locator": "lines:78-90",
+      "effect_kind": "parameters",
+      "before": "尚未把源循环转换为有界任务/内存方案。",
+      "after": "连续输出模板要求每输出唯一owner与总分配预算；保留host chunk和现有所有权，双raw槽+四FP32 scratch按65536B(U=2048)计，不把活跃下界当物理分配。",
+      "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+    },
+    {
+      "opportunity_ids": [
+        "o1"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+        "sha256": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603"
+      },
+      "locator": "lines:62-74",
+      "effect_kind": "parameters",
+      "before": "尚未把源循环转换为有界任务/内存方案。",
+      "after": "foreach中物理num=2与depth=1分别计；每次DeQue后再预取，并闭合输入最后读和MTE3读完后的回收；SDK队列能力另为unknown。",
+      "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+    },
+    {
+      "opportunity_ids": [
+        "o1",
+        "o2"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+        "sha256": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603"
+      },
+      "locator": "lines:62-74",
+      "effect_kind": "alternative",
+      "before": "此前尚未比较该方法的边界。",
+      "after": "foreach中物理num=2与depth=1分别计；每次DeQue后再预取，并闭合输入最后读和MTE3读完后的回收；SDK队列能力另为unknown。",
+      "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+    },
+    {
+      "opportunity_ids": [
+        "o1",
+        "o2"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+        "sha256": "sha256:04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483"
+      },
+      "locator": "lines:80-92",
+      "effect_kind": "alternative",
+      "before": "此前尚未比较该方法的边界。",
+      "after": "独立InitBuffer不因词法作用域而自动共享；foreach只有重排Cast(a)并物理合并fc/fa后才从四FP32区降至三，目标API alias与完成边须核对。",
+      "applicability": "每个tile相同地址、相同有效count、相同dtype和算术顺序，三个输入只读且host分别分配输出；没有跨tile数学依赖。"
+    }
+  ],
+  "selection": {
+    "mode": "conditional_plan",
+    "opportunity_id": "o1",
+    "action_instance_id": "intent-1",
+    "reason": "跨tile预取释放单槽依赖，必要GM流量仍为4Ns，代价是更多raw槽及序言尾声。",
+    "concrete_plan": "保留TensorList逐tensor、8Mi元素host chunk、每元素Div→Muls→Add及原Cast。核内用U∈{1024,2048,4096}、输入/输出物理槽d∈{1,2}；首轮CopyIn(0)，DeQue后允许CopyIn(1)，按队列契约交错计算与搬出，末轮drain。d=2仅用于本核tileCount≥2且8*A(U*s)+4*A(4U)*(s!=4)+R≤UB_available；单tile保留d=1。不把模板depth和物理num混为一谈。",
+    "stop_reason": null
+  },
+  "previous_feedback": null
+}

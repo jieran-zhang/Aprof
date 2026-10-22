@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "pilot-foreach-norm-001",
+  "split_version": "v0001",
+  "graph": "skillgraph/versions/v0001",
+  "notes": "Preparation only. Replace the hardware fingerprint and optionally add exact producer artifacts before collecting a training-eligible trace.",
+  "tasks": [
+    {
+      "task_id": "foreach-norm-natural-001",
+      "split": "train",
+      "operator": "foreach_norm",
+      "op_dir": "scaffolding/benchmarks/cannbench/operators/foreach_norm",
+      "hardware_fingerprint": "REPLACE_WITH_EXACT_SOC_CANN_COMPILER_FINGERPRINT",
+      "origin": "natural",
+      "lineage_id": "foreach-norm-natural-seed-v1",
+      "sentinel_case_ids": [1, 8, 14, 20],
+      "budget": {
+        "candidate_limit": 3,
+        "build_limit": 3,
+        "timing_limit": 2,
+        "full_profile_limit": 1
+      },
+      "selection": {
+        "mode": "argmax",
+        "seed": null
+      },
+      "evidence": {
+        "predicate_states": {}
+      },
+      "device": 0,
+      "build_jobs": 4
+    }
+  ]
+}

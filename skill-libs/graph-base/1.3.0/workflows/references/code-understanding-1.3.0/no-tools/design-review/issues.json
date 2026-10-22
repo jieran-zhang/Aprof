@@ -1,0 +1,129 @@
+{
+  "schema": "aprof.no-tools-design-review/v1",
+  "reviewed_at_utc": "2026-10-21T10:01:54.305431+00:00",
+  "status": "pass_with_scope_limitations",
+  "blocking_issues": [],
+  "issues": [],
+  "checks": [
+    {
+      "id": "D01",
+      "status": "pass",
+      "detail": "All six common headers are identical. Common inputs contain only the shared task/output instruction, common platform declaration, the case workload and line-numbered full source. Current output instruction is plain Chinese Markdown in both arms."
+    },
+    {
+      "id": "D02",
+      "status": "pass",
+      "detail": "All 27 source bodies reconstructed from line-numbered common inputs match the former frozen source byte-for-byte and match embedded/run-plan hashes. Six workloads differ only by removal of the original SDK-guide paragraph."
+    },
+    {
+      "id": "D03",
+      "status": "pass",
+      "detail": "All 12 A prompt hashes match their common input. All 12 B prompt hashes match exactly common input plus inputs/skill-suffix.txt. There are precisely two runs for each case/arm and one for each case/arm/repeat triple."
+    },
+    {
+      "id": "D04",
+      "status": "pass",
+      "detail": "The suffix contains SKILL.md and all five reference bodies, each exactly once and matching frozen file hashes, plus filename/title/newline wrappers only. No source archive, raw SDK manual corpus, gold JSON, grader text or per-case reference choice is appended."
+    },
+    {
+      "id": "D05",
+      "status": "pass",
+      "detail": "The inline skill uses general Add and basic Cube teaching examples, distinct from the evaluated exp/maximum/copy/fused/high-performance source fixtures. No CUxx gold IDs or case-specific 25019/8340/renamed-entry answer material appears. This supports absence of direct payload leakage, subject to the documented provenance limitation."
+    },
+    {
+      "id": "D06",
+      "status": "pass",
+      "detail": "The former freeze hash matches the declared gold freeze, all six gold files remain unchanged, and 59 facts retain algorithm_strategy/execution/hardware at 10 each, 30 per case and 180 per full six-case repeat. Explicit error caps are unchanged and omission does not trigger them."
+    },
+    {
+      "id": "D07",
+      "status": "pass",
+      "detail": "GRADING_PROTOCOL predeclares concrete expressions with unambiguous units and ranges as semantic equivalents of final numbers. This preserves the fixed facts and avoids penalizing formula versus decimal/list formatting. It does not excuse generic formulas lacking workload values or an unknown unit/range, and creates no new cap."
+    },
+    {
+      "id": "D08",
+      "status": "pass",
+      "detail": "Unknown, partial, explicit wrong and unsupported claims remain distinct. Existing UnitFlag protocol recognition and bounded SDK/default-state reservations can coexist; absence of M_FIX alone does not prove a bug, and a documented limitation is not a measured device failure."
+    },
+    {
+      "id": "D09",
+      "status": "out_of_scope",
+      "detail": "Transport/client configuration, the server metadata and smoke output were not independently inspected. The current protocol states one direct Responses request with tools=[] and tool_choice=none; root is separately responsible for validating and retaining that evidence. No subject or grading calls were made in this review."
+    }
+  ],
+  "limitations": [
+    {
+      "id": "L01",
+      "topic": "Estimand",
+      "detail": "This compares no skill against the full expanded skill package: reading method, architecture/API knowledge, examples and extra context. It cannot isolate method-only benefit, nor deployment with only a short entry and unavailable references. The 29991-character fixed suffix and token/time cost are part of the intervention."
+    },
+    {
+      "id": "L02",
+      "topic": "External validity and prior development exposure",
+      "detail": "The six fixtures reuse the known source/gold suite and case-06 structurally reuses case-01/case-04 computations. Tutorial examples share the same API family. Static input review finds no case-dependent selection or direct gold payload, but does not establish a held-out generalization result or prove the skill author never saw benchmark design."
+    },
+    {
+      "id": "L03",
+      "topic": "Replication",
+      "detail": "Two fresh-context repeats per arm and case support a descriptive matched comparison. Repeats and the renamed case are not independent new tasks; do not present all 24 answers as 24 independent task samples or claim broad statistical significance from them."
+    },
+    {
+      "id": "L04",
+      "topic": "Fixed hardware standard without subject manuals",
+      "detail": "The retained 59 facts include API/platform knowledge as well as source derivations. Subjects may use prior knowledge and B may use its fixed skill knowledge. A correct specific knowledge claim need not include an inaccessible manual quote; lack of supplied manuals does not justify adding a new cap or replacing concrete source facts with blanket uncertainty. Differences therefore include knowledge support."
+    },
+    {
+      "id": "L05",
+      "topic": "Performance and comparison to history",
+      "detail": "No compile, device run, exact numerical bits or performance result is established. Differences from an earlier tool/SDK-enabled round cannot be interpreted as a causal tool benefit because multiple context and execution conditions changed."
+    }
+  ],
+  "verified_counts": {
+    "cases": 6,
+    "planned_subject_answers": 24,
+    "prompt_hashes_verified": 24,
+    "source_bodies_exact": 27,
+    "skill_body_files": 6,
+    "reference_bodies": 5,
+    "unchanged_gold_facts": 59,
+    "dimension_points": 10,
+    "case_points": 30,
+    "six_case_repeat_points": 180
+  },
+  "fixed_B_suffix": {
+    "path": "inputs/skill-suffix.txt",
+    "characters": 29991,
+    "sha256": "5b6fc44d507645bbecd3664a38a4dceb7e076f0dd59a93413ef26229d957b1a3",
+    "component_hashes": {
+      "SKILL.md": "5bd1244fc69083c0d6a4c6a221dc0f46caa0f25392a9924a4ac4be8730e2885e",
+      "references/engineering-reading.md": "78d37849f7345e38d22c1e14e97ce73edad8825d53686a23389011427216c977",
+      "references/910c-hardware.md": "0bef452f8caaeee1c2498a19de83b821a887f115557facb59d557efb63669d74",
+      "references/example-add.md": "0eae50c42e51ceb7a7cabd356f80829bc0a9df675b41775e72f9e02499ca3b76",
+      "references/example-cube.md": "908b201edf08749338f45d38522c65e525414787096a81a2e5579bfc99a7f5c3",
+      "references/source-index.md": "a5db371bc429ba712d1c366c6f365561c2fb1a132c9e59d34238898f4e4bee97"
+    }
+  },
+  "reviewed_input_sha256": {
+    "PROTOCOL.md": "26c5760f0f9c6157cf369544a3b82b50ed37a4a2ee7e9049025fa01688c04d7b",
+    "GRADING_PROTOCOL.md": "ac3e4cbdf2b630eaa61da25094deb0986a61e74c9bf70ad5d397b0a9475b5632",
+    "run-plan.json": "bffac8d3bbae24b714b0fbb5eb7b6d6c977f1f11bd3a7669ff5fe795a8029089",
+    "inputs/skill-suffix.txt": "5b6fc44d507645bbecd3664a38a4dceb7e076f0dd59a93413ef26229d957b1a3",
+    "inputs/case-01.txt": "fc6a7cbdc56fe1ef8870446b3c9667b132328d29f1505f95f07d9cd27e82fe3d",
+    "inputs/case-02.txt": "ea77e9b9e22d0f67dcd1b5b92e15beaade6d1ef41ca36311ae3aa23011c97216",
+    "inputs/case-03.txt": "d4ddbee1802a87935baabf1d84ebb6f37e35194e4c50a9fab1210c145737225d",
+    "inputs/case-04.txt": "d6efadb9ebde4b524f0c62b9156dc31434575f5e48d3105d2df4c92976fe9639",
+    "inputs/case-05.txt": "d0a9c4dfeb98952d03bb37ebcf16004365b70f80cd630ae3efb11521ca6012ab",
+    "inputs/case-06.txt": "f9df7a42a99c69c1b543fed3ae1df92d6ed597e473dd0518038ac284f057dc17"
+  },
+  "review_boundaries": {
+    "old_answers_or_results_read_in_this_review": false,
+    "future_runs_read": false,
+    "subject_calls_run": false,
+    "grading_calls_run": false,
+    "SDK_or_NPU_run": false,
+    "files_modified": [
+      "design-review/REPORT.md",
+      "design-review/issues.json"
+    ]
+  }
+}

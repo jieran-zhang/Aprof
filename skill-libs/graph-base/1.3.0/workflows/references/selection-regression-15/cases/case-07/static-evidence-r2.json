@@ -1,0 +1,168 @@
+{
+  "task_id": "case-07",
+  "attempt_identity": {
+    "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+    "implementation_hash": null,
+    "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c"
+  },
+  "source_refs": [
+    {
+      "path": "source/op_kernel/strided_slice_kernel.asc",
+      "sha256": "sha256:46080207eb1e6dada5df620d8a255ec92707356d763d631194f53c4533b48206"
+    },
+    {
+      "path": "source/op_kernel/strided_slice_tiling.h",
+      "sha256": "sha256:a038f2dc047926c24f3c86ad64e2812010e1123b7217dffe3f49150606d6c16b"
+    },
+    {
+      "path": "source/matrix-20.json",
+      "sha256": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c"
+    }
+  ],
+  "finding": "新增按host规则展开全部mask所得几何：shrink列case15输出2048、源step2048，不能整span加载；new-axis size1的step0可折叠，case16/17/19有长物理连续后缀。R2把case15列读明确保留标量，而size1轴之后连续段可合并；小stride域新增流量按s=2/3/4分别计算，不以统一API覆盖宣称全域已优化。",
+  "rows": [
+    {
+      "case_id": "1",
+      "collapsible_contiguous_suffix": 1,
+      "span_extra_bytes_upper": 524288,
+      "selected_span_path": true,
+      "large_gap_fallback": false
+    },
+    {
+      "case_id": "2",
+      "collapsible_contiguous_suffix": 2047,
+      "span_extra_bytes_upper": 0,
+      "selected_span_path": true,
+      "large_gap_fallback": false
+    },
+    {
+      "case_id": "3",
+      "collapsible_contiguous_suffix": 1,
+      "span_extra_bytes_upper": 2097152,
+      "selected_span_path": true,
+      "large_gap_fallback": false
+    },
+    {
+      "case_id": "4",
+      "collapsible_contiguous_suffix": 1,
+      "span_extra_bytes_upper": 134201344,
+      "selected_span_path": true,
+      "large_gap_fallback": false
+    },
+    {
+      "case_id": "5",
+      "collapsible_contiguous_suffix": 1,
+      "span_extra_bytes_upper": 67108864,
+      "selected_span_path": true,
+      "large_gap_fallback": false
+    },
+    {
+      "case_id": "6",
+      "collapsible_contiguous_suffix": 1,
+      "span_extra_bytes_upper": 100663296,
+      "selected_span_path": true,
+      "large_gap_fallback": false
+    },
+    {
+      "case_id": "7",
+      "collapsible_contiguous_suffix": 1022,
+      "span_extra_bytes_upper": 0,
+      "selected_span_path": true,
+      "large_gap_fallback": false
+    },
+    {
+      "case_id": "8",
+      "collapsible_contiguous_suffix": 1,
+      "span_extra_bytes_upper": 250000,
+      "selected_span_path": true,
+      "large_gap_fallback": false
+    },
+    {
+      "case_id": "9",
+      "collapsible_contiguous_suffix": 1,
+      "span_extra_bytes_upper": 1572864,
+      "selected_span_path": true,
+      "large_gap_fallback": false
+    },
+    {
+      "case_id": "10",
+      "collapsible_contiguous_suffix": 100,
+      "span_extra_bytes_upper": 0,
+      "selected_span_path": true,
+      "large_gap_fallback": false
+    },
+    {
+      "case_id": "11",
+      "collapsible_contiguous_suffix": 768,
+      "span_extra_bytes_upper": 0,
+      "selected_span_path": true,
+      "large_gap_fallback": false
+    },
+    {
+      "case_id": "12",
+      "collapsible_contiguous_suffix": 1,
+      "span_extra_bytes_upper": 4194304,
+      "selected_span_path": true,
+      "large_gap_fallback": false
+    },
+    {
+      "case_id": "13",
+      "collapsible_contiguous_suffix": 256,
+      "span_extra_bytes_upper": 0,
+      "selected_span_path": true,
+      "large_gap_fallback": false
+    },
+    {
+      "case_id": "14",
+      "collapsible_contiguous_suffix": 1024,
+      "span_extra_bytes_upper": 0,
+      "selected_span_path": true,
+      "large_gap_fallback": false
+    },
+    {
+      "case_id": "15",
+      "collapsible_contiguous_suffix": 1,
+      "span_extra_bytes_upper": 16769024,
+      "selected_span_path": false,
+      "large_gap_fallback": true
+    },
+    {
+      "case_id": "16",
+      "collapsible_contiguous_suffix": 262144,
+      "span_extra_bytes_upper": 0,
+      "selected_span_path": true,
+      "large_gap_fallback": false
+    },
+    {
+      "case_id": "17",
+      "collapsible_contiguous_suffix": 1048576,
+      "span_extra_bytes_upper": 0,
+      "selected_span_path": true,
+      "large_gap_fallback": false
+    },
+    {
+      "case_id": "18",
+      "collapsible_contiguous_suffix": 1024,
+      "span_extra_bytes_upper": 0,
+      "selected_span_path": true,
+      "large_gap_fallback": false
+    },
+    {
+      "case_id": "19",
+      "collapsible_contiguous_suffix": 512,
+      "span_extra_bytes_upper": 0,
+      "selected_span_path": true,
+      "large_gap_fallback": false
+    },
+    {
+      "case_id": "20",
+      "collapsible_contiguous_suffix": 127,
+      "span_extra_bytes_upper": 0,
+      "selected_span_path": true,
+      "large_gap_fallback": false
+    }
+  ],
+  "counterfactual_probe": "反事实固定N将内轴s从2变为2048（扩大合法源shape）：batch的额外输入从约N*b升至约2047*N*b，选择反转到address；若s=1且E长则保留batch，不依赖case编号。",
+  "implementation_state": "not_implemented",
+  "measurement": "not_measured"
+}

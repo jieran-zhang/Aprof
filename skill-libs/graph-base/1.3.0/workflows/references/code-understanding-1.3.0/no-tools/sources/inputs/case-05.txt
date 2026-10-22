@@ -1,0 +1,1499 @@
+你正在AProf算子优化的code-understanding阶段。以下消息已经给出源码、workload和本次可用资料；仅凭这些上下文及你已有知识完成理解，不调用任何工具，不执行代码、CPU脚本或心算工具，不访问文件、网络、设备或其他Agent。不要请求工具或补充材料。
+
+提交一份供后续diagnosis使用的中文代码理解说明：整体算法与数值语义、当前实现策略、实际分派/任务/循环/尾块、数据/存储/依赖，以及对应的910C硬件行为。用当前workload做必要的具体推导，给出文件/符号/行号定位。区分源码事实、平台/API知识、具体推断及尚不能确认的边界；缺少性能测量不妨碍静态理解。不要预选Problem/Action，不设计新优化方案。
+
+所有资料正文已内联；链接和历史路径只作定位，不提供外部手册或检索能力。尽量在3500个中文或ASCII字符内完成，正确且具体的解释比字数和引用数量重要。最终直接提交完整的中文代码理解说明，使用Markdown，不输出JSON外壳。
+
+=== 平台与workload ===
+目标平台：Ascend 910C / Atlas A3，实际device架构条件为 __NPU_ARCH__=2201。host侧NPU_ARCH以workload指定值为准，不与device宏混用。3510只在题面指定时作为静态对照。没有设备编译、运行或profiling结果。
+# 题 5
+
+请阅读完整 source（含 host、参数/tiling 和 kernel 上下文）及 workload。本题要求理解现有实现，请提交一份连贯的代码理解说明：先解释输入输出与整体算法，再解释当前实现怎样分工、搬运、计算和同步，最后说明目标硬件上的执行行为、适用边界和证据不足之处。
+
+用 workload 中的值做必要的具体推导，让地址/计数的单位明确。请给出能定位到源文件/符号的依据。不要预选 Problem/Action，不要求提出优化或改代码。只写能由本题材料支持的结论；字数和引用数量不计分。
+
+
+比较 `source/baseline/mmad.asc` 与 `source/variant/mmad.asc`；差异完整列于 `source/VARIANT.patch`。两者都固定 `SCENARIO_NUM=1`、host 宏 `NPU_ARCH=2201`、device 宏 `__NPU_ARCH__=2201`，其余使用 main 中所有常量。B 的 GM 文件按 [N,K] 连续存储，它对应逻辑 [K,N] 矩阵的转置存储。
+
+请解释整个矩阵乘的分核、循环和数据路径，再选一个输出 tile，具体说明前 10 个 K 迭代中各级 buffer 的物理位置、选择和复用，以及各事件建立的执行关系。比较两个版本在可证明依赖与执行保证上的差别，明确静态材料对实际运行结果的支持边界。
+=== 完整输入源码 ===
+=== SOURCE FILE: source/VARIANT.patch ; sha256=1cfbdedaf1f90d8cb1f232c5e5466760a1de4a5004f860035a616b94672da5ac ===
+0001: --- baseline/mmad.asc
+0002: +++ variant/mmad.asc
+0003: @@ -206,7 +206,7 @@
+0004:                      AscendC::LocalTensor<half> b2Local = (mte1DBFlag == 0) ? b2LocalPing : b2LocalPong;
+0005:  
+0006:                      // ---- 反向同步：等待上一轮 Compute 释放 L0 缓冲区 ----
+0007: -                    AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(mte1DBFlag);
+0008: +                    // TEST_DELTA: reverse wait removed in this variant.
+0009:  
+0010:                      // ---- 正向同步：等待 L1 大包数据就绪（仅大包中首元素需等待） ----
+0011:                      if (kOffsetInChunkA == 0) {
+
+=== SOURCE FILE: source/baseline/data_utils.h ; sha256=0c8bc9d0f357c27171b1cc25f403922be475a9234cfc9675ee3be1229706745c ===
+0001: /**
+0002:  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+0003:  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+0004:  * CANN Open Software License Agreement Version 2.0 (the "License").
+0005:  * Please refer to the License for details. You may not use this file except in compliance with the License.
+0006:  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+0007:  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+0008:  * See LICENSE in the root of the software repository for the full text of the License.
+0009:  */
+0010: 
+0011: /* !
+0012:  * \file data_utils.h
+0013:  * \brief Utility functions for reading and writing binary files
+0014:  */
+0015: 
+0016: #ifndef DATA_UTILS_H
+0017: #define DATA_UTILS_H
+0018: #include <fcntl.h>
+0019: #include <sys/stat.h>
+0020: #include <unistd.h>
+0021: #include <fstream>
+0022: 
+0023: #define ERROR_LOG(fmt, args...) fprintf(stdout, "[ERROR]  " fmt "\n", ##args)
+0024: 
+0025: bool ReadFile(const std::string& filePath, size_t& fileSize, void* buffer, size_t bufferSize)
+0026: {
+0027:     struct stat sBuf;
+0028:     int fileStatus = stat(filePath.data(), &sBuf);
+0029:     if (fileStatus == -1) {
+0030:         ERROR_LOG("failed to get file");
+0031:         return false;
+0032:     }
+0033:     if (S_ISREG(sBuf.st_mode) == 0) {
+0034:         ERROR_LOG("%s is not a file, please enter a file", filePath.c_str());
+0035:         return false;
+0036:     }
+0037: 
+0038:     std::ifstream file;
+0039:     file.open(filePath, std::ios::binary);
+0040:     if (!file.is_open()) {
+0041:         ERROR_LOG("Open file failed. path = %s", filePath.c_str());
+0042:         return false;
+0043:     }
+0044: 
+0045:     std::filebuf* buf = file.rdbuf();
+0046:     size_t size = buf->pubseekoff(0, std::ios::end, std::ios::in);
+0047:     if (size == 0) {
+0048:         ERROR_LOG("file size is 0");
+0049:         file.close();
+0050:         return false;
+0051:     }
+0052:     if (size > bufferSize) {
+0053:         ERROR_LOG("file size is larger than buffer size");
+0054:         file.close();
+0055:         return false;
+0056:     }
+0057:     buf->pubseekpos(0, std::ios::in);
+0058:     buf->sgetn(static_cast<char*>(buffer), size);
+0059:     fileSize = size;
+0060:     file.close();
+0061:     return true;
+0062: }
+0063: 
+0064: bool WriteFile(const std::string& filePath, const void* buffer, size_t size)
+0065: {
+0066:     if (buffer == nullptr) {
+0067:         ERROR_LOG("Write file failed. buffer is nullptr");
+0068:         return false;
+0069:     }
+0070: 
+0071:     int fd = open(filePath.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWRITE);
+0072:     if (fd < 0) {
+0073:         ERROR_LOG("Open file failed. path = %s", filePath.c_str());
+0074:         return false;
+0075:     }
+0076: 
+0077:     size_t writeSize = write(fd, buffer, size);
+0078:     (void)close(fd);
+0079:     if (writeSize != size) {
+0080:         ERROR_LOG("Write file Failed.");
+0081:         return false;
+0082:     }
+0083: 
+0084:     return true;
+0085: }
+0086: #endif // DATA_UTILS_H
+
+=== SOURCE FILE: source/baseline/mmad.asc ; sha256=8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92 ===
+0001: /**
+0002:  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+0003:  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+0004:  * CANN Open Software License Agreement Version 2.0 (the "License").
+0005:  * Please refer to the License for details. You may not use this file except in compliance with the License.
+0006:  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+0007:  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+0008:  * See LICENSE in the root of the software repository for the full text of the License.
+0009:  */
+0010: 
+0011: /* !
+0012:  * \file mmad.asc
+0013:  * \brief matmul基础API最佳实践样例
+0014:  */
+0015: 
+0016: #include "acl/acl.h"
+0017: #include "kernel_operator.h"
+0018: #include "utils/std/cmath.h"
+0019: #include "data_utils.h"
+0020: 
+0021: // half type, cube block: [16, 16]
+0022: constexpr uint32_t CUBE_BLOCK = 16;
+0023: constexpr uint32_t CUBE_BLOCK_SIZE = 16 * 16;
+0024: constexpr uint32_t L0_PINGPONG_BYTES = 32 * 1024;
+0025: constexpr uint32_t L1_PINGPONG_BYTES = 256 * 1024;
+0026: constexpr bool IS_B_TRANSPOSE = true;
+0027: constexpr uint32_t scenarioNum = SCENARIO_NUM;
+0028: 
+0029: template <
+0030:     uint32_t M, uint32_t K, uint32_t N, uint32_t baseM, uint32_t baseK, uint32_t baseN, uint32_t singleCoreM,
+0031:     uint32_t singleCoreK, uint32_t singleCoreN, uint32_t stepKa, uint32_t stepKb>
+0032: class KernelMmad {
+0033: public:
+0034:     __aicore__ inline KernelMmad() {}
+0035: 
+0036:     __aicore__ inline void Init(__gm__ uint8_t* a, __gm__ uint8_t* b, __gm__ uint8_t* c)
+0037:     {
+0038:         aGMOri.SetGlobalBuffer((__gm__ half*)a);
+0039:         bGMOri.SetGlobalBuffer((__gm__ half*)b);
+0040:         cGMOri.SetGlobalBuffer((__gm__ half*)c);
+0041:     }
+0042: 
+0043:     __aicore__ inline void Process()
+0044:     {
+0045:         InitComputeParams();
+0046: 
+0047:         // ============================================================
+0048:         // 1. Buffer 分配：L1 / L0 双缓冲 Ping-Pong 布局
+0049:         // ============================================================
+0050:         // L1: A1 Ping/Pong (0~256KB), B1 Ping/Pong (256~512KB)
+0051:         // L0: A2/B2 Ping/Pong (0~32KB / 32KB~64KB)
+0052:         uint32_t a1PingpongSize = baseM * baseK * stepKa;
+0053:         uint32_t b1PingpongSize = baseK * baseN * stepKb;
+0054:         uint32_t a2PingpongSize = baseM * baseK;
+0055:         uint32_t b2PingpongSize = baseK * baseN;
+0056: 
+0057:         // A1: L1 Ping/Pong
+0058:         AscendC::LocalTensor<half> a1LocalPing(AscendC::TPosition::A1, 0, a1PingpongSize);
+0059:         AscendC::LocalTensor<half> a1LocalPong(AscendC::TPosition::A1, a1PingpongSize * sizeof(half), a1PingpongSize);
+0060:         // A2: L0 Ping/Pong
+0061:         AscendC::LocalTensor<half> a2LocalPing(AscendC::TPosition::A2, 0, a2PingpongSize);
+0062:         AscendC::LocalTensor<half> a2LocalPong(AscendC::TPosition::A2, L0_PINGPONG_BYTES, a2PingpongSize);
+0063: 
+0064:         // B1: L1 Ping/Pong
+0065:         AscendC::LocalTensor<half> b1LocalPing(AscendC::TPosition::B1, L1_PINGPONG_BYTES, b1PingpongSize);
+0066:         AscendC::LocalTensor<half> b1LocalPong(
+0067:             AscendC::TPosition::B1, L1_PINGPONG_BYTES + b1PingpongSize * sizeof(half), b1PingpongSize);
+0068:         // B2: L0 Ping/Pong
+0069:         AscendC::LocalTensor<half> b2LocalPing(AscendC::TPosition::B2, 0, b2PingpongSize);
+0070:         AscendC::LocalTensor<half> b2LocalPong(AscendC::TPosition::B2, L0_PINGPONG_BYTES, b2PingpongSize);
+0071:         // CO1: L0C
+0072:         AscendC::LocalTensor<float> cLocal(AscendC::TPosition::CO1, 0, baseM * baseN);
+0073: 
+0074:         ProcessLoop(
+0075:             a1LocalPing, a1LocalPong, a2LocalPing, a2LocalPong, b1LocalPing, b1LocalPong, b2LocalPing, b2LocalPong,
+0076:             cLocal);
+0077:     }
+0078: 
+0079:     // ============================================================
+0080:     // L2 Cache 优化：双重外层循环（M 维度 + N 维度分批）
+0081:     // ============================================================
+0082:     __aicore__ inline void ProcessL2Cache()
+0083:     {
+0084:         // ---- Step 1: Buffer 分配：L1 / L0 双缓冲 Ping-Pong 布局
+0085:         uint32_t a1PingpongSize = baseM * baseK * stepKa;
+0086:         uint32_t b1PingpongSize = baseK * baseN * stepKb;
+0087:         uint32_t a2PingpongSize = baseM * baseK;
+0088:         uint32_t b2PingpongSize = baseK * baseN;
+0089: 
+0090:         AscendC::LocalTensor<half> a1LocalPing(AscendC::TPosition::A1, 0, a1PingpongSize);
+0091:         AscendC::LocalTensor<half> a1LocalPong(AscendC::TPosition::A1, a1PingpongSize * sizeof(half), a1PingpongSize);
+0092:         AscendC::LocalTensor<half> a2LocalPing(AscendC::TPosition::A2, 0, a2PingpongSize);
+0093:         AscendC::LocalTensor<half> a2LocalPong(AscendC::TPosition::A2, L0_PINGPONG_BYTES, a2PingpongSize);
+0094: 
+0095:         AscendC::LocalTensor<half> b1LocalPing(AscendC::TPosition::B1, L1_PINGPONG_BYTES, b1PingpongSize);
+0096:         AscendC::LocalTensor<half> b1LocalPong(
+0097:             AscendC::TPosition::B1, L1_PINGPONG_BYTES + b1PingpongSize * sizeof(half), b1PingpongSize);
+0098:         AscendC::LocalTensor<half> b2LocalPing(AscendC::TPosition::B2, 0, b2PingpongSize);
+0099:         AscendC::LocalTensor<half> b2LocalPong(AscendC::TPosition::B2, L0_PINGPONG_BYTES, b2PingpongSize);
+0100:         AscendC::LocalTensor<float> cLocal(AscendC::TPosition::CO1, 0, baseM * baseN);
+0101: 
+0102:         // ---- Step 2: 计算分批参数 ----
+0103:         // mIterTotal/nIterTotal: M/N 方向总共需要多少个 singleCore 大小的子块
+0104:         constexpr uint32_t mIterTotal = AscendC::Std::ceil_div(M, singleCoreM);
+0105:         constexpr uint32_t nIterTotal = AscendC::Std::ceil_div(N, singleCoreN);
+0106:         // 每轮 numBlocks 核覆盖的 M 份数
+0107:         constexpr uint32_t mIterPerRound = AscendC::Std::ceil_div(M, singleCoreM * 2); // 2 轮 M
+0108:         // 外层循环轮数
+0109:         constexpr uint32_t outerMLoopCount = AscendC::Std::ceil_div(mIterTotal, mIterPerRound);
+0110: 
+0111:         // ---- Step 3: outerMIdx/outerNIdx 外层循环 ----
+0112:         for (uint32_t outerMIdx = 0; outerMIdx < outerMLoopCount; outerMIdx++) {
+0113:             //   根据核索引 blockIdx 计算当前核在本轮负责的子块坐标
+0114:             //   mIterIdx = blockIdx 在 M 方向的偏移 + 本轮的 M 起始偏移
+0115:             //   nIterIdx = blockIdx 在 N 方向的偏移
+0116:             uint32_t mIterIdx = AscendC::GetBlockIdx() % mIterPerRound + outerMIdx * mIterPerRound;
+0117:             uint32_t nIterIdx = AscendC::GetBlockIdx() / mIterPerRound;
+0118: 
+0119:             // 边界保护：当 M/N 不能被整除时，最后一轮部分核会超出子块范围，直接跳过
+0120:             if (mIterIdx >= mIterTotal || nIterIdx >= nIterTotal)
+0121:                 continue;
+0122: 
+0123:             // 根据子块坐标计算 GM 偏移、循环次数、尾块参数等
+0124:             InitComputeParamsL2Cache(mIterIdx, nIterIdx);
+0125: 
+0126:             // 执行当前子块的完整 N/M/K 循环计算
+0127:             ProcessLoop(
+0128:                 a1LocalPing, a1LocalPong, a2LocalPing, a2LocalPong, b1LocalPing, b1LocalPong, b2LocalPing, b2LocalPong,
+0129:                 cLocal);
+0130: 
+0131:             // 每轮外层循环后重置双缓冲 flag
+0132:             mte1DBFlag = 0;
+0133:         }
+0134:     }
+0135: 
+0136: private:
+0137:     // N/M/K 主循环：执行当前核的完整计算
+0138:     __aicore__ inline void ProcessLoop(
+0139:         AscendC::LocalTensor<half>& a1LocalPing, AscendC::LocalTensor<half>& a1LocalPong,
+0140:         AscendC::LocalTensor<half>& a2LocalPing, AscendC::LocalTensor<half>& a2LocalPong,
+0141:         AscendC::LocalTensor<half>& b1LocalPing, AscendC::LocalTensor<half>& b1LocalPong,
+0142:         AscendC::LocalTensor<half>& b2LocalPing, AscendC::LocalTensor<half>& b2LocalPong,
+0143:         AscendC::LocalTensor<float>& cLocal)
+0144:     {
+0145:         // ============================================================
+0146:         // 1. DataCopyIn 进度跟踪变量
+0147:         // ============================================================
+0148:         uint32_t a1NextKChunkIdx = 0; // A 下一次 DataCopyIn 要搬的 K 方向大包索引
+0149:         uint32_t b1NextKChunkIdx = 0; // B 下一次 DataCopyIn 要搬的 K 方向大包索引
+0150:         uint8_t a1CopyInIdx = 0;      // A 下一次 DataCopyIn 写入的 L1 buffer 索引 (0=Ping, 1=Pong)
+0151:         uint8_t b1CopyInIdx = 0;      // B 下一次 DataCopyIn 写入的 L1 buffer 索引 (0=Ping, 1=Pong)
+0152: 
+0153:         // ============================================================
+0154:         // 2. 同步标志初始化：反向同步需预置，防止首次 WaitFlag 死锁
+0155:         // ============================================================
+0156:         // MTE1_MTE2 (反向): DataCopyIn 可覆盖通知
+0157:         //   EVENT_ID0: A1 Ping 可写 | EVENT_ID1: A1 Pong 可写
+0158:         //   EVENT_ID2: B1 Ping 可写 | EVENT_ID3: B1 Pong 可写
+0159:         AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(EVENT_ID0);
+0160:         AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(EVENT_ID1);
+0161:         AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(EVENT_ID2);
+0162:         AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(EVENT_ID3);
+0163:         // M_MTE1 (反向): L0 双缓冲，DataLoad 可覆盖通知
+0164:         AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(EVENT_ID0);
+0165:         AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(EVENT_ID1);
+0166: 
+0167:         // ============================================================
+0168:         // 3. N/M 外层循环 + K 主循环
+0169:         // ============================================================
+0170:         for (uint32_t nBlockIdx = 0; nBlockIdx < nLoopCount; nBlockIdx++) {
+0171:             for (uint32_t mBlockIdx = 0; mBlockIdx < mLoopCount; mBlockIdx++) {
+0172:                 // 每个 (mBlockIdx, nBlockIdx) 子块重置 DataCopyIn 进度
+0173:                 a1NextKChunkIdx = 0;
+0174:                 b1NextKChunkIdx = 0;
+0175:                 a1CopyInIdx = 0;
+0176:                 b1CopyInIdx = 0;
+0177: 
+0178:                 // ---- 搬入 A1 Ping 和 B1 Ping 的首个大包 ----
+0179:                 AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(EVENT_ID0); // A1 Ping 可写
+0180:                 DataCopyInA(a1LocalPing, a1NextKChunkIdx, mBlockIdx);
+0181:                 AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(EVENT_ID0); // A1 Ping 数据就绪
+0182:                 a1NextKChunkIdx += stepKa;
+0183:                 a1CopyInIdx ^= 1; // 下次写 Pong
+0184: 
+0185:                 AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(EVENT_ID2); // B1 Ping 可写
+0186:                 DataCopyInB(b1LocalPing, b1NextKChunkIdx, nBlockIdx);
+0187:                 AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(EVENT_ID2); // B1 Ping 数据就绪
+0188:                 b1NextKChunkIdx += stepKb;
+0189:                 b1CopyInIdx ^= 1; // 下次写 Pong
+0190: 
+0191:                 // ---- K 方向主循环 ----
+0192:                 for (uint32_t kBlockIdx = 0; kBlockIdx < kLoopCount; kBlockIdx++) {
+0193:                     // 确定当前 kBlockIdx 对应的 L1 读取缓冲区（Ping/Pong）
+0194:                     uint32_t a1ReadIdx = (kBlockIdx / stepKa) % 2;
+0195:                     uint32_t b1ReadIdx = (kBlockIdx / stepKb) % 2;
+0196:                     uint32_t kOffsetInChunkA = kBlockIdx % stepKa;
+0197:                     uint32_t kOffsetInChunkB = kBlockIdx % stepKb;
+0198: 
+0199:                     AscendC::LocalTensor<half> a1ReadBuf = (a1ReadIdx == 0) ? a1LocalPing : a1LocalPong;
+0200:                     AscendC::LocalTensor<half> b1ReadBuf = (b1ReadIdx == 0) ? b1LocalPing : b1LocalPong;
+0201:                     int32_t a1ReadEvent = (a1ReadIdx == 0) ? EVENT_ID0 : EVENT_ID1;
+0202:                     int32_t b1ReadEvent = (b1ReadIdx == 0) ? EVENT_ID2 : EVENT_ID3;
+0203: 
+0204:                     // L0 双缓冲选择
+0205:                     AscendC::LocalTensor<half> a2Local = (mte1DBFlag == 0) ? a2LocalPing : a2LocalPong;
+0206:                     AscendC::LocalTensor<half> b2Local = (mte1DBFlag == 0) ? b2LocalPing : b2LocalPong;
+0207: 
+0208:                     // ---- 反向同步：等待上一轮 Compute 释放 L0 缓冲区 ----
+0209:                     AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(mte1DBFlag);
+0210: 
+0211:                     // ---- 正向同步：等待 L1 大包数据就绪（仅大包中首元素需等待） ----
+0212:                     if (kOffsetInChunkA == 0) {
+0213:                         AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE1>(a1ReadEvent);
+0214:                     }
+0215:                     if (kOffsetInChunkB == 0) {
+0216:                         AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE1>(b1ReadEvent);
+0217:                     }
+0218: 
+0219:                     // ---- DataLoad: L1 → L0 ----
+0220:                     DataLoadA(a1ReadBuf, a2Local, mBlockIdx, kOffsetInChunkA);
+0221:                     DataLoadB(b1ReadBuf, b2Local, nBlockIdx, kOffsetInChunkB);
+0222: 
+0223:                     // ---- 反向同步：当前 L1 大包消费完毕，通知 DataCopyIn 可覆盖 ----
+0224:                     if ((kOffsetInChunkA + 1) == stepKa) {
+0225:                         AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(a1ReadEvent);
+0226:                     }
+0227:                     if ((kOffsetInChunkB + 1) == stepKb) {
+0228:                         AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(b1ReadEvent);
+0229:                     }
+0230: 
+0231:                     // ---- Compute: Mmad 矩阵乘累加 ----
+0232:                     Compute(cLocal, a2Local, b2Local, kBlockIdx, mBlockIdx, nBlockIdx);
+0233: 
+0234:                     // ---- 搬入下一个 L1 大包，使 DataCopyIn 与 Compute 流水重叠 ----
+0235:                     // 触发条件：
+0236:                     //   (1) kBlockIdx == 0：首个 K 块计算时，A1/B1 Pong 尚未使用，可直接搬入
+0237:                     //   (2) 当前 L1 大包最后一个 baseK 被消费完，该缓冲区可被覆盖
+0238:                     if (((kBlockIdx == 0) || ((kOffsetInChunkB + 1) == stepKb)) && b1NextKChunkIdx < kLoopCount) {
+0239:                         AscendC::LocalTensor<half> b1WriteBuf = (b1CopyInIdx == 0) ? b1LocalPing : b1LocalPong;
+0240:                         int32_t b1WriteEvent = (b1CopyInIdx == 0) ? EVENT_ID2 : EVENT_ID3;
+0241:                         AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(b1WriteEvent);
+0242:                         DataCopyInB(b1WriteBuf, b1NextKChunkIdx, nBlockIdx);
+0243:                         AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(b1WriteEvent);
+0244:                         b1NextKChunkIdx += stepKb;
+0245:                         b1CopyInIdx ^= 1;
+0246:                     }
+0247:                     if (((kBlockIdx == 0) || ((kOffsetInChunkA + 1) == stepKa)) && a1NextKChunkIdx < kLoopCount) {
+0248:                         AscendC::LocalTensor<half> a1WriteBuf = (a1CopyInIdx == 0) ? a1LocalPing : a1LocalPong;
+0249:                         int32_t a1WriteEvent = (a1CopyInIdx == 0) ? EVENT_ID0 : EVENT_ID1;
+0250:                         AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(a1WriteEvent);
+0251:                         DataCopyInA(a1WriteBuf, a1NextKChunkIdx, mBlockIdx);
+0252:                         AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(a1WriteEvent);
+0253:                         a1NextKChunkIdx += stepKa;
+0254:                         a1CopyInIdx ^= 1;
+0255:                     }
+0256:                 }
+0257:                 // ---- CopyOut: CO1 → GM ----
+0258:                 CopyOut(cLocal, mBlockIdx, nBlockIdx);
+0259:             }
+0260:         }
+0261: 
+0262:         // ============================================================
+0263:         // 4. 等待所有同步完成
+0264:         // ============================================================
+0265:         AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(EVENT_ID0);
+0266:         AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(EVENT_ID1);
+0267:         AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(EVENT_ID0);
+0268:         AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(EVENT_ID1);
+0269:         AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(EVENT_ID2);
+0270:         AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(EVENT_ID3);
+0271:     }
+0272: 
+0273:     __aicore__ inline void InitComputeParams()
+0274:     {
+0275:         // ---- 1. 计算当前核在 M/N 方向的迭代索引，确定 GM 起始偏移 ----
+0276:         constexpr uint32_t mIter = AscendC::Std::ceil_div(M, singleCoreM);
+0277:         uint32_t mIterIdx = AscendC::GetBlockIdx() % mIter;
+0278:         uint32_t nIterIdx = AscendC::GetBlockIdx() / mIter;
+0279: 
+0280:         uint64_t gmOffsetA = mIterIdx * singleCoreM * K;
+0281:         uint64_t gmOffsetB = IS_B_TRANSPOSE ? nIterIdx * K * singleCoreN : nIterIdx * singleCoreN;
+0282:         uint64_t gmOffsetC = mIterIdx * singleCoreM * N + nIterIdx * singleCoreN;
+0283:         aGM = aGMOri[gmOffsetA];
+0284:         bGM = bGMOri[gmOffsetB];
+0285:         cGM = cGMOri[gmOffsetC];
+0286: 
+0287:         // ---- 2. 计算当前核实际的 M/N 维度大小（最后一块可能不满 singleCore） ----
+0288:         actualSingleCoreM = M - mIterIdx * singleCoreM;
+0289:         actualSingleCoreM = actualSingleCoreM < singleCoreM ? actualSingleCoreM : singleCoreM;
+0290:         actualSingleCoreN = N - nIterIdx * singleCoreN;
+0291:         actualSingleCoreN = actualSingleCoreN < singleCoreN ? actualSingleCoreN : singleCoreN;
+0292: 
+0293:         // ---- 3. 计算 K/M/N 三个维度的循环次数 ----
+0294:         kLoopCount = AscendC::Std::ceil_div(singleCoreK, baseK);
+0295:         mLoopCount = AscendC::Std::ceil_div(actualSingleCoreM, baseM);
+0296:         nLoopCount = AscendC::Std::ceil_div(actualSingleCoreN, baseN);
+0297: 
+0298:         // ---- 4. 计算 N 方向分块参数：完整 baseN 块数 + 尾块大小及对齐 ----
+0299:         baseNCount = actualSingleCoreN / baseN;
+0300:         tailN = actualSingleCoreN % baseN;
+0301:         tailNAlign = AscendC::Std::ceil_div(tailN, CUBE_BLOCK) * CUBE_BLOCK;
+0302: 
+0303:         // ---- 5. 计算 M 方向分块参数：完整 baseM 块数 + 尾块大小及对齐 ----
+0304:         baseMCount = actualSingleCoreM / baseM;
+0305:         tailM = actualSingleCoreM % baseM;
+0306:         tailMAlign = AscendC::Std::ceil_div(tailM, CUBE_BLOCK) * CUBE_BLOCK;
+0307:     }
+0308: 
+0309:     // 根据子块索引设置当前子块的全部计算参数
+0310:     // mIterIdx: 当前核在 M 方向的子块索引
+0311:     // nIterIdx: 当前核在 N 方向的子块索引
+0312:     __aicore__ inline void InitComputeParamsL2Cache(uint32_t mIterIdx, uint32_t nIterIdx)
+0313:     {
+0314:         // ----  计算当前子块在 GM 中的起始偏移 ----
+0315:         // aGM/bGM/cGM 指向当前子块起始位置，后续 DataCopyIn/CopyOut 基于该偏移寻址
+0316:         uint64_t gmOffsetA = mIterIdx * singleCoreM * K;
+0317:         uint64_t gmOffsetB = IS_B_TRANSPOSE ? nIterIdx * K * singleCoreN : nIterIdx * singleCoreN;
+0318:         uint64_t gmOffsetC = mIterIdx * singleCoreM * N + nIterIdx * singleCoreN;
+0319:         aGM = aGMOri[gmOffsetA];
+0320:         bGM = bGMOri[gmOffsetB];
+0321:         cGM = cGMOri[gmOffsetC];
+0322: 
+0323:         actualSingleCoreM = M - mIterIdx * singleCoreM;
+0324:         actualSingleCoreM = actualSingleCoreM < singleCoreM ? actualSingleCoreM : singleCoreM;
+0325:         actualSingleCoreN = N - nIterIdx * singleCoreN;
+0326:         actualSingleCoreN = actualSingleCoreN < singleCoreN ? actualSingleCoreN : singleCoreN;
+0327: 
+0328:         kLoopCount = AscendC::Std::ceil_div(singleCoreK, baseK);
+0329:         mLoopCount = AscendC::Std::ceil_div(actualSingleCoreM, baseM);
+0330:         nLoopCount = AscendC::Std::ceil_div(actualSingleCoreN, baseN);
+0331:         baseNCount = actualSingleCoreN / baseN;
+0332:         tailN = actualSingleCoreN % baseN;
+0333:         tailNAlign = AscendC::Std::ceil_div(tailN, CUBE_BLOCK) * CUBE_BLOCK;
+0334: 
+0335:         baseMCount = actualSingleCoreM / baseM;
+0336:         tailM = actualSingleCoreM % baseM;
+0337:         tailMAlign = AscendC::Std::ceil_div(tailM, CUBE_BLOCK) * CUBE_BLOCK;
+0338:     }
+0339: 
+0340:     // GM → A1: 将 A 矩阵的一个大包 (stepKa 个 baseK) 搬入 L1
+0341:     // kChunkIdx: K 方向大包索引，用于计算 GM 读取偏移
+0342:     // mBlockIdx: M 方向 baseM 块索引，用于计算 GM 读取偏移及判断尾块
+0343:     __aicore__ inline void DataCopyInA(AscendC::LocalTensor<half> a1Local, uint32_t kChunkIdx, uint32_t mBlockIdx)
+0344:     {
+0345:         // 尾块使用 tailM，否则使用 baseM
+0346:         uint32_t curM = (mBlockIdx != baseMCount) ? baseM : tailM;
+0347:         AscendC::Nd2NzParams nd2nzParams;
+0348:         nd2nzParams.ndNum = 1;
+0349:         nd2nzParams.nValue = curM;
+0350:         nd2nzParams.dValue = baseK * stepKa;
+0351:         nd2nzParams.srcNdMatrixStride = 0;
+0352:         nd2nzParams.srcDValue = K;
+0353:         nd2nzParams.dstNzC0Stride = baseM;
+0354:         nd2nzParams.dstNzNStride = 1;
+0355:         nd2nzParams.dstNzMatrixStride = 0;
+0356:         AscendC::DataCopy(a1Local, aGM[kChunkIdx * baseK + mBlockIdx * K * baseM], nd2nzParams);
+0357:     }
+0358: 
+0359:     // GM → B1: 将 B 矩阵的一个大包 (stepKb 个 baseK) 搬入 L1
+0360:     // kChunkIdx: K 方向大包索引，用于计算 GM 读取偏移
+0361:     // nBlockIdx: N 方向 baseN 块索引，用于计算 GM 读取偏移及判断尾块
+0362:     __aicore__ inline void DataCopyInB(AscendC::LocalTensor<half> b1Local, uint32_t kChunkIdx, uint32_t nBlockIdx)
+0363:     {
+0364:         // 尾块使用 tailN，否则使用 baseN
+0365:         uint32_t curN = (nBlockIdx != baseNCount) ? baseN : tailN;
+0366:         AscendC::Nd2NzParams nd2nzParams;
+0367:         if constexpr (!IS_B_TRANSPOSE) {
+0368:             // B 非转置
+0369:             nd2nzParams.ndNum = 1;
+0370:             nd2nzParams.nValue = baseK * stepKb;
+0371:             nd2nzParams.dValue = curN;
+0372:             nd2nzParams.srcNdMatrixStride = 0;
+0373:             nd2nzParams.srcDValue = N;
+0374:             nd2nzParams.dstNzC0Stride = baseK * stepKb;
+0375:             nd2nzParams.dstNzNStride = 1;
+0376:             nd2nzParams.dstNzMatrixStride = 0;
+0377:             AscendC::DataCopy(b1Local, bGM[kChunkIdx * baseK * N + nBlockIdx * baseN], nd2nzParams);
+0378:         } else {
+0379:             // B 转置
+0380:             nd2nzParams.ndNum = 1;
+0381:             nd2nzParams.nValue = curN;
+0382:             nd2nzParams.dValue = baseK * stepKb;
+0383:             nd2nzParams.srcNdMatrixStride = 0;
+0384:             nd2nzParams.srcDValue = K;
+0385:             nd2nzParams.dstNzC0Stride = baseN;
+0386:             nd2nzParams.dstNzNStride = 1;
+0387:             nd2nzParams.dstNzMatrixStride = 0;
+0388:             AscendC::DataCopy(b1Local, bGM[kChunkIdx * baseK + nBlockIdx * baseN * K], nd2nzParams);
+0389:         }
+0390:     }
+0391: 
+0392:     // A1 → A2: 将 L1 中的一个 baseM * baseK 切片搬入 L0
+0393:     // mBlockIdx: M 方向 baseM 块索引，用于判断尾块对齐
+0394:     // kOffsetInChunkA: 当前 base块 在大包内的偏移序号 (0 ~ stepKa-1)
+0395:     __aicore__ inline void DataLoadA(
+0396:         AscendC::LocalTensor<half> a1Local, AscendC::LocalTensor<half> a2Local, uint32_t mBlockIdx,
+0397:         uint32_t kOffsetInChunkA)
+0398:     {
+0399:         uint32_t srcAddr = kOffsetInChunkA * baseK * baseM;
+0400:         // 尾块使用对齐后的 tailMAlign，保证 LoadData 地址对齐
+0401:         uint32_t curMAlign = (mBlockIdx != baseMCount) ? baseM : tailMAlign;
+0402: #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 2201)
+0403:         AscendC::LoadData3DParamsV2<half> loadDataParams;
+0404:         loadDataParams.l1H = 1;
+0405:         loadDataParams.l1W = baseM;
+0406:         loadDataParams.channelSize = baseK;
+0407:         loadDataParams.kExtension = baseK;
+0408:         loadDataParams.mExtension = curMAlign;
+0409:         loadDataParams.mStartPt = 0;
+0410:         loadDataParams.kStartPt = 0;
+0411:         AscendC::LoadData(a2Local, a1Local[srcAddr], loadDataParams);
+0412: #elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+0413:         AscendC::LoadData2DParamsV2 loadDataParams;
+0414:         loadDataParams.mStartPosition = 0;
+0415:         loadDataParams.kStartPosition = 0;
+0416:         loadDataParams.mStep = AscendC::Std::ceil_div(curMAlign, CUBE_BLOCK);
+0417:         loadDataParams.kStep = AscendC::Std::ceil_div(baseK, CUBE_BLOCK);
+0418:         loadDataParams.srcStride = AscendC::Std::ceil_div(baseM, CUBE_BLOCK);
+0419:         loadDataParams.dstStride = AscendC::Std::ceil_div(curMAlign, CUBE_BLOCK);
+0420:         loadDataParams.sid = 0;
+0421:         loadDataParams.ifTranspose = false;
+0422:         AscendC::LoadData(a2Local, a1Local[srcAddr], loadDataParams);
+0423: #endif
+0424:     }
+0425: 
+0426:     // B1 → B2: 将 L1 中的一个 baseK * baseN 切片搬入 L0
+0427:     // nBlockIdx: N 方向 baseN 块索引，用于判断尾块对齐
+0428:     // kOffsetInChunkB: 当前 base块 在大包内的偏移序号 (0 ~ stepKb-1)
+0429:     __aicore__ inline void DataLoadB(
+0430:         AscendC::LocalTensor<half> b1Local, AscendC::LocalTensor<half> b2Local, uint32_t nBlockIdx,
+0431:         uint32_t kOffsetInChunkB)
+0432:     {
+0433:         uint32_t srcAddr = kOffsetInChunkB * baseK * (IS_B_TRANSPOSE ? baseN : CUBE_BLOCK);
+0434:         // 尾块使用对齐后的 tailNAlign，保证 LoadData 地址对齐
+0435:         uint32_t curNAlign = (nBlockIdx != baseNCount) ? baseN : tailNAlign;
+0436: #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 2201)
+0437:         if constexpr (!IS_B_TRANSPOSE) {
+0438:             // B 非转置: 使用 LoadData（卷积数据搬运）v2 完成 [K, N] → [N, K] 转置搬运
+0439:             AscendC::LoadData3DParamsV2<half> loadDataParams;
+0440:             loadDataParams.l1H = 1;
+0441:             loadDataParams.l1W = baseK * stepKb;
+0442:             loadDataParams.channelSize = baseN;
+0443:             loadDataParams.kExtension = curNAlign;
+0444:             loadDataParams.mExtension = baseK;
+0445:             loadDataParams.mStartPt = kOffsetInChunkB * baseK;
+0446:             loadDataParams.kStartPt = 0;
+0447:             loadDataParams.strideW = 1;
+0448:             loadDataParams.strideH = 1;
+0449:             loadDataParams.filterW = 1;
+0450:             loadDataParams.filterH = 1;
+0451:             loadDataParams.dilationFilterW = 1;
+0452:             loadDataParams.dilationFilterH = 1;
+0453:             loadDataParams.filterSizeW = false;
+0454:             loadDataParams.filterSizeH = false;
+0455:             loadDataParams.enTranspose = true;
+0456:             loadDataParams.fMatrixCtrl = false;
+0457:             AscendC::LoadData(b2Local, b1Local, loadDataParams);
+0458:         } else {
+0459:             // B 转置: 按 CUBE_BLOCK 粒度逐块搬入 L0，无需转置
+0460:             AscendC::LoadData2DParams loadDataParams;
+0461:             uint32_t dstOffset = curNAlign * CUBE_BLOCK;
+0462:             uint32_t srcOffset = baseN * CUBE_BLOCK;
+0463:             loadDataParams.repeatTimes = AscendC::Std::ceil_div(curNAlign, CUBE_BLOCK);
+0464:             loadDataParams.srcStride = 1;
+0465:             loadDataParams.dstGap = 0;
+0466:             loadDataParams.ifTranspose = false;
+0467:             for (int i = 0; i < AscendC::Std::ceil_div(baseK, CUBE_BLOCK); ++i) {
+0468:                 AscendC::LoadData(b2Local[i * dstOffset], b1Local[srcAddr + i * srcOffset], loadDataParams);
+0469:             }
+0470:         }
+0471: #elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+0472:         if constexpr (!IS_B_TRANSPOSE) {
+0473:             // B 非转置: 使用 LoadData2D V2 完成 [K, N] → [N, K] 转置搬运
+0474:             AscendC::LoadData2DParamsV2 loadDataParams;
+0475:             loadDataParams.mStartPosition = 0;
+0476:             loadDataParams.kStartPosition = 0;
+0477:             loadDataParams.mStep = AscendC::Std::ceil_div(baseK, CUBE_BLOCK);
+0478:             loadDataParams.kStep = AscendC::Std::ceil_div(curNAlign * sizeof(half), 32);
+0479:             loadDataParams.srcStride = AscendC::Std::ceil_div(baseK * stepKb, CUBE_BLOCK);
+0480:             loadDataParams.dstStride = AscendC::Std::ceil_div(curNAlign, CUBE_BLOCK);
+0481:             loadDataParams.ifTranspose = true;
+0482:             AscendC::LoadData(b2Local, b1Local[srcAddr], loadDataParams);
+0483:         } else {
+0484:             // B 转置: 无需转置，直接按块搬运
+0485:             AscendC::LoadData2DParamsV2 loadDataParams;
+0486:             loadDataParams.mStartPosition = 0;
+0487:             loadDataParams.kStartPosition = 0;
+0488:             loadDataParams.mStep = AscendC::Std::ceil_div(curNAlign, CUBE_BLOCK);
+0489:             loadDataParams.kStep = AscendC::Std::ceil_div(baseK * sizeof(half), 32);
+0490:             loadDataParams.srcStride = AscendC::Std::ceil_div(baseN, CUBE_BLOCK);
+0491:             loadDataParams.dstStride = AscendC::Std::ceil_div(curNAlign, CUBE_BLOCK);
+0492:             loadDataParams.ifTranspose = false;
+0493:             AscendC::LoadData(b2Local, b1Local[srcAddr], loadDataParams);
+0494:         }
+0495: #endif
+0496:     }
+0497: 
+0498:     // A2 * B2 → CO1: 执行一次 Mmad 矩阵乘累加,A矩阵大小baseM * baseK,B矩阵baseK * baseN
+0499:     // kBlockIdx: K 方向 baseK 块索引，用于判断是否首次累加
+0500:     // mBlockIdx/nBlockIdx: M/N 方向块索引，用于判断尾块实际尺寸
+0501:     __aicore__ inline void Compute(
+0502:         AscendC::LocalTensor<float> cLocal, AscendC::LocalTensor<half> a2Local, AscendC::LocalTensor<half> b2Local,
+0503:         uint32_t kBlockIdx, uint32_t mBlockIdx, uint32_t nBlockIdx)
+0504:     {
+0505:         // MTE1_M 正向同步：等待 MTE1 完成 L1 → L0 搬运
+0506:         AscendC::SetFlag<AscendC::HardEvent::MTE1_M>(mte1DBFlag);
+0507:         AscendC::WaitFlag<AscendC::HardEvent::MTE1_M>(mte1DBFlag);
+0508:         // 尾块使用 tailM/tailN，否则使用 baseM/baseN
+0509:         uint32_t curM = (mBlockIdx != baseMCount) ? baseM : tailM;
+0510:         uint32_t curN = (nBlockIdx != baseNCount) ? baseN : tailN;
+0511:         AscendC::MmadParams mmadParams;
+0512:         mmadParams.m = curM;
+0513:         mmadParams.n = curN;
+0514:         mmadParams.k = baseK;
+0515:         mmadParams.cmatrixInitVal = (kBlockIdx == 0);
+0516:         mmadParams.unitFlag = (kBlockIdx != kLoopCount - 1) ? 2 : 3; // 开启UnitFlag
+0517:         AscendC::Mmad(cLocal, a2Local, b2Local, mmadParams);
+0518:         // M_MTE1 反向同步：通知下一轮 DataLoad 可以覆盖 L0 缓冲区
+0519:         AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(mte1DBFlag);
+0520:         mte1DBFlag ^= 1;
+0521:     }
+0522: 
+0523:     // CO1 → GM: 将计算结果从 L0C 写回 Global Memory
+0524:     // mBlockIdx/nBlockIdx: M/N 方向块索引，用于计算 GM 写入偏移及判断尾块尺寸
+0525:     __aicore__ inline void CopyOut(AscendC::LocalTensor<float> cLocal, uint32_t mBlockIdx, uint32_t nBlockIdx)
+0526:     {
+0527:         // 尾块使用对齐后的 tailMAlign 作为 srcStride，使用 tailM/tailN 作为实际行列数
+0528:         uint32_t curMAlign = (mBlockIdx != baseMCount) ? baseM : tailMAlign;
+0529:         uint32_t curM = (mBlockIdx != baseMCount) ? baseM : tailM;
+0530:         uint32_t curN = (nBlockIdx != baseNCount) ? baseN : tailN;
+0531:         AscendC::FixpipeParamsV220 fixpipeParams;
+0532:         fixpipeParams.nSize = curN;
+0533:         fixpipeParams.mSize = curM;
+0534:         fixpipeParams.srcStride = curMAlign;
+0535:         fixpipeParams.dstStride = N;
+0536:         fixpipeParams.quantPre = QuantMode_t::F322F16;
+0537:         fixpipeParams.ndNum = 1;
+0538:         fixpipeParams.srcNdStride = 0;
+0539:         fixpipeParams.dstNdStride = 0;
+0540:         fixpipeParams.unitFlag = 3;
+0541:         AscendC::Fixpipe(cGM[mBlockIdx * baseM * N + nBlockIdx * baseN], cLocal, fixpipeParams);
+0542:     }
+0543: 
+0544: private:
+0545:     AscendC::GlobalTensor<half> aGM;
+0546:     AscendC::GlobalTensor<half> bGM;
+0547:     AscendC::GlobalTensor<half> cGM;
+0548:     AscendC::GlobalTensor<half> aGMOri;
+0549:     AscendC::GlobalTensor<half> bGMOri;
+0550:     AscendC::GlobalTensor<half> cGMOri;
+0551:     uint32_t actualSingleCoreM, actualSingleCoreN;
+0552:     uint32_t mLoopCount, nLoopCount, kLoopCount;
+0553:     uint32_t baseMCount, baseNCount;
+0554:     uint32_t tailM, tailN;
+0555:     uint32_t tailMAlign, tailNAlign;
+0556:     uint8_t mte1DBFlag = 0;
+0557: };
+0558: 
+0559: template <
+0560:     uint32_t M, uint32_t K, uint32_t N, uint32_t baseM, uint32_t baseK, uint32_t baseN, uint32_t singleCoreM,
+0561:     uint32_t singleCoreK, uint32_t singleCoreN, uint32_t stepKa, uint32_t stepKb>
+0562: __global__ __cube__ void mmad_custom(__gm__ uint8_t* a, __gm__ uint8_t* b, __gm__ uint8_t* c)
+0563: {
+0564:     AscendC::InitSocState();
+0565:     KernelMmad<M, K, N, baseM, baseK, baseN, singleCoreM, singleCoreK, singleCoreN, stepKa, stepKb> op;
+0566:     op.Init(a, b, c);
+0567:     if constexpr (scenarioNum == 1) {
+0568:         op.Process();
+0569:     } else if constexpr (scenarioNum == 2) {
+0570:         op.ProcessL2Cache();
+0571:     }
+0572:     AscendC::PipeBarrier<PIPE_ALL>();
+0573: }
+0574: 
+0575: int32_t main(int32_t argc, char* argv[])
+0576: {
+0577:     constexpr uint32_t M = 8192;
+0578:     constexpr uint32_t K = 8192;
+0579:     constexpr uint32_t N = 8192;
+0580:     constexpr uint32_t baseK = 64;
+0581:     constexpr uint32_t baseN = 256;
+0582:     constexpr uint32_t singleCoreK = 8192;
+0583:     constexpr uint32_t stepKb = 4;
+0584:     constexpr uint32_t singleCoreM = (scenarioNum == 1) ? 2048 : 1024;
+0585: 
+0586: #if (NPU_ARCH == 2201)
+0587:     constexpr uint32_t baseM = 128;
+0588:     constexpr uint32_t stepKa = 8;
+0589:     constexpr uint32_t singleCoreN = 1536;
+0590:     constexpr uint32_t numBlocks = 24;
+0591: #elif (NPU_ARCH == 3510)
+0592:     constexpr uint32_t baseM = 256;
+0593:     constexpr uint32_t stepKa = 4;
+0594:     constexpr uint32_t singleCoreN = 1024;
+0595:     constexpr uint32_t numBlocks = 32;
+0596: #endif
+0597:     size_t aFileSize = M * K * sizeof(int16_t);
+0598:     size_t bFileSize = K * N * sizeof(int16_t);
+0599:     size_t cFileSize = M * N * sizeof(int16_t);
+0600: 
+0601:     aclInit(nullptr);
+0602:     int32_t deviceId = 0;
+0603:     aclrtSetDevice(deviceId);
+0604:     aclrtStream stream = nullptr;
+0605:     aclrtCreateStream(&stream);
+0606: 
+0607:     uint8_t* aHost;
+0608:     uint8_t* aDevice;
+0609:     aclrtMallocHost((void**)(&aHost), aFileSize);
+0610:     aclrtMalloc((void**)&aDevice, aFileSize, ACL_MEM_MALLOC_HUGE_FIRST);
+0611:     ReadFile("./input/x1_gm.bin", aFileSize, aHost, aFileSize);
+0612:     aclrtMemcpy(aDevice, aFileSize, aHost, aFileSize, ACL_MEMCPY_HOST_TO_DEVICE);
+0613: 
+0614:     uint8_t* bHost;
+0615:     uint8_t* bDevice;
+0616:     aclrtMallocHost((void**)(&bHost), bFileSize);
+0617:     aclrtMalloc((void**)&bDevice, bFileSize, ACL_MEM_MALLOC_HUGE_FIRST);
+0618:     ReadFile("./input/x2_gm.bin", bFileSize, bHost, bFileSize);
+0619:     aclrtMemcpy(bDevice, bFileSize, bHost, bFileSize, ACL_MEMCPY_HOST_TO_DEVICE);
+0620: 
+0621:     uint8_t* cHost;
+0622:     uint8_t* cDevice;
+0623:     aclrtMallocHost((void**)(&cHost), cFileSize);
+0624:     aclrtMalloc((void**)&cDevice, cFileSize, ACL_MEM_MALLOC_HUGE_FIRST);
+0625: 
+0626:     mmad_custom<M, K, N, baseM, baseK, baseN, singleCoreM, singleCoreK, singleCoreN, stepKa, stepKb>
+0627:         <<<numBlocks, 0, stream>>>(aDevice, bDevice, cDevice);
+0628:     aclrtSynchronizeStream(stream);
+0629: 
+0630:     aclrtMemcpy(cHost, cFileSize, cDevice, cFileSize, ACL_MEMCPY_DEVICE_TO_HOST);
+0631:     WriteFile("./output/output.bin", cHost, cFileSize);
+0632: 
+0633:     aclrtFree(aDevice);
+0634:     aclrtFreeHost(aHost);
+0635:     aclrtFree(bDevice);
+0636:     aclrtFreeHost(bHost);
+0637:     aclrtFree(cDevice);
+0638:     aclrtFreeHost(cHost);
+0639: 
+0640:     aclrtDestroyStream(stream);
+0641:     aclrtResetDevice(deviceId);
+0642:     aclFinalize();
+0643:     return 0;
+0644: }
+
+=== SOURCE FILE: source/variant/data_utils.h ; sha256=0c8bc9d0f357c27171b1cc25f403922be475a9234cfc9675ee3be1229706745c ===
+0001: /**
+0002:  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+0003:  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+0004:  * CANN Open Software License Agreement Version 2.0 (the "License").
+0005:  * Please refer to the License for details. You may not use this file except in compliance with the License.
+0006:  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+0007:  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+0008:  * See LICENSE in the root of the software repository for the full text of the License.
+0009:  */
+0010: 
+0011: /* !
+0012:  * \file data_utils.h
+0013:  * \brief Utility functions for reading and writing binary files
+0014:  */
+0015: 
+0016: #ifndef DATA_UTILS_H
+0017: #define DATA_UTILS_H
+0018: #include <fcntl.h>
+0019: #include <sys/stat.h>
+0020: #include <unistd.h>
+0021: #include <fstream>
+0022: 
+0023: #define ERROR_LOG(fmt, args...) fprintf(stdout, "[ERROR]  " fmt "\n", ##args)
+0024: 
+0025: bool ReadFile(const std::string& filePath, size_t& fileSize, void* buffer, size_t bufferSize)
+0026: {
+0027:     struct stat sBuf;
+0028:     int fileStatus = stat(filePath.data(), &sBuf);
+0029:     if (fileStatus == -1) {
+0030:         ERROR_LOG("failed to get file");
+0031:         return false;
+0032:     }
+0033:     if (S_ISREG(sBuf.st_mode) == 0) {
+0034:         ERROR_LOG("%s is not a file, please enter a file", filePath.c_str());
+0035:         return false;
+0036:     }
+0037: 
+0038:     std::ifstream file;
+0039:     file.open(filePath, std::ios::binary);
+0040:     if (!file.is_open()) {
+0041:         ERROR_LOG("Open file failed. path = %s", filePath.c_str());
+0042:         return false;
+0043:     }
+0044: 
+0045:     std::filebuf* buf = file.rdbuf();
+0046:     size_t size = buf->pubseekoff(0, std::ios::end, std::ios::in);
+0047:     if (size == 0) {
+0048:         ERROR_LOG("file size is 0");
+0049:         file.close();
+0050:         return false;
+0051:     }
+0052:     if (size > bufferSize) {
+0053:         ERROR_LOG("file size is larger than buffer size");
+0054:         file.close();
+0055:         return false;
+0056:     }
+0057:     buf->pubseekpos(0, std::ios::in);
+0058:     buf->sgetn(static_cast<char*>(buffer), size);
+0059:     fileSize = size;
+0060:     file.close();
+0061:     return true;
+0062: }
+0063: 
+0064: bool WriteFile(const std::string& filePath, const void* buffer, size_t size)
+0065: {
+0066:     if (buffer == nullptr) {
+0067:         ERROR_LOG("Write file failed. buffer is nullptr");
+0068:         return false;
+0069:     }
+0070: 
+0071:     int fd = open(filePath.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWRITE);
+0072:     if (fd < 0) {
+0073:         ERROR_LOG("Open file failed. path = %s", filePath.c_str());
+0074:         return false;
+0075:     }
+0076: 
+0077:     size_t writeSize = write(fd, buffer, size);
+0078:     (void)close(fd);
+0079:     if (writeSize != size) {
+0080:         ERROR_LOG("Write file Failed.");
+0081:         return false;
+0082:     }
+0083: 
+0084:     return true;
+0085: }
+0086: #endif // DATA_UTILS_H
+
+=== SOURCE FILE: source/variant/mmad.asc ; sha256=93bba231d206c149d8ea7f151673e87c5dae03a69588bb5987b946e6364dc707 ===
+0001: /**
+0002:  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+0003:  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+0004:  * CANN Open Software License Agreement Version 2.0 (the "License").
+0005:  * Please refer to the License for details. You may not use this file except in compliance with the License.
+0006:  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+0007:  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+0008:  * See LICENSE in the root of the software repository for the full text of the License.
+0009:  */
+0010: 
+0011: /* !
+0012:  * \file mmad.asc
+0013:  * \brief matmul基础API最佳实践样例
+0014:  */
+0015: 
+0016: #include "acl/acl.h"
+0017: #include "kernel_operator.h"
+0018: #include "utils/std/cmath.h"
+0019: #include "data_utils.h"
+0020: 
+0021: // half type, cube block: [16, 16]
+0022: constexpr uint32_t CUBE_BLOCK = 16;
+0023: constexpr uint32_t CUBE_BLOCK_SIZE = 16 * 16;
+0024: constexpr uint32_t L0_PINGPONG_BYTES = 32 * 1024;
+0025: constexpr uint32_t L1_PINGPONG_BYTES = 256 * 1024;
+0026: constexpr bool IS_B_TRANSPOSE = true;
+0027: constexpr uint32_t scenarioNum = SCENARIO_NUM;
+0028: 
+0029: template <
+0030:     uint32_t M, uint32_t K, uint32_t N, uint32_t baseM, uint32_t baseK, uint32_t baseN, uint32_t singleCoreM,
+0031:     uint32_t singleCoreK, uint32_t singleCoreN, uint32_t stepKa, uint32_t stepKb>
+0032: class KernelMmad {
+0033: public:
+0034:     __aicore__ inline KernelMmad() {}
+0035: 
+0036:     __aicore__ inline void Init(__gm__ uint8_t* a, __gm__ uint8_t* b, __gm__ uint8_t* c)
+0037:     {
+0038:         aGMOri.SetGlobalBuffer((__gm__ half*)a);
+0039:         bGMOri.SetGlobalBuffer((__gm__ half*)b);
+0040:         cGMOri.SetGlobalBuffer((__gm__ half*)c);
+0041:     }
+0042: 
+0043:     __aicore__ inline void Process()
+0044:     {
+0045:         InitComputeParams();
+0046: 
+0047:         // ============================================================
+0048:         // 1. Buffer 分配：L1 / L0 双缓冲 Ping-Pong 布局
+0049:         // ============================================================
+0050:         // L1: A1 Ping/Pong (0~256KB), B1 Ping/Pong (256~512KB)
+0051:         // L0: A2/B2 Ping/Pong (0~32KB / 32KB~64KB)
+0052:         uint32_t a1PingpongSize = baseM * baseK * stepKa;
+0053:         uint32_t b1PingpongSize = baseK * baseN * stepKb;
+0054:         uint32_t a2PingpongSize = baseM * baseK;
+0055:         uint32_t b2PingpongSize = baseK * baseN;
+0056: 
+0057:         // A1: L1 Ping/Pong
+0058:         AscendC::LocalTensor<half> a1LocalPing(AscendC::TPosition::A1, 0, a1PingpongSize);
+0059:         AscendC::LocalTensor<half> a1LocalPong(AscendC::TPosition::A1, a1PingpongSize * sizeof(half), a1PingpongSize);
+0060:         // A2: L0 Ping/Pong
+0061:         AscendC::LocalTensor<half> a2LocalPing(AscendC::TPosition::A2, 0, a2PingpongSize);
+0062:         AscendC::LocalTensor<half> a2LocalPong(AscendC::TPosition::A2, L0_PINGPONG_BYTES, a2PingpongSize);
+0063: 
+0064:         // B1: L1 Ping/Pong
+0065:         AscendC::LocalTensor<half> b1LocalPing(AscendC::TPosition::B1, L1_PINGPONG_BYTES, b1PingpongSize);
+0066:         AscendC::LocalTensor<half> b1LocalPong(
+0067:             AscendC::TPosition::B1, L1_PINGPONG_BYTES + b1PingpongSize * sizeof(half), b1PingpongSize);
+0068:         // B2: L0 Ping/Pong
+0069:         AscendC::LocalTensor<half> b2LocalPing(AscendC::TPosition::B2, 0, b2PingpongSize);
+0070:         AscendC::LocalTensor<half> b2LocalPong(AscendC::TPosition::B2, L0_PINGPONG_BYTES, b2PingpongSize);
+0071:         // CO1: L0C
+0072:         AscendC::LocalTensor<float> cLocal(AscendC::TPosition::CO1, 0, baseM * baseN);
+0073: 
+0074:         ProcessLoop(
+0075:             a1LocalPing, a1LocalPong, a2LocalPing, a2LocalPong, b1LocalPing, b1LocalPong, b2LocalPing, b2LocalPong,
+0076:             cLocal);
+0077:     }
+0078: 
+0079:     // ============================================================
+0080:     // L2 Cache 优化：双重外层循环（M 维度 + N 维度分批）
+0081:     // ============================================================
+0082:     __aicore__ inline void ProcessL2Cache()
+0083:     {
+0084:         // ---- Step 1: Buffer 分配：L1 / L0 双缓冲 Ping-Pong 布局
+0085:         uint32_t a1PingpongSize = baseM * baseK * stepKa;
+0086:         uint32_t b1PingpongSize = baseK * baseN * stepKb;
+0087:         uint32_t a2PingpongSize = baseM * baseK;
+0088:         uint32_t b2PingpongSize = baseK * baseN;
+0089: 
+0090:         AscendC::LocalTensor<half> a1LocalPing(AscendC::TPosition::A1, 0, a1PingpongSize);
+0091:         AscendC::LocalTensor<half> a1LocalPong(AscendC::TPosition::A1, a1PingpongSize * sizeof(half), a1PingpongSize);
+0092:         AscendC::LocalTensor<half> a2LocalPing(AscendC::TPosition::A2, 0, a2PingpongSize);
+0093:         AscendC::LocalTensor<half> a2LocalPong(AscendC::TPosition::A2, L0_PINGPONG_BYTES, a2PingpongSize);
+0094: 
+0095:         AscendC::LocalTensor<half> b1LocalPing(AscendC::TPosition::B1, L1_PINGPONG_BYTES, b1PingpongSize);
+0096:         AscendC::LocalTensor<half> b1LocalPong(
+0097:             AscendC::TPosition::B1, L1_PINGPONG_BYTES + b1PingpongSize * sizeof(half), b1PingpongSize);
+0098:         AscendC::LocalTensor<half> b2LocalPing(AscendC::TPosition::B2, 0, b2PingpongSize);
+0099:         AscendC::LocalTensor<half> b2LocalPong(AscendC::TPosition::B2, L0_PINGPONG_BYTES, b2PingpongSize);
+0100:         AscendC::LocalTensor<float> cLocal(AscendC::TPosition::CO1, 0, baseM * baseN);
+0101: 
+0102:         // ---- Step 2: 计算分批参数 ----
+0103:         // mIterTotal/nIterTotal: M/N 方向总共需要多少个 singleCore 大小的子块
+0104:         constexpr uint32_t mIterTotal = AscendC::Std::ceil_div(M, singleCoreM);
+0105:         constexpr uint32_t nIterTotal = AscendC::Std::ceil_div(N, singleCoreN);
+0106:         // 每轮 numBlocks 核覆盖的 M 份数
+0107:         constexpr uint32_t mIterPerRound = AscendC::Std::ceil_div(M, singleCoreM * 2); // 2 轮 M
+0108:         // 外层循环轮数
+0109:         constexpr uint32_t outerMLoopCount = AscendC::Std::ceil_div(mIterTotal, mIterPerRound);
+0110: 
+0111:         // ---- Step 3: outerMIdx/outerNIdx 外层循环 ----
+0112:         for (uint32_t outerMIdx = 0; outerMIdx < outerMLoopCount; outerMIdx++) {
+0113:             //   根据核索引 blockIdx 计算当前核在本轮负责的子块坐标
+0114:             //   mIterIdx = blockIdx 在 M 方向的偏移 + 本轮的 M 起始偏移
+0115:             //   nIterIdx = blockIdx 在 N 方向的偏移
+0116:             uint32_t mIterIdx = AscendC::GetBlockIdx() % mIterPerRound + outerMIdx * mIterPerRound;
+0117:             uint32_t nIterIdx = AscendC::GetBlockIdx() / mIterPerRound;
+0118: 
+0119:             // 边界保护：当 M/N 不能被整除时，最后一轮部分核会超出子块范围，直接跳过
+0120:             if (mIterIdx >= mIterTotal || nIterIdx >= nIterTotal)
+0121:                 continue;
+0122: 
+0123:             // 根据子块坐标计算 GM 偏移、循环次数、尾块参数等
+0124:             InitComputeParamsL2Cache(mIterIdx, nIterIdx);
+0125: 
+0126:             // 执行当前子块的完整 N/M/K 循环计算
+0127:             ProcessLoop(
+0128:                 a1LocalPing, a1LocalPong, a2LocalPing, a2LocalPong, b1LocalPing, b1LocalPong, b2LocalPing, b2LocalPong,
+0129:                 cLocal);
+0130: 
+0131:             // 每轮外层循环后重置双缓冲 flag
+0132:             mte1DBFlag = 0;
+0133:         }
+0134:     }
+0135: 
+0136: private:
+0137:     // N/M/K 主循环：执行当前核的完整计算
+0138:     __aicore__ inline void ProcessLoop(
+0139:         AscendC::LocalTensor<half>& a1LocalPing, AscendC::LocalTensor<half>& a1LocalPong,
+0140:         AscendC::LocalTensor<half>& a2LocalPing, AscendC::LocalTensor<half>& a2LocalPong,
+0141:         AscendC::LocalTensor<half>& b1LocalPing, AscendC::LocalTensor<half>& b1LocalPong,
+0142:         AscendC::LocalTensor<half>& b2LocalPing, AscendC::LocalTensor<half>& b2LocalPong,
+0143:         AscendC::LocalTensor<float>& cLocal)
+0144:     {
+0145:         // ============================================================
+0146:         // 1. DataCopyIn 进度跟踪变量
+0147:         // ============================================================
+0148:         uint32_t a1NextKChunkIdx = 0; // A 下一次 DataCopyIn 要搬的 K 方向大包索引
+0149:         uint32_t b1NextKChunkIdx = 0; // B 下一次 DataCopyIn 要搬的 K 方向大包索引
+0150:         uint8_t a1CopyInIdx = 0;      // A 下一次 DataCopyIn 写入的 L1 buffer 索引 (0=Ping, 1=Pong)
+0151:         uint8_t b1CopyInIdx = 0;      // B 下一次 DataCopyIn 写入的 L1 buffer 索引 (0=Ping, 1=Pong)
+0152: 
+0153:         // ============================================================
+0154:         // 2. 同步标志初始化：反向同步需预置，防止首次 WaitFlag 死锁
+0155:         // ============================================================
+0156:         // MTE1_MTE2 (反向): DataCopyIn 可覆盖通知
+0157:         //   EVENT_ID0: A1 Ping 可写 | EVENT_ID1: A1 Pong 可写
+0158:         //   EVENT_ID2: B1 Ping 可写 | EVENT_ID3: B1 Pong 可写
+0159:         AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(EVENT_ID0);
+0160:         AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(EVENT_ID1);
+0161:         AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(EVENT_ID2);
+0162:         AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(EVENT_ID3);
+0163:         // M_MTE1 (反向): L0 双缓冲，DataLoad 可覆盖通知
+0164:         AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(EVENT_ID0);
+0165:         AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(EVENT_ID1);
+0166: 
+0167:         // ============================================================
+0168:         // 3. N/M 外层循环 + K 主循环
+0169:         // ============================================================
+0170:         for (uint32_t nBlockIdx = 0; nBlockIdx < nLoopCount; nBlockIdx++) {
+0171:             for (uint32_t mBlockIdx = 0; mBlockIdx < mLoopCount; mBlockIdx++) {
+0172:                 // 每个 (mBlockIdx, nBlockIdx) 子块重置 DataCopyIn 进度
+0173:                 a1NextKChunkIdx = 0;
+0174:                 b1NextKChunkIdx = 0;
+0175:                 a1CopyInIdx = 0;
+0176:                 b1CopyInIdx = 0;
+0177: 
+0178:                 // ---- 搬入 A1 Ping 和 B1 Ping 的首个大包 ----
+0179:                 AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(EVENT_ID0); // A1 Ping 可写
+0180:                 DataCopyInA(a1LocalPing, a1NextKChunkIdx, mBlockIdx);
+0181:                 AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(EVENT_ID0); // A1 Ping 数据就绪
+0182:                 a1NextKChunkIdx += stepKa;
+0183:                 a1CopyInIdx ^= 1; // 下次写 Pong
+0184: 
+0185:                 AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(EVENT_ID2); // B1 Ping 可写
+0186:                 DataCopyInB(b1LocalPing, b1NextKChunkIdx, nBlockIdx);
+0187:                 AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(EVENT_ID2); // B1 Ping 数据就绪
+0188:                 b1NextKChunkIdx += stepKb;
+0189:                 b1CopyInIdx ^= 1; // 下次写 Pong
+0190: 
+0191:                 // ---- K 方向主循环 ----
+0192:                 for (uint32_t kBlockIdx = 0; kBlockIdx < kLoopCount; kBlockIdx++) {
+0193:                     // 确定当前 kBlockIdx 对应的 L1 读取缓冲区（Ping/Pong）
+0194:                     uint32_t a1ReadIdx = (kBlockIdx / stepKa) % 2;
+0195:                     uint32_t b1ReadIdx = (kBlockIdx / stepKb) % 2;
+0196:                     uint32_t kOffsetInChunkA = kBlockIdx % stepKa;
+0197:                     uint32_t kOffsetInChunkB = kBlockIdx % stepKb;
+0198: 
+0199:                     AscendC::LocalTensor<half> a1ReadBuf = (a1ReadIdx == 0) ? a1LocalPing : a1LocalPong;
+0200:                     AscendC::LocalTensor<half> b1ReadBuf = (b1ReadIdx == 0) ? b1LocalPing : b1LocalPong;
+0201:                     int32_t a1ReadEvent = (a1ReadIdx == 0) ? EVENT_ID0 : EVENT_ID1;
+0202:                     int32_t b1ReadEvent = (b1ReadIdx == 0) ? EVENT_ID2 : EVENT_ID3;
+0203: 
+0204:                     // L0 双缓冲选择
+0205:                     AscendC::LocalTensor<half> a2Local = (mte1DBFlag == 0) ? a2LocalPing : a2LocalPong;
+0206:                     AscendC::LocalTensor<half> b2Local = (mte1DBFlag == 0) ? b2LocalPing : b2LocalPong;
+0207: 
+0208:                     // ---- 反向同步：等待上一轮 Compute 释放 L0 缓冲区 ----
+0209:                     // TEST_DELTA: reverse wait removed in this variant.
+0210: 
+0211:                     // ---- 正向同步：等待 L1 大包数据就绪（仅大包中首元素需等待） ----
+0212:                     if (kOffsetInChunkA == 0) {
+0213:                         AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE1>(a1ReadEvent);
+0214:                     }
+0215:                     if (kOffsetInChunkB == 0) {
+0216:                         AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE1>(b1ReadEvent);
+0217:                     }
+0218: 
+0219:                     // ---- DataLoad: L1 → L0 ----
+0220:                     DataLoadA(a1ReadBuf, a2Local, mBlockIdx, kOffsetInChunkA);
+0221:                     DataLoadB(b1ReadBuf, b2Local, nBlockIdx, kOffsetInChunkB);
+0222: 
+0223:                     // ---- 反向同步：当前 L1 大包消费完毕，通知 DataCopyIn 可覆盖 ----
+0224:                     if ((kOffsetInChunkA + 1) == stepKa) {
+0225:                         AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(a1ReadEvent);
+0226:                     }
+0227:                     if ((kOffsetInChunkB + 1) == stepKb) {
+0228:                         AscendC::SetFlag<AscendC::HardEvent::MTE1_MTE2>(b1ReadEvent);
+0229:                     }
+0230: 
+0231:                     // ---- Compute: Mmad 矩阵乘累加 ----
+0232:                     Compute(cLocal, a2Local, b2Local, kBlockIdx, mBlockIdx, nBlockIdx);
+0233: 
+0234:                     // ---- 搬入下一个 L1 大包，使 DataCopyIn 与 Compute 流水重叠 ----
+0235:                     // 触发条件：
+0236:                     //   (1) kBlockIdx == 0：首个 K 块计算时，A1/B1 Pong 尚未使用，可直接搬入
+0237:                     //   (2) 当前 L1 大包最后一个 baseK 被消费完，该缓冲区可被覆盖
+0238:                     if (((kBlockIdx == 0) || ((kOffsetInChunkB + 1) == stepKb)) && b1NextKChunkIdx < kLoopCount) {
+0239:                         AscendC::LocalTensor<half> b1WriteBuf = (b1CopyInIdx == 0) ? b1LocalPing : b1LocalPong;
+0240:                         int32_t b1WriteEvent = (b1CopyInIdx == 0) ? EVENT_ID2 : EVENT_ID3;
+0241:                         AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(b1WriteEvent);
+0242:                         DataCopyInB(b1WriteBuf, b1NextKChunkIdx, nBlockIdx);
+0243:                         AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(b1WriteEvent);
+0244:                         b1NextKChunkIdx += stepKb;
+0245:                         b1CopyInIdx ^= 1;
+0246:                     }
+0247:                     if (((kBlockIdx == 0) || ((kOffsetInChunkA + 1) == stepKa)) && a1NextKChunkIdx < kLoopCount) {
+0248:                         AscendC::LocalTensor<half> a1WriteBuf = (a1CopyInIdx == 0) ? a1LocalPing : a1LocalPong;
+0249:                         int32_t a1WriteEvent = (a1CopyInIdx == 0) ? EVENT_ID0 : EVENT_ID1;
+0250:                         AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(a1WriteEvent);
+0251:                         DataCopyInA(a1WriteBuf, a1NextKChunkIdx, mBlockIdx);
+0252:                         AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(a1WriteEvent);
+0253:                         a1NextKChunkIdx += stepKa;
+0254:                         a1CopyInIdx ^= 1;
+0255:                     }
+0256:                 }
+0257:                 // ---- CopyOut: CO1 → GM ----
+0258:                 CopyOut(cLocal, mBlockIdx, nBlockIdx);
+0259:             }
+0260:         }
+0261: 
+0262:         // ============================================================
+0263:         // 4. 等待所有同步完成
+0264:         // ============================================================
+0265:         AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(EVENT_ID0);
+0266:         AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(EVENT_ID1);
+0267:         AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(EVENT_ID0);
+0268:         AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(EVENT_ID1);
+0269:         AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(EVENT_ID2);
+0270:         AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(EVENT_ID3);
+0271:     }
+0272: 
+0273:     __aicore__ inline void InitComputeParams()
+0274:     {
+0275:         // ---- 1. 计算当前核在 M/N 方向的迭代索引，确定 GM 起始偏移 ----
+0276:         constexpr uint32_t mIter = AscendC::Std::ceil_div(M, singleCoreM);
+0277:         uint32_t mIterIdx = AscendC::GetBlockIdx() % mIter;
+0278:         uint32_t nIterIdx = AscendC::GetBlockIdx() / mIter;
+0279: 
+0280:         uint64_t gmOffsetA = mIterIdx * singleCoreM * K;
+0281:         uint64_t gmOffsetB = IS_B_TRANSPOSE ? nIterIdx * K * singleCoreN : nIterIdx * singleCoreN;
+0282:         uint64_t gmOffsetC = mIterIdx * singleCoreM * N + nIterIdx * singleCoreN;
+0283:         aGM = aGMOri[gmOffsetA];
+0284:         bGM = bGMOri[gmOffsetB];
+0285:         cGM = cGMOri[gmOffsetC];
+0286: 
+0287:         // ---- 2. 计算当前核实际的 M/N 维度大小（最后一块可能不满 singleCore） ----
+0288:         actualSingleCoreM = M - mIterIdx * singleCoreM;
+0289:         actualSingleCoreM = actualSingleCoreM < singleCoreM ? actualSingleCoreM : singleCoreM;
+0290:         actualSingleCoreN = N - nIterIdx * singleCoreN;
+0291:         actualSingleCoreN = actualSingleCoreN < singleCoreN ? actualSingleCoreN : singleCoreN;
+0292: 
+0293:         // ---- 3. 计算 K/M/N 三个维度的循环次数 ----
+0294:         kLoopCount = AscendC::Std::ceil_div(singleCoreK, baseK);
+0295:         mLoopCount = AscendC::Std::ceil_div(actualSingleCoreM, baseM);
+0296:         nLoopCount = AscendC::Std::ceil_div(actualSingleCoreN, baseN);
+0297: 
+0298:         // ---- 4. 计算 N 方向分块参数：完整 baseN 块数 + 尾块大小及对齐 ----
+0299:         baseNCount = actualSingleCoreN / baseN;
+0300:         tailN = actualSingleCoreN % baseN;
+0301:         tailNAlign = AscendC::Std::ceil_div(tailN, CUBE_BLOCK) * CUBE_BLOCK;
+0302: 
+0303:         // ---- 5. 计算 M 方向分块参数：完整 baseM 块数 + 尾块大小及对齐 ----
+0304:         baseMCount = actualSingleCoreM / baseM;
+0305:         tailM = actualSingleCoreM % baseM;
+0306:         tailMAlign = AscendC::Std::ceil_div(tailM, CUBE_BLOCK) * CUBE_BLOCK;
+0307:     }
+0308: 
+0309:     // 根据子块索引设置当前子块的全部计算参数
+0310:     // mIterIdx: 当前核在 M 方向的子块索引
+0311:     // nIterIdx: 当前核在 N 方向的子块索引
+0312:     __aicore__ inline void InitComputeParamsL2Cache(uint32_t mIterIdx, uint32_t nIterIdx)
+0313:     {
+0314:         // ----  计算当前子块在 GM 中的起始偏移 ----
+0315:         // aGM/bGM/cGM 指向当前子块起始位置，后续 DataCopyIn/CopyOut 基于该偏移寻址
+0316:         uint64_t gmOffsetA = mIterIdx * singleCoreM * K;
+0317:         uint64_t gmOffsetB = IS_B_TRANSPOSE ? nIterIdx * K * singleCoreN : nIterIdx * singleCoreN;
+0318:         uint64_t gmOffsetC = mIterIdx * singleCoreM * N + nIterIdx * singleCoreN;
+0319:         aGM = aGMOri[gmOffsetA];
+0320:         bGM = bGMOri[gmOffsetB];
+0321:         cGM = cGMOri[gmOffsetC];
+0322: 
+0323:         actualSingleCoreM = M - mIterIdx * singleCoreM;
+0324:         actualSingleCoreM = actualSingleCoreM < singleCoreM ? actualSingleCoreM : singleCoreM;
+0325:         actualSingleCoreN = N - nIterIdx * singleCoreN;
+0326:         actualSingleCoreN = actualSingleCoreN < singleCoreN ? actualSingleCoreN : singleCoreN;
+0327: 
+0328:         kLoopCount = AscendC::Std::ceil_div(singleCoreK, baseK);
+0329:         mLoopCount = AscendC::Std::ceil_div(actualSingleCoreM, baseM);
+0330:         nLoopCount = AscendC::Std::ceil_div(actualSingleCoreN, baseN);
+0331:         baseNCount = actualSingleCoreN / baseN;
+0332:         tailN = actualSingleCoreN % baseN;
+0333:         tailNAlign = AscendC::Std::ceil_div(tailN, CUBE_BLOCK) * CUBE_BLOCK;
+0334: 
+0335:         baseMCount = actualSingleCoreM / baseM;
+0336:         tailM = actualSingleCoreM % baseM;
+0337:         tailMAlign = AscendC::Std::ceil_div(tailM, CUBE_BLOCK) * CUBE_BLOCK;
+0338:     }
+0339: 
+0340:     // GM → A1: 将 A 矩阵的一个大包 (stepKa 个 baseK) 搬入 L1
+0341:     // kChunkIdx: K 方向大包索引，用于计算 GM 读取偏移
+0342:     // mBlockIdx: M 方向 baseM 块索引，用于计算 GM 读取偏移及判断尾块
+0343:     __aicore__ inline void DataCopyInA(AscendC::LocalTensor<half> a1Local, uint32_t kChunkIdx, uint32_t mBlockIdx)
+0344:     {
+0345:         // 尾块使用 tailM，否则使用 baseM
+0346:         uint32_t curM = (mBlockIdx != baseMCount) ? baseM : tailM;
+0347:         AscendC::Nd2NzParams nd2nzParams;
+0348:         nd2nzParams.ndNum = 1;
+0349:         nd2nzParams.nValue = curM;
+0350:         nd2nzParams.dValue = baseK * stepKa;
+0351:         nd2nzParams.srcNdMatrixStride = 0;
+0352:         nd2nzParams.srcDValue = K;
+0353:         nd2nzParams.dstNzC0Stride = baseM;
+0354:         nd2nzParams.dstNzNStride = 1;
+0355:         nd2nzParams.dstNzMatrixStride = 0;
+0356:         AscendC::DataCopy(a1Local, aGM[kChunkIdx * baseK + mBlockIdx * K * baseM], nd2nzParams);
+0357:     }
+0358: 
+0359:     // GM → B1: 将 B 矩阵的一个大包 (stepKb 个 baseK) 搬入 L1
+0360:     // kChunkIdx: K 方向大包索引，用于计算 GM 读取偏移
+0361:     // nBlockIdx: N 方向 baseN 块索引，用于计算 GM 读取偏移及判断尾块
+0362:     __aicore__ inline void DataCopyInB(AscendC::LocalTensor<half> b1Local, uint32_t kChunkIdx, uint32_t nBlockIdx)
+0363:     {
+0364:         // 尾块使用 tailN，否则使用 baseN
+0365:         uint32_t curN = (nBlockIdx != baseNCount) ? baseN : tailN;
+0366:         AscendC::Nd2NzParams nd2nzParams;
+0367:         if constexpr (!IS_B_TRANSPOSE) {
+0368:             // B 非转置
+0369:             nd2nzParams.ndNum = 1;
+0370:             nd2nzParams.nValue = baseK * stepKb;
+0371:             nd2nzParams.dValue = curN;
+0372:             nd2nzParams.srcNdMatrixStride = 0;
+0373:             nd2nzParams.srcDValue = N;
+0374:             nd2nzParams.dstNzC0Stride = baseK * stepKb;
+0375:             nd2nzParams.dstNzNStride = 1;
+0376:             nd2nzParams.dstNzMatrixStride = 0;
+0377:             AscendC::DataCopy(b1Local, bGM[kChunkIdx * baseK * N + nBlockIdx * baseN], nd2nzParams);
+0378:         } else {
+0379:             // B 转置
+0380:             nd2nzParams.ndNum = 1;
+0381:             nd2nzParams.nValue = curN;
+0382:             nd2nzParams.dValue = baseK * stepKb;
+0383:             nd2nzParams.srcNdMatrixStride = 0;
+0384:             nd2nzParams.srcDValue = K;
+0385:             nd2nzParams.dstNzC0Stride = baseN;
+0386:             nd2nzParams.dstNzNStride = 1;
+0387:             nd2nzParams.dstNzMatrixStride = 0;
+0388:             AscendC::DataCopy(b1Local, bGM[kChunkIdx * baseK + nBlockIdx * baseN * K], nd2nzParams);
+0389:         }
+0390:     }
+0391: 
+0392:     // A1 → A2: 将 L1 中的一个 baseM * baseK 切片搬入 L0
+0393:     // mBlockIdx: M 方向 baseM 块索引，用于判断尾块对齐
+0394:     // kOffsetInChunkA: 当前 base块 在大包内的偏移序号 (0 ~ stepKa-1)
+0395:     __aicore__ inline void DataLoadA(
+0396:         AscendC::LocalTensor<half> a1Local, AscendC::LocalTensor<half> a2Local, uint32_t mBlockIdx,
+0397:         uint32_t kOffsetInChunkA)
+0398:     {
+0399:         uint32_t srcAddr = kOffsetInChunkA * baseK * baseM;
+0400:         // 尾块使用对齐后的 tailMAlign，保证 LoadData 地址对齐
+0401:         uint32_t curMAlign = (mBlockIdx != baseMCount) ? baseM : tailMAlign;
+0402: #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 2201)
+0403:         AscendC::LoadData3DParamsV2<half> loadDataParams;
+0404:         loadDataParams.l1H = 1;
+0405:         loadDataParams.l1W = baseM;
+0406:         loadDataParams.channelSize = baseK;
+0407:         loadDataParams.kExtension = baseK;
+0408:         loadDataParams.mExtension = curMAlign;
+0409:         loadDataParams.mStartPt = 0;
+0410:         loadDataParams.kStartPt = 0;
+0411:         AscendC::LoadData(a2Local, a1Local[srcAddr], loadDataParams);
+0412: #elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+0413:         AscendC::LoadData2DParamsV2 loadDataParams;
+0414:         loadDataParams.mStartPosition = 0;
+0415:         loadDataParams.kStartPosition = 0;
+0416:         loadDataParams.mStep = AscendC::Std::ceil_div(curMAlign, CUBE_BLOCK);
+0417:         loadDataParams.kStep = AscendC::Std::ceil_div(baseK, CUBE_BLOCK);
+0418:         loadDataParams.srcStride = AscendC::Std::ceil_div(baseM, CUBE_BLOCK);
+0419:         loadDataParams.dstStride = AscendC::Std::ceil_div(curMAlign, CUBE_BLOCK);
+0420:         loadDataParams.sid = 0;
+0421:         loadDataParams.ifTranspose = false;
+0422:         AscendC::LoadData(a2Local, a1Local[srcAddr], loadDataParams);
+0423: #endif
+0424:     }
+0425: 
+0426:     // B1 → B2: 将 L1 中的一个 baseK * baseN 切片搬入 L0
+0427:     // nBlockIdx: N 方向 baseN 块索引，用于判断尾块对齐
+0428:     // kOffsetInChunkB: 当前 base块 在大包内的偏移序号 (0 ~ stepKb-1)
+0429:     __aicore__ inline void DataLoadB(
+0430:         AscendC::LocalTensor<half> b1Local, AscendC::LocalTensor<half> b2Local, uint32_t nBlockIdx,
+0431:         uint32_t kOffsetInChunkB)
+0432:     {
+0433:         uint32_t srcAddr = kOffsetInChunkB * baseK * (IS_B_TRANSPOSE ? baseN : CUBE_BLOCK);
+0434:         // 尾块使用对齐后的 tailNAlign，保证 LoadData 地址对齐
+0435:         uint32_t curNAlign = (nBlockIdx != baseNCount) ? baseN : tailNAlign;
+0436: #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 2201)
+0437:         if constexpr (!IS_B_TRANSPOSE) {
+0438:             // B 非转置: 使用 LoadData（卷积数据搬运）v2 完成 [K, N] → [N, K] 转置搬运
+0439:             AscendC::LoadData3DParamsV2<half> loadDataParams;
+0440:             loadDataParams.l1H = 1;
+0441:             loadDataParams.l1W = baseK * stepKb;
+0442:             loadDataParams.channelSize = baseN;
+0443:             loadDataParams.kExtension = curNAlign;
+0444:             loadDataParams.mExtension = baseK;
+0445:             loadDataParams.mStartPt = kOffsetInChunkB * baseK;
+0446:             loadDataParams.kStartPt = 0;
+0447:             loadDataParams.strideW = 1;
+0448:             loadDataParams.strideH = 1;
+0449:             loadDataParams.filterW = 1;
+0450:             loadDataParams.filterH = 1;
+0451:             loadDataParams.dilationFilterW = 1;
+0452:             loadDataParams.dilationFilterH = 1;
+0453:             loadDataParams.filterSizeW = false;
+0454:             loadDataParams.filterSizeH = false;
+0455:             loadDataParams.enTranspose = true;
+0456:             loadDataParams.fMatrixCtrl = false;
+0457:             AscendC::LoadData(b2Local, b1Local, loadDataParams);
+0458:         } else {
+0459:             // B 转置: 按 CUBE_BLOCK 粒度逐块搬入 L0，无需转置
+0460:             AscendC::LoadData2DParams loadDataParams;
+0461:             uint32_t dstOffset = curNAlign * CUBE_BLOCK;
+0462:             uint32_t srcOffset = baseN * CUBE_BLOCK;
+0463:             loadDataParams.repeatTimes = AscendC::Std::ceil_div(curNAlign, CUBE_BLOCK);
+0464:             loadDataParams.srcStride = 1;
+0465:             loadDataParams.dstGap = 0;
+0466:             loadDataParams.ifTranspose = false;
+0467:             for (int i = 0; i < AscendC::Std::ceil_div(baseK, CUBE_BLOCK); ++i) {
+0468:                 AscendC::LoadData(b2Local[i * dstOffset], b1Local[srcAddr + i * srcOffset], loadDataParams);
+0469:             }
+0470:         }
+0471: #elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+0472:         if constexpr (!IS_B_TRANSPOSE) {
+0473:             // B 非转置: 使用 LoadData2D V2 完成 [K, N] → [N, K] 转置搬运
+0474:             AscendC::LoadData2DParamsV2 loadDataParams;
+0475:             loadDataParams.mStartPosition = 0;
+0476:             loadDataParams.kStartPosition = 0;
+0477:             loadDataParams.mStep = AscendC::Std::ceil_div(baseK, CUBE_BLOCK);
+0478:             loadDataParams.kStep = AscendC::Std::ceil_div(curNAlign * sizeof(half), 32);
+0479:             loadDataParams.srcStride = AscendC::Std::ceil_div(baseK * stepKb, CUBE_BLOCK);
+0480:             loadDataParams.dstStride = AscendC::Std::ceil_div(curNAlign, CUBE_BLOCK);
+0481:             loadDataParams.ifTranspose = true;
+0482:             AscendC::LoadData(b2Local, b1Local[srcAddr], loadDataParams);
+0483:         } else {
+0484:             // B 转置: 无需转置，直接按块搬运
+0485:             AscendC::LoadData2DParamsV2 loadDataParams;
+0486:             loadDataParams.mStartPosition = 0;
+0487:             loadDataParams.kStartPosition = 0;
+0488:             loadDataParams.mStep = AscendC::Std::ceil_div(curNAlign, CUBE_BLOCK);
+0489:             loadDataParams.kStep = AscendC::Std::ceil_div(baseK * sizeof(half), 32);
+0490:             loadDataParams.srcStride = AscendC::Std::ceil_div(baseN, CUBE_BLOCK);
+0491:             loadDataParams.dstStride = AscendC::Std::ceil_div(curNAlign, CUBE_BLOCK);
+0492:             loadDataParams.ifTranspose = false;
+0493:             AscendC::LoadData(b2Local, b1Local[srcAddr], loadDataParams);
+0494:         }
+0495: #endif
+0496:     }
+0497: 
+0498:     // A2 * B2 → CO1: 执行一次 Mmad 矩阵乘累加,A矩阵大小baseM * baseK,B矩阵baseK * baseN
+0499:     // kBlockIdx: K 方向 baseK 块索引，用于判断是否首次累加
+0500:     // mBlockIdx/nBlockIdx: M/N 方向块索引，用于判断尾块实际尺寸
+0501:     __aicore__ inline void Compute(
+0502:         AscendC::LocalTensor<float> cLocal, AscendC::LocalTensor<half> a2Local, AscendC::LocalTensor<half> b2Local,
+0503:         uint32_t kBlockIdx, uint32_t mBlockIdx, uint32_t nBlockIdx)
+0504:     {
+0505:         // MTE1_M 正向同步：等待 MTE1 完成 L1 → L0 搬运
+0506:         AscendC::SetFlag<AscendC::HardEvent::MTE1_M>(mte1DBFlag);
+0507:         AscendC::WaitFlag<AscendC::HardEvent::MTE1_M>(mte1DBFlag);
+0508:         // 尾块使用 tailM/tailN，否则使用 baseM/baseN
+0509:         uint32_t curM = (mBlockIdx != baseMCount) ? baseM : tailM;
+0510:         uint32_t curN = (nBlockIdx != baseNCount) ? baseN : tailN;
+0511:         AscendC::MmadParams mmadParams;
+0512:         mmadParams.m = curM;
+0513:         mmadParams.n = curN;
+0514:         mmadParams.k = baseK;
+0515:         mmadParams.cmatrixInitVal = (kBlockIdx == 0);
+0516:         mmadParams.unitFlag = (kBlockIdx != kLoopCount - 1) ? 2 : 3; // 开启UnitFlag
+0517:         AscendC::Mmad(cLocal, a2Local, b2Local, mmadParams);
+0518:         // M_MTE1 反向同步：通知下一轮 DataLoad 可以覆盖 L0 缓冲区
+0519:         AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(mte1DBFlag);
+0520:         mte1DBFlag ^= 1;
+0521:     }
+0522: 
+0523:     // CO1 → GM: 将计算结果从 L0C 写回 Global Memory
+0524:     // mBlockIdx/nBlockIdx: M/N 方向块索引，用于计算 GM 写入偏移及判断尾块尺寸
+0525:     __aicore__ inline void CopyOut(AscendC::LocalTensor<float> cLocal, uint32_t mBlockIdx, uint32_t nBlockIdx)
+0526:     {
+0527:         // 尾块使用对齐后的 tailMAlign 作为 srcStride，使用 tailM/tailN 作为实际行列数
+0528:         uint32_t curMAlign = (mBlockIdx != baseMCount) ? baseM : tailMAlign;
+0529:         uint32_t curM = (mBlockIdx != baseMCount) ? baseM : tailM;
+0530:         uint32_t curN = (nBlockIdx != baseNCount) ? baseN : tailN;
+0531:         AscendC::FixpipeParamsV220 fixpipeParams;
+0532:         fixpipeParams.nSize = curN;
+0533:         fixpipeParams.mSize = curM;
+0534:         fixpipeParams.srcStride = curMAlign;
+0535:         fixpipeParams.dstStride = N;
+0536:         fixpipeParams.quantPre = QuantMode_t::F322F16;
+0537:         fixpipeParams.ndNum = 1;
+0538:         fixpipeParams.srcNdStride = 0;
+0539:         fixpipeParams.dstNdStride = 0;
+0540:         fixpipeParams.unitFlag = 3;
+0541:         AscendC::Fixpipe(cGM[mBlockIdx * baseM * N + nBlockIdx * baseN], cLocal, fixpipeParams);
+0542:     }
+0543: 
+0544: private:
+0545:     AscendC::GlobalTensor<half> aGM;
+0546:     AscendC::GlobalTensor<half> bGM;
+0547:     AscendC::GlobalTensor<half> cGM;
+0548:     AscendC::GlobalTensor<half> aGMOri;
+0549:     AscendC::GlobalTensor<half> bGMOri;
+0550:     AscendC::GlobalTensor<half> cGMOri;
+0551:     uint32_t actualSingleCoreM, actualSingleCoreN;
+0552:     uint32_t mLoopCount, nLoopCount, kLoopCount;
+0553:     uint32_t baseMCount, baseNCount;
+0554:     uint32_t tailM, tailN;
+0555:     uint32_t tailMAlign, tailNAlign;
+0556:     uint8_t mte1DBFlag = 0;
+0557: };
+0558: 
+0559: template <
+0560:     uint32_t M, uint32_t K, uint32_t N, uint32_t baseM, uint32_t baseK, uint32_t baseN, uint32_t singleCoreM,
+0561:     uint32_t singleCoreK, uint32_t singleCoreN, uint32_t stepKa, uint32_t stepKb>
+0562: __global__ __cube__ void mmad_custom(__gm__ uint8_t* a, __gm__ uint8_t* b, __gm__ uint8_t* c)
+0563: {
+0564:     AscendC::InitSocState();
+0565:     KernelMmad<M, K, N, baseM, baseK, baseN, singleCoreM, singleCoreK, singleCoreN, stepKa, stepKb> op;
+0566:     op.Init(a, b, c);
+0567:     if constexpr (scenarioNum == 1) {
+0568:         op.Process();
+0569:     } else if constexpr (scenarioNum == 2) {
+0570:         op.ProcessL2Cache();
+0571:     }
+0572:     AscendC::PipeBarrier<PIPE_ALL>();
+0573: }
+0574: 
+0575: int32_t main(int32_t argc, char* argv[])
+0576: {
+0577:     constexpr uint32_t M = 8192;
+0578:     constexpr uint32_t K = 8192;
+0579:     constexpr uint32_t N = 8192;
+0580:     constexpr uint32_t baseK = 64;
+0581:     constexpr uint32_t baseN = 256;
+0582:     constexpr uint32_t singleCoreK = 8192;
+0583:     constexpr uint32_t stepKb = 4;
+0584:     constexpr uint32_t singleCoreM = (scenarioNum == 1) ? 2048 : 1024;
+0585: 
+0586: #if (NPU_ARCH == 2201)
+0587:     constexpr uint32_t baseM = 128;
+0588:     constexpr uint32_t stepKa = 8;
+0589:     constexpr uint32_t singleCoreN = 1536;
+0590:     constexpr uint32_t numBlocks = 24;
+0591: #elif (NPU_ARCH == 3510)
+0592:     constexpr uint32_t baseM = 256;
+0593:     constexpr uint32_t stepKa = 4;
+0594:     constexpr uint32_t singleCoreN = 1024;
+0595:     constexpr uint32_t numBlocks = 32;
+0596: #endif
+0597:     size_t aFileSize = M * K * sizeof(int16_t);
+0598:     size_t bFileSize = K * N * sizeof(int16_t);
+0599:     size_t cFileSize = M * N * sizeof(int16_t);
+0600: 
+0601:     aclInit(nullptr);
+0602:     int32_t deviceId = 0;
+0603:     aclrtSetDevice(deviceId);
+0604:     aclrtStream stream = nullptr;
+0605:     aclrtCreateStream(&stream);
+0606: 
+0607:     uint8_t* aHost;
+0608:     uint8_t* aDevice;
+0609:     aclrtMallocHost((void**)(&aHost), aFileSize);
+0610:     aclrtMalloc((void**)&aDevice, aFileSize, ACL_MEM_MALLOC_HUGE_FIRST);
+0611:     ReadFile("./input/x1_gm.bin", aFileSize, aHost, aFileSize);
+0612:     aclrtMemcpy(aDevice, aFileSize, aHost, aFileSize, ACL_MEMCPY_HOST_TO_DEVICE);
+0613: 
+0614:     uint8_t* bHost;
+0615:     uint8_t* bDevice;
+0616:     aclrtMallocHost((void**)(&bHost), bFileSize);
+0617:     aclrtMalloc((void**)&bDevice, bFileSize, ACL_MEM_MALLOC_HUGE_FIRST);
+0618:     ReadFile("./input/x2_gm.bin", bFileSize, bHost, bFileSize);
+0619:     aclrtMemcpy(bDevice, bFileSize, bHost, bFileSize, ACL_MEMCPY_HOST_TO_DEVICE);
+0620: 
+0621:     uint8_t* cHost;
+0622:     uint8_t* cDevice;
+0623:     aclrtMallocHost((void**)(&cHost), cFileSize);
+0624:     aclrtMalloc((void**)&cDevice, cFileSize, ACL_MEM_MALLOC_HUGE_FIRST);
+0625: 
+0626:     mmad_custom<M, K, N, baseM, baseK, baseN, singleCoreM, singleCoreK, singleCoreN, stepKa, stepKb>
+0627:         <<<numBlocks, 0, stream>>>(aDevice, bDevice, cDevice);
+0628:     aclrtSynchronizeStream(stream);
+0629: 
+0630:     aclrtMemcpy(cHost, cFileSize, cDevice, cFileSize, ACL_MEMCPY_DEVICE_TO_HOST);
+0631:     WriteFile("./output/output.bin", cHost, cFileSize);
+0632: 
+0633:     aclrtFree(aDevice);
+0634:     aclrtFreeHost(aHost);
+0635:     aclrtFree(bDevice);
+0636:     aclrtFreeHost(bHost);
+0637:     aclrtFree(cDevice);
+0638:     aclrtFreeHost(cHost);
+0639: 
+0640:     aclrtDestroyStream(stream);
+0641:     aclrtResetDevice(deviceId);
+0642:     aclFinalize();
+0643:     return 0;
+0644: }

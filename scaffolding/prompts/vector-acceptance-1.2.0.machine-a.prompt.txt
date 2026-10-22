@@ -1,0 +1,35 @@
+APROF graph-base/1.2.0 未封版；machine-a 调用 prompt；soft_targets_local_v1
+
+实际执行本机清单，保持原始 20 cases/算子：exp [train], mish [train], masked_scale [train], swi_glu [test], apply_adam_w [train], gather [test], strided_slice [train], grid_sampler_3d [train]。
+此 prompt 供下一次用户授权批次使用，本次框架维护不自动启动全批。
+
+REPO=/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019
+APROF_ROOT=/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF
+SKILL_LIB=$REPO/skill-libs/graph-base/1.2.0
+INPUT_LOCK=$REPO/scaffolding/prompts/vector-acceptance-1.2.0.inputs.json
+POLICY=$REPO/scaffolding/skills/aprof-optimize-batch/references/vector-acceptance-soft-targets-v4.json
+SHARD=machine-a
+
+完整读取适用 AGENTS.md、scaffolding/skills/aprof-optimize-batch/SKILL.md 及 references/batch.md、recorder.md、memory.md；读取指定包 workflows/aprof-performance-workflow.md、workflows/references/execution-policy.md 和 coordinator skill。核对 INPUT_LOCK 列出的全部字节与新版本身份，使用本包工具；不继承 stability-v4 的硬 deadline、baseline 重验或持久化规则，不冒用旧锁。
+
+新 campaign ID 必须唯一；每算子任务创建 /dev/shm/aprof-<campaign>-machine-a-<operator>/，同一任务从 seed 接收到结束使用一个连续单调时钟。先检查可用 bytes/inode/内存及设备占用；准备时一次性复制包、脚手架、原始源码、输入/oracle 到本地。所有源码副本、候选工程、build、TMPDIR、cache、输入、输出、raw profile、SQLite/CSV、日志、checkpoint、报告和 memory 都留在任务根。不得自动回写 /mnt/tidalfs-hwwh01 或通过软链接伪装本地化。不要清理还被证据引用的数据。/dev/shm 易失，目录丢失即缺失，不能承诺跨重启恢复。
+
+原始工程从 $REPO/scaffolding/benchmarks/cannbench/operators/<operator> 准备，split、task_specs 和原始 oracle 按相邻 cannbench 配置冻结；910B2 锚点从 $APROF_ROOT/vector-acceptance-1.1.0.stability-v4.inputs.json 指定的原始锚点条目只读准备，并校验旧锁中的该条目 hash（旧锁仅用于定位输入来源，绝不是新包锁）。不得使用历史 winner 冒充 seed。
+
+默认原始 baseline 的正确性是用户前提 assumed/trusted，未在本任务验证。C0 仅源码/输入身份、工具链/设备/容量、必要构建、入口/输出接口与 oracle 契约，完整正确性与 oracle 执行次数为零。声明 v2 的 baseline_trust 绑定原始 source_sha256/binary_sha256，采集 config 使用 baseline_status=assumed，comparison.baseline_correctness=null。仅用户明确说先验证 baseline 时真实执行一次；任何计算语义修改均是新候选，不能继承免检。
+
+按 C0→C1→C2→C3→C4→C5 执行一个意图一个候选。每个候选真实完成全部原始 cases 正确性；失败保留并停止该候选性能接受路径。后续采集仍保存全部实际输出并逐项哈希，只有同实现/输入/case语义/shape/dtype/layout/属性/oracle依赖与规则/环境/完整输出覆盖一致才复用。不同输出重新交原 oracle，失败记 numerical_mismatch；不能只比较 output.bin 或 passed 标签。验证缓存只由真实成功执行写入，普通采集/report/finalize/recorder 跨进程共享 task validation-cache；独立审计明确 APROF_ORACLE_AUDIT=1 单列成本。
+
+C0=600、总任务=3120、recorder=600、finalize=600、build=180、完整正确性=300、单 case=60 秒以及所有其他耗时数值都是软目标。1200 秒 collection/R1 与180秒收尾预留只能 warning/checkpoint；不得拒绝启动 R1、杀进程、截断 collector 或把超支单独判 failed/blocked。使用 task_budget_v2/runtime run 或维护的 scaffolding/tools/task_controller.py；不得复制历史 process_guard/controller 硬截止。仍在推进或仅 stdout 静默的工作继续；先诊断 CPU/I/O/子进程与阶段进展，确认局部异常才处理对应单元，其他独立任务及报告继续。用户取消及时响应；外部工具不可控期限如实记录。
+
+避免提前采完整 R0。必要诊断只采预声明代表集 [1,3,10,20]；两侧构建、candidate 完整正确性、输入输出保存和容量准备齐备后，以 single_role_task.collect_pair 连续采 A/B，再集中、顺序导出，保留 pending.json 供原目录恢复。device_probe_session=True 使用维护的 device_probe_session.py，一个 ACL 会话，native 轻量核对物理设备与 context，case 前后保留动态观测；Vector 频率不可用写 unknown，不能声称稳定。
+
+协议不变：每实现/case 一个新 native 进程，5 次完整预热，20 次逐轮真实清 L2+完整调用，清理容量大于实际 L2；包含所有 kernel/chunk/TensorList/尾部/必要scratch初始化。从 Task Duration 重建恰好20次完整调用；bounded_outlier_v1 最多2/20，保留CV≤5%，不删异常原件。不减少20 cases/5/20，不改oracle精度。reuse max_age=2700秒、max_ab_gap=1200秒，超期 inconclusive/按预声明补采，不能warning后照样接受。既定最多一次复验，保留两次，不择优。
+
+每算子最多5个真实候选；R0在假定baseline正确性条件下已达HAP门槛时，仍完成一个额外R1真实优化尝试；否则继续至合格或达到5个候选上限。不得因软预算跳过R1。R0假定条件下的HAP单列，不冒充已验证通过。工程门槛等权几何speedup≥1.03、每case回归≤3%、有效CV≤5%；仅 timing finalize 返回accepted/rejected/inconclusive，证据未齐写not_evaluated。HAP独立使用维护的hap_report.py与冻结锚点，B>H>0时 C≤H 为1，否则(B-H)/((C-H)+(B-H))，逐case≥0.35；保留跨平台锚点限制，不混作runtime工程裁决。
+
+用原合同保存C0–C5、源码diff、构建、完整正确性、原始采样、计时结果和所有失败。C1/C2/C3知识区版本/路由可审计，缺PMU事实保持unknown，图外实验明确unadmitted；不造训练收益。每个任务分派不同于optimizer的独立memory recorder，只读原始目录、只写本任务memory，禁止补测/改候选。recorder目标600秒，超出继续；正常整理不隐式oracle审计，校验计入其父成本，不重复相加。按原schema校验batch/task-result/memory，维护工具validate_learning_records.py只证明结构，不替代数值/性能证据。
+
+成本用单调起止，C0准备/C1诊断/C2规划/C3实现构建正确性/C4采集/C5判定及recorder分别列；操作再分设备初始化/查询、准备预热、正式采样、导出、内容核对、oracle首次/重放、文件快照、报告/归档。operation注明case/实现/pid/parent，解释包含与并行，不重复相加。模型等待/生成、token无法取得写unknown/null，不把未归属时间当模型时间。报告目标、实际、超支、原因、hit/miss/重算次数和完整连续成本。
+
+仅交付本机结果，不读对方优化过程，不扩充清单。两机完成后只读汇总15算子300cases，保持原split，至少14/15的批次HAP口径与条件性baseline评分分开。不要seal/发布/训练、改全局技能或升级CANN/驱动。最终给出/dev/shm内报告、checkpoint、memory准确路径和易失性。

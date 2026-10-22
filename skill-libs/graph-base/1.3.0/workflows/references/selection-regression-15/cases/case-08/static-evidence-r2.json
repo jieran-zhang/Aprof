@@ -1,0 +1,588 @@
+{
+  "task_id": "case-08",
+  "attempt_identity": {
+    "parent_implementation_hash": "sha256:6a5e650109b9038b520ed2d4be0e20d887c0c005141f7bae263eec48b3f9a6ef",
+    "implementation_hash": null,
+    "workload_hash": "sha256:59d4a4678284053205a7723b7b7110ae66fdd140f5438bbdfb280ed7bb7da50e"
+  },
+  "source_refs": [
+    {
+      "path": "source/op_kernel/grid_sampler_3d_kernel.asc",
+      "sha256": "sha256:4e583b489d23efa16985429318737667a85960af5b3acc569bcc4018650b373e"
+    },
+    {
+      "path": "source/op_kernel/grid_sampler_3d_tiling.h",
+      "sha256": "sha256:1aba1adbdfec9aaea64cb522d9da2abd9e4d0f2084fc3c3414458ec6df4da120"
+    },
+    {
+      "path": "source/matrix-20.json",
+      "sha256": "sha256:59d4a4678284053205a7723b7b7110ae66fdd140f5438bbdfb280ed7bb7da50e"
+    }
+  ],
+  "finding": "新增逐case C与K统计：C在7..256，nearest K=1而bilinear K=8。D若存完整K×三坐标+权重每点nearest至少24B、bilinear224B（mask另计）；所以R2从全C一owner改为有界Ct×St，并建议保存基坐标+分轴差分而非完整8邻域记录，但精度乘法次序必须不变。nearest小K与reflection代价不同，不能统一宣称复用总成本。",
+  "rows": [
+    {
+      "case_id": "1",
+      "geometry_generations_before": 2097152,
+      "by_Ct": [
+        {
+          "Ct": 1,
+          "geometry_generations": 2097152,
+          "saved_generations": 0
+        },
+        {
+          "Ct": 2,
+          "geometry_generations": 1048576,
+          "saved_generations": 1048576
+        },
+        {
+          "Ct": 4,
+          "geometry_generations": 524288,
+          "saved_generations": 1572864
+        },
+        {
+          "Ct": 8,
+          "geometry_generations": 262144,
+          "saved_generations": 1835008
+        }
+      ],
+      "full_geometry_bytes_per_point_without_mask": 224,
+      "nearest_coordinate_only_bytes": null
+    },
+    {
+      "case_id": "2",
+      "geometry_generations_before": 1048576,
+      "by_Ct": [
+        {
+          "Ct": 1,
+          "geometry_generations": 1048576,
+          "saved_generations": 0
+        },
+        {
+          "Ct": 2,
+          "geometry_generations": 524288,
+          "saved_generations": 524288
+        },
+        {
+          "Ct": 4,
+          "geometry_generations": 262144,
+          "saved_generations": 786432
+        },
+        {
+          "Ct": 8,
+          "geometry_generations": 131072,
+          "saved_generations": 917504
+        }
+      ],
+      "full_geometry_bytes_per_point_without_mask": 224,
+      "nearest_coordinate_only_bytes": null
+    },
+    {
+      "case_id": "3",
+      "geometry_generations_before": 131072,
+      "by_Ct": [
+        {
+          "Ct": 1,
+          "geometry_generations": 131072,
+          "saved_generations": 0
+        },
+        {
+          "Ct": 2,
+          "geometry_generations": 65536,
+          "saved_generations": 65536
+        },
+        {
+          "Ct": 4,
+          "geometry_generations": 32768,
+          "saved_generations": 98304
+        },
+        {
+          "Ct": 8,
+          "geometry_generations": 16384,
+          "saved_generations": 114688
+        }
+      ],
+      "full_geometry_bytes_per_point_without_mask": 28,
+      "nearest_coordinate_only_bytes": 24
+    },
+    {
+      "case_id": "4",
+      "geometry_generations_before": 8388608,
+      "by_Ct": [
+        {
+          "Ct": 1,
+          "geometry_generations": 8388608,
+          "saved_generations": 0
+        },
+        {
+          "Ct": 2,
+          "geometry_generations": 4194304,
+          "saved_generations": 4194304
+        },
+        {
+          "Ct": 4,
+          "geometry_generations": 2097152,
+          "saved_generations": 6291456
+        },
+        {
+          "Ct": 8,
+          "geometry_generations": 1048576,
+          "saved_generations": 7340032
+        }
+      ],
+      "full_geometry_bytes_per_point_without_mask": 224,
+      "nearest_coordinate_only_bytes": null
+    },
+    {
+      "case_id": "5",
+      "geometry_generations_before": 67108864,
+      "by_Ct": [
+        {
+          "Ct": 1,
+          "geometry_generations": 67108864,
+          "saved_generations": 0
+        },
+        {
+          "Ct": 2,
+          "geometry_generations": 33554432,
+          "saved_generations": 33554432
+        },
+        {
+          "Ct": 4,
+          "geometry_generations": 16777216,
+          "saved_generations": 50331648
+        },
+        {
+          "Ct": 8,
+          "geometry_generations": 8388608,
+          "saved_generations": 58720256
+        }
+      ],
+      "full_geometry_bytes_per_point_without_mask": 28,
+      "nearest_coordinate_only_bytes": 24
+    },
+    {
+      "case_id": "6",
+      "geometry_generations_before": 33554432,
+      "by_Ct": [
+        {
+          "Ct": 1,
+          "geometry_generations": 33554432,
+          "saved_generations": 0
+        },
+        {
+          "Ct": 2,
+          "geometry_generations": 16777216,
+          "saved_generations": 16777216
+        },
+        {
+          "Ct": 4,
+          "geometry_generations": 8388608,
+          "saved_generations": 25165824
+        },
+        {
+          "Ct": 8,
+          "geometry_generations": 4194304,
+          "saved_generations": 29360128
+        }
+      ],
+      "full_geometry_bytes_per_point_without_mask": 224,
+      "nearest_coordinate_only_bytes": null
+    },
+    {
+      "case_id": "7",
+      "geometry_generations_before": 2770563,
+      "by_Ct": [
+        {
+          "Ct": 1,
+          "geometry_generations": 2770563,
+          "saved_generations": 0
+        },
+        {
+          "Ct": 2,
+          "geometry_generations": 1429968,
+          "saved_generations": 1340595
+        },
+        {
+          "Ct": 4,
+          "geometry_generations": 714984,
+          "saved_generations": 2055579
+        },
+        {
+          "Ct": 8,
+          "geometry_generations": 357492,
+          "saved_generations": 2413071
+        }
+      ],
+      "full_geometry_bytes_per_point_without_mask": 224,
+      "nearest_coordinate_only_bytes": null
+    },
+    {
+      "case_id": "8",
+      "geometry_generations_before": 425250,
+      "by_Ct": [
+        {
+          "Ct": 1,
+          "geometry_generations": 425250,
+          "saved_generations": 0
+        },
+        {
+          "Ct": 2,
+          "geometry_generations": 216000,
+          "saved_generations": 209250
+        },
+        {
+          "Ct": 4,
+          "geometry_generations": 108000,
+          "saved_generations": 317250
+        },
+        {
+          "Ct": 8,
+          "geometry_generations": 54000,
+          "saved_generations": 371250
+        }
+      ],
+      "full_geometry_bytes_per_point_without_mask": 28,
+      "nearest_coordinate_only_bytes": 24
+    },
+    {
+      "case_id": "9",
+      "geometry_generations_before": 1715547,
+      "by_Ct": [
+        {
+          "Ct": 1,
+          "geometry_generations": 1715547,
+          "saved_generations": 0
+        },
+        {
+          "Ct": 2,
+          "geometry_generations": 876024,
+          "saved_generations": 839523
+        },
+        {
+          "Ct": 4,
+          "geometry_generations": 438012,
+          "saved_generations": 1277535
+        },
+        {
+          "Ct": 8,
+          "geometry_generations": 219006,
+          "saved_generations": 1496541
+        }
+      ],
+      "full_geometry_bytes_per_point_without_mask": 224,
+      "nearest_coordinate_only_bytes": null
+    },
+    {
+      "case_id": "10",
+      "geometry_generations_before": 38560895,
+      "by_Ct": [
+        {
+          "Ct": 1,
+          "geometry_generations": 38560895,
+          "saved_generations": 0
+        },
+        {
+          "Ct": 2,
+          "geometry_generations": 19479215,
+          "saved_generations": 19081680
+        },
+        {
+          "Ct": 4,
+          "geometry_generations": 9938375,
+          "saved_generations": 28622520
+        },
+        {
+          "Ct": 8,
+          "geometry_generations": 5167955,
+          "saved_generations": 33392940
+        }
+      ],
+      "full_geometry_bytes_per_point_without_mask": 224,
+      "nearest_coordinate_only_bytes": null
+    },
+    {
+      "case_id": "11",
+      "geometry_generations_before": 2371842,
+      "by_Ct": [
+        {
+          "Ct": 1,
+          "geometry_generations": 2371842,
+          "saved_generations": 0
+        },
+        {
+          "Ct": 2,
+          "geometry_generations": 1221858,
+          "saved_generations": 1149984
+        },
+        {
+          "Ct": 4,
+          "geometry_generations": 646866,
+          "saved_generations": 1724976
+        },
+        {
+          "Ct": 8,
+          "geometry_generations": 359370,
+          "saved_generations": 2012472
+        }
+      ],
+      "full_geometry_bytes_per_point_without_mask": 224,
+      "nearest_coordinate_only_bytes": null
+    },
+    {
+      "case_id": "12",
+      "geometry_generations_before": 32487,
+      "by_Ct": [
+        {
+          "Ct": 1,
+          "geometry_generations": 32487,
+          "saved_generations": 0
+        },
+        {
+          "Ct": 2,
+          "geometry_generations": 18564,
+          "saved_generations": 13923
+        },
+        {
+          "Ct": 4,
+          "geometry_generations": 9282,
+          "saved_generations": 23205
+        },
+        {
+          "Ct": 8,
+          "geometry_generations": 4641,
+          "saved_generations": 27846
+        }
+      ],
+      "full_geometry_bytes_per_point_without_mask": 28,
+      "nearest_coordinate_only_bytes": 24
+    },
+    {
+      "case_id": "13",
+      "geometry_generations_before": 1847042,
+      "by_Ct": [
+        {
+          "Ct": 1,
+          "geometry_generations": 1847042,
+          "saved_generations": 0
+        },
+        {
+          "Ct": 2,
+          "geometry_generations": 953312,
+          "saved_generations": 893730
+        },
+        {
+          "Ct": 4,
+          "geometry_generations": 476656,
+          "saved_generations": 1370386
+        },
+        {
+          "Ct": 8,
+          "geometry_generations": 238328,
+          "saved_generations": 1608714
+        }
+      ],
+      "full_geometry_bytes_per_point_without_mask": 224,
+      "nearest_coordinate_only_bytes": null
+    },
+    {
+      "case_id": "14",
+      "geometry_generations_before": 53482,
+      "by_Ct": [
+        {
+          "Ct": 1,
+          "geometry_generations": 53482,
+          "saved_generations": 0
+        },
+        {
+          "Ct": 2,
+          "geometry_generations": 29172,
+          "saved_generations": 24310
+        },
+        {
+          "Ct": 4,
+          "geometry_generations": 14586,
+          "saved_generations": 38896
+        },
+        {
+          "Ct": 8,
+          "geometry_generations": 9724,
+          "saved_generations": 43758
+        }
+      ],
+      "full_geometry_bytes_per_point_without_mask": 224,
+      "nearest_coordinate_only_bytes": null
+    },
+    {
+      "case_id": "15",
+      "geometry_generations_before": 7507332,
+      "by_Ct": [
+        {
+          "Ct": 1,
+          "geometry_generations": 7507332,
+          "saved_generations": 0
+        },
+        {
+          "Ct": 2,
+          "geometry_generations": 3813248,
+          "saved_generations": 3694084
+        },
+        {
+          "Ct": 4,
+          "geometry_generations": 1906624,
+          "saved_generations": 5600708
+        },
+        {
+          "Ct": 8,
+          "geometry_generations": 953312,
+          "saved_generations": 6554020
+        }
+      ],
+      "full_geometry_bytes_per_point_without_mask": 28,
+      "nearest_coordinate_only_bytes": 24
+    },
+    {
+      "case_id": "16",
+      "geometry_generations_before": 2032128,
+      "by_Ct": [
+        {
+          "Ct": 1,
+          "geometry_generations": 2032128,
+          "saved_generations": 0
+        },
+        {
+          "Ct": 2,
+          "geometry_generations": 1016064,
+          "saved_generations": 1016064
+        },
+        {
+          "Ct": 4,
+          "geometry_generations": 508032,
+          "saved_generations": 1524096
+        },
+        {
+          "Ct": 8,
+          "geometry_generations": 254016,
+          "saved_generations": 1778112
+        }
+      ],
+      "full_geometry_bytes_per_point_without_mask": 224,
+      "nearest_coordinate_only_bytes": null
+    },
+    {
+      "case_id": "17",
+      "geometry_generations_before": 192048003,
+      "by_Ct": [
+        {
+          "Ct": 1,
+          "geometry_generations": 192048003,
+          "saved_generations": 0
+        },
+        {
+          "Ct": 2,
+          "geometry_generations": 97548192,
+          "saved_generations": 94499811
+        },
+        {
+          "Ct": 4,
+          "geometry_generations": 48774096,
+          "saved_generations": 143273907
+        },
+        {
+          "Ct": 8,
+          "geometry_generations": 24387048,
+          "saved_generations": 167660955
+        }
+      ],
+      "full_geometry_bytes_per_point_without_mask": 224,
+      "nearest_coordinate_only_bytes": null
+    },
+    {
+      "case_id": "18",
+      "geometry_generations_before": 216000,
+      "by_Ct": [
+        {
+          "Ct": 1,
+          "geometry_generations": 216000,
+          "saved_generations": 0
+        },
+        {
+          "Ct": 2,
+          "geometry_generations": 108000,
+          "saved_generations": 108000
+        },
+        {
+          "Ct": 4,
+          "geometry_generations": 54000,
+          "saved_generations": 162000
+        },
+        {
+          "Ct": 8,
+          "geometry_generations": 27000,
+          "saved_generations": 189000
+        }
+      ],
+      "full_geometry_bytes_per_point_without_mask": 28,
+      "nearest_coordinate_only_bytes": 24
+    },
+    {
+      "case_id": "19",
+      "geometry_generations_before": 3694084,
+      "by_Ct": [
+        {
+          "Ct": 1,
+          "geometry_generations": 3694084,
+          "saved_generations": 0
+        },
+        {
+          "Ct": 2,
+          "geometry_generations": 1906624,
+          "saved_generations": 1787460
+        },
+        {
+          "Ct": 4,
+          "geometry_generations": 953312,
+          "saved_generations": 2740772
+        },
+        {
+          "Ct": 8,
+          "geometry_generations": 476656,
+          "saved_generations": 3217428
+        }
+      ],
+      "full_geometry_bytes_per_point_without_mask": 224,
+      "nearest_coordinate_only_bytes": null
+    },
+    {
+      "case_id": "20",
+      "geometry_generations_before": 63511938,
+      "by_Ct": [
+        {
+          "Ct": 1,
+          "geometry_generations": 63511938,
+          "saved_generations": 0
+        },
+        {
+          "Ct": 2,
+          "geometry_generations": 32260032,
+          "saved_generations": 31251906
+        },
+        {
+          "Ct": 4,
+          "geometry_generations": 16130016,
+          "saved_generations": 47381922
+        },
+        {
+          "Ct": 8,
+          "geometry_generations": 8065008,
+          "saved_generations": 55446930
+        }
+      ],
+      "full_geometry_bytes_per_point_without_mask": 224,
+      "nearest_coordinate_only_bytes": null
+    }
+  ],
+  "counterfactual_probe": "反事实C=1且NS足够大：NCS→NS的几何减少为0，geometry失去benefit而保留D/调度代价，转向vector空间片；C大且D容量闭合才保留geometry。此为纸面敏感性不是生产阈值。",
+  "implementation_state": "not_implemented",
+  "measurement": "not_measured"
+}

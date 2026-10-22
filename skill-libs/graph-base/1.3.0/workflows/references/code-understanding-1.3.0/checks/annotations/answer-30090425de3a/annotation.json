@@ -1,0 +1,61 @@
+{
+  "answer_id": "answer-30090425de3a",
+  "case": "case-02",
+  "facts": [
+    {
+      "id": "CU02.A01",
+      "status": "correct",
+      "rationale": "完整说明5行输入的物理行宽20、每行截取13个float、输出物理行宽18，以及有效值100r+c；明确只是经UB中转的逐行复制，不进行数值激活。",
+      "answer_span": "当前实现完成逐行截取和带间隔写回：输入为5×20个float，每行保留前13个元素，经UB中转后写入5×18个float的输出空间；输出每行后5个元素对应的字节保持初始化值0xA5。输入有效值不参与算术运算，UB中的补零也不写入输出。因而对0≤r<5、0≤c<13，有output[r,c]=100r+c；13≤c<18的位置保持32位模式0xA5A5A5A5，不能将其解释为数值零或某个整数填充值。"
+    },
+    {
+      "id": "CU02.A02",
+      "status": "correct",
+      "rationale": "全文明确Duplicate先清零全部120个UB元素，每行13个数据元素后补3个零，再留下32B预置零间隙，并单独说明末尾32B。搬出仅写13个元素，五段输出间隙包括最终后缀均保留0xA5，未混同UB补零与GM间隙。",
+      "answer_span": "每行只写13个float，即52B。UB侧为对齐组织的剩余12B不会成为GM有效写入，额外32B间隔也不搬出。API描述的非对齐搬出会丢弃dummy，不能据此把写回长度扩大成64B。输出保持0xA5的区间为[52,72)、[124,144)、[196,216)、[268,288)、[340,360)，每段20B。因此共写260B、保留100B，最后有效写入终点为340B，整个360B输出空间均有确定来源。"
+    },
+    {
+      "id": "CU02.A03",
+      "status": "correct",
+      "rationale": "采用当前scenario 2及其5、13、16、120模板常量和当前双向stride、逐行写回，没有替换为上游常量或平铺写回；另明确排除其他场景和3510分支。",
+      "answer_span": "scenarioNum固定为2，入口实例化KernelDataCopyPad<float,5,13,16,120>。这里13表示每块有效元素数，16用于计算右填充量，120表示UB分配元素数；它们均不代表输入或输出的物理行宽。"
+    },
+    {
+      "id": "CU02.E01",
+      "status": "correct",
+      "rationale": "明确blockLen为52B、GM源间隙28B、行距80B；表中五个读取区间的起点分别为0、80、160、240、320，末次读取终点372，并明确输入分配400B及边界合法。",
+      "answer_span": "| 行r | GM读取 | UB有效数据 | UB右侧零填充 | 输出GM写入 |\n| --- | --- | --- | --- | --- |\n| 0 | [0,52) | [0,52) | [52,64) | [0,52) |\n| 1 | [80,132) | [96,148) | [148,160) | [72,124) |\n| 2 | [160,212) | [192,244) | [244,256) | [144,196) |\n| 3 | [240,292) | [288,340) | [340,352) | [216,268) |\n| 4 | [320,372) | [384,436) | [436,448) | [288,340) |\n\n输入未读取区间为每行[80r+52,80r+80)，最后一段是[372,400)。"
+    },
+    {
+      "id": "CU02.E02",
+      "status": "correct",
+      "rationale": "正确推导52B数据加3个float的12B填充形成64B，再加dstStride=1对应32B，得到96B行距。表中列出全部UB数据和填充区间，正文列出四个块间间隙与最终尾部，且明确总分配480B。",
+      "answer_span": "UB每块先存52B有效数据，再右补3×4=12B，合计64B，已满足32B对齐，无需额外dummy；之后再间隔1×32=32B，下一块起点间距为96B，即24个float。"
+    },
+    {
+      "id": "CU02.E03",
+      "status": "correct",
+      "rationale": "完整给出搬出blockLen=52B、UB源块对齐到64B后增加32B间隙、源行距96B，以及GM目的间隙20B、目的行距72B。表中输出起点与写入区间全部正确，并明确末次写入结束340B、小于360B分配。",
+      "answer_span": "搬出使用源码68行的DataCopyExtParams{5,52,1,20,0}。DataCopyPad_UBToGM.md表4规定，UB侧srcStride以32B计，GM侧dstStride以字节计。非对齐块在UB侧按32B边界组织，所以源起点步长为ceil(52/32)×32+1×32=96B，与搬入布局吻合；目的起点步长为52+20=72B，恰好对应输出物理18列。"
+    },
+    {
+      "id": "CU02.H01",
+      "status": "correct",
+      "rationale": "正确说明blockLen以字节计，GM侧stride为块间字节间隙，UB侧stride以32B块计，padding以元素计；搬出段补充了反向srcStride/dstStride单位。全文明确区分5×13逻辑数据、GM物理行距、UB填充及总分配。",
+      "answer_span": "固定API原文DataCopyPad_GMToUB.md表4、表5规定：blockLen以字节计；GM侧srcStride是两块之间的字节间隔；UB侧dstStride以32B的dataBlock计；leftPadding/rightPadding以元素计。"
+    },
+    {
+      "id": "CU02.H02",
+      "status": "correct",
+      "rationale": "明确Duplicate由Vector流水执行，V_MTE2保证清零先于搬入覆盖，MTE2_MTE3保证搬入及填充先于搬出读取；区分写后写和写后读依赖，且全文明确数据不参与算术运算，无Vector激活。",
+      "answer_span": "同步体现的是核内异步流水依赖。源码63—64行的V_MTE2事件由Vector流水在Duplicate完成后置位，MTE2等待后才覆盖UB，避免后到的清零破坏搬入数据，这是写后写依赖。66—67行的MTE2_MTE3事件在搬入和填充完成后置位，MTE3等待后读取UB，是写后读依赖。"
+    },
+    {
+      "id": "CU02.H03",
+      "status": "correct",
+      "rationale": "明确A3支持当前普通DataCopyPad重载，并排除3510限定的Compact及loop分支；各缓冲区访问区间均在显式分配范围内。结尾明确结论属于调用成功条件下的静态语义，未声称已证明硬件编译、运行或具体时序。",
+      "answer_span": "910C按题面固定为Atlas A3、__NPU_ARCH__=2201。固定文档支持A3上的float及当前不带mode模板参数的两种DataCopyPad重载：MTE2完成GM→UB及填充，MTE3完成UB→GM，Vector流水执行Duplicate。没有矩阵计算或Cube参与。3510条件编译中的Compact、loop mode和场景3—6均不进入当前执行路径；其他场景注释中的形状不能用于本题。"
+    }
+  ],
+  "critical_errors": []
+}

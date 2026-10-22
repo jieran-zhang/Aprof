@@ -1,0 +1,12 @@
+{
+  "task_id": "raw15-case-03",
+  "basis": "手工逐谓词源码与数学分析；非自动由Action条件列表生成truth",
+  "proofs": {
+    "constraint.semantic_equivalence": "Mul先计算xFp*maskFp，其后的Muls才乘scale，最后FromFloat保持原模式；将of绑定xf只改变物理存储，不提前乘scale、不删scale0或Inf/NaN运算、不删整数mask两段Cast。",
+    "constraint.dependency_lifetime": "原xf唯一消费者为Mul(of,xf,mf)，该语句后旧xf无再读；将目的完全等于src0时在Mul之后把同一字节解释为乘积，后继Muls/FromFloat读新值。mf及xLocal/maskLocal保持原释放点，输出yLocal保留至MTE3；实际Mul完全重叠读写许可单列target_api_support。",
+    "constraint.task_ownership": "MaskedScale x/mask/y同形N且分别分配；block c读取/写回同一[cL,min((c+1)L,N))，valid=min(T,end-off)，of=xf只改本核局部暂存，不改变GM owner/尾长。",
+    "constraint.valid_lengths": "MaskedScale x/mask/y同形N且分别分配；block c读取/写回同一[cL,min((c+1)L,N))，valid=min(T,end-off)，of=xf只改本核局部暂存，不改变GM owner/尾长。",
+    "constraint.output_ownership": "MaskedScale x/mask/y同形N且分别分配；block c读取/写回同一[cL,min((c+1)L,N))，valid=min(T,end-off)，of=xf只改本核局部暂存，不改变GM owner/尾长。"
+  },
+  "limitations": "需确认目标Mul完整dst=src0别名及依赖完成规则，实际B与CopyPad/API字段上限。整型mask两段Cast的支持不能推断为直接转换支持。"
+}

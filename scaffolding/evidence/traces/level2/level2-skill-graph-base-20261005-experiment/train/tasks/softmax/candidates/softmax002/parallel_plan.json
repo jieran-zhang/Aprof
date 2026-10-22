@@ -1,0 +1,128 @@
+{
+  "architecture_profile_ref": "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+  "groups": [
+    {
+      "algorithm": "Stable per-row softmax",
+      "alternatives": [
+        "Dependency-specific events",
+        "Bounded tile and row batching"
+      ],
+      "group_id": "contiguous",
+      "memory_requirements": {
+        "UB": 196352
+      },
+      "ownership": "One core owns complete row",
+      "reduction": "Within-row max and sum",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:e3c25614642fd2c6058a20f02016376be7326270c9d25b30fd4f56bb0be7e332",
+        "sha256:eb54d4e9b88088fb7e6211f6e890bf2f989f04250494ea3b53eab28e25624889",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:a49f099a3edabff5fb9272b5f8230eb029e5c03bb484aa78af1c7ac074d3194d",
+        "sha256:80739902c84738acbb9afb095be99ccdaf73c739ba644b483aa51e5a2f1d0377",
+        "sha256:a663cf157f9e639b134fce1f91afd2c2f84e39e3e2eb56868accb021c4b1a15f"
+      ],
+      "synchronization": "MTE2 to vector, V_S for scalar max/sum, vector to MTE3 R2 execution specialization: preserve ReduceMax then PIPE_ALL then maximum.GetValue for every dtype; half additionally retains ReduceMin then PIPE_ALL then minimum.GetValue before Adds/SLEEF selection. Float and BF16 omit only that unused minimum sequence; dependent Adds/Exp, ReduceSum barrier, ownership, queues and complete-call launch order remain unchanged.",
+      "task_partition": "Distribute complete contiguous reduction rows over available AIV",
+      "workspace_bytes": 0,
+      "workspace_formula": "0; no global intermediate; any future split/merge must create a new plan with counted workspace"
+    },
+    {
+      "algorithm": "Materialize [outer,reduce,inner] into existing output as [slice,reduce], then stable row softmax in place",
+      "alternatives": [
+        "In-UB adjacent-column fusion",
+        "Retain original gather path if transpose launch dominates"
+      ],
+      "group_id": "strided",
+      "memory_requirements": {
+        "UB": 196352
+      },
+      "ownership": "Phase1: complete32-slice groups owned by AIV,64-byte boundaries; phase2: baseline whole-row owners load every input lane intoUB before overwriting only that row",
+      "reduction": "Unchanged within-row FP32 max/exp/sum and dtype-specific half compensation",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:e3c25614642fd2c6058a20f02016376be7326270c9d25b30fd4f56bb0be7e332",
+        "sha256:eb54d4e9b88088fb7e6211f6e890bf2f989f04250494ea3b53eab28e25624889",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:a49f099a3edabff5fb9272b5f8230eb029e5c03bb484aa78af1c7ac074d3194d",
+        "sha256:80739902c84738acbb9afb095be99ccdaf73c739ba644b483aa51e5a2f1d0377",
+        "sha256:a663cf157f9e639b134fce1f91afd2c2f84e39e3e2eb56868accb021c4b1a15f"
+      ],
+      "synchronization": "Two serial stream launches: output-backed transpose completes before in-place row softmax; full row loaded before store; both launches counted R2 execution specialization: preserve ReduceMax then PIPE_ALL then maximum.GetValue for every dtype; half additionally retains ReduceMin then PIPE_ALL then minimum.GetValue before Adds/SLEEF selection. Float and BF16 omit only that unused minimum sequence; dependent Adds/Exp, ReduceSum barrier, ownership, queues and complete-call launch order remain unchanged.",
+      "task_partition": "Transpose: complete groups of32 output slices owned by AIV and tiled16reduce x32inner; softmax: existing row distribution",
+      "workspace_bytes": 0,
+      "workspace_formula": "0 additional bytes: reuse the existing numel*sizeof(dtype) output as a phase-local intermediate; each complete call rewrites it before reduction"
+    },
+    {
+      "algorithm": "Unchanged per-row stable softmax for short contiguous reductions",
+      "alternatives": [
+        "Row batching only after R1 feedback"
+      ],
+      "group_id": "short_rows",
+      "memory_requirements": {
+        "UB": 32768
+      },
+      "ownership": "One AIV owns each whole reduction slice",
+      "reduction": "Separate max/sum per row",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:e3c25614642fd2c6058a20f02016376be7326270c9d25b30fd4f56bb0be7e332",
+        "sha256:eb54d4e9b88088fb7e6211f6e890bf2f989f04250494ea3b53eab28e25624889",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:a49f099a3edabff5fb9272b5f8230eb029e5c03bb484aa78af1c7ac074d3194d",
+        "sha256:80739902c84738acbb9afb095be99ccdaf73c739ba644b483aa51e5a2f1d0377",
+        "sha256:a663cf157f9e639b134fce1f91afd2c2f84e39e3e2eb56868accb021c4b1a15f"
+      ],
+      "synchronization": "Existing conservative barriers and output queue R2 execution specialization: preserve ReduceMax then PIPE_ALL then maximum.GetValue for every dtype; half additionally retains ReduceMin then PIPE_ALL then minimum.GetValue before Adds/SLEEF selection. Float and BF16 omit only that unused minimum sequence; dependent Adds/Exp, ReduceSum barrier, ownership, queues and complete-call launch order remain unchanged.",
+      "task_partition": "Existing row-at-a-time slice distribution across AIV",
+      "workspace_bytes": 0,
+      "workspace_formula": "0; no global intermediate; any future split/merge must create a new plan with counted workspace"
+    },
+    {
+      "algorithm": "Bounds-safe original stable softmax: scalar staging when inner<one lane group, resource check before launch",
+      "alternatives": [
+        "New chunked reduction plan for a row exceeding actual capacity"
+      ],
+      "group_id": "generic",
+      "memory_requirements": {
+        "UB": 196352
+      },
+      "ownership": "One output slice owner; retain output layout contract",
+      "reduction": "Stable max/sum with same FP32 ordering constraints",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:e3c25614642fd2c6058a20f02016376be7326270c9d25b30fd4f56bb0be7e332",
+        "sha256:eb54d4e9b88088fb7e6211f6e890bf2f989f04250494ea3b53eab28e25624889",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:a49f099a3edabff5fb9272b5f8230eb029e5c03bb484aa78af1c7ac074d3194d",
+        "sha256:80739902c84738acbb9afb095be99ccdaf73c739ba644b483aa51e5a2f1d0377",
+        "sha256:a663cf157f9e639b134fce1f91afd2c2f84e39e3e2eb56868accb021c4b1a15f"
+      ],
+      "synchronization": "Conservative queue/events; no unsigned gather stride underflow R2 execution specialization: preserve ReduceMax then PIPE_ALL then maximum.GetValue for every dtype; half additionally retains ReduceMin then PIPE_ALL then minimum.GetValue before Adds/SLEEF selection. Float and BF16 omit only that unused minimum sequence; dependent Adds/Exp, ReduceSum barrier, ownership, queues and complete-call launch order remain unchanged.",
+      "task_partition": "One complete reduction slice per owner with bounds-checked gathering",
+      "workspace_bytes": 0,
+      "workspace_formula": "0; inputs exceeding actual probed UB rejected explicitly until a chunked-row algorithm is available"
+    }
+  ],
+  "operator": "softmax",
+  "plan_id": "softmax-r2-nonhalf-unused-min-elision",
+  "precision_invariants": [
+    "Preserve FP32 accumulation, half SLEEF polynomial and underflow handling unless separately verified.",
+    "Keep baseline dtype-specific error thresholds and special-value masks, including one-subnormal FP16 tolerance."
+  ],
+  "schema_version": "1.0.0",
+  "semantic_invariants": [
+    "Stable softmax over normalized dim: subtract row max, exp, sum, divide; output has original shape.",
+    "Reduction groups are independent slices [outer, inner]; baseline device output is slice-major and host transposes it back.",
+    "No input-value dispatch; NaN/Inf values follow golden softmax behavior."
+  ],
+  "source_hash": "sha256:e0ef1a48a80aead958f669fbbd1558001ae0b1ad3c75b3466d1ba5b6e0977dea"
+}

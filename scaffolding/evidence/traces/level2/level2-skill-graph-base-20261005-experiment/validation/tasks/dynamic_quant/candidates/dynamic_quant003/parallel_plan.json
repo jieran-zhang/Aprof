@@ -1,0 +1,107 @@
+{
+  "architecture_profile_ref": "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+  "groups": [
+    {
+      "algorithm": "Independent absmax and quantization per short token",
+      "alternatives": [
+        "New plan batches short rows for vector control amortization",
+        "Current one-token process preserves reference"
+      ],
+      "group_id": "short_rows",
+      "memory_requirements": {
+        "UB": 196352
+      },
+      "ownership": "Each AIV owns full tokens and aligned y/scale boundaries",
+      "reduction": "Within-token absmax plus explicit NaN mask",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:3b4dc2d6426a18c6a54b2abb1b45db17c41c526b14f35615bb882fddaf380939",
+        "sha256:e59f60344951a14c87cb819405df9e85d3c019d3c8971d50f46908b6f9a8c433",
+        "sha256:5a5a9a5cc2d483e14abd73c4a56047010dc59ccf67b18011b871158716e1fdfc",
+        "sha256:1ac8956222a58732d6a277ab86477b4fe3709aaf6bad4608b103189668df4d7e",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:a418a4bd778f75efcab59c2bebb314108d3023db225321e501db28bb44f0f1bf",
+        "sha256:e9be8e7413478cf5805f1004b398fa487f6a2e52bcba0dcdb9cae7a458ddf69a",
+        "sha256:71a9dccce5068b9e04377a8bfee319a7dca8fe76c1129cb2a119dc35acdf64b0"
+      ],
+      "synchronization": "V_S mask and reduction read events; queue input/output Reuse the existing WordMask=true template: after unchanged padded zero fill, Cast and aligned Compare, the same V_S event permits reading ceil(count/64) uint64 mask words in order. Every valid lane and zero padding is unchanged; reduction, second full clear, queues and ownership remain unchanged.",
+      "task_partition": "Contiguous token blocks aligned by lcm(16,64/gcd(rowLength,64))",
+      "workspace_bytes": 0,
+      "workspace_formula": "0 new intermediate bytes; any split-reduction alternative must create a new plan with concrete workspace bound and formula"
+    },
+    {
+      "algorithm": "Full-row absmax then quantization",
+      "alternatives": [
+        "Keep signed FP32 values and separate abs scratch if capacity permits",
+        "Row-sized rather than kMaxRow allocations"
+      ],
+      "group_id": "full_rows",
+      "memory_requirements": {
+        "UB": 196352
+      },
+      "ownership": "One AIV owns every element of each token and its scale",
+      "reduction": "Per-token max; no merge",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:3b4dc2d6426a18c6a54b2abb1b45db17c41c526b14f35615bb882fddaf380939",
+        "sha256:e59f60344951a14c87cb819405df9e85d3c019d3c8971d50f46908b6f9a8c433",
+        "sha256:5a5a9a5cc2d483e14abd73c4a56047010dc59ccf67b18011b871158716e1fdfc",
+        "sha256:1ac8956222a58732d6a277ab86477b4fe3709aaf6bad4608b103189668df4d7e",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:a418a4bd778f75efcab59c2bebb314108d3023db225321e501db28bb44f0f1bf",
+        "sha256:e9be8e7413478cf5805f1004b398fa487f6a2e52bcba0dcdb9cae7a458ddf69a",
+        "sha256:71a9dccce5068b9e04377a8bfee319a7dca8fe76c1129cb2a119dc35acdf64b0"
+      ],
+      "synchronization": "Unchanged V_S before scalar NaN-mask reads; use aligned uint64 words with explicit padded zero bits. Other copy/vector/reduction events unchanged.",
+      "task_partition": "Contiguous whole-token blocks across available AIV",
+      "workspace_bytes": 0,
+      "workspace_formula": "0 new intermediate bytes; any split-reduction alternative must create a new plan with concrete workspace bound and formula"
+    },
+    {
+      "algorithm": "Validated complete-token fallback",
+      "alternatives": [
+        "Reject unsupported row>16384 before launch; any chunked row plan requires new workspace/reduction contract"
+      ],
+      "group_id": "generic",
+      "memory_requirements": {
+        "UB": 196352
+      },
+      "ownership": "One scale and int8 interval writer",
+      "reduction": "Exact row absmax semantics",
+      "required_capabilities": [
+        "vector"
+      ],
+      "selection_evidence": [
+        "sha256:3b4dc2d6426a18c6a54b2abb1b45db17c41c526b14f35615bb882fddaf380939",
+        "sha256:e59f60344951a14c87cb819405df9e85d3c019d3c8971d50f46908b6f9a8c433",
+        "sha256:5a5a9a5cc2d483e14abd73c4a56047010dc59ccf67b18011b871158716e1fdfc",
+        "sha256:1ac8956222a58732d6a277ab86477b4fe3709aaf6bad4608b103189668df4d7e",
+        "sha256:e6af4048234e5ea9d21f3630ad5202be777e4cfb7fd1180ab760b95e1a12702c",
+        "sha256:a418a4bd778f75efcab59c2bebb314108d3023db225321e501db28bb44f0f1bf",
+        "sha256:e9be8e7413478cf5805f1004b398fa487f6a2e52bcba0dcdb9cae7a458ddf69a",
+        "sha256:71a9dccce5068b9e04377a8bfee319a7dca8fe76c1129cb2a119dc35acdf64b0"
+      ],
+      "synchronization": "Conservative queues and explicit NaN propagation",
+      "task_partition": "Same aligned ownership for supported row extent",
+      "workspace_bytes": 0,
+      "workspace_formula": "0 new intermediate bytes; any split-reduction alternative must create a new plan with concrete workspace bound and formula"
+    }
+  ],
+  "operator": "dynamic_quant",
+  "plan_id": "dynamic_quant-fixed-row-ownership-r3-short-wordmask",
+  "precision_invariants": [
+    "Scale reduction propagates NaN explicitly and preserves signed infinity masks. Rounding remains half-even with existing AscendQuant behavior; y tolerance<=1.",
+    "Scale MERE<2^-13 and MARE<10*2^-13 with exact NaN/Inf masks. No finite-input assumption or value-dependent dispatch."
+  ],
+  "schema_version": "1.0.0",
+  "semantic_invariants": [
+    "Each last-axis token quantizes independently: scale=max(abs(x)).clamp(min1e-12)/127; y=clamp(round(x/scale),-128,127) as int8.",
+    "Scale output is FP32 and y is original row-major int8; each token has one owner; no cross-token reduction.",
+    "Supported rank2..8, row length1..16384, half/BF16 input. Preserve token and y store alignment at core boundaries."
+  ],
+  "source_hash": "sha256:a80a045dc0e5c9714441af4cf54e92a75f718035083db6055f907c6f56fdc232"
+}

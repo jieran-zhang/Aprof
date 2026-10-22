@@ -1,0 +1,29 @@
+该程序意图实现连续ND张量的广播逐元素最大值：输入使用同一dtype，shape从末轴对齐，每轴尺寸须相同或其中一个为1，输出尺寸取两者较大值。P、Q的数学目标均为[[3,4,8],[7,7,9]]；R的目标为[[3,7,8],[3,7,9]]。但FP16广播分支没有使用通用广播stride，P因此不能保证产生合法输出。
+
+[host源码](/tmp/eval/source/op_host/maximum.asc:36)的main解析shape、dtype和二进制文件路径，查询Vector核数，调用ComputeMaximumTiling，再按输入实际元素数及输出totalLength分配内存。数据、tiling分别复制到GM，随后以blockNum启动maximum_kernel；host等待stream完成后，将连续ND结果复制回并写入文件。这里直接传递MaximumTilingData，没有额外workspace。ReadFile/WriteFile见source/op_host/data_utils.h。
+
+[tiling源码](/tmp/eval/source/op_kernel/maximum_tiling.h:29)的ComputeMaximumTiling接受1至8维shape，左补1，从末轴向前计算输出shape及输入stride。stride单位为元素；广播轴置0，其他轴采用原连续布局stride。sameShape比较原始shape向量是否完全相等。tileElements固定4096；useful=max(1,ceil(totalLength/4096))，blockNum=max(1,min(cores,useful))，blockLength=ceil(totalLength/blockNum)。每个block处理从blockIdx×blockLength开始的一段扁平输出，并截断到totalLength。
+
+本题三次调用的rank均为2、outShape均为[2,3]、totalLength=6、x1Stride=[3,1]、sameShape=0。P/Q的x2Stride=[1,0]；R将[3]补成[1,3]，得到x2Stride=[0,1]。虽然查询核数为4，但ceil(6/4096)=1，因此三次都是blockNum=1、blockLength=6，只有blockIdx=0负责元素[0,6)。P的dtype枚举为0，Q为1，R为0。输入x1、输入x2、输出的分配字节数分别为：P为12、4、12；Q为24、8、24；R为12、6、12。
+
+[kernel源码](/tmp/eval/source/op_kernel/maximum_kernel.asc:153)的DispatchMaximum决定实际路径。int64始终进入MaximumScalar；half按sameShape选择同形向量路径或KernelMaximumHalfLastAxisBroadcast；其余dtype在同形时走向量路径，否则走MaximumScalar。因此P与R执行同一个half广播实现，Q执行float标量实现。
+
+Q的MaximumScalar（第125—150行）对每个linear按outShape反解坐标，再累加coord×stride形成ai、bi。linear=0至5时，ai依次为0、1、2、3、4、5，bi为0、0、0、1、1、1。以各自GM基址为起点，x1读取字节偏移为0、4、8、12、16、20，x2为0、0、0、4、4、4，输出写入偏移与x1相同。每步直接读取两个float，以av>bv选择av或bv，并写回GM；没有显式GM→UB搬运或Vector Max。对本题有限数值，源码支持Q输出float32的[[3,4,8],[7,7,9]]。
+
+P/R的KernelMaximumHalfLastAxisBroadcast（第82—123行）设置begin=0、end=6、row=outShape[1]=3。它将x1、y描述为6个half，将x2描述为3个half，但完全不读取x1Stride/x2Stride。每段count=min(end-off,4096,row-off%row)，因此仅有off=0和3两段，各3个元素。两段都从x2[off%3]=x2[0]开始连续读取3个half；x1读取元素范围[0,3)、[3,6)，y写回相应范围。换成字节区间，x1和y分别为[0,6)、[6,12)，x2两次均为[0,6)。
+
+R的x2恰有3个half，即[3,7,6]，上述读取合法。两次向量比较分别为[1,4,8]与[3,7,6]、[2,5,9]与[3,7,6]，得到float16的[[3,7,8],[3,7,9]]，符合R的广播映射。
+
+P的x2只有2个half，即[3,7]，合法字节区间为[0,4)，两次请求都额外读取[4,6)。第92行SetGlobalBuffer(...,row)只是设置GlobalTensor描述，不能把4字节分配扩成6字节；其原文契约也要求调用者保证描述长度不超过实际数据长度。即使暂且忽略越界，当前路径也在两行重复使用[3,7,未知值]，而正确广播应分别重复标量3和7：第一行第二列会比较4与7，第二行第一列会比较2与3，已与目标映射不同。因此不能给P一个确定完整结果，也不能保证已有部分会写回或host成功完成。越界的实际返回值、是否报错及报错位置，静态材料无法确定。
+
+P/R每次搬运的DataCopyExtParams为{1,6,0,0,0}：1是数据块数，6是字节数，而Max的count=3是元素数。固定rawdocs中的DataCopyPad_GMToUB.md、DataCopyPad_UBToGM.md明确支持A3的非对齐搬运：GM起点可按1字节对齐，UB起点须32字节对齐。pad={false,0,0,0}且未调用SetPadValue时，6个有效字节在UB右侧补26字节dummy，形成32字节块；本配置文档说明dummy重复该块首元素。Max仅计算前3个half，写回也仅写6字节，dummy不进入逻辑输出。第二行从GM字节偏移6开始并不违反该API对齐约束，但UB补齐不能授权P越过GM分配边界。
+
+这条half路径通过三个深度为1的队列分配输入、输出UB块，每块4096×2=8192字节，合计24576字节，即24KiB。每段先AllocTensor、搬入，再EnQue/DeQue交给计算；输出Max完成后入队、出队并搬出，最后FreeTensor。队列框架表达MTE2→Vector→MTE3的数据依赖及缓冲复用依赖。InitBuffer的num=1表示没有double buffer，不能据此宣称跨tile双缓冲重叠。源码没有跨核同步；各block的逻辑输出范围互不重叠，host最终以stream同步等待整个调用。
+
+其他分支中，KernelMaximumSame（第7—77行）按每核连续区间分成最多4096元素的tile，使用实际尾块count搬入、计算和搬出。half、float、int32直接Vector Max；bfloat16先转float，Max后以CAST_RINT转回；int8先经half转float，Max后以CAST_RINT经half转回int8。它们的队列及临时UB数据量分别为：half 24KiB，float/int32 48KiB，bfloat16 24+48=72KiB，int8 12+48+8=68KiB，不含框架其他开销。固定Max.md列出的A3直接支持类型包含half、float、int32，不包含bfloat16、int8、int64，与这里的转换及标量分派相符。
+
+非同形的float、int8、int32走上述逐坐标标量广播；bfloat16也走标量广播，先ScalarCast到float比较，再选择原始输入值。int64无论shape是否相同都逐元素使用原整数类型比较，避免经float表示。标量条件相等时选择x2；对NaN、正负零等特殊值，不能仅凭普通数值结果认定它与Vector Max逐位一致。
+
+目标契约是910C/Atlas A3、__NPU_ARCH__=2201。这是由标量控制循环和地址计算驱动的Membase执行：向量路径经过GM、UB、Vector、GM，涉及MTE2、Vector、MTE3流水；标量路径直接表达GM标量访问，没有逐元素SIMT线程分派，也不使用Cube。Max文档以256字节说明向量迭代粒度，half对应128元素；本题每段仅3元素，通过count限制有效计算，不能当成3个硬件线程。
+
+half广播分支实际适用于x1可按输出连续读取、x2可作为末轴向量反复使用的情形，R满足；host允许的通用广播范围更广，而分派未进一步检查这个前提，P不满足。另有零尺寸、总量乘积溢出等边界未被显式校验，不能据rank及广播兼容检查推导为均可执行。上述Q/R输出是源码与固定API契约支持的静态结论；没有编译、设备执行或指令证据，不能进一步断言完整模板编译结果、实际流水重叠、物理访存事务数或性能。

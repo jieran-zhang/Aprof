@@ -1,0 +1,667 @@
+{
+  "schema_version": "aprof.knowledge-route/v1",
+  "owner": "parallel-planning",
+  "version": "v0003",
+  "knowledge_hash": "sha256:f56937bc9c128b179f561d0b3d774fef393778f61de55277b7a8b8c83d59e037",
+  "context_hash": "sha256:77110f93949acddabcb2b64a988621e2cfc31e2a01236def81da08c2604fd13f",
+  "task_id": "autonomy-c-15",
+  "override_hash": null,
+  "selection_mode": "deterministic",
+  "evidence": {},
+  "context_snapshot": {
+    "schema_version": "aprof.evidence/v1",
+    "task_id": "autonomy-c-15",
+    "source_context_ref": {
+      "path": "authority.json",
+      "sha256": "sha256:eb125a94bee6321b35ca6d6ad0a80eac4dcd1499eb8c244c9f42526c5b4ec587"
+    },
+    "attributes": {
+      "platform": "dav-2201",
+      "family": [
+        "indexing",
+        "elementwise"
+      ],
+      "dtype": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "features": [
+        "scalar-control",
+        "memory-transfer",
+        "vector-api"
+      ]
+    },
+    "facts": {}
+  },
+  "matches": [
+    {
+      "id": "planning.elementwise.continuous",
+      "version": "1.2.0",
+      "path": [
+        "planning.root",
+        "planning.elementwise",
+        "planning.elementwise.continuous"
+      ],
+      "score": 6,
+      "missing": [
+        "constraint.capacity",
+        "constraint.semantic_equivalence",
+        "constraint.task_ownership",
+        "constraint.valid_lengths"
+      ],
+      "status": "needs_evidence",
+      "snapshot": {
+        "body": "# 连续输出分区与均衡尾块\n\n## 适用域与先决语义\n\n输入、输出具有相同的逻辑 shape，且每个输出元素只依赖同一下标的输入或已冻结的只读标量。输入真实连续或已存在合法的连续视图，才可将 shape 的乘积展平为 N；带 stride 的 view 不能仅凭元素总数走本模板。N=0 在 host 空张量分支处理，不启动会执行零 count 或除以零的 kernel。\n\n一元函数、同形 Add/Mul、独立的算术链均可采用相同所有权。C2 先明确每步 dtype、Cast 舍入、溢出/饱和、NaN/Inf、输出别名和计算顺序。来源提出半精度加减链升 FP32 的候选；这是需要与 oracle 比较的数值实现选择，不是对所有 FP16/BF16 Add 的自动改写许可，更不能保证最后 Cast 后保留任意小增量。\n\n## 分区、任务数与核内循环\n\n令 g 为满足实际搬运接口及输出独占写要求的元素粒度，Q=ceil(N/g) 为逻辑块数。选择 1≤C≤min(Q,C_available)，定义 q=Q//C、r=Q%C。核 c 的起始块 b_c=cq+min(c,r)，块数 n_c=q+[c<r]，其有效元素区间为 `[b_c*g, min((b_c+n_c)*g,N))`。所有区间并集恰为 `[0,N)`，交集为空；尾部不足 g 的部分由唯一末核处理，绝不通过重叠搬出尾块补齐。\n\n核内再按 U 个元素分 tile，循环条件用当前位置小于核的有效结束位置，`valid=min(U,end-pos)`。只在 valid>0 时执行搬运与计算。U 是片上工作集粒度，g 是分核边界粒度，两者不必相同。若 C 很大而单核只有一个很短 tile，需与较少核数比较；增加 task 数、减少每核工作量、减少流水循环之间存在取舍。\n\n所有输入只读，每个输出片段只有一个写者，无跨核归约和全局同步。精确原址逐元素操作只有在 API 与算子别名合同均允许时才可使用；部分重叠 view 可能使一个核覆盖另一核尚未读取的输入，必须用已有安全基线。\n\n## 字节容量与成本模型\n\n定义 A_a(x)=ceil(x/a)*a，为按 a 字节向上对齐。s_j 是第 j 个存活张量的元素字节数，d_j 是它实际分配的 buffer 份数（含双缓冲），T_api 是按当前 API、dtype、形状查询的临时字节，B_res 是其他必须预留的字节。一般容量合同为：\n\n`B_UB = Σ_j d_j*A_aj(U*s_j) + B_fixed + T_api ≤ B_available`。\n\n这里计入所有已分配且未释放/未合法复用的区域；仅逻辑上不再使用但 TPipe 仍保留的独立分配不能从账上删除。若共享同一物理区，必须说明不同阶段的生命周期互斥以及跨流水依赖已完成。\n\n同 dtype 二输入 Add、两个输入队列与一个输出队列深度都为 d 时，数据区约 `3*d*A_a(U*s)` 字节；升 FP32 另有 K 个非别名中间区，则另加 `K*A_a(4U)`。K 由 API 的 dst/src 别名约束决定，不应把一个 Cast buffer 当三个运算都能安全原址复用。UB 余量不足一个合法 tile 时直接淘汰该候选，不能把 U 强制改成 1 掩盖超容。\n\n一次无复用扫描的必要 GM 数据量为 `B_GM=N*(Σ_inputs s_i+Σ_outputs s_o)`，不含额外 workspace、重读和隐式变换。设 F 为计算操作量、BW_eff/P_eff 为同一目标机测得的有效带宽/算力，则 `max(B_GM/BW_eff,F/P_eff)` 只是服务时间下界；实际还包括 launch、tile 循环、同步及尾块开销。该表达式用于解释候选，不能给出未经测量的微秒数。\n\n来源有 bits/bytes 混用的示意公式；本条全部以字节重推，若输入是 bit 宽度 b，先显式转换 s=b/8。上游 4KB 每核、512 元素、256B repeat 等是其示例选择，不能代替当前目标的合法对齐或性能阈值。\n\n## 参数选择与替代边界\n\n| 决策 | 优先检查的条件 | 不满足时的路径 |\n| --- | --- | --- |\n| 展平 | 同 shape、真实连续、逐元素无依赖 | 广播模板或保留 stride 的基线 |\n| 更多核 | 独立逻辑块够多，单核工作能摊销启动/调度成本 | 比较更少 C，并保持完整覆盖 |\n| 更大 U | 片上容量、API count 范围、足够 tile 循环 | 减 U 或降低队列深度 |\n| 双缓冲 | 两份数据区确实可容纳，存在可重叠阶段 | 单缓冲；双缓冲本身不证明速度更快 |\n| 半精度升 FP32 | 语义允许且精度需要，K 已确认 | 保持 oracle 认可的原 dtype 路径 |\n\nHost 用溢出安全的宽整数计算 shape 乘积、Q、偏移与 U*s；把 uint64 值转换为搬运接口的 uint32/int32 字段前验证范围。tile 的有效长度、存储长度、搬运字段单位要分别保存，不能共享一个含义不清的 length。\n\n## 可执行伪代码\n\n```python\n# host；checked_product 与 choose_tile 已证明不溢出、容量足够。\nN = checked_product(shape)\nif N == 0: return empty_result(shape)\nQ = (N + g - 1) // g\nC = choose_cores(1, min(Q, available_cores))\nq, r = divmod(Q, C)\nU = choose_tile(capacity_bytes, dtype_sizes, queue_depths, api_tmp)\n# kernel(c)\nbegin = (c*q + min(c, r))*g\nend = min(begin + (q + int(c < r))*g, N)\nfor pos in range(begin, end, U):\n    valid = min(U, end-pos)\n    xs = load_valid_inputs(pos, valid)  # queue producer -> consumer\n    ys = elementwise_with_frozen_casts(xs, valid)\n    store_valid_outputs(pos, ys, valid) # 不写 [valid,U) 的 padding\n```\n\n## 有界 Ascend C 片段与同步上下文\n\n下段采用来源 Add 样例的 TQue 生命周期，适用于一个合法对齐的 FP32 主 tile。xGm/yGm/zGm 已按本核 begin 绑定；队列已用字节容量初始化；pos 相对本核起点；n>0 且符合 DataCopy 主块约束。非对齐尾 tile 改用经核验的有效长度 DataCopyPad 封装，不能直接沿用主块搬出。\n\n```cpp\n// 包含 kernel_operator.h；inX/inY 为 VECIN，outZ 为 VECOUT。\nauto x = inX.AllocTensor<float>();\nauto y = inY.AllocTensor<float>();\nAscendC::DataCopy(x, xGm[pos], n);\nAscendC::DataCopy(y, yGm[pos], n);\ninX.EnQue(x); inY.EnQue(y);\nx = inX.DeQue<float>(); y = inY.DeQue<float>();\nauto z = outZ.AllocTensor<float>();\nAscendC::Add(z, x, y, n);\noutZ.EnQue(z);\ninX.FreeTensor(x); inY.FreeTensor(y);\nz = outZ.DeQue<float>();\nAscendC::DataCopy(zGm[pos], z, n);\noutZ.FreeTensor(z);\n```\n\nEnQue/DeQue 表达搬入→计算→搬出依赖；不得在同一物理区的异步消费者完成前覆盖或回收。原 Add 样例固定可整除的输入并将每核整段一次放进 UB，本条的 q/r 和核内 U 循环是为任意合法长度增加的规划推导，不能把样例直接改 totalLength 后视作通用 kernel。\n\n## 平台、验证与证据\n\n固定 asc-devkit 样例 README 给出的范围是 Atlas A2/A3（CANN≥9.0）和 950PR/950DT（CANN≥9.1）；这是该修订的样例范围。面向 910C/A3 应核对实际 SoC/编译目标，不能借用 950 的寄存器路径、NDDMA 或动态 Broadcast 能力。scope=all 仅表示可检索，未证明任意平台、dtype、API 组合可执行。\n\n至少验证 N∈{0,1,g−1,g,g+1,U−1,U,U+1}、Q 不能整除 C、多核最后一片、最大整数偏移、全分配容量和精确输出覆盖。数值用大/小量级混合、±0、NaN/Inf、溢出边界检查声明的合同。来源事实是均匀连续分区、UB 分块、队列数据流；均衡公式、字节模型与参数比较为本条工程推导。证据状态为 source_reviewed_not_benchmarked，无 NPU 时延或收益验证。\n\n## 选择前比较：连续段、短行与 tile 不能只看容量\n\n本节为依据 Add 队列样例与广播合轴规则作出的规划推导。样例只能直接确认“连续分区、按字节分配、队列传递”的事实，不能确认队列已经隐藏搬运延迟。\n\n先对每个 dtype/真实 stride 域保存 `(N,C,U,d)`，并按有效元素数分别计：输入读 `NΣs_i` 字节、输出写 `Ns_o` 字节、算术 `Nf` 次、核内 tile 数 `L=Σ_c ceil(N_c/U)`、尾片数及 padding 元素数。`f` 是每元素明确列出的逻辑算术次数；Cast、地址解码和同步单独列，不合并为“总成本”。采用新 U 只减少循环与接口调用，不会自动减少必要 GM 字节或逐元素算术。\n\n对于由 R 行、每行 H 个连续元素构成的路径，有两种不同机会：\n\n- **直接展平**：所有输入在行边界两侧都连续、标量/属性及数值路径不随行改变时，以 RH 元素连续段处理；跨行无需重新初始化。若输入每行有 padding 或广播位图变化，则不能如此展平。\n- **短行组合**：语义仍按行执行，但同一 owner 收集 h 行进入一个批次。保持每行有效 H 与物理行跨度 Ha 分离；容量与计算按 hHa，GM 有效搬出按 hH。规则行间 stride 可用已验证的多段搬运，任意间隔仍需逐段；批次不等于只发一次 DMA。初始化、mask、索引表等若按 Ha 执行，新增 `h(Ha−H)` 个无效 lane 工作必须计入比较。\n\n这两者的主要收益假设分别是去掉行级调度和摊销短接口发射；都不是扩大 UB 的同义词。更大 h/U 会减少核内批次或循环；固定核数 C 时不改变独立 owner/task 数，只有同时改变跨 owner 工作域或重新分核才可能减少 task，可能增加尾部浪费、临时存活量并挤掉第二个 buffer。若瓶颈仍可能是逐元素昂贵函数、转换或不连续输入，本次选择须保留它们作为残余机会。没有测得时间权重时，只比较工作类别及方向，不从调用次数给出确定收益。\n\nC2 输出完整适用域与未变路径；C3 若为了 API 尾部把所有主 tile 都清零、额外转换或加入全流水 barrier，应将新增工作反馈给选择阶段。不能以“已有 TQue”“已实现 Vector API”作为无需比较流水或计算粒度的依据。",
+        "evidence_status": "source_reviewed_not_benchmarked",
+        "id": "planning.elementwise.continuous",
+        "kind": "template",
+        "learning": {},
+        "parent": "planning.elementwise",
+        "references": [
+          "planning.elementwise.broadcast",
+          "planning.elementwise.fallback"
+        ],
+        "schema_version": "aprof.knowledge-record/v1",
+        "scope": {
+          "dtypes": [
+            "all"
+          ],
+          "platforms": [
+            "all"
+          ],
+          "workloads": [
+            "all"
+          ]
+        },
+        "seed_reason": "固定开源修订审读并补全中文算法、所有权、字节容量与选择边界；保留原 ID/主归属/数值合同，未做 NPU 性能验证。",
+        "source_hash": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4",
+        "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sources": [
+          {
+            "excerpt_sha256": "sha256:40fd7187bf84f9c454fc5a53b0c5adc1e9594e6054901f21c518cae1ee3ad0ad",
+            "lines": [
+              1,
+              215
+            ],
+            "original_path": "ops/ascendc-tiling-design/references/elewise/tiling.md",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/elewise/tiling.md",
+            "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+            "sha256": "sha256:40fd7187bf84f9c454fc5a53b0c5adc1e9594e6054901f21c518cae1ee3ad0ad"
+          },
+          {
+            "excerpt_sha256": "sha256:40fd7187bf84f9c454fc5a53b0c5adc1e9594e6054901f21c518cae1ee3ad0ad",
+            "lines": [
+              1,
+              215
+            ],
+            "original_path": "ops/ascendc-tiling-design/references/elewise/tiling.md",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/elewise/tiling.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:40fd7187bf84f9c454fc5a53b0c5adc1e9594e6054901f21c518cae1ee3ad0ad"
+          },
+          {
+            "excerpt_sha256": "sha256:8a1351ff5295af67a53383682a4264aca6a19a113a2cdb47158938f73bae0cec",
+            "lines": [
+              1,
+              46
+            ],
+            "original_path": "ops/ascendc-tiling-design/references/elewise/patterns.md",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/elewise/patterns.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:8a1351ff5295af67a53383682a4264aca6a19a113a2cdb47158938f73bae0cec"
+          },
+          {
+            "excerpt_sha256": "sha256:5c62ddc8f95f62eca158343a50005bb51f6f08f057946a4d67ba030dbd26da6c",
+            "lines": [
+              24,
+              65
+            ],
+            "original_path": "examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/add_tpipe_tque.asc",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/add_tpipe_tque.asc",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:3fd854a223214eec19b03eebf4be3397c81358ebd526d07b17202a5fd522b654"
+          },
+          {
+            "excerpt_sha256": "sha256:accaf93a389515058582a1b86c73fddc763155871b2f09255a4a08212d7541de",
+            "lines": [
+              7,
+              18
+            ],
+            "original_path": "examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/README.md",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/README.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:14f2219ba48fdf536ac5cf018c2f70b6fd4a0a074d2dede49c9a6ca187d8e9dd"
+          },
+          {
+            "excerpt_sha256": "sha256:fb975d9faab55d910f8e4df0a9f2995d9cf26ed8c737bfb91a1e08504979c297",
+            "lines": [
+              20,
+              75
+            ],
+            "original_path": "examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/add_tpipe_tque.asc",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/add_tpipe_tque.asc",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:3fd854a223214eec19b03eebf4be3397c81358ebd526d07b17202a5fd522b654"
+          },
+          {
+            "excerpt_sha256": "sha256:accaf93a389515058582a1b86c73fddc763155871b2f09255a4a08212d7541de",
+            "lines": [
+              7,
+              18
+            ],
+            "original_path": "examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/README.md",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/README.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:14f2219ba48fdf536ac5cf018c2f70b6fd4a0a074d2dede49c9a6ca187d8e9dd"
+          }
+        ],
+        "status": "active",
+        "tags": [
+          "broadcast",
+          "elementwise"
+        ],
+        "title": "连续输出分区与均衡尾块",
+        "version": "1.2.0"
+      }
+    },
+    {
+      "id": "planning.indexing.coordinate_neighborhood",
+      "version": "1.0.0",
+      "path": [
+        "planning.root",
+        "planning.indexing",
+        "planning.indexing.coordinate_neighborhood"
+      ],
+      "score": 5,
+      "missing": [
+        "constraint.capacity",
+        "constraint.coordinate_mapping",
+        "constraint.neighborhood_bounds",
+        "constraint.precision",
+        "constraint.semantic_equivalence",
+        "constraint.task_ownership"
+      ],
+      "status": "needs_evidence",
+      "snapshot": {
+        "body": "# 坐标生成与邻域读取：空间块、复用轴及重算取舍\n\n## 身份与采用边界\n\n这是**本次机制推导**的通用条件化骨架。固定来源直接确认 GatherElements 的输出独占/间接取数/转置中转，RoPE 的共享输入块广播及按容量分区，950 SIMT Gather 的逐行或输出元素分配；这些事实不证明任意插值公式、边界规则或 API 在目标平台合法。五个固定仓库本次检索未找到可用的 GridSampler/Resize 完整实现链，不能把本条说成已移植的上游采样 kernel。\n\n用于输出可独立计算、每输出从有限邻域读数的任务。实例必须给定：输入/输出真实布局与 stride，坐标来源函数 G，边界函数 B，邻域/权重函数 H，按既定次序消费邻域的函数 F，dtype/Cast/舍入、NaN/Inf、越界与空输入规则。**这些槽位未绑定时只能作为部分原则参考；绑定且证明输出互斥、地址/容量/数值条件后，才可完整采用其任务骨架。** 本条不提供通用插值数值实现，也不授权从任务 oracle 改写特殊值行为。\n\n最近邻可令 K=1、F 为读取合法元素；加权邻域的 K、权重计算精度和累加顺序必须来自任务定义。二维四邻域、三维八邻域只是已绑定特定数学定义后可能出现的 K，不是所有采样任务的假定。GatherElements 的 index 同形语义独立保留，不能因两者都读离散地址就采用同一完整模板。\n\n## 坐标、依赖轴与所有权\n\n示例符号：输出 `Y[n,c,p]`，n 为外层独立对象，c 为可复用轴，p 为展平输出空间点；输入 `X[n,c,i]`，真实 stride 显式保存。几何记录 `D[n,p]=H(B(G(n,p)))` 含 K 个源空间坐标、有效标记及必要权重。当 G/B/H 也依赖 c 时，必须改成 D[n,c,p]，不允许跨 c 复用。输入值 X 仍依赖 c，**几何相同不代表输入值相同**。\n\n将输出切成互斥 `[n,c0:c1,p0:p1]` 矩形；owner 为该矩形唯一写者，完整覆盖各有效维度。物理布局为 NCHW 类时 p 通常连续，c 跨一个源/输出平面；NHWC 类时 c 通常连续、p 跨通道行。代码必须用真实 stride，而非借用上述逻辑维度的连续假设。布局、边界策略、插值模式与 dtype 属于不同适用域；不能把只优化一域计为全算子覆盖。\n\n## 三种骨架与选择\n\n| 骨架 | 步骤与所有权 | 减少的工作与新增代价 |\n| --- | --- | --- |\n| 输出连续空间块，独立生成几何 | 每 owner 固定 n/c，连续 p 片批量生成坐标、验证邻域、读取并写出 | 输出连续、任务多；几何可能跨 c 重算，适合作为通用基线及无共享依赖的域 |\n| 同 owner 的复用轴块×空间块 | 先生成 St 个 D，再按 c 块逐次读取各自输入并消费，保持每个 c 的 p 子块连续 | 几何从每输出一次降为每复用块一次；新增 D 活跃状态、可能减少 task，跨 c 访问可能更离散 |\n| 有局部输入窗口的空间块 | 只有已证明邻域地址落在合法小窗口，才搬入含 halo 的窗口并本地读取 | 减少重复源请求的潜力；增加未用窗口字节、halo 重读和 Gather/布局成本；任意数据相关坐标不能假定局部性 |\n\n窗口方案与几何复用是不同维度，可以组合，也可以分开比较。没有地址局部性证据时保留逐输出间接取数或合法的本地分组方案；不凭输出连续推定源地址连续。950 SIMT 样例只支持其 README 指定产品，不能直接作为 910C/A3 的 GM Gather API。A3 需根据现有可用 Scalar/搬运/UB Gather 路径组成，API 选择归 C3 并须再次核对。\n\n## 工作量、字节与容量公式\n\n设外层数量 N、复用轴长度 C、空间点数 S，tile 为 Ct×St，最大邻域 K。G/B/H 每点的逻辑操作列表记为 g（按操作类型分开）；不把 g 当秒数。逐输出生成需 NCS 次几何，按 c 块保留需 `NS*ceil(C/Ct)` 次；所有 c 由同一 owner 顺序消费时可降到 NS 次，但 task 数会相应减少。边界点 Kvalid≤K 可不同，源读取请求上界 NCSK 个，真实缓存/DRAM 字节需要测量，不能把复用几何直接写成消除这些输入请求。\n\n令 bI/bW 为每索引/权重字节，bM 为每点完整 mask 记录字节，d 为源空间维数，bX/bY 为输入/输出元素宽。一个空间片的几何存储上界：\n\n`B_D = A(St*(K*d*bI + K*bW + bM))` 字节。\n\nA 是当前分配器的字节对齐函数；最近邻不需要权重时令 bW=0；存储基坐标+少量差分可有更小表示，但必须保留数值/范围证明。若每次只处理一个 c，输出 buffer 只需 St 元素；若同时处理 Ct 列，则按 CtSt 分配。保守 UB：\n\n`B_UB = B_D_UB + qX*A(LX*bX) + qY*A(LY*bY) + B_offsets + B_masks + B_cast + B_api_tmp + B_fixed`。\n\nLX 为真实搬入输入窗口/片的元素数，LY 为同时存活输出数，qX/qY 是实际分配份数。若 D 放 Scalar 私有数组，另列私有状态 `B_D_private` 与编译后寄存器/栈/spill 未知；**不能把其从 UB 删除就认定没有资源代价**。跨核共享 D 若另存 GM，还要增加 D 的写读与阶段完成关系；这已改变 C2 通路，不能当作局部复用免费实现。\n\n参数 St/Ct 的扩大可能分别改善空间连续性/几何摊销，也增加存储、尾片浪费、编译器活跃状态并减少 task。仅初始化真正需要的区域；若为合法向量尾部填充，计入 padded−valid 的本地工作。节省坐标操作、增加源访问、额外同步等分项记录，不使用统一成本分数掩盖无时间依据。\n\n## 带语义槽位的完整任务骨架\n\n```python\n# 所有偏移以元素为单位；转换到具体 API 字节偏移只做一次。\n# G/B/H/F 已绑定本任务语义，exact_read 只读取已证明有效的地址。\nfor n, c0, c1, p0, p1 in owned_rectangles:\n    D = [H(B(G(n, p))) for p in range(p0, p1)]  # 必须证明不依赖 c\n    for c in range(c0, c1):\n        out = []\n        for p, record in zip(range(p0, p1), D):\n            state = F.begin(n, c, p)\n            for neighbor in record.in_required_order():\n                if neighbor.is_valid:\n                    off = offset_from_true_strides(n, c, neighbor.coordinate)\n                    value = exact_read(X, off)\n                else:\n                    value = F.out_of_bounds_value(neighbor)  # 先判界，禁止先读越界再mask\n                state = F.consume(state, value, neighbor.weight)\n            out.append(F.finish(state))\n        write_valid_owned_output(n, c, p0, out)\n    wait_for_all_consumers_before_reusing(D_or_output_storage)\n```\n\nD 依赖 c 的域改为 c 循环内生成；这不是失败回退，而是语义要求。批量坐标/邻域 API 可以替换内层实现，但需证明 mask、舍入与运算顺序满足任务合同。无跨核归约；若采用两阶段 GM 几何表，生产者写唯一表槽，完成后消费者只读，不能省略阶段同步。\n\n## 复用、重算与 Action 意图\n\n输入值复用保存原始 X/B；派生数据复用保存 G/B/H 的结果；不变量外提保存地址或控制计算；三者分别记录依赖轴、owner 和生命周期。`reuse_input_tiles` 不能自动承载几何派生结果，`hoist_invariant_control` 不能自动承载插值计算重排。没有合法注册意图时仍可比较本骨架并提出知识提案，正式 C1 交接保持 blocked/条件分析，不把不适用 Action 改名塞入。\n\nC2 需比较“复用 D”“缩小 St/Ct 重算 D”“保留源窗口”及最强合理替代；不要求固定比较数量。若选择复用，写出哪些操作仍逐输出执行，以及布局/模式/dtype 的残余域。R2 发生回归时分别检查 D 表示与活跃状态、访存顺序、task 数、初始化/同步和数值实现，再决定缩 tile、重算、换骨架或保留原计划；不能从一次整体退化直接否定重复几何机制。\n\n本条没有硬件收益、通用阈值或完整插值 API 资格证明。最低 CPU 规划检查包括矩形覆盖、零/单点、Ct/St 尾部、依赖轴变化、负/边界坐标、真实 stride、地址溢出和所有生存期容量；这些检查不能代替实际数值与性能验收。",
+        "evidence_status": "mechanism_inference_from_reviewed_source_not_benchmarked",
+        "id": "planning.indexing.coordinate_neighborhood",
+        "kind": "template",
+        "learning": {},
+        "parent": "planning.indexing",
+        "references": [
+          "planning.indexing.gather_output_owned",
+          "planning.elementwise.broadcast",
+          "planning.layout.transpose"
+        ],
+        "schema_version": "aprof.knowledge-record/v1",
+        "scope": {
+          "dtypes": [
+            "all"
+          ],
+          "platforms": [
+            "all"
+          ],
+          "workloads": [
+            "all"
+          ]
+        },
+        "seed_reason": "固定来源确认间接取数/输出所有权及广播分区组成；完整采样骨架为明确条件化的本次机制推导，不是上游已有插值实现。",
+        "source_hash": "sha256:5e4f96af8fde45ec3d5ea785c96c2243f211dbeeb93cd28c1f4d7e63bdf036fb",
+        "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/coordinate_neighborhood.md",
+        "sources": [
+          {
+            "excerpt_sha256": "sha256:710989d3762b9a9b098d32ae60880ef24e30e663be574d65aeb494ae047304d6",
+            "lines": [
+              1,
+              16
+            ],
+            "original_path": "index/gather_elements_v2/README.md",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/README.md",
+            "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+            "sha256": "sha256:c8df45df36e823c8531e2e64a7d396d53f04c7e75ddc223dfb476c3910ffc43e"
+          },
+          {
+            "excerpt_sha256": "sha256:e3de11b8245bfed856224ab85e90f622e751b99b8a00cacab770c6d8cb7b2546",
+            "lines": [
+              105,
+              280
+            ],
+            "original_path": "index/gather_elements_v2/op_host/gather_elements_v2_tiling.cpp",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_host/gather_elements_v2_tiling.cpp",
+            "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+            "sha256": "sha256:c7bb8d76d1741b5c3212a8de9f28bf6f9de5fe2f7d012bfa90780b25e6f12793"
+          },
+          {
+            "excerpt_sha256": "sha256:27c6ffe9981fd02e7bf51e3722407a0bbe0b2ec0a73904fb0162e78f43843ab3",
+            "lines": [
+              35,
+              187
+            ],
+            "original_path": "index/gather_elements_v2/op_kernel/gather_elements_v2_scalar.h",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_kernel/gather_elements_v2_scalar.h",
+            "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+            "sha256": "sha256:d7038ab1282e3a89aaecc2123a5b5c6bd3e6ce041703dfcbc63c34a0fbace77f"
+          },
+          {
+            "excerpt_sha256": "sha256:cc2ec40a9f9d3cfce1021e356e4e8f2a5f27e1528caaeb2ff1796a6a530c0d75",
+            "lines": [
+              1,
+              522
+            ],
+            "original_path": "index/gather_elements_v2/op_kernel/gather_elements_v2_transpose.h",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_kernel/gather_elements_v2_transpose.h",
+            "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+            "sha256": "sha256:cc2ec40a9f9d3cfce1021e356e4e8f2a5f27e1528caaeb2ff1796a6a530c0d75"
+          },
+          {
+            "excerpt_sha256": "sha256:e61ea7721f247f0bc3c4bfc634d10b507668909fa619d5a0eab4ce14fb4bc5d4",
+            "lines": [
+              24,
+              106
+            ],
+            "original_path": "Samples/0_Introduction/03_simt_api/01_gather/general_gather/gather.asc",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/cann-samples/17c948bb961fc6a660e4fcab45f6bf217c9c6239/Samples/0_Introduction/03_simt_api/01_gather/general_gather/gather.asc",
+            "revision": "17c948bb961fc6a660e4fcab45f6bf217c9c6239",
+            "sha256": "sha256:736f80f904a485299798f602f5dec5349582544ed5bbbf82a74c97479074f913"
+          },
+          {
+            "excerpt_sha256": "sha256:aca4c07f4c58eb05c59d299de5d7142d08972a1602152cdc24f5b0a696d310f9",
+            "lines": [
+              1,
+              58
+            ],
+            "original_path": "Samples/0_Introduction/03_simt_api/01_gather/general_gather/README.md",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/cann-samples/17c948bb961fc6a660e4fcab45f6bf217c9c6239/Samples/0_Introduction/03_simt_api/01_gather/general_gather/README.md",
+            "revision": "17c948bb961fc6a660e4fcab45f6bf217c9c6239",
+            "sha256": "sha256:c4f0943995abfc0f44bfcd74fe8ca25ef908ba95d003c7b8dc2649e4683f84f1"
+          },
+          {
+            "excerpt_sha256": "sha256:0584361aaf5de66a2e5290e73880764867c112b65192db8fdd2a8a545b4e5f7f",
+            "lines": [
+              1,
+              51
+            ],
+            "original_path": "posembedding/rotary_position_embedding/README.md",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/README.md",
+            "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+            "sha256": "sha256:5c367eaca3ad1b7008afd6804ccc997be9cde35a76bb03d23df2a931d810a784"
+          },
+          {
+            "excerpt_sha256": "sha256:43e2749e99d4ff0e456b7039f18af6a7645511e6d6cbdcbcd6d8d0e58a3b3e85",
+            "lines": [
+              151,
+              348
+            ],
+            "original_path": "posembedding/rotary_position_embedding/op_host/rope_interleaved_tiling.cpp",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_host/rope_interleaved_tiling.cpp",
+            "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+            "sha256": "sha256:0f2bac0d6cd52e57ef38976b7fb8205e3104f2e0ea26f3689f0be1dd0a09cec6"
+          },
+          {
+            "excerpt_sha256": "sha256:24d59f53fadba324ba0346704b8fbaff23d6de81b93fd9f8282d5e9d15e28f28",
+            "lines": [
+              145,
+              200
+            ],
+            "original_path": "posembedding/rotary_position_embedding/op_kernel/rotary_position_embedding.cpp",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_kernel/rotary_position_embedding.cpp",
+            "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+            "sha256": "sha256:5160d08c053ba32694df0c699d31ddc9b67a26d3ae4545f4fb9d6122efc3400e"
+          },
+          {
+            "excerpt_sha256": "sha256:aee09fcfd96fbd9fa8fd9dee7eee943d5d9f288672ae0c74f2ee4759e5c7f18b",
+            "lines": [
+              80,
+              195
+            ],
+            "original_path": "posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bsn.h",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bsn.h",
+            "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+            "sha256": "sha256:1b9db64d84e6abf43eda6f65ca706df6d5219e8b73ebeec794c5ff106fa2434b"
+          }
+        ],
+        "status": "active",
+        "tags": [
+          "indexing",
+          "coordinate-generation",
+          "neighborhood-read",
+          "derived-reuse"
+        ],
+        "title": "坐标生成与邻域读取：空间块、复用轴及重算取舍",
+        "version": "1.0.0"
+      }
+    },
+    {
+      "id": "planning.indexing.gather_output_owned",
+      "version": "1.0.0",
+      "path": [
+        "planning.root",
+        "planning.indexing",
+        "planning.indexing.gather_output_owned"
+      ],
+      "score": 5,
+      "missing": [
+        "constraint.capacity",
+        "constraint.semantic_equivalence",
+        "constraint.task_ownership"
+      ],
+      "status": "needs_evidence",
+      "snapshot": {
+        "body": "# Gather：按输出所有权划分的取数\n\n## 语义、形状与平台边界\n\n用于 GatherElements 类逐元素取数，index 与输出同形，每个输出坐标独立选择源 tensor 的 gather 轴位置。冻结 d 的归一化、源/索引 shape 与 stride、负索引和越界行为，不能混同“一个一维 index 供整行共享”的 IndexSelect。设 `g=normalize(index[o],X_dim[d])`，则 `src_coord[d]=g`，其余轴 `src_coord[j]=out_coord[j]`，`y[o]=x[Σ src_coord[j]*x_stride[j]]`。只搬运位模式，不进行算术 cast；BF16/INT32 用同宽类型作搬运时必须证明只是 reinterpret。\n\n本模板的具体分支来源是 ops-nn GatherElementsV2 的 host 与 scalar/transpose/last_dim 实现，scope 保守限 dav-2201；README 列 A2/A3 支持，但本次没有构建或硬件验证。输出所有权的数学方法可以迁移到别的平台，迁移需重新核验 API、对齐、索引宽度和内存路径；不能视为硬件资格。\n\n## 非尾轴：按行或行列共同分核\n\n把 d 前后的索引维展为 `P=prod(index_shape[:d])`、`J=index_shape[d]`、`Q=prod(index_shape[d+1:])`，源 gather 长 G、源后轴长 Qx。逻辑输出 `[P,J,Q]`。P 足够供核时，每核处理若干完整前置行和该行全部后轴列；P 较少时，每前置行一个核组，组内再分后轴 Q 列。两者均让某个 `(p,q)` 的整个 J 取数序列只有一个 owner，无需输出原子。用商余分配：给 M 个 owner 分 L 个任务时，第 c 个 owner 有 `floor(L/M)+(c<L%M)` 个，起点 `c*floor(L/M)+min(c,L%M)`；只启用有有效工作者。\n\n前后各维 shape 相同且连续时，可写简化地址 `x_base(p)+g*Qx+q`。若 index 的非 gather 维比 X 小，必须逐维分解 index 的 p/q 坐标并使用 X stride，不能用展平 p 或 index 的 Q 直接替代源跨度。host 与 kernel 应共享这一映射口径。\n\n比较两条实现：scalar 路径批量搬 index、逐输出在 GM 取源值、批量写 y，容量小但标量寻址多；transpose 路径把 X 和 index 在本核负责的后轴列片转成 gather 轴连续的局部行，在 UB 进行 Gather，结果反转置写回。来源 transpose 分支使用每核独立 GM workspace 作中转，不能写成仅片上转换。需比较该额外写读与标量访问代价；转置/offset 单位规则复用 `planning.layout.transpose`。\n\n## 尾轴：直接行 gather 与双轴分片\n\nd 为末轴时 Q=1，源行沿 G 连续，不需要非尾轴 transpose workspace。能容纳源整行及索引/输出片时，可批量处理多行；索引 J 很长则切索引片，每片独占输出区间。G 很大时，切源轴窗口并为每个索引判断它属于哪个源窗口，按相对偏移 Gather，再只合入命中结果；不能把所有未命中的默认值覆盖已命中输出。索引负值应先按接口合法范围修正，超范围行为不能用无条件模 G 悄悄改变。来源 scalar 的修正式只能在已确认合法域内复用。\n\n当源窗口数过大或没有合法/划算的向量路径，可退到按输出元素均分的 scalar 取数。尾轴行不足时也可沿一行的索引 J 切分以增加 task；每个 task 可重复读源行，但必须只写自己的索引片。非尾轴“分后轴 Q 列”与尾轴“分索引 J 片”是不同的所有权划分，不能共用错误的偏移公式。\n\n## 容量与代价\n\n`A(z)=ceil(z/a)*a` 为 a 字节对齐，b_x/b_i/b_o 为值、索引和偏移字节宽，r 为批行数，g/j 为源/索引片长，q_* 为实际分配份数。直接尾轴 gather 的保守预算是 `U=q_x*A(r*g*b_x)+q_i*A(r*j*b_i)+A(r*j*b_o)+q_y*A(r*j*b_x)+U_mask+Tmp+F`。负索引修正若另需 scratch，再加对应索引片；若将它复用在 index 的另一半，仍须计完整分配。scalar 路径至少计 `q_i*A(j*b_i)+q_y*A(j*b_x)+F`，不需要为整个 G 分配 UB。\n\n非尾轴转置路径 `U=max(U_transpose,U_gather)` 仅在两个阶段确实复用同一缓冲且无重叠流水时成立，否则按存活峰值求和；每核 workspace 按被保留的 X/index/结果转置块逐项分配并按生存期复用，总 `W=Σ_active_core W_core+W_system`。源片×索引片的循环有重复读放大，必须计实际源读取次数；不能只按输出总元素数推定带宽成本。\n\n```text\n冻结坐标/stride/合法 index；建立输出互斥分区\nif 非尾轴且转置路径容量/API 可行:\n    本核源/索引列片转置 -> gather 轴连续取数 -> 反转置有效输出\nelse if 尾轴且向量路径可行:\n    每行/索引片读取 index，修正合法负索引\n    整源行或逐源窗口 gather，命中 mask 合入输出\nelse:\n    每个拥有的输出 o：解码坐标；读取 x[src_coord]；写 y[o]\n等待 DMA/Vector/标量读者完成后才复用其 buffer\n```\n\nGather 重复读取同一源无需归约，也无需原子；索引改变写目标的操作另见 `planning.indexing.indexed_write_reduce`。验证多维非等长非 gather 轴、负/边界索引、空 shape 的接口处理、非尾/尾轴、同一源多次命中、G/J 不对齐、极长索引、64 位地址与分片边界。具体 API 的 byte offset 只乘一次 sizeof；当前来源审读不包含 NPU 性能结论。",
+        "evidence_status": "source_reviewed_not_benchmarked",
+        "id": "planning.indexing.gather_output_owned",
+        "kind": "template",
+        "learning": {},
+        "parent": "planning.indexing",
+        "references": [
+          "planning.layout.transpose",
+          "planning.indexing.indexed_write_reduce"
+        ],
+        "schema_version": "aprof.knowledge-record/v1",
+        "scope": {
+          "dtypes": [
+            "all"
+          ],
+          "platforms": [
+            "dav-2201"
+          ],
+          "workloads": [
+            "all"
+          ]
+        },
+        "seed_reason": "固定开源修订审读并以中文提炼；未做性能训练或硬件收益验证。",
+        "source_hash": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e",
+        "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+        "sources": [
+          {
+            "excerpt_sha256": "sha256:c8df45df36e823c8531e2e64a7d396d53f04c7e75ddc223dfb476c3910ffc43e",
+            "lines": [
+              1,
+              106
+            ],
+            "original_path": "index/gather_elements_v2/README.md",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/README.md",
+            "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+            "sha256": "sha256:c8df45df36e823c8531e2e64a7d396d53f04c7e75ddc223dfb476c3910ffc43e"
+          },
+          {
+            "excerpt_sha256": "sha256:e80d0fcbd0b582c83e9a37fb8fd61dcff95d5c1b98af493630cba1ff467fb9c8",
+            "lines": [
+              105,
+              273
+            ],
+            "original_path": "index/gather_elements_v2/op_host/gather_elements_v2_tiling.cpp",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_host/gather_elements_v2_tiling.cpp",
+            "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+            "sha256": "sha256:c7bb8d76d1741b5c3212a8de9f28bf6f9de5fe2f7d012bfa90780b25e6f12793"
+          },
+          {
+            "excerpt_sha256": "sha256:c5c10605e8e2621e3c8fec9e8844b5c541b65877b2037d5c3991689e4f31ec5c",
+            "lines": [
+              1,
+              369
+            ],
+            "original_path": "index/gather_elements_v2/op_host/gather_elements_v2_last_dim_tiling.h",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_host/gather_elements_v2_last_dim_tiling.h",
+            "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+            "sha256": "sha256:c5c10605e8e2621e3c8fec9e8844b5c541b65877b2037d5c3991689e4f31ec5c"
+          },
+          {
+            "excerpt_sha256": "sha256:27c6ffe9981fd02e7bf51e3722407a0bbe0b2ec0a73904fb0162e78f43843ab3",
+            "lines": [
+              35,
+              187
+            ],
+            "original_path": "index/gather_elements_v2/op_kernel/gather_elements_v2_scalar.h",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_kernel/gather_elements_v2_scalar.h",
+            "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+            "sha256": "sha256:d7038ab1282e3a89aaecc2123a5b5c6bd3e6ce041703dfcbc63c34a0fbace77f"
+          },
+          {
+            "excerpt_sha256": "sha256:cc2ec40a9f9d3cfce1021e356e4e8f2a5f27e1528caaeb2ff1796a6a530c0d75",
+            "lines": [
+              1,
+              522
+            ],
+            "original_path": "index/gather_elements_v2/op_kernel/gather_elements_v2_transpose.h",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_kernel/gather_elements_v2_transpose.h",
+            "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+            "sha256": "sha256:cc2ec40a9f9d3cfce1021e356e4e8f2a5f27e1528caaeb2ff1796a6a530c0d75"
+          },
+          {
+            "excerpt_sha256": "sha256:caf8774a67ba31a55ef29be6b785545a877eea0eb856777d588f00f6f94a858c",
+            "lines": [
+              1,
+              523
+            ],
+            "original_path": "index/gather_elements_v2/op_kernel/gather_elements_v2_last_dim.h",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_kernel/gather_elements_v2_last_dim.h",
+            "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+            "sha256": "sha256:caf8774a67ba31a55ef29be6b785545a877eea0eb856777d588f00f6f94a858c"
+          },
+          {
+            "excerpt_sha256": "sha256:08be2c49bafe17407829de0a4e1d8bd47f7aef8216d7f499d8a589ced28c61a1",
+            "lines": [
+              25,
+              184
+            ],
+            "original_path": "ops/ascendc-tiling-design/references/index/gather.md",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/index/gather.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:0f63900de53cd6e704572f14fc896b4e477b47b74ebf1371c130db2810992c63"
+          }
+        ],
+        "status": "active",
+        "tags": [
+          "gather",
+          "indexing",
+          "ownership",
+          "last-dimension"
+        ],
+        "title": "Gather 输出所有权、行列分区与尾轴路径",
+        "version": "1.0.0"
+      }
+    },
+    {
+      "id": "planning.indexing.indexed_write_reduce",
+      "version": "1.0.0",
+      "path": [
+        "planning.root",
+        "planning.indexing",
+        "planning.indexing.indexed_write_reduce"
+      ],
+      "score": 5,
+      "missing": [
+        "constraint.capacity",
+        "constraint.duplicate_index_semantics",
+        "constraint.precision",
+        "constraint.semantic_equivalence",
+        "constraint.task_ownership"
+      ],
+      "status": "needs_evidence",
+      "snapshot": {
+        "body": "# 索引写与重复目标归约：先定义冲突再分区\n\n## 语义模型\n\n将每个更新记为 `e=(target,source_order,value)`。冻结初始输出、target 地址映射、覆盖/add/mul/min/max 语义、累加 dtype、cast/scale/舍入位置、整数溢出与重复目标顺序。若重复目标使用覆盖，必须定义胜者（例如最后合法 source_order），无序并发写无法提供“最后写”语义。若重复目标使用浮点归约，原子仅保证单次更新不可分割，不保证顺序与结合方式；固定树合并只保证该树可复现，不自动逐位等价于原顺序。\n\n先确认唯一性：需要的是最终物理目标地址不冲突，而非 index 数值在某个局部片唯一。不同外轴、广播/stride、非对齐写回和别名都应纳入冲突图。index 唯一时，可以按 source 分区直接写出；仍须初始化所有要求保留而未命中的输出位置。index 重复时，比较以下分解。\n\n## 候选及完整所有权\n\n目标 owner：按输出目标块分核，读初始值，在 UB 内筛选所有落入此块的更新，按合法源顺序读改写，最后批量写回。每个物理输出块只有一个 owner，避免跨核原子；代价可能是各 owner 重复扫描索引。可建立命中表或分桶来减少重复扫描，但构建及读取成本、最坏热点容量也计入。\n\n直接原子：按 source 分核并发更新目标。仅在目标 dtype/API 支持该归约且精度/确定性契约允许时选用；输出初始化必须先全部完成，原子模式必须覆盖所有合法更新且结束后恢复，不能混入非原子普通写。热点竞争可能主导成本；原子加不能实现有序覆盖。\n\n分组再归约：将更新按 `(target,source_order)` 稳定组织，目标 owner 读取完整等 target run，按契约次序归约后写一次。若 source_order 本身就是稳定排序输入顺序，可以按 target 稳定排序；不能只按 target 不稳定聚合。run 跨 tile/核边界时指定完整 run 的 owner，或保存 partial 后按允许的固定顺序合并；不能让两个边界核分别读初始 y、各自覆盖结果。分组排序复用 `planning.sort-topk.merge`，归约状态/合并复用 `planning.reduction.split`，本条不另造通用排序或归约算法。\n\n热点拆分：仅当契约允许重结合时，多个 task 处理同一热点的 source 子区间，partial 唯一写到 workspace，最终 target owner 按固定规则合并并加入初始 y 一次。若必须严格 source_order，保留顺序链或完整 run owner；热点并行不能成为放松数值语义的理由。\n\n## 来源实例与平台范围\n\nops-nn 的 ScatterAddWithSorted 浮点分支输入 sorted_index 与 pos：前者组织目标 run，后者取回原更新位置。核首读取前一个 index，若与前一核同 run，当前核跳过开头的重复段；run 的首 owner 在自己名义分区结束后继续向后读取同目标，直到 run 结束才写回。该“名义索引区间+边界延伸”的规则保证等目标只由一个 owner 归约；不能删掉边界扫描后只保留均匀分区。\n\n该源的 half/bf16 值先转 float 累加，回写以其 CAST_RINT 转换，float 分支按代码逐项 Add；这是具体算子实现语义，不是所有 ScatterReduce 的通用精度政策。README 参数描述存在示例与字段文字不一致，规划以 host/kernel 的 target、pos、输入布局和当前接口 oracle 联合核验，不猜测缺项。本条 scope all 只描述跨平台算法候选；源码分支 API、arch35 路径和收益均未取得当前硬件资格。\n\n## 容量、分布与同步\n\n设 U 为更新数，D 为唯一目标数，B 为当前 owner 的输出元素数，b_y/b_u/b_t/b_s 为输出计算值、更新值、目标索引、源顺序字节宽，a 为字节对齐，`A(z)=ceil(z/a)*a`。目标 owner 保守 UB 为 `A(B*b_y)+q_u*A(t*b_u)+q_i*A(t*b_t)+U_hit+U_cast+Tmp+F`，t 为更新批长；输出 dtype 与累加 dtype 不同需同时计原值/转换值。分组元组 workspace 至少 `A(U*(b_t+b_s+b_u))`，外部排序还需第二代和 API 元数据；若只保存索引则扣去 value 项并计后续随机 gather。partial 路径为 `W_partial=Σ_target P_target*b_state` 再加对齐、元数据和最终结果。\n\n比较成本 `索引读取+目标筛选/分组+更新搬运+临时写读+归约+最终写回+同步/启动`，并记录 U、D、每目标更新数和最热目标、顺序/随机/热点分布。GM 元数据发布前要完成数据写入，复用前要等消费者；只用标量轮询不能推定新值可见，缓存/同步须按架构证明。独占输出路径通常无需跨核写同步，partial 或分组阶段仍需完成依赖。\n\n```text\n初始化结果语义并建立最终 target 冲突图\nif target 唯一：source owner 直接写唯一目标\nelif 原子满足 dtype/数值/顺序契约：初始化完成后 source owner 原子归约\nelse：按 target 分区，或按(target,source_order)稳定分组\n      完整 run 的唯一 owner 从初始值开始按合法顺序归约并写回\n      若允许热点 partial：先等待全部 partial，再由最终 owner 合并一次\n```\n\n验证无命中输出、唯一目标、全重复、热点跨核/跨 tile、非对齐物理块、覆盖胜者、混合正负大数、溢出与每 dtype 的 cast。读索引 Gather 无写冲突，见 `planning.indexing.gather_output_owned`。本条没有 NPU 性能验证，不继承来源性能数字或固定阈值。",
+        "evidence_status": "source_reviewed_not_benchmarked",
+        "id": "planning.indexing.indexed_write_reduce",
+        "kind": "template",
+        "learning": {},
+        "parent": "planning.indexing",
+        "references": [
+          "planning.sort-topk.merge",
+          "planning.reduction.split",
+          "planning.indexing.gather_output_owned"
+        ],
+        "schema_version": "aprof.knowledge-record/v1",
+        "scope": {
+          "dtypes": [
+            "all"
+          ],
+          "platforms": [
+            "all"
+          ],
+          "workloads": [
+            "all"
+          ]
+        },
+        "seed_reason": "固定开源修订审读并以中文提炼；未做性能训练或硬件收益验证。",
+        "source_hash": "sha256:d7590b4d193bb0adc9c1e88793f9d9909f7ec4dc1788d9ed17885c0a1d8f8c46",
+        "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/indexed_write_reduce.md",
+        "sources": [
+          {
+            "excerpt_sha256": "sha256:c8b2bdb82a5ca27c192ffdf6ecdf76a9424ae1c0daa0396e6ddb42775fe6b7ae",
+            "lines": [
+              1,
+              30
+            ],
+            "original_path": "ops/ascendc-performance-best-practices/references/common/indexed_write_reduction.md",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/indexed_write_reduction.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:c8b2bdb82a5ca27c192ffdf6ecdf76a9424ae1c0daa0396e6ddb42775fe6b7ae"
+          },
+          {
+            "excerpt_sha256": "sha256:b67ec969c55ab5d7b8a763a69fb71c5c1588d91fc07e23f7645688f9bcb1a74c",
+            "lines": [
+              1,
+              199
+            ],
+            "original_path": "ops/ascendc-tiling-design/references/index/patterns.md",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/index/patterns.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:b67ec969c55ab5d7b8a763a69fb71c5c1588d91fc07e23f7645688f9bcb1a74c"
+          },
+          {
+            "excerpt_sha256": "sha256:43653d54e243ddcd8e7aac142af45db506f26f59fd9be2b10928a9d5c98b6953",
+            "lines": [
+              1,
+              341
+            ],
+            "original_path": "ops/ascendc-tiling-design/references/index/scatter.md",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/index/scatter.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:43653d54e243ddcd8e7aac142af45db506f26f59fd9be2b10928a9d5c98b6953"
+          },
+          {
+            "excerpt_sha256": "sha256:f832694b1a824d5656fe58a7b6961bd22ed0cbd84b7acdc34cf8d00a4ed0ad30",
+            "lines": [
+              1,
+              317
+            ],
+            "original_path": "index/scatter_add_with_sorted/op_kernel/scatter_add_float_with_sorted.h",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/scatter_add_with_sorted/op_kernel/scatter_add_float_with_sorted.h",
+            "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+            "sha256": "sha256:f832694b1a824d5656fe58a7b6961bd22ed0cbd84b7acdc34cf8d00a4ed0ad30"
+          },
+          {
+            "excerpt_sha256": "sha256:ca5a2bf244f7f9cb1bb8f7f6b081e26bffba7d8b21d7aeadc6194a4335bb1f70",
+            "lines": [
+              1,
+              96
+            ],
+            "original_path": "index/scatter_add_with_sorted/README.md",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/scatter_add_with_sorted/README.md",
+            "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+            "sha256": "sha256:ca5a2bf244f7f9cb1bb8f7f6b081e26bffba7d8b21d7aeadc6194a4335bb1f70"
+          }
+        ],
+        "status": "active",
+        "tags": [
+          "scatter",
+          "index-add",
+          "indexed-write",
+          "duplicate-target",
+          "ownership"
+        ],
+        "title": "索引写与重复目标：目标所有权、原子和分组归约",
+        "version": "1.0.0"
+      }
+    }
+  ],
+  "considered": [
+    {
+      "router": "planning.root",
+      "target": "planning.elementwise",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "planning.root",
+      "target": "planning.reduction",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "planning.root",
+      "target": "planning.matmul",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "planning.root",
+      "target": "planning.under-fusion",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "planning.root",
+      "target": "planning.flash-attention",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "planning.root",
+      "target": "planning.sort-topk",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "planning.root",
+      "target": "planning.layout",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "planning.root",
+      "target": "planning.indexing",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "planning.root",
+      "target": "planning.moe-routing",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "planning.elementwise",
+      "target": "planning.elementwise.continuous",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "planning.elementwise",
+      "target": "planning.elementwise.broadcast",
+      "matched": false,
+      "prior_score": 2
+    },
+    {
+      "router": "planning.indexing",
+      "target": "planning.indexing.gather_output_owned",
+      "matched": true,
+      "prior_score": 2
+    },
+    {
+      "router": "planning.indexing",
+      "target": "planning.indexing.indexed_write_reduce",
+      "matched": true,
+      "prior_score": 2
+    },
+    {
+      "router": "planning.indexing",
+      "target": "planning.indexing.coordinate_neighborhood",
+      "matched": true,
+      "prior_score": 2
+    }
+  ]
+}

@@ -1,0 +1,148 @@
+{
+  "task_id": "raw-case-14",
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "o1"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+        "sha256": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db"
+      },
+      "locator": "lines:329-341",
+      "effect_kind": "mechanism",
+      "before": "源码显示：perm[rank-1]==rank-1仅case1/14；其他case输入跨stride，矩形能令搬入/搬出分别连续。",
+      "after": "二维矩形转置降低跨stride逐元素GM访问，连续suffix可直接块拷；新增局部重排与UB资源。",
+      "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+    },
+    {
+      "opportunity_ids": [
+        "o2"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+        "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+      },
+      "locator": "lines:292-304",
+      "effect_kind": "mechanism",
+      "before": "源码显示：TransposeScalar每输出rank次除模、1个原始位宽GM读和1个写；没有Vector或UB分块。",
+      "after": "只对逐元素循环做Vector gather仍可能保留离散GM访问，先把数据通路规则化更直接。",
+      "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+    },
+    {
+      "opportunity_ids": [
+        "o3"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+        "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+      },
+      "locator": "lines:310-322",
+      "effect_kind": "mechanism",
+      "before": "源码显示：TransposeScalar每输出rank次除模、1个原始位宽GM读和1个写；没有Vector或UB分块。",
+      "after": "混合基数递增消除大部分每元素除模，能覆盖复杂perm但仍每元素GM搬运；作为fallback后继。",
+      "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+    },
+    {
+      "opportunity_ids": [
+        "o1"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md",
+        "sha256": "sha256:678b709d7ea4092de4145febb3c7174155094d097e47f2b42b3f073d499b1c25"
+      },
+      "locator": "lines:51-69",
+      "effect_kind": "parameters",
+      "before": "尚未把源循环转换为有界任务/内存方案。",
+      "after": "transpose正文53要求不同owner不因DMA对齐触及同一物理块，故撤回output_ownership=true。采用真实A全局物理块同owner、矩形行段与owner区间求交，尾块须核验有效写许可；原矩形思路保留为条件方案。",
+      "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+    },
+    {
+      "opportunity_ids": [
+        "o1"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+        "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+      },
+      "locator": "lines:76-88",
+      "effect_kind": "parameters",
+      "before": "尚未把源循环转换为有界任务/内存方案。",
+      "after": "transpose仅连续suffix或局部重排后的输出行片可合并；输出行片先裁切至真实物理块owner，不能跨owner补齐写。",
+      "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+    },
+    {
+      "opportunity_ids": [
+        "o1",
+        "o2"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+        "sha256": "sha256:d1a2e2eb822d93e4962d5c0198fd3a124e81e5af354c73596b513bd53ee13f08"
+      },
+      "locator": "lines:85-97",
+      "effect_kind": "alternative",
+      "before": "此前尚未比较该方法的边界。",
+      "after": "transpose批量重排必须保持原始位；count或mask不能保护GM写，且局部位宽重排API与物理写owner分别待核验。",
+      "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+    },
+    {
+      "opportunity_ids": [
+        "o1",
+        "o2"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+        "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+      },
+      "locator": "lines:70-82",
+      "effect_kind": "alternative",
+      "before": "此前尚未比较该方法的边界。",
+      "after": "外提只减少地址控制，不会自行改善离散GM；复杂perm保留混合基数递增fallback，矩形方案优先解决数据通路。",
+      "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+    }
+  ],
+  "adopted_routes": {
+    "P": "planning.layout.transpose",
+    "O": "implementation.memory-transfer.coalesce"
+  },
+  "scope": "conditional method adoption; no C3 implementation",
+  "complete_directory_reviewed": [
+    "problem.broadcast_strategy_mismatch",
+    "problem.cache_policy_mismatch",
+    "problem.chunk_merge_overhead",
+    "problem.control_metadata_overhead",
+    "problem.core_tail_imbalance",
+    "problem.dynamic_shape_mismatch",
+    "problem.excessive_sync_scope",
+    "problem.fragmented_writeback",
+    "problem.insufficient_input_reuse",
+    "problem.l1_l0_reuse_deficit",
+    "problem.memory_bandwidth_saturation",
+    "problem.missing_kernel_fusion",
+    "problem.mixed_pipeline_imbalance",
+    "problem.noncontiguous_access",
+    "problem.onchip_capacity_pressure",
+    "problem.pipeline_serialization",
+    "problem.reduction_strategy_mismatch",
+    "problem.redundant_cast",
+    "problem.redundant_gm_round_trip",
+    "problem.register_spill",
+    "problem.scalar_control_hot_loop",
+    "problem.tail_slow_path",
+    "problem.tiny_transfer_setup_amplification",
+    "problem.transfer_compute_contention",
+    "problem.ub_bank_conflict",
+    "problem.underused_task_parallelism",
+    "problem.vector_api_fragmentation",
+    "problem.workspace_overallocation"
+  ],
+  "stopping_reason": "当前主体数据路径与竞争机会已比较，剩余合法性/性能问题不能由文档替代当前设备证据。"
+}

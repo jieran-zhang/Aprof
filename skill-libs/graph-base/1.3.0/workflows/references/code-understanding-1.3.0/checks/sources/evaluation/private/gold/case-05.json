@@ -1,0 +1,345 @@
+{
+  "schema": "aprof.code-understanding-gold/v1",
+  "case": "case-05",
+  "title_private": "Two-level ping-pong lifetimes, forward readiness and reverse reuse guarantee",
+  "max_score": 30,
+  "dimensions": {
+    "algorithm_strategy": 10,
+    "execution": 10,
+    "hardware": 10
+  },
+  "facts": [
+    {
+      "id": "CU05.A01",
+      "dimension": "algorithm_strategy",
+      "points": 3,
+      "expected": "SCENARIO_NUM=1 computes half-output C=A*B with half inputs and float L0C accumulation; GM B is stored [N,K], while the logical matmul is [M,K]@[K,N]. There is no activation and IS_B_TRANSPOSE=true describes the stored B route.",
+      "sources": [
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 26,
+          "line_end": 26,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        },
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 567,
+          "line_end": 570,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        },
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 381,
+          "line_end": 388,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU05.A02",
+      "dimension": "algorithm_strategy",
+      "points": 3,
+      "expected": "For 2201/scenario1: M=N=K=8192, singleCoreM=2048, singleCoreN=1536, singleCoreK=8192; baseM=128, baseN=256, baseK=64; 24 blocks map mIterIdx=block%4,nIterIdx=block/4. M loops=16, N loops=6 except the final N slab has 512 columns and 2 loops; each output tile runs 128 K iterations.",
+      "sources": [
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 577,
+          "line_end": 590,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        },
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 276,
+          "line_end": 278,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        },
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 288,
+          "line_end": 296,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU05.A03",
+      "dimension": "algorithm_strategy",
+      "points": 4,
+      "expected": "L1 stages K chunks stepKa=8 and stepKb=4; L0 stages one baseK. Mmad initializes C only on kBlockIdx=0, then accumulates. Mmad unitFlag is 2 except final K iteration uses 3, with Fixpipe unitFlag=3; this source uses the documented UnitFlag protocol and absence of explicit M_FIX alone is not evidence of a missing dependency.",
+      "sources": [
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 194,
+          "line_end": 197,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        },
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 515,
+          "line_end": 517,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        },
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 540,
+          "line_end": 540,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/cube_compute_ISASI/mmad_compute/Mmad.md",
+          "line_start": 327,
+          "line_end": 327,
+          "sha256": "1ebb798bb29605a5cbabb2b52964032fff2e5a3b0c02b9ba7556b05f573e062a"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/cube_compute_ISASI/mmad_compute_key_features/UnitFlag.md",
+          "line_start": 5,
+          "line_end": 5,
+          "sha256": "aae10d46db710c9ae9b24e5a6544267d1c67ed3294ab005d934f37ced21ac185"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU05.E01",
+      "dimension": "execution",
+      "points": 4,
+      "expected": "L1 A chunk is 128*64*8 half=131072 bytes: ping [0,131072), pong [131072,262144). L1 B chunk is 64*256*4 half=131072 bytes: ping [262144,393216), pong [393216,524288). A1 and B1 both use L1, so the B base=256KiB offset matters. There are 16 A chunks and 32 B chunks over K.",
+      "sources": [
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 52,
+          "line_end": 72,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        },
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 25,
+          "line_end": 25,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "All intervals are byte offsets in L1, half=2 bytes; KiB=1024 bytes."
+    },
+    {
+      "id": "CU05.E02",
+      "dimension": "execution",
+      "points": 3,
+      "expected": "L0A A2 size=16384 bytes, ping [0,16384), pong [32768,49152). L0B B2 size=32768 bytes, ping [0,32768), pong [32768,65536). L0A and L0B are separate physical memories, so equal offsets do not alias. Float L0C is 128*256*4=131072 bytes.",
+      "sources": [
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 61,
+          "line_end": 72,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        },
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 24,
+          "line_end": 24,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU05.E03",
+      "dimension": "execution",
+      "points": 3,
+      "expected": "For k=0..9, A1 read slots are 0,0,0,0,0,0,0,0,1,1; B1 slots 0,0,0,0,1,1,1,1,0,0; L0 slots alternate 0,1 throughout. A chunk release occurs after load k7, B ping after k3 and B pong after k7. First pong prefetch starts after k0; source event selection tracks separate A1 ids0/1 and B1 ids2/3.",
+      "sources": [
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 194,
+          "line_end": 202,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        },
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 224,
+          "line_end": 232,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        },
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 238,
+          "line_end": 254,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU05.H01",
+      "dimension": "hardware",
+      "points": 3,
+      "expected": "Forward events MTE2_MTE1 protect chunk data readiness on first K slice of a chunk, and MTE1_M protects each L0 data load before Mmad reads it. These do not by themselves release a slot for a future writer.",
+      "sources": [
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 212,
+          "line_end": 221,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        },
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 506,
+          "line_end": 507,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/sync_control/intra_core_sync/SetFlag_WaitFlag_ISASI.md",
+          "line_start": 64,
+          "line_end": 64,
+          "sha256": "dada622bc1f47bcdbb58acd765bd1d596bcaa14b0b8143a4d5f4f17ed6f929fe"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU05.H02",
+      "dimension": "hardware",
+      "points": 3,
+      "expected": "Reverse MTE1_MTE2 protects L1 reuse until the last LoadData of its chunk completes, while reverse M_MTE1 protects L0 reuse until prior Mmad consumes that L0 slot. Ready and reusable are different lifetime edges. Initial reverse flags mark empty/free slots, and final waits drain outstanding flags.",
+      "sources": [
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 159,
+          "line_end": 165,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        },
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 209,
+          "line_end": 209,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        },
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 519,
+          "line_end": 519,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        },
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 265,
+          "line_end": 270,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU05.H03",
+      "dimension": "hardware",
+      "points": 2,
+      "expected": "The variant removes the loop WaitFlag<M_MTE1>(mte1DBFlag). Thus the explicit Compute(k)->Load(k+2) reuse guarantee for each L0 slot is missing. A possible asynchronous schedule can overwrite A2/B2 before the previous Mmad finishes reading; forward readiness events do not repair that reverse edge.",
+      "sources": [
+        {
+          "file": "case-05/source/variant/mmad.asc",
+          "line_start": 209,
+          "line_end": 209,
+          "sha256": "93bba231d206c149d8ea7f151673e87c5dae03a69588bb5987b946e6364dc707"
+        },
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 209,
+          "line_end": 209,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        },
+        {
+          "file": "case-05/source/baseline/mmad.asc",
+          "line_start": 205,
+          "line_end": 206,
+          "sha256": "8891b02f5cbf5f0841041e07bbcf766f07abb53b474ad675c751fe2c9e52cb92"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU05.H04",
+      "dimension": "hardware",
+      "points": 2,
+      "expected": "No hardware failure or exact corrupt output is established. The remaining reverse SetFlags without matching per-iteration waits also conflict with the documented pairing/one-bit flag lifecycle and may merit concern, but do not constitute a measured crash/hang. Static evidence supports loss of guarantees, not an observed runtime outcome.",
+      "sources": [
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/sync_control/intra_core_sync/SetFlag_WaitFlag_ISASI.md",
+          "line_start": 75,
+          "line_end": 75,
+          "sha256": "dada622bc1f47bcdbb58acd765bd1d596bcaa14b0b8143a4d5f4f17ed6f929fe"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/sync_control/intra_core_sync/SetFlag_WaitFlag_ISASI.md",
+          "line_start": 99,
+          "line_end": 99,
+          "sha256": "dada622bc1f47bcdbb58acd765bd1d596bcaa14b0b8143a4d5f4f17ed6f929fe"
+        },
+        {
+          "file": "case-05/source/variant/mmad.asc",
+          "line_start": 519,
+          "line_end": 519,
+          "sha256": "93bba231d206c149d8ea7f151673e87c5dae03a69588bb5987b946e6364dc707"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    }
+  ],
+  "critical_errors": [
+    {
+      "id": "CU05.C01",
+      "dimension": "hardware",
+      "cap": 2,
+      "explicit_claim_trigger": "Claims two slots or host program order alone makes reverse reuse events unnecessary.",
+      "omission_does_not_trigger": true
+    },
+    {
+      "id": "CU05.C02",
+      "dimension": "execution",
+      "cap": 2,
+      "explicit_claim_trigger": "Treats L1 A1/B1 or L0A/L0B address spaces as interchangeable, or measures offsets in elements when constructors use bytes.",
+      "omission_does_not_trigger": true
+    },
+    {
+      "id": "CU05.C03",
+      "dimension": "hardware",
+      "cap": 2,
+      "explicit_claim_trigger": "Reports variant hardware corruption, timeout, hang or measured slowdown as established by this static task.",
+      "omission_does_not_trigger": true
+    },
+    {
+      "id": "CU05.C04",
+      "dimension": "algorithm_strategy",
+      "cap": 3,
+      "explicit_claim_trigger": "Calls missing M_FIX a proven bug while ignoring the active Mmad/Fixpipe UnitFlag protocol.",
+      "omission_does_not_trigger": true
+    }
+  ],
+  "acceptable_unknowns": [
+    "May decline to predict an exact device schedule or output for the variant.",
+    "The helper checks partial order and storage ranges, not hardware timing or SDK validity.",
+    "Need not analyze unselected scenario2 L2 scheduling in full."
+  ],
+  "grading": "Use private/GRADING_PROTOCOL.md; do not infer unsupported measurements or penalize brevity."
+}

@@ -1,0 +1,1780 @@
+{
+  "generator": {
+    "id": "aprof_runtime.knowledge/v1",
+    "schema_hash": "sha256:69941aacfe8db7f58142fd4611c0c57922ca86f64662a98f2c03df183ace2ba2",
+    "sha256": "sha256:f09921f590f7306cd7777415784f3b894576d48cbc648a24dc0d43d199d70076"
+  },
+  "owner": "optimization",
+  "records": [
+    {
+      "body": "# Buffer 存活期与布局 路由\n\n根据 C2 冻结的方案和待实现变换，选择以下方法。保持算法、所有权和数值语义；越过 C2 自由度时返回重规划。\n\n- [存活期、合法复用与 UB 布局核验](recipes/reuse.md)\n\n- 按需回查 [ub-accumulator](examples/ub-accumulator.md) 的原协议和失败记录。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.buffer-lifetime",
+      "kind": "router",
+      "learning": {},
+      "parent": "implementation.root",
+      "references": [],
+      "routes": [
+        {
+          "exclude": [
+            {
+              "field": "excluded_recipes",
+              "op": "contains",
+              "value": "implementation.buffer-lifetime.reuse"
+            }
+          ],
+          "fallback": false,
+          "match": [],
+          "prior_score": 3,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.plan_freedom",
+            "constraint.dependency_lifetime"
+          ],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "implementation.buffer-lifetime.reuse"
+        },
+        {
+          "exclude": [],
+          "fallback": false,
+          "match": [
+            {
+              "field": "examples",
+              "op": "contains",
+              "value": "ub-accumulator"
+            }
+          ],
+          "prior_score": 1,
+          "required_evidence": [],
+          "seed_reason": "探索性参照，需要额外证据。",
+          "target": "implementation.buffer-lifetime.example.ub-accumulator"
+        },
+        {
+          "exclude": [],
+          "fallback": true,
+          "match": [],
+          "prior_score": 0,
+          "required_evidence": [],
+          "seed_reason": "未知类型保留语义正确的现有方案并补证据。",
+          "target": "implementation.buffer-lifetime.fallback"
+        }
+      ],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:59309a3304d1a5f669bbdff63510dba87f7ee4523be55fb0a3aac6be7fbfedb1",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/ROUTER.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:422c329fdf4dcb62d095afc88371f7bb44f51aa624398cc977cdc0e995b8d5e3",
+          "lines": [
+            1,
+            342
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/reference/common/ub_resident_design.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-performance-best-practices/reference/common/ub_resident_design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:422c329fdf4dcb62d095afc88371f7bb44f51aa624398cc977cdc0e995b8d5e3"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "Buffer 存活期与布局 路由",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# ub-accumulator 历史案例\n\n此案例仅用于提出候选和识别失败边界；原始记录见[完整历史案例](../../../../../../workflows/migration/archive/wiki/ub-accumulator.md)，其中硬件/工具链、shape、dtype、原协议、通过/拒绝记录和后续演化均保留原文。来源元数据同时绑定旧索引与 evolution 日志。\n\n本轮没有按 single_role_l2_clean_task_v1 重新测量。历史 validated 只限原实例和协议，不会自动转为当前候选资格。采用时 C2/C3 必须说明相同与不同的前提，并保留原失败记录。\n\nexp 的 tile8192 案例不能推广为通用 tile；预取案例须防止末轮越界；norm 案例须区分 p 特例、partial/广播开销和原始数值语义。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.buffer-lifetime.example.ub-accumulator",
+      "kind": "example",
+      "learning": {},
+      "parent": "implementation.buffer-lifetime",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:2455bca1195978b8e212cec343794cac160c5e6c26ea472be386fe5a3a3bf405",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/examples/ub-accumulator.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:792df6e0d5f474660e4f29743f32a703cf794f795dc013d3e684f0d6bb876e3e",
+          "lines": [
+            1,
+            23
+          ],
+          "original_path": "wiki/ub-accumulator.md",
+          "path": "workflows/migration/archive/wiki/ub-accumulator.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:792df6e0d5f474660e4f29743f32a703cf794f795dc013d3e684f0d6bb876e3e",
+          "sha256": "sha256:792df6e0d5f474660e4f29743f32a703cf794f795dc013d3e684f0d6bb876e3e"
+        },
+        {
+          "excerpt_sha256": "sha256:dca7200b4542b6e6e54e51d956407a67d3a7b300e255cab77ac97e6932294c0b",
+          "lines": [
+            1,
+            388
+          ],
+          "original_path": "wiki/index.json",
+          "path": "workflows/migration/archive/wiki/index.json",
+          "revision": "aprof-1.1.0-pre-governance:sha256:dca7200b4542b6e6e54e51d956407a67d3a7b300e255cab77ac97e6932294c0b",
+          "sha256": "sha256:dca7200b4542b6e6e54e51d956407a67d3a7b300e255cab77ac97e6932294c0b"
+        },
+        {
+          "excerpt_sha256": "sha256:080bde3fc3eb67514d9075453b78f20c1d12dbd48f6db4f48407187da65917f4",
+          "lines": [
+            1,
+            15
+          ],
+          "original_path": "wiki/evolution.jsonl",
+          "path": "workflows/migration/archive/wiki/evolution.jsonl",
+          "revision": "aprof-1.1.0-pre-governance:sha256:080bde3fc3eb67514d9075453b78f20c1d12dbd48f6db4f48407187da65917f4",
+          "sha256": "sha256:080bde3fc3eb67514d9075453b78f20c1d12dbd48f6db4f48407187da65917f4"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "ub-accumulator 历史案例",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# Buffer 存活期与布局 回退方法\n\n保留当前正确实现，逐项确认 C2 参数与 API 支持。不能满足前提时记录失败和缺项，调用相应辅助技能；不要绕过所有权、容量或精度边界。验证使用原 oracle 全 case，性能结果不能覆盖正确性失败。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.buffer-lifetime.fallback",
+      "kind": "recipe",
+      "learning": {},
+      "parent": "implementation.buffer-lifetime",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:d7419bd67a98b68f937508a866a0f78b91693ec5fe2a017425bfee3857d15c42",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/fallback.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:422c329fdf4dcb62d095afc88371f7bb44f51aa624398cc977cdc0e995b8d5e3",
+          "lines": [
+            1,
+            342
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/reference/common/ub_resident_design.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-performance-best-practices/reference/common/ub_resident_design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:422c329fdf4dcb62d095afc88371f7bb44f51aa624398cc977cdc0e995b8d5e3"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "Buffer 存活期与布局 回退方法",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 存活期、合法复用与 UB 布局核验\n\n## 适用条件\n\n片上容量限制 tile 或存在重复临时 buffer。 输入是 C2 的 action/模板快照、实例参数、实现自由度、源码及架构证据。\n\n## 操作步骤与约束\n\n画 producer->consumer->最后使用的存活区间；只有所有消费者完成且 API 允许别名才复用；按对齐大小推进 offset；padding 变化同步重算容量。\n\npeakBytes=max_t Σalive alignedBytes；异步搬运尚未完成时仍存活。UB bank 结构必须来自平台证据。\n\n## 关键代码\n\n```cpp\n// 一段存储先由 phase A 使用，完成所有读取后才交 phase B。\npipe.InitBuffer(scratch, scratchBytes);\nauto local = scratch.Get<T>();\n// 不可仅因 C++ 变量出作用域就认为 DMA/Vector 已完成。\n```\n\n片段用于表达关键契约，变量与工程由候选补齐。当前只完成来源审读；需按目标 SDK 编译和运行完整正确性，尚未进行 NPU 性能验证。\n\n## 验证方法\n\n审查每个区间、异步完成边、完整正确性和多次运行；布局变更用冲突计数验证。 构建前调用 ascendc-code-review；正确性失败调用 ascendc-precision-debug，异常或挂起调用 ascendc-runtime-debug/ascendc-crash-debug。\n\n## 失败特征与回退\n\n偶发精度错、跨 tile 污染、padding 后容量超限；这类失败先修正确性。 保留原失败、完整日志与实际改动，回退到 C2 fallback 或请求重规划；不能静默改算法以继续计时。C3 记录所用条目版本、参数变化及计划符合性。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.buffer-lifetime.reuse",
+      "kind": "recipe",
+      "learning": {},
+      "parent": "implementation.buffer-lifetime",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:793426a117ec35a9b61db79bf1b67693b95e813ea1ba805ce79621771b7533e3",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:422c329fdf4dcb62d095afc88371f7bb44f51aa624398cc977cdc0e995b8d5e3",
+          "lines": [
+            1,
+            342
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/reference/common/ub_resident_design.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-performance-best-practices/reference/common/ub_resident_design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:422c329fdf4dcb62d095afc88371f7bb44f51aa624398cc977cdc0e995b8d5e3"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "存活期、合法复用与 UB 布局核验",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 执行通用回退\n\n在 C2 的参数边界内保持已有正确实现，恢复有效长度、容量、所有权与同步证明。若无合适方法则记录知识缺口，不发明性能收益；提供源码差异、构建和完整正确性结果后再决定是否计时。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.fallback",
+      "kind": "recipe",
+      "learning": {},
+      "parent": "implementation.root",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:0daa3bea3cb57e927efd13ae30e55c4902d465061b51ceda275eda0f057b46f0",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/fallback.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:117f27ba6fb7cd69f3e5c6f32448b052d958a8e70e5c4dad044a34aa47aec071",
+          "lines": [
+            1,
+            23
+          ],
+          "original_path": "skills/ascendc-perf-optimize/references/execution-mechanisms.md",
+          "path": "workflows/migration/archive/skills/ascendc-perf-optimize/references/execution-mechanisms.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:117f27ba6fb7cd69f3e5c6f32448b052d958a8e70e5c4dad044a34aa47aec071",
+          "sha256": "sha256:117f27ba6fb7cd69f3e5c6f32448b052d958a8e70e5c4dad044a34aa47aec071"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "执行通用回退",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 搬运与写回 路由\n\n根据 C2 冻结的方案和待实现变换，选择以下方法。保持算法、所有权和数值语义；越过 C2 自由度时返回重规划。\n\n- [连续搬运合并与批量写回](recipes/coalesce.md)\n\n- 按需回查 [tile-amortization](examples/tile-amortization.md) 的原协议和失败记录。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.memory-transfer",
+      "kind": "router",
+      "learning": {},
+      "parent": "implementation.root",
+      "references": [],
+      "routes": [
+        {
+          "exclude": [
+            {
+              "field": "excluded_recipes",
+              "op": "contains",
+              "value": "implementation.memory-transfer.coalesce"
+            }
+          ],
+          "fallback": false,
+          "match": [],
+          "prior_score": 3,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.plan_freedom",
+            "constraint.output_ownership"
+          ],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "implementation.memory-transfer.coalesce"
+        },
+        {
+          "exclude": [],
+          "fallback": false,
+          "match": [
+            {
+              "field": "examples",
+              "op": "contains",
+              "value": "tile-amortization"
+            }
+          ],
+          "prior_score": 1,
+          "required_evidence": [],
+          "seed_reason": "探索性参照，需要额外证据。",
+          "target": "implementation.memory-transfer.example.tile-amortization"
+        },
+        {
+          "exclude": [],
+          "fallback": true,
+          "match": [],
+          "prior_score": 0,
+          "required_evidence": [],
+          "seed_reason": "未知类型保留语义正确的现有方案并补证据。",
+          "target": "implementation.memory-transfer.fallback"
+        }
+      ],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:8fb4d7a607eec13422f82d1447a829251b6acea7c8589461a357d9afdbaf343e",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/ROUTER.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:e8cc9f2915a016c276cf431de51a66748779c510f82de2cc293e523beaed679e",
+          "lines": [
+            1,
+            351
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/reference/common/datacopy_optimization_design.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-performance-best-practices/reference/common/datacopy_optimization_design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:e8cc9f2915a016c276cf431de51a66748779c510f82de2cc293e523beaed679e"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "搬运与写回 路由",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 连续搬运合并与批量写回\n\n## 适用条件\n\n相邻有效地址可合并且输入输出无不允许的别名。 输入是 C2 的 action/模板快照、实例参数、实现自由度、源码及架构证据。\n\n## 操作步骤与约束\n\n列出每次 copy 地址和有效字节；合并相邻区间；保留 layout stride 语义；按输出所有权批量写回；一次性数据的 cache 策略与复用输入分别核验。\n\n总读写字节不应因合并重复扩大；API 长度、stride、对齐与容量必须合法。\n\n## 关键代码\n\n```cpp\n// 连续且满足该 DataCopy 重载的对齐要求时，count 为元素数。\nAscendC::DataCopy(dstLocal, srcGm[offset], alignedCount);\n// 非对齐有效尾部改用已核验的 DataCopyPad；不能为对齐越界读 GM。\n```\n\n片段用于表达关键契约，变量与工程由候选补齐。当前只完成来源审读；需按目标 SDK 编译和运行完整正确性，尚未进行 NPU 性能验证。\n\n## 验证方法\n\n比较原始 Task CSV 和 Memory/MTE 指令；检查布局、alias、非连续 stride、写回唯一性。 构建前调用 ascendc-code-review；正确性失败调用 ascendc-precision-debug，异常或挂起调用 ascendc-runtime-debug/ascendc-crash-debug。\n\n## 失败特征与回退\n\nMTE 指令减少但读字节增大、相邻 task 输出被覆盖、短尾越界。 保留原失败、完整日志与实际改动，回退到 C2 fallback 或请求重规划；不能静默改算法以继续计时。C3 记录所用条目版本、参数变化及计划符合性。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.memory-transfer.coalesce",
+      "kind": "recipe",
+      "learning": {},
+      "parent": "implementation.memory-transfer",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:eb89188ac1b391da5d05a3ac00494eccc6f6e9fa18ef97ab6d23574611a1caa2",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:e8cc9f2915a016c276cf431de51a66748779c510f82de2cc293e523beaed679e",
+          "lines": [
+            1,
+            351
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/reference/common/datacopy_optimization_design.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-performance-best-practices/reference/common/datacopy_optimization_design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:e8cc9f2915a016c276cf431de51a66748779c510f82de2cc293e523beaed679e"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "连续搬运合并与批量写回",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# tile-amortization 历史案例\n\n此案例仅用于提出候选和识别失败边界；原始记录见[完整历史案例](../../../../../../workflows/migration/archive/wiki/tile-amortization.md)，其中硬件/工具链、shape、dtype、原协议、通过/拒绝记录和后续演化均保留原文。来源元数据同时绑定旧索引与 evolution 日志。\n\n本轮没有按 single_role_l2_clean_task_v1 重新测量。历史 validated 只限原实例和协议，不会自动转为当前候选资格。采用时 C2/C3 必须说明相同与不同的前提，并保留原失败记录。\n\nexp 的 tile8192 案例不能推广为通用 tile；预取案例须防止末轮越界；norm 案例须区分 p 特例、partial/广播开销和原始数值语义。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.memory-transfer.example.tile-amortization",
+      "kind": "example",
+      "learning": {},
+      "parent": "implementation.memory-transfer",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:14252dc571c11267078fe947695b0f0285061ff87e2f37d2cec2e8f04e92feaf",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/examples/tile-amortization.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:67e8af670f58f444b5ff228c1dc8cafbd3c11ce278bc385591f673368f6eb2f4",
+          "lines": [
+            1,
+            31
+          ],
+          "original_path": "wiki/tile-amortization.md",
+          "path": "workflows/migration/archive/wiki/tile-amortization.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:67e8af670f58f444b5ff228c1dc8cafbd3c11ce278bc385591f673368f6eb2f4",
+          "sha256": "sha256:67e8af670f58f444b5ff228c1dc8cafbd3c11ce278bc385591f673368f6eb2f4"
+        },
+        {
+          "excerpt_sha256": "sha256:dca7200b4542b6e6e54e51d956407a67d3a7b300e255cab77ac97e6932294c0b",
+          "lines": [
+            1,
+            388
+          ],
+          "original_path": "wiki/index.json",
+          "path": "workflows/migration/archive/wiki/index.json",
+          "revision": "aprof-1.1.0-pre-governance:sha256:dca7200b4542b6e6e54e51d956407a67d3a7b300e255cab77ac97e6932294c0b",
+          "sha256": "sha256:dca7200b4542b6e6e54e51d956407a67d3a7b300e255cab77ac97e6932294c0b"
+        },
+        {
+          "excerpt_sha256": "sha256:080bde3fc3eb67514d9075453b78f20c1d12dbd48f6db4f48407187da65917f4",
+          "lines": [
+            1,
+            15
+          ],
+          "original_path": "wiki/evolution.jsonl",
+          "path": "workflows/migration/archive/wiki/evolution.jsonl",
+          "revision": "aprof-1.1.0-pre-governance:sha256:080bde3fc3eb67514d9075453b78f20c1d12dbd48f6db4f48407187da65917f4",
+          "sha256": "sha256:080bde3fc3eb67514d9075453b78f20c1d12dbd48f6db4f48407187da65917f4"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "tile-amortization 历史案例",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 搬运与写回 回退方法\n\n保留当前正确实现，逐项确认 C2 参数与 API 支持。不能满足前提时记录失败和缺项，调用相应辅助技能；不要绕过所有权、容量或精度边界。验证使用原 oracle 全 case，性能结果不能覆盖正确性失败。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.memory-transfer.fallback",
+      "kind": "recipe",
+      "learning": {},
+      "parent": "implementation.memory-transfer",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:5f343d2bec3fbf8424e8ede87ffd7117a0e62804815f44a509db6032822bf590",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/fallback.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:e8cc9f2915a016c276cf431de51a66748779c510f82de2cc293e523beaed679e",
+          "lines": [
+            1,
+            351
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/reference/common/datacopy_optimization_design.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-performance-best-practices/reference/common/datacopy_optimization_design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:e8cc9f2915a016c276cf431de51a66748779c510f82de2cc293e523beaed679e"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "搬运与写回 回退方法",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 流水与同步 路由\n\n根据 C2 冻结的方案和待实现变换，选择以下方法。保持算法、所有权和数值语义；越过 C2 自由度时返回重规划。\n\n- [Prolog / steady / drain 与 queue/event 生命周期](recipes/pipeline.md)\n- [Workspace 槽所有权与混合流水](recipes/slots.md)\n\n- 按需回查 [sigmoid-pipeline](examples/sigmoid-pipeline.md) 的原协议和失败记录。\n\n- 按需回查 [prefetch-boundaries](examples/prefetch-boundaries.md) 的原协议和失败记录。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.pipeline-sync",
+      "kind": "router",
+      "learning": {},
+      "parent": "implementation.root",
+      "references": [],
+      "routes": [
+        {
+          "exclude": [
+            {
+              "field": "excluded_recipes",
+              "op": "contains",
+              "value": "implementation.pipeline-sync.pipeline"
+            }
+          ],
+          "fallback": false,
+          "match": [],
+          "prior_score": 3,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.plan_freedom",
+            "constraint.dependency_lifetime"
+          ],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "implementation.pipeline-sync.pipeline"
+        },
+        {
+          "exclude": [
+            {
+              "field": "excluded_recipes",
+              "op": "contains",
+              "value": "implementation.pipeline-sync.slots"
+            }
+          ],
+          "fallback": false,
+          "match": [],
+          "prior_score": 3,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.plan_freedom",
+            "constraint.workspace_ownership"
+          ],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "implementation.pipeline-sync.slots"
+        },
+        {
+          "exclude": [],
+          "fallback": false,
+          "match": [
+            {
+              "field": "examples",
+              "op": "contains",
+              "value": "sigmoid-pipeline"
+            }
+          ],
+          "prior_score": 1,
+          "required_evidence": [],
+          "seed_reason": "探索性参照，需要额外证据。",
+          "target": "implementation.pipeline-sync.example.sigmoid-pipeline"
+        },
+        {
+          "exclude": [],
+          "fallback": false,
+          "match": [
+            {
+              "field": "examples",
+              "op": "contains",
+              "value": "prefetch-boundaries"
+            }
+          ],
+          "prior_score": 1,
+          "required_evidence": [],
+          "seed_reason": "探索性参照，需要额外证据。",
+          "target": "implementation.pipeline-sync.example.prefetch-boundaries"
+        },
+        {
+          "exclude": [],
+          "fallback": true,
+          "match": [],
+          "prior_score": 0,
+          "required_evidence": [],
+          "seed_reason": "未知类型保留语义正确的现有方案并补证据。",
+          "target": "implementation.pipeline-sync.fallback"
+        }
+      ],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:7f08a25680d3ce8c7127113f1bbf8edac06af2b6a303e8c307a0a438388c7142",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/ROUTER.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:142cc0055136ff3bc203672f4c4365cf4f09b41a175a7bfa1d89f3df3b2500ae",
+          "lines": [
+            1,
+            288
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/reference/elementwise/double_buffer_design.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-performance-best-practices/reference/elementwise/double_buffer_design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:142cc0055136ff3bc203672f4c4365cf4f09b41a175a7bfa1d89f3df3b2500ae"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "流水与同步 路由",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# prefetch-boundaries 历史案例\n\n此案例仅用于提出候选和识别失败边界；原始记录见[完整历史案例](../../../../../../workflows/migration/archive/wiki/prefetch-boundaries.md)，其中硬件/工具链、shape、dtype、原协议、通过/拒绝记录和后续演化均保留原文。来源元数据同时绑定旧索引与 evolution 日志。\n\n本轮没有按 single_role_l2_clean_task_v1 重新测量。历史 validated 只限原实例和协议，不会自动转为当前候选资格。采用时 C2/C3 必须说明相同与不同的前提，并保留原失败记录。\n\nexp 的 tile8192 案例不能推广为通用 tile；预取案例须防止末轮越界；norm 案例须区分 p 特例、partial/广播开销和原始数值语义。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.pipeline-sync.example.prefetch-boundaries",
+      "kind": "example",
+      "learning": {},
+      "parent": "implementation.pipeline-sync",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:2080c228c5f8ed8cf5aab2b3b69e782281318c5f442760c0b49fe1ecc124245c",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/examples/prefetch-boundaries.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:24e01b7a1c612ea1f5323fce9e5e54c4a2ef6aaa768df6748013c2981152d997",
+          "lines": [
+            1,
+            32
+          ],
+          "original_path": "wiki/prefetch-boundaries.md",
+          "path": "workflows/migration/archive/wiki/prefetch-boundaries.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:24e01b7a1c612ea1f5323fce9e5e54c4a2ef6aaa768df6748013c2981152d997",
+          "sha256": "sha256:24e01b7a1c612ea1f5323fce9e5e54c4a2ef6aaa768df6748013c2981152d997"
+        },
+        {
+          "excerpt_sha256": "sha256:dca7200b4542b6e6e54e51d956407a67d3a7b300e255cab77ac97e6932294c0b",
+          "lines": [
+            1,
+            388
+          ],
+          "original_path": "wiki/index.json",
+          "path": "workflows/migration/archive/wiki/index.json",
+          "revision": "aprof-1.1.0-pre-governance:sha256:dca7200b4542b6e6e54e51d956407a67d3a7b300e255cab77ac97e6932294c0b",
+          "sha256": "sha256:dca7200b4542b6e6e54e51d956407a67d3a7b300e255cab77ac97e6932294c0b"
+        },
+        {
+          "excerpt_sha256": "sha256:080bde3fc3eb67514d9075453b78f20c1d12dbd48f6db4f48407187da65917f4",
+          "lines": [
+            1,
+            15
+          ],
+          "original_path": "wiki/evolution.jsonl",
+          "path": "workflows/migration/archive/wiki/evolution.jsonl",
+          "revision": "aprof-1.1.0-pre-governance:sha256:080bde3fc3eb67514d9075453b78f20c1d12dbd48f6db4f48407187da65917f4",
+          "sha256": "sha256:080bde3fc3eb67514d9075453b78f20c1d12dbd48f6db4f48407187da65917f4"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "prefetch-boundaries 历史案例",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# sigmoid-pipeline 历史案例\n\n此案例仅用于提出候选和识别失败边界；原始记录见[完整历史案例](../../../../../../workflows/migration/archive/wiki/sigmoid-pipeline.md)，其中硬件/工具链、shape、dtype、原协议、通过/拒绝记录和后续演化均保留原文。来源元数据同时绑定旧索引与 evolution 日志。\n\n本轮没有按 single_role_l2_clean_task_v1 重新测量。历史 validated 只限原实例和协议，不会自动转为当前候选资格。采用时 C2/C3 必须说明相同与不同的前提，并保留原失败记录。\n\nexp 的 tile8192 案例不能推广为通用 tile；预取案例须防止末轮越界；norm 案例须区分 p 特例、partial/广播开销和原始数值语义。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.pipeline-sync.example.sigmoid-pipeline",
+      "kind": "example",
+      "learning": {},
+      "parent": "implementation.pipeline-sync",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:e01b2d7786292ddc4fc3f9a57965c07f537fa4093e356c751941f99d5e79b285",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/examples/sigmoid-pipeline.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:e41563e1e12e9f4c13c116aae042f3cffaefb8011fbded70f34cd350ea8bf7f6",
+          "lines": [
+            1,
+            50
+          ],
+          "original_path": "wiki/sigmoid-pipeline.md",
+          "path": "workflows/migration/archive/wiki/sigmoid-pipeline.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:e41563e1e12e9f4c13c116aae042f3cffaefb8011fbded70f34cd350ea8bf7f6",
+          "sha256": "sha256:e41563e1e12e9f4c13c116aae042f3cffaefb8011fbded70f34cd350ea8bf7f6"
+        },
+        {
+          "excerpt_sha256": "sha256:dca7200b4542b6e6e54e51d956407a67d3a7b300e255cab77ac97e6932294c0b",
+          "lines": [
+            1,
+            388
+          ],
+          "original_path": "wiki/index.json",
+          "path": "workflows/migration/archive/wiki/index.json",
+          "revision": "aprof-1.1.0-pre-governance:sha256:dca7200b4542b6e6e54e51d956407a67d3a7b300e255cab77ac97e6932294c0b",
+          "sha256": "sha256:dca7200b4542b6e6e54e51d956407a67d3a7b300e255cab77ac97e6932294c0b"
+        },
+        {
+          "excerpt_sha256": "sha256:080bde3fc3eb67514d9075453b78f20c1d12dbd48f6db4f48407187da65917f4",
+          "lines": [
+            1,
+            15
+          ],
+          "original_path": "wiki/evolution.jsonl",
+          "path": "workflows/migration/archive/wiki/evolution.jsonl",
+          "revision": "aprof-1.1.0-pre-governance:sha256:080bde3fc3eb67514d9075453b78f20c1d12dbd48f6db4f48407187da65917f4",
+          "sha256": "sha256:080bde3fc3eb67514d9075453b78f20c1d12dbd48f6db4f48407187da65917f4"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "sigmoid-pipeline 历史案例",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 流水与同步 回退方法\n\n保留当前正确实现，逐项确认 C2 参数与 API 支持。不能满足前提时记录失败和缺项，调用相应辅助技能；不要绕过所有权、容量或精度边界。验证使用原 oracle 全 case，性能结果不能覆盖正确性失败。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.pipeline-sync.fallback",
+      "kind": "recipe",
+      "learning": {},
+      "parent": "implementation.pipeline-sync",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:60723237114232f26b8ee6689c0d94330fbf2d14db238bed15f6ccb20385f22b",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/fallback.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:142cc0055136ff3bc203672f4c4365cf4f09b41a175a7bfa1d89f3df3b2500ae",
+          "lines": [
+            1,
+            288
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/reference/elementwise/double_buffer_design.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-performance-best-practices/reference/elementwise/double_buffer_design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:142cc0055136ff3bc203672f4c4365cf4f09b41a175a7bfa1d89f3df3b2500ae"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "流水与同步 回退方法",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# Prolog / steady / drain 与 queue/event 生命周期\n\n## 适用条件\n\n存在可重叠的搬运/计算且 tile 数足以形成稳态。 输入是 C2 的 action/模板快照、实例参数、实现自由度、源码及架构证据。\n\n## 操作步骤与约束\n\nprolog 填充首个输入；steady 交错 CopyIn/Compute/CopyOut；drain 收尾；每次 Alloc 对应合法 Free，读写依赖用正确方向事件；不得用立即等待制造假双缓冲。\n\n同槽新写必须等待上一消费者完成；depth 与事件数受当前平台/API 限制。\n\n## 关键代码\n\n```cpp\nauto x = inQueue.AllocTensor<T>();\nAscendC::DataCopy(x, xGm[offset], alignedCount);\ninQueue.EnQue(x);\nauto ready = inQueue.DeQue<T>();\n// Compute(ready) 使用到完成；异步消费者仍活跃时不可 Free。\ninQueue.FreeTensor(ready);\n```\n\n片段用于表达关键契约，变量与工程由候选补齐。当前只完成来源审读；需按目标 SDK 编译和运行完整正确性，尚未进行 NPU 性能验证。\n\n## 验证方法\n\ntrace 分离启动、稳态和收尾；单 tile、两 tile、长流水、多轮任务正确性；核验真实 overlap。 构建前调用 ascendc-code-review；正确性失败调用 ascendc-precision-debug，异常或挂起调用 ascendc-runtime-debug/ascendc-crash-debug。\n\n## 失败特征与回退\n\nwait 成本增加、prolog/drain 漏处理、重复 enqueue/free、只启用双 buffer 却无重叠。 保留原失败、完整日志与实际改动，回退到 C2 fallback 或请求重规划；不能静默改算法以继续计时。C3 记录所用条目版本、参数变化及计划符合性。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.pipeline-sync.pipeline",
+      "kind": "recipe",
+      "learning": {},
+      "parent": "implementation.pipeline-sync",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:72d0292d6a282bc5df953c23a422011673e601db41ad106068137c9f1449db27",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:142cc0055136ff3bc203672f4c4365cf4f09b41a175a7bfa1d89f3df3b2500ae",
+          "lines": [
+            1,
+            288
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/reference/elementwise/double_buffer_design.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-performance-best-practices/reference/elementwise/double_buffer_design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:142cc0055136ff3bc203672f4c4365cf4f09b41a175a7bfa1d89f3df3b2500ae"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "Prolog / steady / drain 与 queue/event 生命周期",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# Workspace 槽所有权与混合流水\n\n## 适用条件\n\nFA、split-K、复杂 AIC/AIV 或跨 task 状态。 输入是 C2 的 action/模板快照、实例参数、实现自由度、源码及架构证据。\n\n## 操作步骤与约束\n\n分别定义 handshakeSlot、taskStateSlot、selfRefSlot、L1RotationSlot；每类使用自己的计数器、深度和生命周期；每段列出写者、读者、释放条件和初始化。\n\n槽数是满足并发存活区间的结果，不从一个 magic number 复用；任何跨核等待需要可证明进展。\n\n## 关键代码\n\n```cpp\nconst uint64_t handshakeSlot = stageSequence % handshakeDepth;\nconst uint64_t taskStateSlot = taskSequence % stateDepth;\nconst uint64_t selfRefSlot = loopSequence % selfRefDepth;\n// 各 depth > 0；槽位代次和事件对应，公式不能互换。\n```\n\n片段用于表达关键契约，变量与工程由候选补齐。当前只完成来源审读；需按目标 SDK 编译和运行完整正确性，尚未进行 NPU 性能验证。\n\n## 验证方法\n\n多 task、多 s2、多 chunk、回卷后重复运行；将每槽访问序列与 trace/结果核对。 构建前调用 ascendc-code-review；正确性失败调用 ascendc-precision-debug，异常或挂起调用 ascendc-runtime-debug/ascendc-crash-debug。\n\n## 失败特征与回退\n\n周期性精度漂移、仅多 s2 失败、悬挂；视为 race/死锁故障，不给性能奖励。 保留原失败、完整日志与实际改动，回退到 C2 fallback 或请求重规划；不能静默改算法以继续计时。C3 记录所用条目版本、参数变化及计划符合性。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.pipeline-sync.slots",
+      "kind": "recipe",
+      "learning": {},
+      "parent": "implementation.pipeline-sync",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:9365cb03e545621c0cb512548363212194ac0118cbc14951cf41e849ca6695e7",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/slots.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:83ed347947ce330ed2940beb797be67fdc3cc30d60b9cf376d81711d76ab09cb",
+          "lines": [
+            1,
+            634
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/flashattention/design.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/flashattention/design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:83ed347947ce330ed2940beb797be67fdc3cc30d60b9cf376d81711d76ab09cb"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "Workspace 槽所有权与混合流水",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 精度与边界 路由\n\n根据 C2 冻结的方案和待实现变换，选择以下方法。保持算法、所有权和数值语义；越过 C2 自由度时返回重规划。\n\n- [累加精度、特殊值与数值边界](recipes/numeric.md)\n- [Padding、容量和地址边界约束](recipes/bounds.md)",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.precision-boundaries",
+      "kind": "router",
+      "learning": {},
+      "parent": "implementation.root",
+      "references": [],
+      "routes": [
+        {
+          "exclude": [
+            {
+              "field": "excluded_recipes",
+              "op": "contains",
+              "value": "implementation.precision-boundaries.numeric"
+            }
+          ],
+          "fallback": false,
+          "match": [],
+          "prior_score": 3,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.plan_freedom",
+            "constraint.precision"
+          ],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "implementation.precision-boundaries.numeric"
+        },
+        {
+          "exclude": [
+            {
+              "field": "excluded_recipes",
+              "op": "contains",
+              "value": "implementation.precision-boundaries.bounds"
+            }
+          ],
+          "fallback": false,
+          "match": [],
+          "prior_score": 3,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.plan_freedom"
+          ],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "implementation.precision-boundaries.bounds"
+        },
+        {
+          "exclude": [],
+          "fallback": true,
+          "match": [],
+          "prior_score": 0,
+          "required_evidence": [],
+          "seed_reason": "未知类型保留语义正确的现有方案并补证据。",
+          "target": "implementation.precision-boundaries.fallback"
+        }
+      ],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:3bd1d8766b9ec0a5bde176380fd9173b1f38a2db4a09d214d026f61f7e7a047d",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/ROUTER.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:6c8e784dad546cb1caa07867596721b3d1c8ecc746396df5392054f44d84eb28",
+          "lines": [
+            1,
+            74
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/reduction/alg-welford.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/reduction/alg-welford.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:6c8e784dad546cb1caa07867596721b3d1c8ecc746396df5392054f44d84eb28"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "精度与边界 路由",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# Padding、容量和地址边界约束\n\n## 适用条件\n\n任何 padding、动态尾、workspace 或静态 offset 变化。 输入是 C2 的 action/模板快照、实例参数、实现自由度、源码及架构证据。\n\n## 操作步骤与约束\n\n容量按实际同时存活、API tmp 和对齐计算；检查地址乘加溢出；确认 padding 中性元；仅有效元素参与输出与归约；同步错误先进入 debug。\n\nsum padding 通常为 0、max 为负无穷，但以具体 oracle/类型语义为准；mask 不自动保护 GM 搬运。\n\n## 关键代码\n\n```cpp\n// 在 host 使用足够宽整数并先检查乘法溢出。\nconst uint64_t alignedElements = ((validElements + align - 1) / align) * align;\nconst uint64_t bytes = alignedElements * sizeof(T);\n// validElements+align-1、乘法与 bytes<=availableBytes 都需检查。\n```\n\n片段用于表达关键契约，变量与工程由候选补齐。当前只完成来源审读；需按目标 SDK 编译和运行完整正确性，尚未进行 NPU 性能验证。\n\n## 验证方法\n\n容量上下边界、最大索引、非对齐尾、padding 污染、同步压力；不在错误运行上做性能比较。 构建前调用 ascendc-code-review；正确性失败调用 ascendc-precision-debug，异常或挂起调用 ascendc-runtime-debug/ascendc-crash-debug。\n\n## 失败特征与回退\n\nADDR_MISALIGN、越界、容量超限、随机错；调用 precision/runtime/crash debug。 保留原失败、完整日志与实际改动，回退到 C2 fallback 或请求重规划；不能静默改算法以继续计时。C3 记录所用条目版本、参数变化及计划符合性。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.precision-boundaries.bounds",
+      "kind": "recipe",
+      "learning": {},
+      "parent": "implementation.precision-boundaries",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:4b9b84100ce41669c8eea03333544daa3f4e6ae440113638c521be0ba8a63751",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/bounds.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:c74ad927867806d42723213292831e22c84a2e84d75230e5aa615dee1500782a",
+          "lines": [
+            1,
+            151
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/reduction/ar-fullload.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/reduction/ar-fullload.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:c74ad927867806d42723213292831e22c84a2e84d75230e5aa615dee1500782a"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "Padding、容量和地址边界约束",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 精度与边界 回退方法\n\n保留当前正确实现，逐项确认 C2 参数与 API 支持。不能满足前提时记录失败和缺项，调用相应辅助技能；不要绕过所有权、容量或精度边界。验证使用原 oracle 全 case，性能结果不能覆盖正确性失败。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.precision-boundaries.fallback",
+      "kind": "recipe",
+      "learning": {},
+      "parent": "implementation.precision-boundaries",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:2aad83000d4347d7defebfb4ddfc96c6f552f32e07d53b471ed87b11b14e2dea",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/fallback.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:6c8e784dad546cb1caa07867596721b3d1c8ecc746396df5392054f44d84eb28",
+          "lines": [
+            1,
+            74
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/reduction/alg-welford.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/reduction/alg-welford.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:6c8e784dad546cb1caa07867596721b3d1c8ecc746396df5392054f44d84eb28"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "精度与边界 回退方法",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 累加精度、特殊值与数值边界\n\n## 适用条件\n\n归约、方差、norm、softmax、split-K/KV 与 Cast 变更。 输入是 C2 的 action/模板快照、实例参数、实现自由度、源码及架构证据。\n\n## 操作步骤与约束\n\n从 oracle 写出 dtype、舍入、epsilon/correction、NaN/Inf/有符号零语义；选择累加状态；用稳定公式合并；明确全 mask、空归约、计数为零分支。\n\nFP32 partial 不是自动正确的证明；归约顺序变化仍需误差与边界校验。\n\n## 关键代码\n\n```cpp\n// Welford 的两段合并使用宿主参考公式核对 kernel 输出。\nconst double delta = meanB - meanA;\nconst double count = countA + countB;\n// count==0 单独按原语义处理，以下只用于 count>0。\nconst double mean = meanA + delta * countB / count;\nconst double m2 = m2A + m2B + delta * delta * countA * countB / count;\n```\n\n片段用于表达关键契约，变量与工程由候选补齐。当前只完成来源审读；需按目标 SDK 编译和运行完整正确性，尚未进行 NPU 性能验证。\n\n## 验证方法\n\n大动态范围、抵消、NaN/Inf、全零、极大/极小值、分段数变化和 oracle 全 case。 构建前调用 ascendc-code-review；正确性失败调用 ascendc-precision-debug，异常或挂起调用 ascendc-runtime-debug/ascendc-crash-debug。\n\n## 失败特征与回退\n\n平均误差正常但极值超标、方差负值、全 mask 出 NaN、split 后重复 bias。 保留原失败、完整日志与实际改动，回退到 C2 fallback 或请求重规划；不能静默改算法以继续计时。C3 记录所用条目版本、参数变化及计划符合性。\n\n\n量化/MX 格式还须单独核验 quantization 轴、scale 对应关系、pack 布局和目标 SDK 支持；不能仅按连续维推导量化语义。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.precision-boundaries.numeric",
+      "kind": "recipe",
+      "learning": {},
+      "parent": "implementation.precision-boundaries",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:f6fc5d53912958d7184b1ad221d8bfeab016e8ecc673be92b162e7c46cda5eae",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:6c8e784dad546cb1caa07867596721b3d1c8ecc746396df5392054f44d84eb28",
+          "lines": [
+            1,
+            74
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/reduction/alg-welford.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/reduction/alg-welford.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:6c8e784dad546cb1caa07867596721b3d1c8ecc746396df5392054f44d84eb28"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "累加精度、特殊值与数值边界",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 执行知识入口\n\n只使用 C2 的方案、action/模板快照和实现约束；不重新运行诊断图，也不重新做算法规划。features 可以同时命中多个执行分支。\n\n- [Tiling / tail](branches/tiling-tail/ROUTER.md)\n- [搬运与写回](branches/memory-transfer/ROUTER.md)\n- [Buffer 存活期与布局](branches/buffer-lifetime/ROUTER.md)\n- [流水与同步](branches/pipeline-sync/ROUTER.md)\n- [Vector / API](branches/vector-api/ROUTER.md)\n- [精度与边界](branches/precision-boundaries/ROUTER.md)",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.root",
+      "kind": "router",
+      "learning": {},
+      "parent": null,
+      "references": [],
+      "routes": [
+        {
+          "exclude": [],
+          "fallback": false,
+          "match": [
+            {
+              "field": "features",
+              "op": "contains",
+              "value": "tiling-tail"
+            }
+          ],
+          "prior_score": 3,
+          "required_evidence": [],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "implementation.tiling-tail"
+        },
+        {
+          "exclude": [],
+          "fallback": false,
+          "match": [
+            {
+              "field": "features",
+              "op": "contains",
+              "value": "memory-transfer"
+            }
+          ],
+          "prior_score": 3,
+          "required_evidence": [],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "implementation.memory-transfer"
+        },
+        {
+          "exclude": [],
+          "fallback": false,
+          "match": [
+            {
+              "field": "features",
+              "op": "contains",
+              "value": "buffer-lifetime"
+            }
+          ],
+          "prior_score": 3,
+          "required_evidence": [],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "implementation.buffer-lifetime"
+        },
+        {
+          "exclude": [],
+          "fallback": false,
+          "match": [
+            {
+              "field": "features",
+              "op": "contains",
+              "value": "pipeline-sync"
+            }
+          ],
+          "prior_score": 3,
+          "required_evidence": [],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "implementation.pipeline-sync"
+        },
+        {
+          "exclude": [],
+          "fallback": false,
+          "match": [
+            {
+              "field": "features",
+              "op": "contains",
+              "value": "vector-api"
+            }
+          ],
+          "prior_score": 3,
+          "required_evidence": [],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "implementation.vector-api"
+        },
+        {
+          "exclude": [],
+          "fallback": false,
+          "match": [
+            {
+              "field": "features",
+              "op": "contains",
+              "value": "precision-boundaries"
+            }
+          ],
+          "prior_score": 3,
+          "required_evidence": [],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "implementation.precision-boundaries"
+        },
+        {
+          "exclude": [],
+          "fallback": true,
+          "match": [],
+          "prior_score": 0,
+          "required_evidence": [],
+          "seed_reason": "未知类型保留语义正确的现有方案并补证据。",
+          "target": "implementation.fallback"
+        }
+      ],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:9efa167638001144f2f63f5237eaf66745f93a841dd9d0dd00afceb71146258e",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/ROUTER.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:117f27ba6fb7cd69f3e5c6f32448b052d958a8e70e5c4dad044a34aa47aec071",
+          "lines": [
+            1,
+            23
+          ],
+          "original_path": "skills/ascendc-perf-optimize/references/execution-mechanisms.md",
+          "path": "workflows/migration/archive/skills/ascendc-perf-optimize/references/execution-mechanisms.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:117f27ba6fb7cd69f3e5c6f32448b052d958a8e70e5c4dad044a34aa47aec071",
+          "sha256": "sha256:117f27ba6fb7cd69f3e5c6f32448b052d958a8e70e5c4dad044a34aa47aec071"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "执行知识入口",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# Tiling / tail 路由\n\n根据 C2 冻结的方案和待实现变换，选择以下方法。保持算法、所有权和数值语义；越过 C2 自由度时返回重规划。\n\n- [有效长度、对齐长度与动态尾块](recipes/valid-length.md)\n- [元数据分发与实现身份接线](recipes/dispatch.md)\n\n- 按需回查 [exp-tile8192](examples/exp-tile8192.md) 的原协议和失败记录。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.tiling-tail",
+      "kind": "router",
+      "learning": {},
+      "parent": "implementation.root",
+      "references": [],
+      "routes": [
+        {
+          "exclude": [
+            {
+              "field": "excluded_recipes",
+              "op": "contains",
+              "value": "implementation.tiling-tail.valid-length"
+            }
+          ],
+          "fallback": false,
+          "match": [],
+          "prior_score": 3,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.plan_freedom"
+          ],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "implementation.tiling-tail.valid-length"
+        },
+        {
+          "exclude": [
+            {
+              "field": "excluded_recipes",
+              "op": "contains",
+              "value": "implementation.tiling-tail.dispatch"
+            }
+          ],
+          "fallback": false,
+          "match": [],
+          "prior_score": 3,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.plan_freedom"
+          ],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "implementation.tiling-tail.dispatch"
+        },
+        {
+          "exclude": [],
+          "fallback": false,
+          "match": [
+            {
+              "field": "examples",
+              "op": "contains",
+              "value": "exp-tile8192"
+            }
+          ],
+          "prior_score": 1,
+          "required_evidence": [],
+          "seed_reason": "探索性参照，需要额外证据。",
+          "target": "implementation.tiling-tail.example.exp-tile8192"
+        },
+        {
+          "exclude": [],
+          "fallback": true,
+          "match": [],
+          "prior_score": 0,
+          "required_evidence": [],
+          "seed_reason": "未知类型保留语义正确的现有方案并补证据。",
+          "target": "implementation.tiling-tail.fallback"
+        }
+      ],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:e9a2510d5a2aadccedec34d3dcb9aadcd7bbeda0eb938fd1d9245589a8e5dd71",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/ROUTER.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:c74ad927867806d42723213292831e22c84a2e84d75230e5aa615dee1500782a",
+          "lines": [
+            1,
+            151
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/reduction/ar-fullload.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/reduction/ar-fullload.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:c74ad927867806d42723213292831e22c84a2e84d75230e5aa615dee1500782a"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "Tiling / tail 路由",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 元数据分发与实现身份接线\n\n## 适用条件\n\n多方案、多 dtype/layout 或算法重规划后的候选。 输入是 C2 的 action/模板快照、实例参数、实现自由度、源码及架构证据。\n\n## 操作步骤与约束\n\n为各 workload group 设置互斥条件、稳定 uint64 key 和实际 kernel entry；保留通用 fallback；Host 设置 key，Kernel 使用相同 key 分支；更新 implementation_source_hash。\n\nplan_basis_source_hash 仍指原分析源码；参数变化不得修改已承诺的算法/所有权。\n\n## 关键代码\n\n```cpp\n// Host：key 来自校验通过的 dispatch_plan，不使用 case 名或 benchmark ID。\ncontext->SetTilingKey(selectedKey);\n// Kernel：对应的 TILING_KEY_IS 分支调用冻结的实现 entry。\n```\n\n片段用于表达关键契约，变量与工程由候选补齐。当前只完成来源审读；需按目标 SDK 编译和运行完整正确性，尚未进行 NPU 性能验证。\n\n## 验证方法\n\ndispatch select 覆盖域边界、未知 shape fallback、所有 key 都有实际实现；重新构建验证。 构建前调用 ascendc-code-review；正确性失败调用 ascendc-precision-debug，异常或挂起调用 ascendc-runtime-debug/ascendc-crash-debug。\n\n## 失败特征与回退\n\n计划选中了特化但实际 kernel 仍为旧分支；缺省 key 吞掉尾域。 保留原失败、完整日志与实际改动，回退到 C2 fallback 或请求重规划；不能静默改算法以继续计时。C3 记录所用条目版本、参数变化及计划符合性。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.tiling-tail.dispatch",
+      "kind": "recipe",
+      "learning": {},
+      "parent": "implementation.tiling-tail",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:479a61978b5b02daf831d41bc88b8a778035ad965a6970bc070c48420c5e0651",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/recipes/dispatch.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:8a1351ff5295af67a53383682a4264aca6a19a113a2cdb47158938f73bae0cec",
+          "lines": [
+            1,
+            46
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/elewise/patterns.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/elewise/patterns.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:8a1351ff5295af67a53383682a4264aca6a19a113a2cdb47158938f73bae0cec"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "元数据分发与实现身份接线",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# exp-tile8192 历史案例\n\n此案例仅用于提出候选和识别失败边界；原始记录见[完整历史案例](../../../../../../workflows/migration/archive/wiki/exp-tile8192.md)，其中硬件/工具链、shape、dtype、原协议、通过/拒绝记录和后续演化均保留原文。来源元数据同时绑定旧索引与 evolution 日志。\n\n本轮没有按 single_role_l2_clean_task_v1 重新测量。历史 validated 只限原实例和协议，不会自动转为当前候选资格。采用时 C2/C3 必须说明相同与不同的前提，并保留原失败记录。\n\nexp 的 tile8192 案例不能推广为通用 tile；预取案例须防止末轮越界；norm 案例须区分 p 特例、partial/广播开销和原始数值语义。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.tiling-tail.example.exp-tile8192",
+      "kind": "example",
+      "learning": {},
+      "parent": "implementation.tiling-tail",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:60e9a5e96ea03c72df4c45027a45f81dad909b37a91da9aa398898428dcce465",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/examples/exp-tile8192.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:90ca5ffa91371300bb62cf53e6b6e6fe8ba73385ea72cd8401d23f39467dde2f",
+          "lines": [
+            1,
+            119
+          ],
+          "original_path": "wiki/exp-tile8192.md",
+          "path": "workflows/migration/archive/wiki/exp-tile8192.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:90ca5ffa91371300bb62cf53e6b6e6fe8ba73385ea72cd8401d23f39467dde2f",
+          "sha256": "sha256:90ca5ffa91371300bb62cf53e6b6e6fe8ba73385ea72cd8401d23f39467dde2f"
+        },
+        {
+          "excerpt_sha256": "sha256:dca7200b4542b6e6e54e51d956407a67d3a7b300e255cab77ac97e6932294c0b",
+          "lines": [
+            1,
+            388
+          ],
+          "original_path": "wiki/index.json",
+          "path": "workflows/migration/archive/wiki/index.json",
+          "revision": "aprof-1.1.0-pre-governance:sha256:dca7200b4542b6e6e54e51d956407a67d3a7b300e255cab77ac97e6932294c0b",
+          "sha256": "sha256:dca7200b4542b6e6e54e51d956407a67d3a7b300e255cab77ac97e6932294c0b"
+        },
+        {
+          "excerpt_sha256": "sha256:080bde3fc3eb67514d9075453b78f20c1d12dbd48f6db4f48407187da65917f4",
+          "lines": [
+            1,
+            15
+          ],
+          "original_path": "wiki/evolution.jsonl",
+          "path": "workflows/migration/archive/wiki/evolution.jsonl",
+          "revision": "aprof-1.1.0-pre-governance:sha256:080bde3fc3eb67514d9075453b78f20c1d12dbd48f6db4f48407187da65917f4",
+          "sha256": "sha256:080bde3fc3eb67514d9075453b78f20c1d12dbd48f6db4f48407187da65917f4"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "exp-tile8192 历史案例",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# Tiling / tail 回退方法\n\n保留当前正确实现，逐项确认 C2 参数与 API 支持。不能满足前提时记录失败和缺项，调用相应辅助技能；不要绕过所有权、容量或精度边界。验证使用原 oracle 全 case，性能结果不能覆盖正确性失败。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.tiling-tail.fallback",
+      "kind": "recipe",
+      "learning": {},
+      "parent": "implementation.tiling-tail",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:46b9e557423bdf5af2ea2d9d4b56f54d81216a56b69177751dfbb0a53f24b239",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/fallback.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:c74ad927867806d42723213292831e22c84a2e84d75230e5aa615dee1500782a",
+          "lines": [
+            1,
+            151
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/reduction/ar-fullload.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/reduction/ar-fullload.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:c74ad927867806d42723213292831e22c84a2e84d75230e5aa615dee1500782a"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "Tiling / tail 回退方法",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# 有效长度、对齐长度与动态尾块\n\n## 适用条件\n\n任何非整齐 shape、归约、转换或尾块写回。 输入是 C2 的 action/模板快照、实例参数、实现自由度、源码及架构证据。\n\n## 操作步骤与约束\n\n分开 validElements/alignedElements/bytes；算各核实际有效范围；零任务不进入 loop；循环次数用有效长度的 ceilDiv，尾部不制造额外零长迭代。\n\nUB 分配/rowOffset 用对齐长度，DMA blockLen 与数学 count 使用有效长度。\n\n## 关键代码\n\n```cpp\nAscendC::DataCopyExtParams cp{1, static_cast<uint32_t>(validCount * sizeof(T)), 0, 0, 0};\nAscendC::DataCopyPadExtParams<T> pad{false, 0, 0, 0};\nAscendC::DataCopyPad(xLocal, xGm[offset], cp, pad);\n// 该 GM->UB 重载的 blockLen 是字节；边界和 uint32 范围须预先核验。\n```\n\n片段用于表达关键契约，变量与工程由候选补齐。当前只完成来源审读；需按目标 SDK 编译和运行完整正确性，尚未进行 NPU 性能验证。\n\n## 验证方法\n\n边界前一元素/正好边界/后一元素、空任务、单 tile、多 tile；核验最后地址与 oracle。 构建前调用 ascendc-code-review；正确性失败调用 ascendc-precision-debug，异常或挂起调用 ascendc-runtime-debug/ascendc-crash-debug。\n\n## 失败特征与回退\n\n尾块错、对齐输入通过但奇数 shape 失败、零长 loop 下溢。 保留原失败、完整日志与实际改动，回退到 C2 fallback 或请求重规划；不能静默改算法以继续计时。C3 记录所用条目版本、参数变化及计划符合性。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.tiling-tail.valid-length",
+      "kind": "recipe",
+      "learning": {},
+      "parent": "implementation.tiling-tail",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:18d3039612fd1b63e757bb44bf4eb978522595fa20984c6004a4c9d36787c0b7",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/recipes/valid-length.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:c74ad927867806d42723213292831e22c84a2e84d75230e5aa615dee1500782a",
+          "lines": [
+            1,
+            151
+          ],
+          "original_path": "ops/ascendc-tiling-design/references/reduction/ar-fullload.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/reduction/ar-fullload.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:c74ad927867806d42723213292831e22c84a2e84d75230e5aa615dee1500782a"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "有效长度、对齐长度与动态尾块",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# Vector / API 路由\n\n根据 C2 冻结的方案和待实现变换，选择以下方法。保持算法、所有权和数值语义；越过 C2 自由度时返回重规划。\n\n- [Repeat / mask / stride 与批量 Vector API](recipes/batch.md)\n- [Cast 合并与标量控制简化](recipes/cast-control.md)",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.vector-api",
+      "kind": "router",
+      "learning": {},
+      "parent": "implementation.root",
+      "references": [],
+      "routes": [
+        {
+          "exclude": [
+            {
+              "field": "excluded_recipes",
+              "op": "contains",
+              "value": "implementation.vector-api.batch"
+            }
+          ],
+          "fallback": false,
+          "match": [],
+          "prior_score": 3,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.plan_freedom"
+          ],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "implementation.vector-api.batch"
+        },
+        {
+          "exclude": [
+            {
+              "field": "excluded_recipes",
+              "op": "contains",
+              "value": "implementation.vector-api.cast-control"
+            }
+          ],
+          "fallback": false,
+          "match": [],
+          "prior_score": 3,
+          "required_evidence": [
+            "constraint.semantic_equivalence",
+            "constraint.capacity",
+            "constraint.plan_freedom"
+          ],
+          "seed_reason": "明确属于该算子族或实现问题，优先比较。",
+          "target": "implementation.vector-api.cast-control"
+        },
+        {
+          "exclude": [],
+          "fallback": true,
+          "match": [],
+          "prior_score": 0,
+          "required_evidence": [],
+          "seed_reason": "未知类型保留语义正确的现有方案并补证据。",
+          "target": "implementation.vector-api.fallback"
+        }
+      ],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:3ab53d9a73e148aa0a126843751533defe681bac334a7060092e63f5e6b2db8f",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/ROUTER.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:9f427095336cbb2e8024b29f664648b75abfe3b499471b999b30867d5c29213a",
+          "lines": [
+            1,
+            203
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/reference/elementwise/vector_efficiency_design.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-performance-best-practices/reference/elementwise/vector_efficiency_design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:9f427095336cbb2e8024b29f664648b75abfe3b499471b999b30867d5c29213a"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "Vector / API 路由",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# Repeat / mask / stride 与批量 Vector API\n\n## 适用条件\n\n同类小调用可在合法 stride 下批量化。 输入是 C2 的 action/模板快照、实例参数、实现自由度、源码及架构证据。\n\n## 操作步骤与约束\n\n确认 count/repeat/mask 单位和上限；主循环批量计算、尾部使用有效 count；减少重复 mask 设置；核验操作数别名与 buffer 对齐。\n\n不把上游某平台 repeat 上限推广；mask 状态恢复须满足后续 API 契约。\n\n## 关键代码\n\n```cpp\n// count 重载的简化示例；不是 repeat 参数重载。\nAscendC::Add(outLocal, xLocal, yLocal, validCount);\n// 使用 repeat/stride 重载前读取当前 SDK 的单位、上限与地址增量规则。\n```\n\n片段用于表达关键契约，变量与工程由候选补齐。当前只完成来源审读；需按目标 SDK 编译和运行完整正确性，尚未进行 NPU 性能验证。\n\n## 验证方法\n\n不整齐 count、repeat 上限附近、不同 dtype 和 stride；比较有用工作/指令数。 构建前调用 ascendc-code-review；正确性失败调用 ascendc-precision-debug，异常或挂起调用 ascendc-runtime-debug/ascendc-crash-debug。\n\n## 失败特征与回退\n\n只有部分 lane 写对、跨 repeat 错位、batch 后 UB 越界。 保留原失败、完整日志与实际改动，回退到 C2 fallback 或请求重规划；不能静默改算法以继续计时。C3 记录所用条目版本、参数变化及计划符合性。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.vector-api.batch",
+      "kind": "recipe",
+      "learning": {},
+      "parent": "implementation.vector-api",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:97e4695b1512f16d4817734fefe2a429d17564835aa96e339def38d65214e229",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:9f427095336cbb2e8024b29f664648b75abfe3b499471b999b30867d5c29213a",
+          "lines": [
+            1,
+            203
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/reference/elementwise/vector_efficiency_design.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-performance-best-practices/reference/elementwise/vector_efficiency_design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:9f427095336cbb2e8024b29f664648b75abfe3b499471b999b30867d5c29213a"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "Repeat / mask / stride 与批量 Vector API",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# Cast 合并与标量控制简化\n\n## 适用条件\n\n存在可证明冗余 Cast、重复索引/分支或标量热路径。 输入是 C2 的 action/模板快照、实例参数、实现自由度、源码及架构证据。\n\n## 操作步骤与约束\n\n先区分精度边界与纯格式转换；只合并不影响可见舍入的 Cast；外提不变量，分离主/尾循环；spill 先看编译报告再改对象存活期。\n\n每一次消除舍入都要核验误差标准；不能因 Scalar 高就删 queue/event。\n\n## 关键代码\n\n```cpp\n// Host 预计算不会随 tile 变化的 byteStride；kernel 只递增元素偏移。\nfor (uint64_t i = 0, offset = begin; i < fullTiles; ++i, offset += tileElements) {\n    // 选定的向量路径处理 tileElements；尾块在循环外处理。\n}\n```\n\n片段用于表达关键契约，变量与工程由候选补齐。当前只完成来源审读；需按目标 SDK 编译和运行完整正确性，尚未进行 NPU 性能验证。\n\n## 验证方法\n\n逐步对比中间结果、极端值和 dtype；编译报告检查 spill 是否减少；Task 计时验证。 构建前调用 ascendc-code-review；正确性失败调用 ascendc-precision-debug，异常或挂起调用 ascendc-runtime-debug/ascendc-crash-debug。\n\n## 失败特征与回退\n\n精度边界变化、特殊值不一致、分支外提改变地址或空输入行为。 保留原失败、完整日志与实际改动，回退到 C2 fallback 或请求重规划；不能静默改算法以继续计时。C3 记录所用条目版本、参数变化及计划符合性。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.vector-api.cast-control",
+      "kind": "recipe",
+      "learning": {},
+      "parent": "implementation.vector-api",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:f225fc420387ba487159c7621b4764ce4c8ea597ea14ce9e634b56c4a1e9dec7",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/cast-control.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:96c753e315deb40eebe82c9827b2babc39497868296bcf0cac17ef89b4cb9387",
+          "lines": [
+            1,
+            476
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/reference/scalar/coding_principles.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-performance-best-practices/reference/scalar/coding_principles.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:96c753e315deb40eebe82c9827b2babc39497868296bcf0cac17ef89b4cb9387"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "Cast 合并与标量控制简化",
+      "version": "1.0.0"
+    },
+    {
+      "body": "# Vector / API 回退方法\n\n保留当前正确实现，逐项确认 C2 参数与 API 支持。不能满足前提时记录失败和缺项，调用相应辅助技能；不要绕过所有权、容量或精度边界。验证使用原 oracle 全 case，性能结果不能覆盖正确性失败。",
+      "evidence_status": "source_reviewed_not_benchmarked",
+      "id": "implementation.vector-api.fallback",
+      "kind": "recipe",
+      "learning": {},
+      "parent": "implementation.vector-api",
+      "references": [],
+      "schema_version": "aprof.knowledge-record/v1",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "seed_reason": "内容初始版本；树路由按适用条件采用 3/2/1 排序，fallback 为 0。",
+      "source_hash": "sha256:09c009028a912e16124fbdbca309e34e5cb66cb23c37070c92bb4d54f8ca4e99",
+      "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/fallback.md",
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:9f427095336cbb2e8024b29f664648b75abfe3b499471b999b30867d5c29213a",
+          "lines": [
+            1,
+            203
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/reference/elementwise/vector_efficiency_design.md",
+          "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-performance-best-practices/reference/elementwise/vector_efficiency_design.md",
+          "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+          "sha256": "sha256:9f427095336cbb2e8024b29f664648b75abfe3b499471b999b30867d5c29213a"
+        }
+      ],
+      "status": "active",
+      "tags": [],
+      "title": "Vector / API 回退方法",
+      "version": "1.0.0"
+    }
+  ],
+  "schema_version": "aprof.knowledge/v1",
+  "source_hashes": {
+    "skills/ascendc-aprof-optimization/knowledge/REGION.json": "sha256:78e86c6862559725890d4e46021a84893aff7cae09c50a529a706c2f7d22fe13",
+    "skills/ascendc-aprof-optimization/knowledge/ROUTER.md": "sha256:9efa167638001144f2f63f5237eaf66745f93a841dd9d0dd00afceb71146258e",
+    "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/ROUTER.md": "sha256:59309a3304d1a5f669bbdff63510dba87f7ee4523be55fb0a3aac6be7fbfedb1",
+    "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/examples/ub-accumulator.md": "sha256:2455bca1195978b8e212cec343794cac160c5e6c26ea472be386fe5a3a3bf405",
+    "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/fallback.md": "sha256:d7419bd67a98b68f937508a866a0f78b91693ec5fe2a017425bfee3857d15c42",
+    "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md": "sha256:793426a117ec35a9b61db79bf1b67693b95e813ea1ba805ce79621771b7533e3",
+    "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/ROUTER.md": "sha256:8fb4d7a607eec13422f82d1447a829251b6acea7c8589461a357d9afdbaf343e",
+    "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/examples/tile-amortization.md": "sha256:14252dc571c11267078fe947695b0f0285061ff87e2f37d2cec2e8f04e92feaf",
+    "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/fallback.md": "sha256:5f343d2bec3fbf8424e8ede87ffd7117a0e62804815f44a509db6032822bf590",
+    "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md": "sha256:eb89188ac1b391da5d05a3ac00494eccc6f6e9fa18ef97ab6d23574611a1caa2",
+    "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/ROUTER.md": "sha256:7f08a25680d3ce8c7127113f1bbf8edac06af2b6a303e8c307a0a438388c7142",
+    "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/examples/prefetch-boundaries.md": "sha256:2080c228c5f8ed8cf5aab2b3b69e782281318c5f442760c0b49fe1ecc124245c",
+    "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/examples/sigmoid-pipeline.md": "sha256:e01b2d7786292ddc4fc3f9a57965c07f537fa4093e356c751941f99d5e79b285",
+    "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/fallback.md": "sha256:60723237114232f26b8ee6689c0d94330fbf2d14db238bed15f6ccb20385f22b",
+    "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md": "sha256:72d0292d6a282bc5df953c23a422011673e601db41ad106068137c9f1449db27",
+    "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/slots.md": "sha256:9365cb03e545621c0cb512548363212194ac0118cbc14951cf41e849ca6695e7",
+    "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/ROUTER.md": "sha256:3bd1d8766b9ec0a5bde176380fd9173b1f38a2db4a09d214d026f61f7e7a047d",
+    "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/fallback.md": "sha256:2aad83000d4347d7defebfb4ddfc96c6f552f32e07d53b471ed87b11b14e2dea",
+    "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/bounds.md": "sha256:4b9b84100ce41669c8eea03333544daa3f4e6ae440113638c521be0ba8a63751",
+    "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md": "sha256:f6fc5d53912958d7184b1ad221d8bfeab016e8ecc673be92b162e7c46cda5eae",
+    "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/ROUTER.md": "sha256:e9a2510d5a2aadccedec34d3dcb9aadcd7bbeda0eb938fd1d9245589a8e5dd71",
+    "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/examples/exp-tile8192.md": "sha256:60e9a5e96ea03c72df4c45027a45f81dad909b37a91da9aa398898428dcce465",
+    "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/fallback.md": "sha256:46b9e557423bdf5af2ea2d9d4b56f54d81216a56b69177751dfbb0a53f24b239",
+    "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/recipes/dispatch.md": "sha256:479a61978b5b02daf831d41bc88b8a778035ad965a6970bc070c48420c5e0651",
+    "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/recipes/valid-length.md": "sha256:18d3039612fd1b63e757bb44bf4eb978522595fa20984c6004a4c9d36787c0b7",
+    "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/ROUTER.md": "sha256:3ab53d9a73e148aa0a126843751533defe681bac334a7060092e63f5e6b2db8f",
+    "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/fallback.md": "sha256:09c009028a912e16124fbdbca309e34e5cb66cb23c37070c92bb4d54f8ca4e99",
+    "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md": "sha256:97e4695b1512f16d4817734fefe2a429d17564835aa96e339def38d65214e229",
+    "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/cast-control.md": "sha256:f225fc420387ba487159c7621b4764ce4c8ea597ea14ce9e634b56c4a1e9dec7",
+    "skills/ascendc-aprof-optimization/knowledge/fallback.md": "sha256:0daa3bea3cb57e927efd13ae30e55c4902d465061b51ceda275eda0f057b46f0"
+  },
+  "version": "v0001"
+}

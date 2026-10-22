@@ -1,0 +1,50 @@
+{
+  "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+  "task_id": "raw15-case-04",
+  "context_hash": "sha256:7d14c8fbfaee3d315268a5ae56fcff4285290923f24a69b56f9f01ef9fa9977c",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "graph_version": "v0005",
+  "source_context_ref": {
+    "path": "origin.json",
+    "sha256": "sha256:282cbc5907021f6ccf8df97d53deb963da9c13f2f5e178b9cf7e2311362b2ab6"
+  },
+  "retrieval_hash": "sha256:d1d005113617dc6dc34c578a9d0caca6fc6c7575805c2bc0ce6b81bb328d0af5",
+  "selections": [
+    {
+      "problem_id": "problem.tiny_transfer_setup_amplification",
+      "reason": "segment=1与7导致每1/7元素发3次DMA；考虑批量多行布局。",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.current_kernel"
+      ]
+    },
+    {
+      "problem_id": "problem.noncontiguous_access",
+      "reason": "x0/x1跨segment交错布局，不能直接把x0逻辑相邻块合为物理连续。",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.current_kernel"
+      ]
+    },
+    {
+      "problem_id": "problem.vector_api_fragmentation",
+      "reason": "每短段重发5或8个Vector原语，检查仅合并DMA是否不足。",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.current_kernel"
+      ]
+    },
+    {
+      "problem_id": "problem.control_metadata_overhead",
+      "reason": "每段除模元数据，比较外提与整段重排的不同收益。",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.current_kernel"
+      ]
+    }
+  ]
+}

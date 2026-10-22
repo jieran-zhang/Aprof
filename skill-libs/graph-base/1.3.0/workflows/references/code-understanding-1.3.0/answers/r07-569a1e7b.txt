@@ -1,0 +1,29 @@
+该算子的数学目标是对连续 ND 输入按右对齐规则广播，再逐元素取最大值，输出沿用输入 dtype。对本题有限整数值，P、Q 的数学期望均为 [[3,4,8],[7,7,9]]，R 为 [[3,7,8],[3,7,9]]；当前实现对三者走的路径不同，P 不能据此保证正确输出。
+
+host 在 source/op_host/maximum.asc:42–60 解析 shape、dtype，按实际输入元素数分配并读入二进制数据，查询 Vector 核数，计算 tiling，将输入和 tiling 复制到设备，直接以 tiling.blockNum 启动 maximum_kernel。随后同步 stream，复制并写出 totalLength 个结果。输出文件是连续原始数据，没有附加 shape 元信息。题目已限定无分配余量，因此不能用分配器可能的对齐空间解释越界为合法。
+
+ComputeMaximumTiling（source/op_kernel/maximum_tiling.h:29–55）把两个 shape 在左侧补 1，从末维反推连续元素 stride；某维长度为 1 时，将该维广播 stride 设为 0。它检查 rank 为 1 至 8、各维相等或至少一方为 1，输出维度取两者最大值。sameShape 比较的是原始 shape 数组，tileElements 固定为 4096 元素。核数为 max(1,min(cores,ceil(totalLength/4096)))，blockLength 为 ceil(totalLength/blockNum)，后者也以元素计。
+
+三次调用均得到 rank=2、outShape=[2,3]、totalLength=6、x1Stride=[3,1]、sameShape=0。P、Q 的 x2Stride=[1,0]；R 的 x2 补成 [1,3]，stride=[0,1]。由于 ceil(6/4096)=1，查询虽返回 4 个 Vector 核，实际只启动 1 个 block，blockLength=6，负责线性元素区间 [0,6)。P、R 的 dtype 编号为 0，Q 为 1。P 的输入/输出分配分别为 12、4、12 字节；Q 为 24、8、24 字节；R 为 12、6、12 字节。
+
+分派依据见 maximum_kernel.asc:153–182：int64 始终进入 MaximumScalar；half 同形进入 KernelMaximumSame，所有异形都进入 KernelMaximumHalfLastAxisBroadcast；其他 dtype 同形走向量路径，异形走标量路径。half 异形分派没有验证末轴广播条件，因此类名和注释不能充当通用广播正确性的保证。
+
+P 进入 half 专用路径（maximum_kernel.asc:84–114）。begin=0、end=6、row=outShape[1]=3；每段长度是 min(end-off,4096,row-off%row)，故两轮分别为 off=0、3，count 都为 3。每轮从 x1[off] 连续读取 3 个 half，从 x2[off%3] 连续读取 3 个 half，执行 Max 后连续写到 y[off]。它完全没有使用 host 算出的 x2Stride=[1,0]，并未把每行的一个数复制到三列。
+
+以各张量基址为零、字节区间采用左闭右开表示，P 的 x1 两轮分别读取 [0,6)、[6,12)，y 写相同区间；两轮 x2 起点都为 0，请求范围都为 [0,6)。实际 x2 只有 [0,4)，其中两个 half 为 3、7：第三个 half 对应 [4,6)，已越界。即使暂时忽略越界，每行第二列也会与 7 比较，第一行第二列将按该寻址得到 7，而数学期望为 4。第三列读取的内容、是否报错以及最终可见输出均不能确定；不能承诺某个完整数组或部分结果必然写回。Init 中将 x2 的 GlobalTensor 长度设为 row=3，只描述访问视图，不会扩大真实分配。
+
+Q 进入 MaximumScalar<float>（maximum_kernel.asc:125–150）。每个 linear 经除法、取模恢复坐标，再用 stride 累加输入索引。对于 linear=0…5，ai=[0,1,2,3,4,5]，bi=[0,0,0,1,1,1]；对应 x1 字节起点为 [0,4,8,12,16,20]，x2 为 [0,0,0,4,4,4]，每次访问 4 字节，输出起点与 x1 相同。所有访问均在分配内，逐元素执行 av>bv?av:bv，源码支持输出 [[3,4,8],[7,7,9]]。这一路径直接通过 GM 指针进行标量加载、比较和存储，没有建立向量搬运队列。
+
+R 与 P 进入同一个 half 专用类，同样分成两个 count=3 的片段。但 R 的 x2 实际有 3 个 half，两个片段均合法读取 x2 的 [0,6)，得到 [3,7,6]；x1、y 的两段范围分别为 [0,6)、[6,12)。两次向量比较得到 [3,7,8] 和 [3,7,9]，因此源码及搬运契约支持输出 [[3,7,8],[3,7,9]]。此例中，按列向量循环复用恰好与广播 stride=[0,1] 一致。
+
+P、R 每轮的 DataCopyExtParams 均为 {1,6,0,0,0}：1 个连续数据块，有效长度 6 字节，两端块间隔均为零。依据 shared/rawdocs 中 DataCopyPad_GMToUB.md、DataCopyPad_UBToGM.md 的 A3 普通重载，GM 端允许非 32 字节对齐地址，UB 端要求 32 字节对齐；所以第二行从字节偏移 6 开始本身合法。GM→UB 会将每个 6 字节片段在 UB 补到 32 字节，即增加 26 字节 dummy。源码的 pad={false,0,0,0} 不表示补零；该配置下文档规定 dummy 使用数据块首元素值。Max 的 count=3 只处理前三个有效元素，写回也只写 6 字节，dummy 不进入输出。P 请求的第三个 half 位于有效 blockLen 内，绝非可由 UB padding 补出的内容。
+
+这两个 half 调用各建立 x1、x2、y 三条单槽队列，每槽分配 4096×2=8192 字节，合计 24576 字节，即 24 KiB；实际每轮只使用其中 3 个有效元素。按 InitBuffer.md，分配长度单位是字节；这里已经满足 32 字节对齐。队列深度和实际分配块数均为 1，没有双缓冲。每轮 AllocTensor 后搬入、EnQue/DeQue 交给计算，输出 EnQue/DeQue 后搬出，最后 FreeTensor，使同一组存储能在后续片段复用。
+
+按固定 SDK 契约，本题目标是 910C/Atlas A3、__NPU_ARCH__=2201。此向量路径为 GM 经 MTE2 到 UB，Vector 执行 Max，再经 MTE3 回 GM；VECIN、VECOUT、VECCALC 都是 UB 的逻辑角色，没有 Cube 矩阵布局转换。队列和框架同步机制承接搬入完成后计算、计算完成后搬出，以及消费者完成后复用存储的依赖；源码没有手写跨核同步。各核输出区间互斥，本题又只启动一个 block。host 的 stream 同步保证完成后再读回结果。队列存在本身不能证明流水实际重叠或给出耗时。
+
+其他分支的策略也由上述代码决定。KernelMaximumSame（maximum_kernel.asc:6–77）按核号×blockLength 划分连续区间，末核截断，再按最多 4096 元素分 tile，用 DataCopyPad 处理有效尾长。half、float32、int32 直接向量 Max，均属于 Max.md 列出的 A3 支持类型。bfloat16 先转 float 比较，再以 CAST_RINT 转回；int8 经 half 转 float，比较后经 half 转回 int8，两个回转均使用 CAST_RINT，并复用一块 half 临时区。相应 float 临时区各按 4096 元素分配，独立于三条输入输出队列。
+
+异形的 float32、bfloat16、int8、int32，以及全部 int64 使用逐维广播索引的标量路径；bfloat16 比较前 ScalarCast 成 float，但写回选中的原值，int64 直接按整数比较。标量表达式相等时选第二输入；不能仅凭算子名称把其 NaN、正负零行为等同于向量 Max，本题数值不涉及这些差异。half 专用类则只有在 x1 可按输出线性索引读取、x2 可作为固定末轴向量复用时才符合当前寻址，其分派条件覆盖了更多不满足条件的 shape，P 就是明确反例。
+
+以上为静态源码与固定 API 契约下的理解：Q、R 的地址与计算支持所列结果；P 存在确定的越界请求和广播映射错误。材料未提供实际构建、编译器同步展开或设备运行证据，因此不据此断言编译成功、具体越界故障形式或性能表现。

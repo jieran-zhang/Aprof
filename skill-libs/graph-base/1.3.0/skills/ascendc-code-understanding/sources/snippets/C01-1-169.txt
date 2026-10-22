@@ -1,0 +1,169 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/* !
+ * \file matmul_basic_api.asc
+ * \brief 使用静态Tensor编程模式实现矩阵乘法，展示Cube单元的基本使用方法
+ */
+
+#include "acl/acl.h"
+#include "kernel_operator.h"
+#include "data_utils.h"
+
+// half type, cube block: [16, 16]
+constexpr uint32_t CUBE_BLOCK = 16;
+
+template <uint32_t M, uint32_t K, uint32_t N, uint32_t singleCoreM, uint32_t baseM, uint32_t baseK, uint32_t baseN>
+__global__ __cube__ void mmad_custom(__gm__ uint8_t* a, __gm__ uint8_t* b, __gm__ uint8_t* c)
+{
+    AscendC::InitSocState();
+    AscendC::GlobalTensor<half> aGM;
+    AscendC::GlobalTensor<half> bGM;
+    AscendC::GlobalTensor<half> cGM;
+    uint32_t mIterIdx = AscendC::GetBlockIdx() % (M / singleCoreM);
+    aGM.SetGlobalBuffer((__gm__ half*)a + mIterIdx * singleCoreM * K);
+    bGM.SetGlobalBuffer((__gm__ half*)b);
+    cGM.SetGlobalBuffer((__gm__ half*)c + mIterIdx * singleCoreM * N);
+    AscendC::LocalMemAllocator<AscendC::Hardware::L1> l1Allocator;
+    AscendC::LocalMemAllocator<AscendC::Hardware::L0A> l0aAllocator;
+    AscendC::LocalMemAllocator<AscendC::Hardware::L0B> l0bAllocator;
+    AscendC::LocalMemAllocator<AscendC::Hardware::L0C> l0cAllocator;
+    // 使用LocalMemAllocator按申请顺序分配片上内存，避免手动维护LocalTensor地址偏移。
+    AscendC::LocalTensor<half> a1Local = l1Allocator.Alloc<AscendC::TPosition::A1, half>(baseM * baseK);
+    AscendC::LocalTensor<half> b1Local = l1Allocator.Alloc<AscendC::TPosition::B1, half>(baseK * baseN);
+    AscendC::LocalTensor<half> a2Local = l0aAllocator.Alloc<AscendC::TPosition::A2, half>(baseM * baseK);
+    AscendC::LocalTensor<half> b2Local = l0bAllocator.Alloc<AscendC::TPosition::B2, half>(baseK * baseN);
+    AscendC::LocalTensor<float> cLocal = l0cAllocator.Alloc<AscendC::TPosition::CO1, float>(baseM * baseN);
+    // A矩阵GM->L1调用DataCopy接口 + Nd2NzParams结构体参数:
+    // {ndNum, nValue, dValue, srcNdMatrixStride, srcDValue,
+    //  dstNzC0Stride, dstNzNStride, dstNzMatrixStride}
+    AscendC::DataCopy(a1Local, aGM, AscendC::Nd2NzParams{1, baseM, baseK, 0, K, baseM, 1, 0});
+    // B矩阵GM->L1调用DataCopy接口 + Nd2NzParams结构体参数:
+    // {ndNum, nValue, dValue, srcNdMatrixStride, srcDValue,
+    //  dstNzC0Stride, dstNzNStride, dstNzMatrixStride}
+    AscendC::DataCopy(b1Local, bGM, AscendC::Nd2NzParams{1, baseK, baseN, 0, N, baseK, 1, 0});
+    // SetFlag用于在生产者流水完成当前任务后写入同步事件，WaitFlag用于让消费者流水等待该事件；
+    // HardEvent模板参数描述同步方向，EVENT_ID用于区分同类同步事件。
+    // GM->L1的DataCopy由MTE2流水完成，后续L1->L0的LoadData由MTE1流水读取L1数据；
+    // 这里设置MTE2_MTE1事件，使MTE1等待MTE2，避免LoadData读取到尚未搬运完成的数据。
+    AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(EVENT_ID0);
+    AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE1>(EVENT_ID0);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 2201)
+    // A矩阵L1->L0A（Nz->Zz）
+    // A矩阵L1->L0A调用LoadData接口 + LoadData2DParams结构体参数：
+    // {startIndex, repeatTimes, srcStride, sid, dstGap, ifTranspose, addrMode}
+    for (int i = 0; i < baseM / CUBE_BLOCK; ++i) {
+        AscendC::LoadData(
+            a2Local[i * baseK * CUBE_BLOCK], a1Local[i * 512 / sizeof(half)],
+            AscendC::LoadData2DParams{0, baseK / CUBE_BLOCK, baseM / CUBE_BLOCK, 0, 0, false, 0});
+    }
+    // B矩阵L1->L0B（Nz->Zn）
+    // B矩阵L1->L0B调用LoadData接口 + LoadData2DParams结构体参数：
+    // {startIndex, repeatTimes, srcStride, sid, dstGap, ifTranspose, addrMode}
+    for (int i = 0; i < baseK / CUBE_BLOCK; ++i) {
+        AscendC::LoadData(
+            b2Local[i * baseN * CUBE_BLOCK], b1Local[i * 512 / sizeof(half)],
+            AscendC::LoadData2DParams{0, baseN / CUBE_BLOCK, baseK / CUBE_BLOCK, 0, 0, true, 0});
+    }
+#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+    // A矩阵L1->L0A（Nz->Nz）
+    // A矩阵L1->L0A调用LoadData接口 + LoadData2DParamsV2结构体参数：
+    // {mStartPosition, kStartPosition, mStep, kStep, srcStride, dstStride, ifTranspose, sid}
+    AscendC::LoadData(
+        a2Local, a1Local,
+        AscendC::LoadData2DParamsV2{
+            0, 0, baseM / CUBE_BLOCK, baseK / CUBE_BLOCK, baseM / CUBE_BLOCK, baseM / CUBE_BLOCK, false, 0});
+    // B矩阵L1->L0B（Nz->Zn）
+    // B矩阵L1->L0B调用LoadData接口 + LoadData2DParamsV2结构体参数：
+    // {mStartPosition, kStartPosition, mStep, kStep, srcStride, dstStride, ifTranspose, sid}
+    AscendC::LoadData(
+        b2Local, b1Local,
+        AscendC::LoadData2DParamsV2{
+            0, 0, baseK / CUBE_BLOCK, baseN / CUBE_BLOCK, baseK / CUBE_BLOCK, baseN / CUBE_BLOCK, true, 0});
+#endif
+    // L1->L0的LoadData由MTE1流水完成，后续Mmad由M流水读取L0A/L0B数据；
+    // 这里设置MTE1_M事件，使M流水等待MTE1，避免Mmad读取到尚未搬运完成的数据。
+    AscendC::SetFlag<AscendC::HardEvent::MTE1_M>(EVENT_ID0);
+    AscendC::WaitFlag<AscendC::HardEvent::MTE1_M>(EVENT_ID0);
+    // 矩阵乘调用Mmad接口 + MmadParams结构体参数：{m, n, k, unitFlag, cmatrixSource, cmatrixInitVal}
+    AscendC::Mmad(cLocal, a2Local, b2Local, AscendC::MmadParams{baseM, baseN, baseK, 0, false, true});
+
+    // Mmad由M流水完成并写入L0C，后续Fixpipe由FIX流水读取L0C并搬运到GM；
+    // 这里设置M_FIX事件，使FIX流水等待M流水，避免Fixpipe读取到尚未计算完成的数据。
+    AscendC::SetFlag<AscendC::HardEvent::M_FIX>(EVENT_ID0);
+    AscendC::WaitFlag<AscendC::HardEvent::M_FIX>(EVENT_ID0);
+    // L0C->GM搬运调用Fixpipe+FixpipeParamsV220结构体参数：
+    // {nSize, mSize, srcStride, dstStride, reluEn, quantPre, deqScalar,
+    //  ndNum, srcNdStride, dstNdStride, unitFlag}
+    AscendC::Fixpipe(
+        cGM, cLocal, AscendC::FixpipeParamsV220{baseN, baseM, baseM, N, false, QuantMode_t::F322F16, 0, 1, 0, 0, 0});
+    AscendC::PipeBarrier<PIPE_ALL>();
+}
+
+int32_t main(int32_t argc, char* argv[])
+{
+    // matmul参数
+    constexpr uint32_t M = 256;
+    constexpr uint32_t K = 64;
+    constexpr uint32_t N = 256;
+    // 单核计算量
+    constexpr uint32_t singleCoreM = 128;
+    // 矩阵乘执行单元Tile参数
+    constexpr uint32_t baseM = 128;
+    constexpr uint32_t baseK = 64;
+    constexpr uint32_t baseN = 256;
+
+    size_t aFileSize = M * K * sizeof(half);
+    size_t bFileSize = K * N * sizeof(half);
+    size_t cFileSize = M * N * sizeof(half);
+    uint32_t numBlocks = 2;
+
+    aclInit(nullptr);
+    int32_t deviceId = 0;
+    aclrtSetDevice(deviceId);
+    aclrtStream stream = nullptr;
+    aclrtCreateStream(&stream);
+
+    uint8_t* aHost;
+    uint8_t* aDevice;
+    aclrtMallocHost((void**)(&aHost), aFileSize);
+    aclrtMalloc((void**)&aDevice, aFileSize, ACL_MEM_MALLOC_HUGE_FIRST);
+    ReadFile("./input/x1_gm.bin", aFileSize, aHost, aFileSize);
+    aclrtMemcpy(aDevice, aFileSize, aHost, aFileSize, ACL_MEMCPY_HOST_TO_DEVICE);
+
+    uint8_t* bHost;
+    uint8_t* bDevice;
+    aclrtMallocHost((void**)(&bHost), bFileSize);
+    aclrtMalloc((void**)&bDevice, bFileSize, ACL_MEM_MALLOC_HUGE_FIRST);
+    ReadFile("./input/x2_gm.bin", bFileSize, bHost, bFileSize);
+    aclrtMemcpy(bDevice, bFileSize, bHost, bFileSize, ACL_MEMCPY_HOST_TO_DEVICE);
+
+    uint8_t* cHost;
+    uint8_t* cDevice;
+    aclrtMallocHost((void**)(&cHost), cFileSize);
+    aclrtMalloc((void**)&cDevice, cFileSize, ACL_MEM_MALLOC_HUGE_FIRST);
+
+    mmad_custom<M, K, N, singleCoreM, baseM, baseK, baseN><<<numBlocks, 0, stream>>>(aDevice, bDevice, cDevice);
+    aclrtSynchronizeStream(stream);
+
+    aclrtMemcpy(cHost, cFileSize, cDevice, cFileSize, ACL_MEMCPY_DEVICE_TO_HOST);
+    WriteFile("./output/output.bin", cHost, cFileSize);
+
+    aclrtFree(aDevice);
+    aclrtFreeHost(aHost);
+    aclrtFree(bDevice);
+    aclrtFreeHost(bHost);
+    aclrtFree(cDevice);
+    aclrtFreeHost(cHost);
+    aclrtDestroyStream(stream);
+    aclrtResetDevice(deviceId);
+    aclFinalize();
+    return 0;
+}

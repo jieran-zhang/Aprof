@@ -1,0 +1,69 @@
+# 数据排布格式<a name="ZH-CN_TOPIC_0000001700139572"></a>
+
+数据排布格式（Data Layout Format）是深度学习中对多维Tensor在内存中存储方式的描述。
+
+常见的数据格式包括ND、NHWC和NCHW等，为Tensor的每个轴赋予了特定的业务语义。
+
+除了上述NHWC和NCHW格式外，还存在一些特殊的私有数据格式，如FRACTAL\_NZ（也简称NZ）、NC1HWC0、FRACTAL\_Z、NDC1HWC0、FRACTAL\_Z\_3D等。这些格式的引入是为了满足AI Core中Cube计算单元的高性能计算需求，通过优化内存布局，这些格式能够提升计算效率。在使用矩阵乘、卷积API开发相关算子的过程中，您可以看到这些格式的具体应用。
+
+## 普通格式<a name="section138780167211"></a>
+
+-   **ND、NHWC和NCHW**
+
+    数据排布格式最初用于表示图像在内存中的存储方式，其中常见的包括ND、NHWC和NCHW。在一般情况下，所有的Tensor都是N维的（ND），而NHWC和NCHW则是为四维Tensor中的每个轴赋予了特定的业务语义，例如高度（Height）、宽度（Width）和通道数（Channels）。
+
+    NHWC和NCHW的主要区别在于通道（Channel）维度的位置：
+
+    -   NHWC格式中，通道维度位于最后一个位置。
+    -   NCHW格式中，通道维度位于高度和宽度之前。
+
+    具体解释每个轴的含义：
+
+    -   **N**：Batch数量，表示图像的数目。
+    -   **H**：Height，图像的高度，即垂直方向的像素个数。
+    -   **W**：Width，图像的宽度，即水平方向的像素个数。
+    -   **C**：Channels，图像的通道数，例如彩色RGB图像的Channels为3。
+
+    如[图1](#zh-cn_topic_0000001265237150_zh-cn_topic_0228422146_zh-cn_topic_0187054064_fig146585121118)所示，以一张格式为RGB的图片为例，NCHW中，C排列在外层，实际存储的是“RRRRRRGGGGGGBBBBBB”，即同一通道的所有像素值顺序存储在一起；而NHWC中C排列在最内层，实际存储的则是“RGBRGBRGBRGBRGBRGB”，即多个通道的同一位置的像素值顺序存储在一起。
+
+    **图1**  NCHW和NHWC存储示例<a name="zh-cn_topic_0000001265237150_zh-cn_topic_0228422146_zh-cn_topic_0187054064_fig146585121118"></a>  
+    ![](../../../figures/nchw_nhwc.png "NCHW和NHWC存储示例")
+
+    尽管存储的数据相同，但不同的存储顺序会导致数据的访问特性不一致，因此即便进行同样的运算，相应的计算性能也会不同。
+
+-   **NDHWC和NCDHW**
+
+    NDHWC和NCDHW是五维Tensor，较NHWC和NCHW多了一个D的维度，D代表特征深度（Depth），表示数据在深度方向上的扩展，如视频的时间步或医学图像的深度层，因此该类格式便于在时间维度上进行卷积操作。以NDHWC为例，其数据格式如下图所示：
+
+    ![](../../../figures/NCDHW.png)
+
+## 矩阵乘相关特殊格式<a name="section184471251122117"></a>
+
+使用Mmad基础API进行矩阵乘计算时，对矩阵输入输出的数据排布格式有一定的要求，如下图所示，要求A矩阵（位于L0A Buffer）为FRACTAL\_ZZ，B矩阵（位于L0B Buffer）为FRACTAL\_ZN，C矩阵（位于L0C Buffer）为FRACTAL\_NZ。这些格式将矩阵划分成了一些分形（Fractal Matrix），适配Cube计算单元每次读取\(16, 16\)× \(16, 16\)的数据进行计算的硬件特点（以half数据类型为例），从而提高矩阵计算的效率。分形的大小和数据类型有关，也和所在的存储位置有关，具体可参见下文的详细介绍。
+
+![](../../../figures/zn_abc.png)
+
+-   **FRACTAL\_NZ/NZ**<a name="li19960204116136"></a>
+
+    FRACTAL\_NZ格式，简称NZ格式，是对一个Tensor最低两维（一个Tensor的所有维度，右侧为低维，左侧为高维）进行填充（pad）、拆分（reshape）和转置（transpose）操作后得到的格式。具体的转换过程如下：
+
+    \(M，N\)大小的矩阵被分为M1 \* N1个分形，按照column major（列优先）排布，形状如N字形；每个分形内部有M0 \* N0个元素，按照row major（行优先）排布，形状如Z字形，所以这种数据格式称为NZ格式。其中，\(M0, N0\)表示一个分形的大小。
+
+    通过公式表达为：
+
+    ```
+    (…, B, M, N)->pad->(…, B, M1 * M0, N1 * N0)->reshape->(…, B, M1, M0, N1, N0)->transpose->(…, B, N1, M1, M0, N0)
+    ```
+
+    >[!NOTE]说明 
+    >通常情况下，NZ格式在L0C Buffer和L1 Buffer中分别用于不同的场景：
+    >- 在L0C Buffer中，NZ格式用于存储矩阵乘法的结果。其分形形状为16x16，包含256个元素，这种结构非常适合Cube计算单元进行高效的矩阵乘法运算。
+    >- 在L1 Buffer中，NZ格式被采用以便于将数据搬运到L0A Buffer和L0B Buffer时，能够方便地转换为对应的ZZ和ZN格式。此时，分形形状为16 x \(32B / sizeof\(Datatype\)\)，大小为512字节。
+    >因此，当数据从L0C Buffer搬运到L1 Buffer时，其分形大小可能会发生变化。
+
+    下面通过一个具体的例子来了解ND格式转换为NZ格式的过程。
+
+    原始Tensor的Shape为\(20, 28\)：
+
+    ```
+    data = [x for x in range(20 * 28)]

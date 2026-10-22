@@ -1,0 +1,614 @@
+
+=== 本次使用的ascendc-code-understanding skill及参考正文 ===
+=== SKILL FILE: SKILL.md ===
+---
+name: ascendc-code-understanding
+description: 在 Ascend 910C 工程进入性能 diagnosis 前，串联算法语义、host/tiling/kernel 实现策略与硬件数据流；也用于后续 P/O/R2 对当前实现的理解和复核。适用于 Ascend C 工程阅读，不负责预选 Problem、Action 或新优化方案。
+---
+
+# Ascend C 工程理解（910C 首版）
+
+先把当前工程讲清楚：它计算什么、为何这样切分和组织、数据如何经过存储与执行单元、同步保护了哪些依赖。以工程的实际输入和被选中的编译分支为对象，host、tiling、kernel、公共函数和编译配置共同提供证据。成果应让后续 diagnosis 可以直接引用，不需要重新猜测算法和执行路径。
+
+本版硬件解释限定 910C 项目所用的 Atlas A3 / 2201 适用内容；型号、SDK 和构建目标以项目已有证据为准。A2 示例可用于练习阅读，但不自动证明该工程已在 910C 编译或运行。详见 [硬件适用边界](references/910c-hardware.md)。
+
+## 阅读入口
+
+- 从整个工程建立语义和实现策略：读 [工程理解方法](references/engineering-reading.md)。采用其中对当前代码有用的线索，不机械填表。
+- 解释搬运、布局、分配或同步：读 [910C 硬件与数据流](references/910c-hardware.md)。先分辨架构和重载，再解释行为。
+- 需要完整示范：读 [Add 工程贯通例子](references/example-add.md) 或 [基本 Cube 工程贯通例子](references/example-cube.md)。例子展示完整论证链，不是优化模板。
+- 追溯重要结论：读 [来源与证据索引](references/source-index.md)；必要原文、代码、版本、许可均随包保存。
+
+## 完成理解时应能说明什么
+
+用连贯叙述解释数学目标与数值语义、输入输出契约、实际分支、跨核与核内任务划分、各阶段的数据位置和布局、buffer 生命周期，以及依赖如何得到满足。关键判断附项目源码位置；硬件/API 行为附本包来源；公式计算明确写成推导。对于不能由代码或已给证据确认的内容，保留具体疑点和影响范围。
+
+详细程度随工程复杂度调整。简单算子可以用几段话说明；复杂融合算子可用算法分解、数据流图和少量表格辅助。图中的边表示数据/依赖关系，不代表已观测到的重叠时间线。
+
+code-understanding 是 diagnosis 前独立的理解阶段。此处不匹配 Problem/Action、不裁定瓶颈、不选择新 P 方案，也不把 `BUFFER_NUM=2`、队列或事件的存在当作已经有效重叠的证据。沿用项目阶段报告惯例，一份中文 Markdown 承载理解正文；已有适用报告可直接引用，接收请求中记录来源与适用范围，不补造外壳或重复文档。后续 P/O/R2 可复用已有理解，源码、tiling、构建分支或输入改变时只更新受影响部分，保存后继版本并保留旧版与未变部分的引用；仅新增 profiling 不要求重做。无需生成专用 execution-model、理解 JSON、固定 schema 或验收回执，亦不要求必跑工具或硬件测试。
+
+
+=== SKILL FILE: references/engineering-reading.md ===
+# 从工程语义走到当前实现
+
+本参考将 cannbot 的“入口→数据流→计算核心→输出”、数学语义、tiling 溯源和跨文件追踪方法改写为工程理解指导。[方法来源 M01](source-index.md#m01)。它保留理解优先、证据驱动的原则；模式名称只作为描述线索，不采用“命中关键词即停止”的分类办法，也不把 Host 传来的字段一概视为已验证。
+
+## 先建立能解释所有主要阶段的算法
+
+从算子接口、输入生成/参考结果、实际计算和最终输出相互核对，说明输入 tensor 的业务角色、shape、dtype、layout，输出满足的数学关系，以及归约、广播、索引、排序或状态更新发生在哪些轴。函数名不足以证明算法；例如 `Add` 出现于复杂融合算子时，它可能只负责偏置或归一化的一步。[方法 M01；完整演示见 Add/Cube 例子]
+
+把数学目标与实现的数值语义一起读：输入、运算中间值和输出是否同一 dtype；Cast、累加、舍入、饱和、padding 是否改变有效值；归约是一次完成还是局部结果合并。某些推导只有在特定 shape、连续布局、dtype 或整除条件下成立，应把条件写在结论旁。数学上可交换的运算，不自动意味着浮点结果相同。[方法 M01 的数学不变量、模板与分支语义的展开；数值实例 C01/C04]
+
+算法大图可以写成“矩阵乘生成中间结果→逐元素处理→写回”，随后解释每段具体数据从何而来。若输入只有一个 kernel 文件，先形成局部理解，再从 include、入口调用者、注册和公共函数补足工程上下文；缺失部分标明可见边界。无需扫描与算法、分支、索引或资源无关的整个依赖树。[方法 M01 的关联追踪，本文作范围收敛]
+
+## 用 Host 和构建条件确定到底在读哪个实现
+
+目录名帮助定位职责，但以调用关系为准。一个 `.asc` 文件可以同时包含 host 的 `main` 和 device kernel；公共头文件可能包含 tiling 结构、编译期路由、内存分配与真正的计算。下面这些关系用于回答实际问题，不要求产出固定清单。[方法 M01；源码 A01–A07、C01–C03]
+
+| 需要解释的关系 | 典型证据 | 对理解的作用 |
+| --- | --- | --- |
+| 外部输入如何成为 kernel 实参 | 调用端、shape/dtype 推断、OpDef、launch | 确定语义、输出区域和实际启动数量 |
+| Host 值如何进入 tiling | 字段定义、赋值公式、校验与回退分支 | 还原每核工作量、tile 大小、尾块与 workspace |
+| runtime 选择哪组编译期参数 | TilingKey / 模板声明与选择、二进制配置 | 区分 dtype、算法、分块和缓冲的真正选择条件 |
+| 哪段条件编译生效 | CMake、编译目标、宏、SDK 版本 | 区分 2201 与其他架构；避免把未编译分支当实际行为 |
+| 公共函数承诺什么 | 真实定义、模板特化、调用参数 | 把隐藏的 padding、循环、地址换算、同步纳入数据流 |
+
+沿影响算法的 tiling 字段追踪“输入量→公式/分支→写入→kernel 读取→地址/循环使用”。例如 `totalLength`、`blockLength`、`tileLength` 都可能以元素计，`InitBuffer` 长度则以字节计；不能仅因都叫 length 就在公式中混用。算法说“覆盖全部 N 元素”，源码中则需要由核号、起始偏移、循环次数和有效尾长共同证明覆盖范围。[方法 M01；API H07/H15；推导见 Add 例子]
+
+记录启动核数与硬件可用核数各自的来源。`SetBlockDim(8)` 或 `SetSimdNumBlocks(8)` 只能证明该处设置 8 个 block，不能证明 910C 的物理核数是 8；设备数、芯片数、AIC/AIV 数量也不能相互替换。参数只在平台接口或项目配置里出现时，沿那条证据解释，不补一个静态 SKU 常量。[源码 A01/C01；硬件 H01/H02；方法 M02]
+
+## 把实现策略解释成算法的组织方式
+
+说明算法的工作怎样分到核、tile、循环和 buffer。例如，输出沿 M 轴切分的矩阵乘，每核仍可能需要完整 B；沿 K 轴切分则产生不同的部分和依赖。对于当前代码，应从实际偏移、循环和累加位置推导，不能从“matmul”或模板参数名字套用固定策略。[方法 M01；源码/推导 C01]
+
+对每个主要阶段说明四件相互关联的事：它处理哪部分数学对象；读写哪块数据；把中间结果保存在哪、为什么还需要它；下一个阶段在什么条件下能使用或覆盖它。需要表达设计理由时区分“源码注释明确说明”和“由布局、容量、依赖推导的作用”。没有设计文档时，可说“这使每核输出独立”，不要替作者编造“为了最优带宽”。[方法 M01 的设计和同步分析；本文证据规则]
+
+当前实现可能同时有编译期路由、Vector 多步分解、循环与跨核协作，不能被单一模式标签遮蔽。`IS_SPLIT` 的含义从分支内部读，`BUFFER_MODE` 的含义从分配及地址切换读，`TILE_NUM` 从它参与的公式读。同名变量在别的工程中可以完全不同。[方法 M01 的模板语义，经 A01/A02 实例校正]
+
+## 数据流要携带位置、布局和单位
+
+每条重要搬运边至少应说清“源对象及其物理位置/布局→目的对象及其位置/布局”、传输有效范围，以及哪个执行单元承担。shape 是数学对象，layout 是物理排布，stride 是地址关系，三者各有证据。连续拷贝、跨行拷贝、格式转换、padding 和软件中转可能都藏在 `DataCopy` 这个名字后面。[API/源码 H03、H05/H06、H09–H13]
+
+对 GM 地址用逻辑索引说明核间覆盖；对 LocalTensor 切片用 byte/element 的单位说明是否是同一分配的别名。`VECIN`、`VECCALC`、`VECOUT` 是逻辑标签，均映射 UB，不能画成三个物理存储层。[API H03]
+
+阅读 buffer 时把“容量”“槽数”“队列深度”“当前有效数据量”分开。给每个重要 buffer 找到分配、首次写入、最后读取和下一次复用；在分支、别名和公共辅助函数间把这些位置接起来。队列占用可以变化，静态 tensor 可以反复复用，`BUFFER_NUM` 也可能只参与算术。[API H07/H08/H15；源码 A02]
+
+## 同步解释的是依赖
+
+从读写冲突解释同步，不数同步调用的个数：本次 MTE2 写完后 V 才能读；V 读完输入后下一次 MTE2 才能覆盖输入；MTE3 读完输出后下一次 V 才能覆盖输出。前两者是不同方向的依赖。Cube 同样要追踪 L1、L0A/B、L0C 的生产与消费。[API H02/H04；源码 A02/C01]
+
+核内 SetFlag/WaitFlag、单流水 PipeBarrier、队列管理、跨核 flag 和 host stream 同步所保护的范围不同。只有把数据的所有者和消费者确定下来，才知道某个同步覆盖哪条边。若使用自动同步或高级 Matmul，沿可见 API 契约及调用上下文解释，不能因为上层源码没有手写 flag 就宣称没有同步。[API H04；完整例子 C01/C02]
+
+以“不同流水可异步执行”“此处事件建立先后关系”“地址复用受到此依赖约束”描述静态证据。是否在真实运行中重叠、等待多久、哪个资源限制吞吐，需要后续运行证据；在本阶段保留为未判定。[API H04；证据边界]
+
+## 把理解交给后续工作
+
+好的结果让读者不用重新拼接一串 API：先用几句话描述完整算法和当前策略，再把最关键的数据路径与依赖解释清楚，最后列出确实影响理解的未确认条件。来源可以就近写成“源码 `file:line`”“文档 Hxx 的 A3 分区”“由上述公式推导”。这些是表达方式，不是新 schema。
+
+后续 diagnosis 可以直接引用事实和疑点；P/O/R2 可以比较“旧实现的算法、分块、资源和同步”哪些发生变化。复用时检查源版本、具体输入、tiling、构建分支与平台上下文是否仍成立；只补受变化影响的部分，保存后继版本并保留旧版及未变部分的引用。本 skill 不给疑点绑定 Problem/Action，不把潜在硬件机制升级为已测瓶颈，也不提出替代实现。
+
+
+=== SKILL FILE: references/910c-hardware.md ===
+# 910C：从数据路径解释硬件行为
+
+查阅顺序可按问题选择：适用架构、存储与路径、布局与搬运单位、buffer 生命周期、同步。这里的硬件知识服务于理解当前算法如何执行，不构成瓶颈诊断或优化建议。
+
+## 适用边界与证据层级
+
+本版面向用户已指定的 910C 工程。固定版本 devkit 文档明确标记 Atlas A3 对应 `__NPU_ARCH__ == 2201`；cannbot 产品表将 A3 与 `Ascend910_93` 联系起来。这些支持选择 A3/2201 内容，并不代替项目已有的具体型号、SDK 和编译目标证据。[文档 H01/H02；辅助映射 M02，见来源索引]
+
+同一 Markdown 经常同时含 `npu="910b,A3"`、`npu="950"` 分区，公共 API 名称也可能跨架构重载。解释前先确认产品支持表、函数原型、条件编译，再进入实现。`__NPU_ARCH__==2201` 的数据搬运实现选入 `dav_c220`；`3510` 选入另一目录。[源码 H11] 本文不把 950/3510 的 Compact、负 stride、loop/regbase 或 CV 直通行为移植到 910C。
+
+用于解释硬件的依据按用途区分：A3/2201 文档给出 API 和架构契约；`dav_c220` 源码说明该版本怎样实现具体重载；由二者与项目代码计算出的占用、地址覆盖或依赖属于推导。内部头文件是理解依据，不是建议业务代码直接 include 的公共 API。[源码 H10 的文件告示]
+
+核数、总带宽、频率、设备拓扑和项目可用内存不在本包固定。文档中的存储规格与实际用户可分配容量也有区别，预留空间可能受 SDK、融合场景及编译选项影响。解释资源约束时应以当前工程的平台信息、分配方式和构建条件为边界，不用其他 SKU 的峰值补空白。[文档 H02 的容量及预留说明；M02]
+
+## 先区分 AIC/AIV 与逻辑位置
+
+2201 文档把 Cube 与 Vector 放在独立的 AIC 和 AIV 核上，各自拥有 Scalar；AIC/AIV 间通过 GM 传递数据。因此一个融合算法可由多个角色协作，源码写在同一文件不代表共享一套片上内存，也不代表核内事件可以保护跨核读写。[文档 H02]
+
+| 代码位置/对象 | A3 下的物理存储 | 在算法理解中的含义 |
+| --- | --- | --- |
+| GlobalTensor、GM | Global Memory | 输入、最终输出，也可能保存核间中间值/workspace |
+| VECIN、VECCALC、VECOUT | 均为 UB | Vector 使用的数据；标签体现角色，不是三个物理层级 |
+| A1、B1、TSCM | L1 | Cube 输入暂存；A1/B1 可以占同一 L1 的不同区域 |
+| A2 / B2 | L0A / L0B | Cube 左/右矩阵输入 |
+| CO1 | L0C | Cube 输出与累加中间结果 |
+| CO2 | GM | A3 的映射；不能套用旧产品 CO2→UB |
+
+表中映射来自 [H03 的 TPosition 表](source-index.md#h03)。C1/C2、BiasTable 等在项目实际使用时再按同一文档 A3 分区解释，不凭相邻名称猜测存储。
+
+## 沿数学对象追踪搬运和执行单元
+
+典型 Vector 路径是 `GM --MTE2--> UB --V计算--> UB --MTE3--> GM`。典型基本 Cube 路径是 `GM --MTE2--> L1 --MTE1--> L0A/L0B --M计算--> L0C --FIX--> GM`。Scalar 发射指令并处理标量控制，各流水可异步执行；图中的箭头只表达数据关系。[文档 H04/H14；Cube 源码 C01]
+
+但不能按 `DataCopy` 名字把所有搬运都归 MTE：
+
+| 实际路径 | 该版本的证据 | 应怎样解释 |
+| --- | --- | --- |
+| GM→UB、UB→GM | `DataCopyGM2UBImpl` / `DataCopyUB2GMImpl` 及核内流水表 | 分别读入/写出 Vector 数据，涉及 MTE2/MTE3 |
+| UB→UB | `DataCopyUB2UBImpl` 调 `copy_ubuf_to_ubuf`；C API 同 intrinsic 的实现与文档明确 `PIPE_V` | 消耗 V 流水的搬运，也要考虑与 V 计算的数据依赖 |
+| L0C→GM | `DataCopyL0C2GMImpl` 调 `copy_matrix_cc_to_gm`；流水表为 FIX | 输出可伴随类型/布局处理，不是 UB→GM 的 MTE3 路径 |
+| 某些 AIV UB→L1/TSCM 重载 | `DataCopyUB2L1Impl`、`DataCopyPadUB2L1Impl` 注明 Matmul 软件模拟，经 workspace GM 并向 AIC 发消息 | 把 UB→GM、中转及 AIC 侧工作纳入链条，不能画成天然片上直连 |
+
+依据：[源码 H10/H11/H13；文档 H04/H12](source-index.md)。最后一行限定具体重载和 Matmul 上下文，不能扩大为所有 API、所有代际都相同。类型转换、ND/NZ 转换与填充也都需读匹配的重载。
+
+## layout 是算法索引与物理地址之间的桥
+
+以 half 的基本矩阵乘为例，数学上 A 为 `[M,K]`、B 为 `[K,N]`、C 为 `[M,N]`；在 2201 示例中，A/B 由 GM 的 ND 变成 L1 的 NZ，再分别进 L0A 的 ZZ、L0B 的 ZN，结果位于 L0C 的 NZ，最后写回 GM ND。转换不等于数学转置，更不能把 `ifTranspose=true` 单独解释成算法换成 `A×Bᵀ`。[文档 H02/H09；源码 C01 的 2201 分支]
+
+以下偏移公式是由 H09 的 reshape/transpose 定义推导，用于阅读 half 示例。令 `q=16`，将已 padding 的维度分成 16×16 分形；所有偏移均以元素计，padding 后维度须用于分形数。
+
+| 位置与布局 | 原坐标的物理偏移（half 示例） |
+| --- | --- |
+| ND A `[M,K]` | `m*K + k` |
+| NZ A `[K/16,M/16,16,16]` | `((k/16*(M/16)+m/16)*16+m%16)*16+k%16` |
+| ZZ A `[M/16,K/16,16,16]` | `((m/16*(K/16)+k/16)*16+m%16)*16+k%16` |
+| ZN B `[K/16,N/16,16,16]` | `((k/16*(N/16)+n/16)*16+n%16)*16+k%16` |
+
+这里 `/` 表示整除。half 的一个 L1/L0A/L0B 分形含 256 元素、512 字节；L0C 的 NZ 分形为 16×16 元素，示例 float 累加时是 1024 字节。不能把“512 字节分形”套给所有 dtype 和所有存储位置。[文档 H09；推导]
+
+有效 shape、padding shape、local 排布与 GM 行跨度要一起说明。地址运算支持证明“读取原矩阵哪些元素”，layout 公式支持证明“它们以什么顺序送入 Cube”。跨 dtype 情况重新查分形规则，不从 half 例子外推。
+
+## DataCopyPad：先核对方向，再换算单位
+
+下面仅讨论 A3 支持的、不含 `PaddingMode` 模板参数的 `DataCopyExtParams` 重载。GM→UB 文档虽然共享表中出现 Compact 文字，但其产品支持表与原型明确 A3 不支持 mode；A3 的普通路径逐块补齐至 32B。[文档 H05/H06]
+
+| 参数 | GM→UB | UB→GM |
+| --- | --- | --- |
+| `blockCount` | 连续数据块数 | 连续数据块数 |
+| `blockLen` | 每块有效字节数 | 每块有效字节数 |
+| `srcStride` | GM 中前块末尾至后块开头的字节间隔 | UB 侧块间间隔，以 32B dataBlock 计 |
+| `dstStride` | UB 侧块间间隔，以 32B dataBlock 计 | GM 中前块末尾至后块开头的字节间隔 |
+| `leftPadding/rightPadding` | 元素个数，换字节时乘 `sizeof(T)` | 此重载无对应填充参数 |
+
+`srcStride`/`dstStride` 是间隔，不是整行起点到下一行起点的跨度。示例推导：GM 每行含 11 个 float 有效值、物理行长 16 个 float，连续读 3 行；`blockLen=44B`、`srcStride=(16-11)*4=20B`。若 UB 每行显式右补 5 个 float，填充值设为 0，`dstStride=0`，每行占 `(11+5)*4=64B`，3 行共 192B。写回紧凑输出时 `blockLen=44B`、UB `srcStride=0`、GM `dstStride=0`，输出有效 132B；每个 UB 块按 32B 对齐读取，非有效部分不写入 GM。[H05/H06 的单位与普通非对齐行为；本文教学推导，不引用评测样例]
+
+若 padding 参与归约，其值须与数学运算相容；若只是对齐产生的 dummy，则不要当作有效输入。`isPad=false` 不等于“自动补零”，也不等于“无需 local 对齐空间”。本阶段说明源码实际的有效范围和补充值，未见相应约束就保留未知。[文档 H05/H06；算法层推导]
+
+## 分配与生命周期：三个量不能合并
+
+`TPipe::InitBuffer(que,num,len)` 的 `num` 是物理内存块数量，`len` 是每块字节数，非 32B 对齐时内部向上补齐。`TQue<pos,depth>` 的 depth 约束没有 DeQue 间隔的连续 EnQue 次数，文档明确它与 double buffer 不同：depth 为 1 也可以分配双缓冲。[文档 H07/H08]
+
+例如三条独立 UB 队列均调用 `InitBuffer(q,2,100*sizeof(float))`：单块 400B 向上对齐为 416B，用户分配合计 `3*2*416=2496B`；不能再乘 depth。这个数只统计所列分配，不包含其他 TBuf、临时区、API scratch、框架预留。存在重用/别名时按实际存活的物理区域解释，不能直接把每个变量都当一份内存。[H07/H08；推导]
+
+静态 `LocalMemAllocator::Alloc<T,N>()` 中 N 是元素数；它不依赖 TQue，当前示例采用的分配要独立计算。`BUFFER_NUM=2` 只能提示去找两块地址或槽位切换，不能证明存在两块物理 buffer。[文档 H15/H16；源码 A02/C01]
+
+## 同步把数据生命周期连起来
+
+核内 SetFlag 的含义是源流水前序操作完成后置位；WaitFlag 使目的流水等待该事件并消耗状态。事件方向和 ID 共同标识一对关系。PipeBarrier 保护同流水前后读写；“顺序发射”不意味着前一条已经完成。TQue/TPipe 与编译器可提供自动同步，是否需要手动事件取决于编程方式与 API 场景。[文档 H04]
+
+一个复用单组 UB 的循环至少需要理解以下关系，具体由项目代码的机制承担：
+
+```text
+MTE2 写 X/Y[i] ──就绪──> V 读 X/Y[i]、写 Z[i] ──就绪──> MTE3 读 Z[i]
+       ↑                       │                               │
+       └─ 下一轮覆写 X/Y 前 ───┘                               │
+                     下一轮覆写 Z 前 <─────────────────────────┘
+```
+
+该图解释数据依赖，不宣称所有阶段必须全局串行，也不证明已经并行。AIC/AIV 间的数据依赖另看双方角色、GM 中间区、cross-core flag 的 mode/ID 与发出方流水；本版 2201 文档的跨核等待语义不可用别的代际替换。[文档 H02 的核间同步章节]
+
+可得结论是哪些读写要等待、哪些地址可以复用、算法哪些部分互相独立。即使有双物理 buffer、预取或跨流水事件，真实重叠率、耗时和资源瓶颈仍不由这些静态事实单独证明。
+
+所有编号对应 [来源索引](source-index.md)，每条原始片段保留适用分区、源码路径、版本和 hash。
+
+
+=== SKILL FILE: references/example-add.md ===
+# 完整例子：从 simplified key Add 工程读出实际策略
+
+本例使用固定版本 devkit 的 `custom_op_simplified_key`，完整的 host、kernel、tiling、模板选择、Binary JSON 和构建片段随包保存，见 [A01–A08](source-index.md#a01)。上游工程注册的是 `ascend910b`，用于演示阅读方法；它没有证明已在 910C 构建或运行。硬件解释另由 A3/2201 适用文档支持，二者的证据范围分开。
+
+## 算法与输入输出契约
+
+算子目标是对同形输入逐元素计算 `z[i]=x[i]+y[i]`。README 和 `Add` 调用相互印证；OpDef 声明 ND 的 float16/float32，InferShape 将 x 的 shape 复制给 z，InferDataType 将 x 的 dtype 传给 z。模板选择只列出三者全 half 或全 float 的组合，不能因为三个模板类型分别命名，就说支持任意混合 dtype。[源码 A01–A05、说明 A08]
+
+host 的 shape 推断没有展示 x 与 y shape 相等的校验；TilingFunc 也只从 x 获取总元素数。因此“合法输入的目标语义”和“这组文件实际证明的校验”应分开描述。代码没有广播索引，不应为其补造广播支持。[源码 A01/A02；推导]
+
+## 分支是怎样形成的
+
+`GenSimplifiedKeyFunc` 按 x dtype 返回 `custom_fp16` 或 `custom_fp32`。Binary JSON 把它们对应到两个二进制名。与此同时，TilingFunc 根据总长度决定模板轴 `TILE_NUM` 与 `IS_SPLIT`，两者不是一个含义：simplified key 用于二进制查找，模板参数进一步决定 kernel 内的编译期路径。[源码 A01/A04/A05/A07；说明 A08]
+
+host 侧的相关内容可压缩为下列语义等价片段，完整原文见 A01：
+
+```cpp
+totalLength = input_x_shape.GetShapeSize();
+NUM_BLOCKS = 8;
+if (totalLength < 2048) {
+    TILE_NUM = 1; IS_SPLIT = 0;
+} else {
+    TILE_NUM = 8; IS_SPLIT = 1;
+}
+context->SetSimdNumBlocks(NUM_BLOCKS);
+tiling->totalLength = totalLength;
+ASCENDC_TPL_SEL_PARAM(context, D_T_X, D_T_Y, D_T_Z, TILE_NUM, IS_SPLIT);
+workspace_size = 0;
+```
+
+这说明当前实现使用固定启动数量和长度阈值，并不说明 8 是设备物理核数、2048 是硬件最佳阈值。tiling 结构只有 `totalLength` 一个字段；`TILE_NUM`/`IS_SPLIT` 来自模板路由。入口 `if constexpr` 选择 Process1/Process2，运行时不会每个 tile 都再执行这个选择。[源码 A01–A04；推导]
+
+## 选择一个可完整计算的输入贯通路径
+
+取同 dtype float32、连续 ND 的 `N=16384`，并按 host 的 8 个 block 解释 `GetBlockNum()==8` 的路径。它选择 `TILE_NUM=8, IS_SPLIT=1`。Init 的原始公式是：[源码 A02]
+
+```text
+blockLength = totalLength / GetBlockNum()
+tileLength = blockLength / tileNum / BUFFER_NUM   // tileNum != 1
+GM 起点 = blockLength * GetBlockIdx()
+loopCount = tileNum * BUFFER_NUM
+```
+
+代入 `BUFFER_NUM=2`：每 block 2048 元素，每 tile 128 元素，循环 16 次。block b 的第 i 次迭代处理半开区间 `[2048b+128i, 2048b+128(i+1))`；b∈[0,8)、i∈[0,16)。区间互不重叠，联集恰为 `[0,16384)`。这是所选输入下的覆盖推导；对任意 N 的余数不能凭这个例子消除。[源码 A02；推导]
+
+该策略把独立逐元素工作均分到 block，再在每个 block 内循环复用片上存储。数学上不需要核间合并，代码也没有展示跨核累加或通信。具体事件约束在核内保护 buffer 复用。[源码 A02；推导]
+
+## 物理 buffer 与命名给出的暗示并不相同
+
+Process2 只有这些静态分配，每个申请 2048 个元素：[源码 A02；元素单位 H15]
+
+```cpp
+LocalMemAllocator<Hardware::UB> ubAllocator;
+xLocal = ubAllocator.Alloc<dtypeX, CALCULATE_SIZE>();
+yLocal = ubAllocator.Alloc<dtypeY, CALCULATE_SIZE>();
+zLocal = ubAllocator.Alloc<dtypeZ, CALCULATE_SIZE>();
+```
+
+所选 float32 路径三份用户数据区合计 `3*2048*4=24576B`，每次只对各 tensor 前 128 个元素进行有效搬运/计算。没有 TQue，也没有 `i%2` 地址切换或两套 X/Y/Z；`BUFFER_NUM=2` 仅参与 tileLength 与 loopCount 的算术。准确理解是“一组静态 UB tensor 的循环复用”，不能写成“已开启双物理 buffer”。[源码 A02；推导；H15/H16]
+
+这也展示了为什么资源占用与有效 tile 工作集不能混为一谈：当前有效输入/输出总共 `3*128*4=1536B`，但分配空间是 24576B。二者都不是运行时总 UB 使用量的完整证明，因为还要考虑框架、编译器和其他隐含用途。[源码 A02；文档 H02；推导]
+
+## 数据流与事件的完整解释
+
+每次迭代先将 GM 对应范围的 X/Y 搬到 UB，由 Vector Add 写 Z，再将 Z 搬回 GM。同一套地址重复使用，因此既要保护生产者→消费者的就绪关系，也要保护消费者结束→下一次覆盖的复用关系。[源码 A02；硬件 H04]
+
+| 代码位置 / 事件方向 | 它实际保护的关系 |
+| --- | --- |
+| 循环前 Set `V_MTE2`、Set `MTE3_V` | 初始化首轮可使用输入/输出 buffer 的事件状态 |
+| 循环开头 Wait `V_MTE2` | 下一次 MTE2 覆写 x/yLocal 前，上一轮 V 已读完输入 |
+| 两次 DataCopy 后 Set/Wait `MTE2_V` | 当前 Add 读取前，X/Y 数据已经搬入 |
+| Add 前 Wait `MTE3_V` | 本轮写 zLocal 前，上一轮 MTE3 已读取旧输出 |
+| Add 后 Set `V_MTE2` | 发布输入区可复用状态 |
+| Add 后 Set/Wait `V_MTE3` | 当前输出搬出前，Vector 已写完 zLocal |
+| 搬出后 Set `MTE3_V` | 发布输出区可复用状态 |
+| 循环末尾两次 Wait | 消耗最后一轮留下的复用事件状态；入口还有 `PipeBarrier<PIPE_ALL>()` |
+
+事件名称和顺序均来自 Process2；含义由 H04 的源/目的流水语义解释。MTE2、V、MTE3 属于不同流水，输入区和输出区也不同，但这不足以断言某次真实执行已有效重叠。源码的 printf、launch 和 host 开销也不能凭这一张表消去。
+
+从算法所需数据量算，当前 N 的有效逻辑访问量为 `N*(4+4+4)=196608B`：读 X/Y 各一次、写 Z 一次。这个推导只计算有效 payload，不是实测 HBM 流量或耗时；cache、事务和运行行为没有在本次阅读中测量。[源码 A02；推导]
+
+## 小数据与尾块：保留工程事实的边界
+
+Process1 在 `tileNum==1` 时把 `tileLength` 设为整个 `totalLength`，而每个 GlobalTensor 的起始偏移仍用 `blockLength*GetBlockIdx()`，声明长度为 blockLength。若沿同样的 8 block 假设取 N=1024，blockLength=128，末 block 的数据范围从 896 开始、长度 1024，超过逻辑输入 `[0,1024)`。这组可见文件没有给出把该分支改成单 block 的配套条件。因此不能把“小数据分支覆盖正确”当作已证明；应记录此分支的 launch/范围契约未闭合。[源码 A01/A02；条件推导]
+
+同样，Process2 的连续整数除法没有显示余数补偿和显式尾长，固定 `CALCULATE_SIZE=2048` 又给实际 tile 容量设置了条件。完整理解需说明“本例选定可整除输入的路径成立”，而不是承诺任意长度都有效。这是理解边界，尚未给它绑定问题分类、修改策略或优化方案。[源码 A02；推导]
+
+## 一份可交接的理解叙述
+
+> 当前 Add 工程按 dtype 选择二进制，再按 N<2048 的阈值选择编译期 Process1/2；tiling 仅传总长度，host 设置 8 个 block。对 N=16384、float32 且 GetBlockNum()==8 的 Process2 路径，每 block 处理 2048 元素，分成 16 次、每次 128 元素。三个静态 UB tensor 各有 2048 元素容量，由 MTE2 搬入、V 相加、MTE3 写回；事件同时保护数据就绪和单组 buffer 复用。所有 block 的有效范围共同覆盖输出，无跨核合并。BUFFER_NUM 的值不证明双物理缓冲；小数据分支及非整除长度的范围条件仍需配套工程证据。上述是源码与 API 支持的理解，未测量执行重叠和性能。
+
+这段叙述由前文证据支撑。实际报告应引用目标项目自身位置，不能把教学样例中的常量或疑点复制给别的工程。
+
+
+=== SKILL FILE: references/example-cube.md ===
+# 完整例子：基本 Cube 矩阵乘的算法、布局和执行
+
+使用 devkit `examples/01_simd_cpp_api/00_introduction/02_matrix/matmul_basic_api`。完整实现、README 的相关说明、CMake 和输入/参考值脚本见 [C01–C04](source-index.md#c01)。这是独立的入门基本 API 样例，不使用高性能或融合激活评测样例。
+
+## 先确认工程范围和实际架构分支
+
+单个 `.asc` 同时包含 host `main` 和 `__global__ __cube__` kernel `mmad_custom`。CMake 默认 `CMAKE_ASC_ARCHITECTURES="dav-2201"`，也允许显式配置其他架构；kernel 中存在 2201 和 3510 的 LoadData 分支。本例只解释 2201 分支。README 明确列出 Atlas A3、A2 的 CANN >=9.0.0 支持；这提供样例适用声明，不代表这里已完成 910C 编译或实测。[源码 C01/C03；说明 C02]
+
+## 数学问题与数值语义
+
+输入 A 是 half 的 `[256,64]`，B 是 half 的 `[64,256]`，输出 C 是 half 的 `[256,256]`，GM 均为 ND。数学目标为 `C[m,n]=Σ(k=0..63) A[m,k]*B[k,n]`。kernel 在 L0C 使用 float tensor 承接 Mmad 结果，Fixpipe 的 `F322F16` 把它转换到 half 输出。参考脚本也先把输入转 float32 做 matmul，再转 float16；这个参考表达了数值意图，不证明所有浮点实现逐位相同。[源码 C01/C04；说明 C02]
+
+算法没有 bias、激活和 K 方向多段累加。`MmadParams{baseM,baseN,baseK,0,false,true}` 在这个样例中一次完成每核矩阵块。不要因常见高性能矩阵乘有 K 循环，就为这里补出一个不存在的循环。[源码 C01]
+
+## Host 常量怎样决定多核分解
+
+main 传入的模板参数为 `M=256,K=64,N=256,singleCoreM=128,baseM=128,baseK=64,baseN=256`，launch 使用 `numBlocks=2`。它没有独立的 TilingContext 计算；这些编译期常量就是该工程的切分来源。[源码 C01]
+
+kernel 的关键偏移如下：[源码 C01，省略类型转换后的等价摘写]
+
+```text
+mIterIdx = GetBlockIdx() % (M / singleCoreM)
+aGM 起点 = A + mIterIdx * singleCoreM * K
+bGM 起点 = B
+cGM 起点 = C + mIterIdx * singleCoreM * N
+```
+
+launch 的 block 0/1 分别得到 mIterIdx 0/1。block 0 处理 C 的第 0–127 行，block 1 处理第 128–255 行；N/K 不切。两核读取不同行的 A，但都读取完整 B，写回不同的 C 行块，因此无需核间合并输出。这里 2 是算法所用 block 数，不是 910C 核数。[源码 C01；推导]
+
+模运算本身不保证任意 launch 数都合理：如果错误地增加到超过 M/singleCoreM 的 block 数，mIterIdx 会重复。理解要把 launch、模板常量和地址公式当作一个闭合上下文，不能孤立地给偏移公式贴“均匀多核”标签。[源码 C01；推导]
+
+## 从矩阵行块到实际数据路径
+
+以下图只表达当前代码的数据与依赖方向：[源码 C01；文档 H03/H04/H09]
+
+```text
+A 的 128×64 行块：GM ND ─MTE2/ND→NZ─> L1 A1 NZ ─MTE1─> L0A A2 ZZ ┐
+                                                                 ├─M/Mmad─> L0C CO1 NZ(float)
+完整 B 64×256：  GM ND ─MTE2/ND→NZ─> L1 B1 NZ ─MTE1─> L0B B2 ZN ┘
+                                                                    │
+                                                     FIX / NZ→ND / F322F16
+                                                                    ↓
+                                                   GM C 的 128×256 行块 half
+```
+
+DataCopy 的 `Nd2NzParams` 分别使用原始矩阵行跨度 K/N，所以它们读的是输入矩阵正确的行块，而不是把 tile 大小当作所有 GM 行的跨度。A1/B1 使用同一个 L1 allocator 依申请顺序分配；逻辑标签不代表两套独立 L1。[源码 C01；API H03/H15/H16]
+
+2201 的 A 路径用 `baseM/16=8` 次 LoadData，每次读取 K 方向 `baseK/16=4` 个分形，源分形间隔 `baseM/16=8`；目的写入对应的 ZZ 行块。B 路径用 `baseK/16=4` 次 LoadData，每次读取 N 方向 `baseN/16=16` 个分形，源分形间隔 `baseK/16=4`，并设置 `ifTranspose=true` 转换每个分形的排布以得到 ZN。[源码 C01；布局 H09；推导]
+
+这里 B 的局部分形转置服务于物理布局，数学上的 B 仍是 `[K,N]`，没有把算法变成 `A×Bᵀ`。同文件 3510 分支的 A 布局与 LoadData2DParamsV2 路径不属于本例，也不能仅凭相同 Mmad 名字替换到 A3。[源码 C01 的分支；H01/H09]
+
+## 占用体现当前策略的尺度
+
+由五次 `Alloc` 和数据类型得到每个 AIC 的用户数据分配：[源码 C01；元素单位 H15；推导]
+
+| 对象 | 元素数及类型 | 字节数 | 生命周期 |
+| --- | --- | --- | --- |
+| a1Local (L1) | 128×64 half | 16384 | GM 搬入后供 A 的 LoadData 读取 |
+| b1Local (L1) | 64×256 half | 32768 | GM 搬入后供 B 的 LoadData 读取 |
+| a2Local (L0A) | 128×64 half | 16384 | LoadData 后供 Mmad 读取 |
+| b2Local (L0B) | 64×256 half | 32768 | LoadData 后供 Mmad 读取 |
+| cLocal (L0C) | 128×256 float | 131072 | Mmad 写入后供 Fixpipe 读取 |
+
+总量不能相加成“UB 使用量”：L1 的两份合计 49152B，L0A、L0B、L0C 分别独立计。cLocal 的 131072B 恰为 H02 所列 L0C 128KiB 的标称容量；它说明此数据区的规模，不证明完整编译产物的资源检查已经通过。
+
+策略上这是每核一次装入、一次矩阵计算、一次写回。代码没有 TQue 双 buffer、不同 K tile 之间的 ping-pong，也没有跨迭代资源复用。LoadData 内部的小循环用于格式搬运，不应误读成矩阵算法的 K 分块累加循环。[源码 C01；推导]
+
+## 同步怎样约束这些阶段
+
+DataCopy 完成后，`MTE2_MTE1` 事件保证 LoadData 读取已就绪的 L1；LoadData 后，`MTE1_M` 保证 Mmad 的 L0A/B 操作数就绪；Mmad 后，`M_FIX` 保证 Fixpipe 读取已产生的 L0C 结果。最后 `PipeBarrier<PIPE_ALL>()` 结束核内相关流水；host `aclrtSynchronizeStream` 之后才把结果拷回 host。这几层顺序关系各自保护不同范围。[源码 C01；文档 H04]
+
+`FixpipeParamsV220{baseN,baseM,baseM,N,false,F322F16,...}` 明确关闭此参数中的 ReLU，配置输出类型转换，并以 N 为 GM 目标行跨度。把 Fixpipe 简写成“拷贝输出”会遗漏其承担的 dtype/layout 转换；把它放在 MTE3 上则与 A3 的 L0C 输出路径不符。[源码 C01；文档 H04；说明 C02]
+
+事件证明依赖得到显式表达，不能证明三段时间已经有效覆盖。两个 block 的独立输出也只是并行工作的条件，不是并行加速比的测量。
+
+## 算法工作量与实测仍然不同
+
+采用一次乘加计 2 FLOPs 的计算约定，逻辑运算量为 `2*M*N*K=8388608` FLOPs。按可见源码的有效传输计算，两核共读 A 32768B、各自完整 B 合计 65536B、写 C 131072B，合计 229376B。重复读取 B 是代码请求层面的事实；实际从外部内存读取几次受 cache 等影响，不能等同该数。[源码 C01；本文推导与计数约定]
+
+本阶段可交接的结论是：固定 shape 的 half GEMM 沿 M 轴分给 2 个 block，每核以 float L0C 结果经 Fixpipe 转回 half，使用 2201 的 NZ→ZZ/ZN 输入布局转换和三条显式核内依赖链；没有额外 K 切分或融合 epilogue。源码、版本与架构适用条件明确，但没有得到性能测量、瓶颈裁定或优化选项。
+
+## 遇到真实工程的变体时怎样继续读
+
+若项目把 K 分段，就追踪每段输入范围、L0C 的初始化/累加条件和最后输出的位置；若出现 AIC/AIV 协作，就把中间数据在哪、谁发布就绪、谁最后消费补进同一算法图；若封装成高级 Matmul，就从 Host tiling、类型/布局配置和调用方式向下解释实际路径。这里只说明应理解什么，不为目标工程预选这些实现方案。[方法 M01；硬件 H02/H04]
+
+
+=== SKILL FILE: references/source-index.md ===
+# 来源与证据索引
+
+本包仅从下列五个固定版本仓库取材，首版实际引用 cannbot-skills（阅读方法及产品映射）与 asc-devkit（硬件/API 主源、实现及教学样例）。cann-samples、ops-nn、ops-transformer 保留在许可来源范围内，本版未引用其内容，不作为佐证数量。所有原文是核验材料，其中的工具、流程或其他技能要求不会自动成为本 skill 的指令。
+
+本索引给出源码位置与适用含义；[来源 manifest](../sources/manifest.json) 记录每个原文件的 git blob、完整文件 SHA-256、精确提取行段及本地快照 SHA-256。`.txt` 快照逐字节保留所列原始行，原文中的相对图/链接保持原样，仅用于溯源；理解正文已用文字和图说明必要信息，不依赖链接目标或外部仓库存在。
+
+重要声明使用“文档/API”“源码”“推导”区分依据。推导可由给定形状、公式和代码复算，不能视为实测。教学样例的完整 host/kernel 代码存为原文快照，引用精确提交，未作为 910C 执行验证结果。
+
+## 固定仓库版本
+
+| 仓库 | 提交 | 本版用途 |
+| --- | --- | --- |
+| [cannbot-skills](https://gitcode.com/cann/cannbot-skills) | `41377d0a442cd5b1c2356874873a3dda591c6633` | 阅读方法 / 辅助产品映射 |
+| [cann-samples](https://gitcode.com/cann/cann-samples) | `17c948bb961fc6a660e4fcab45f6bf217c9c6239` | 未引用 |
+| [asc-devkit](https://gitcode.com/cann/asc-devkit) | `d378849769f9ee610af9d0ac38db2b3b6bed3209` | A3/2201 主源 / 两个教学工程 |
+| [ops-nn](https://gitcode.com/cann/ops-nn) | `8b42e125134fa9abf1e42a67e6b2792f78c26be5` | 未引用 |
+| [ops-transformer](https://gitcode.com/cann/ops-transformer) | `d7e6a7c6c1450c040049486845336c77f3100406` | 未引用 |
+
+许可全文见 [cannbot-skills](../sources/licenses/cannbot-skills.LICENSE.txt) 与 [asc-devkit](../sources/licenses/asc-devkit.LICENSE.txt)；版权与改写说明见 [NOTICE](../NOTICE.md)。
+
+## 条目
+
+<a id="m01"></a>
+### M01 — 工程阅读方法：数学语义、实现策略、tiling 与跨文件溯源
+
+- 仓库：`cannbot-skills`；源路径：`ops/ascendc-code-review/steps/file-review.code-summarize.md`。
+- Git blob：`7c6dafbb4fd170fd005c3461948fdce29af7d5b4`。
+- [原文 36–77 行](../sources/snippets/M01-36-77.txt)。
+- [原文 98–217 行](../sources/snippets/M01-98-217.txt)。
+
+<a id="m02"></a>
+### M02 — A3/Ascend910_93 辅助映射；不引用 SKU 数值作为硬件常量
+
+- 仓库：`cannbot-skills`；源路径：`ops/npu-arch/references/npu-hardware-params.md`。
+- Git blob：`c76f4879b02b45ab3b3df1d03e2acea9a9f0f373`。
+- [原文 1–32 行](../sources/snippets/M02-1-32.txt)。
+
+<a id="h01"></a>
+### H01 — 产品与 __NPU_ARCH__；A3=2201，950=3510
+
+- 仓库：`asc-devkit`；源路径：`docs/zh/guide/programming_guide/language_extension/simd_builtin_keywords.md`。
+- Git blob：`e966bc2123d03f24bbd1a61c50a2d9d0a28c2a53`。
+- [原文 1–40 行](../sources/snippets/H01-1-40.txt)。
+
+<a id="h02"></a>
+### H02 — 2201 架构：AIC/AIV、存储、预留空间、核内与核间同步
+
+- 仓库：`asc-devkit`；源路径：`docs/zh/guide/programming_guide/advanced_programming/hardware_implementation/architecture_spec/npu_arch_2201.md`。
+- Git blob：`1566061f94ab3fa0ef86da824bb4359b50de69a5`。
+- [原文 1–224 行](../sources/snippets/H02-1-224.txt)（完整文件）。
+
+<a id="h03"></a>
+### H03 — TPosition 的 A3 物理映射与通用地址对齐
+
+- 仓库：`asc-devkit`；源路径：`docs/zh/api/SIMD-API/general_description_and_constraints.md`。
+- Git blob：`6853ba0748372d1b0512e9dcfa626a28842a1841`。
+- [原文 1–79 行](../sources/snippets/H03-1-79.txt)。
+
+<a id="h04"></a>
+### H04 — 流水、事件与屏障语义，保留 A3/910b 与 950 分区
+
+- 仓库：`asc-devkit`；源路径：`docs/zh/api/SIMD-API/basic_api/sync_control/intra_core_sync/intra_core_sync_overview.md`。
+- Git blob：`b8bdfaa953aa3411bc773c569a2cad90f70a2ae1`。
+- [原文 1–104 行](../sources/snippets/H04-1-104.txt)（完整文件）。
+
+<a id="h05"></a>
+### H05 — GM→UB：A3 原型、逐块 padding、参数单位及 mode 边界
+
+- 仓库：`asc-devkit`；源路径：`docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB.md`。
+- Git blob：`88a3265b0d72de9d5a15f41bebeb92b157eb008e`。
+- [原文 1–180 行](../sources/snippets/H05-1-180.txt)。
+
+<a id="h06"></a>
+### H06 — UB→GM：A3 原型、参数单位、非对齐有效写出
+
+- 仓库：`asc-devkit`；源路径：`docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_UBToGM.md`。
+- Git blob：`8e6daaa0095b732027aa2876ff1a0f65bfb2127b`。
+- [原文 1–171 行](../sources/snippets/H06-1-171.txt)。
+
+<a id="h07"></a>
+### H07 — InitBuffer num、len、32B 向上对齐
+
+- 仓库：`asc-devkit`；源路径：`docs/zh/api/SIMD-API/basic_api/resource_management/TPipe/InitBuffer.md`。
+- Git blob：`b2c3c5d218b2dbb457686a0287dfda6c7e9dbf23`。
+- [原文 1–130 行](../sources/snippets/H07-1-130.txt)。
+
+<a id="h08"></a>
+### H08 — TQue depth 与物理 double buffer 的区别
+
+- 仓库：`asc-devkit`；源路径：`docs/zh/api/SIMD-API/basic_api/resource_management/TQue/TQue_intro.md`。
+- Git blob：`ff0910f46f4012ad3548ef4a29a618bbea64c4d8`。
+- [原文 1–48 行](../sources/snippets/H08-1-48.txt)。
+
+<a id="h09"></a>
+### H09 — ND/NZ/ZZ/ZN 的定义、分形与 dtype/位置关系
+
+- 仓库：`asc-devkit`；源路径：`docs/zh/guide/technical_appendix/concepts_and_terms/neural_networks_and_operators/data_layout.md`。
+- Git blob：`5aee6e90ba2879cc919dfb31dbee83e0afa1e739`。
+- [原文 1–69 行](../sources/snippets/H09-1-69.txt)。
+- [原文 176–216 行](../sources/snippets/H09-176-216.txt)。
+
+<a id="h10"></a>
+### H10 — 2201 DataCopy：GM/UB、UB/UB、软件 UB→L1 与 L0C→GM 的具体路径
+
+- 仓库：`asc-devkit`；源路径：`impl/basic_api/dav_c220/kernel_operator_data_copy_impl.h`。
+- Git blob：`1b83ff30e5b086cd53f7ea3347f3737ff7513c47`。
+- [原文 1–190 行](../sources/snippets/H10-1-190.txt)。
+- [原文 645–704 行](../sources/snippets/H10-645-704.txt)。
+- [原文 1094–1168 行](../sources/snippets/H10-1094-1168.txt)。
+
+<a id="h11"></a>
+### H11 — __NPU_ARCH__ == 2201 选择 dav_c220 的源码关联
+
+- 仓库：`asc-devkit`；源路径：`impl/basic_api/kernel_operator_data_copy_base_impl.h`。
+- Git blob：`c3b9f71b3a107b7e179f4c1666382755228d6ccf`。
+- [原文 1–50 行](../sources/snippets/H11-1-50.txt)。
+
+<a id="h12"></a>
+### H12 — UB→UB 的 PIPE_V 与 A3 数据依赖说明
+
+- 仓库：`asc-devkit`；源路径：`docs/zh/api/SIMD-API/c_api/vector_datamove/asc_copy_ub2ub.md`。
+- Git blob：`85ee33bf482776c24b28a1490497b0c093facce1`。
+- [原文 1–109 行](../sources/snippets/H12-1-109.txt)。
+
+<a id="h13"></a>
+### H13 — asc_copy_ub2ub 与 C++ DataCopyUB2UB 使用同一底层 intrinsic 的旁证
+
+- 仓库：`asc-devkit`；源路径：`impl/c_api/memory_base_impl/vector_datamove_intf_impl.h`。
+- Git blob：`cad3ec02999cea4d7f707f030201a1c3c4d23ce7`。
+- [原文 1–100 行](../sources/snippets/H13-1-100.txt)。
+
+<a id="h14"></a>
+### H14 — 典型数据流、Scalar 发射与异步流水
+
+- 仓库：`asc-devkit`；源路径：`docs/zh/guide/programming_guide/advanced_programming/hardware_implementation/basic_architecture.md`。
+- Git blob：`381dcabb4557b0001abb45cf887bb23bad5a51ed`。
+- [原文 199–240 行](../sources/snippets/H14-199-240.txt)。
+
+<a id="h15"></a>
+### H15 — 静态 Alloc 的 tileSize 是元素个数
+
+- 仓库：`asc-devkit`；源路径：`docs/zh/api/SIMD-API/basic_api/resource_management/LocalMemAllocator/Alloc.md`。
+- Git blob：`7886c71fe6db8e88428023673d71659ef75369ae`。
+- [原文 1–110 行](../sources/snippets/H15-1-110.txt)。
+
+<a id="h16"></a>
+### H16 — 静态 Tensor 的资源管理与 TPipe/TQue 关系
+
+- 仓库：`asc-devkit`；源路径：`docs/zh/api/SIMD-API/basic_api/resource_management/LocalMemAllocator/LocalMemAllocator_intro.md`。
+- Git blob：`bc2253444358ae850a56c32746f52097f3ca6ae3`。
+- [原文 1–57 行](../sources/snippets/H16-1-57.txt)（完整文件）。
+
+<a id="a01"></a>
+### A01 — Add 完整 host：注册、推断、tiling、simplified key
+
+- 仓库：`asc-devkit`；源路径：`examples/01_simd_cpp_api/02_features/99_acl_based/00_acl_compilation/custom_op_simplified_key/op_host/add_custom_template/add_custom_template.cpp`。
+- Git blob：`30233045017c35b4ac260254a02b3821efedd24a`。
+- [原文 1–114 行](../sources/snippets/A01-1-114.txt)（完整文件）。
+
+<a id="a02"></a>
+### A02 — Add 完整 kernel：Init、Process1/2、静态 UB 与手动同步
+
+- 仓库：`asc-devkit`；源路径：`examples/01_simd_cpp_api/02_features/99_acl_based/00_acl_compilation/custom_op_simplified_key/op_kernel/add_custom_template/add_custom_template.cpp`。
+- Git blob：`4b03339dd77681d5b247014e8b42a298f8fcce42`。
+- [原文 1–127 行](../sources/snippets/A02-1-127.txt)（完整文件）。
+
+<a id="a03"></a>
+### A03 — Add 的完整 tiling 字段定义
+
+- 仓库：`asc-devkit`；源路径：`examples/01_simd_cpp_api/02_features/99_acl_based/00_acl_compilation/custom_op_simplified_key/op_kernel/add_custom_template/add_custom_template_tiling.h`。
+- Git blob：`a230200df48ef2102d6c5903890165b7a2b689ed`。
+- [原文 1–18 行](../sources/snippets/A03-1-18.txt)（完整文件）。
+
+<a id="a04"></a>
+### A04 — Add 完整模板参数定义与编译组合
+
+- 仓库：`asc-devkit`；源路径：`examples/01_simd_cpp_api/02_features/99_acl_based/00_acl_compilation/custom_op_simplified_key/op_kernel/add_custom_template/tiling_key_add_custom_template.h`。
+- Git blob：`8f214a1a4b56c821f00c5d11887d23d92a5e5a50`。
+- [原文 1–93 行](../sources/snippets/A04-1-93.txt)（完整文件）。
+
+<a id="a05"></a>
+### A05 — Add Binary JSON 与 dtype/format/simplified key
+
+- 仓库：`asc-devkit`；源路径：`examples/01_simd_cpp_api/02_features/99_acl_based/00_acl_compilation/custom_op_simplified_key/op_host/config/ascend910b/add_custom_template_binary.json`。
+- Git blob：`78e475ddecee409e1fa10c8b29ef494ca341a6f5`。
+- [原文 1–75 行](../sources/snippets/A05-1-75.txt)（完整文件）。
+
+<a id="a06"></a>
+### A06 — Add 工程构建目标 ascend910b
+
+- 仓库：`asc-devkit`；源路径：`examples/01_simd_cpp_api/02_features/99_acl_based/00_acl_compilation/custom_op_simplified_key/CMakeLists.txt`。
+- Git blob：`d39431ed88a0bbfec59c85a4a8f625e87170d25d`。
+- [原文 1–50 行](../sources/snippets/A06-1-50.txt)（完整文件）。
+
+<a id="a07"></a>
+### A07 — Add kernel 编译如何关联 Binary JSON 和 tiling 库
+
+- 仓库：`asc-devkit`；源路径：`examples/01_simd_cpp_api/02_features/99_acl_based/00_acl_compilation/custom_op_simplified_key/op_kernel/CMakeLists.txt`。
+- Git blob：`f488c9c2354ec01bf4c3da06a78955640853e89a`。
+- [原文 1–31 行](../sources/snippets/A07-1-31.txt)（完整文件）。
+
+<a id="a08"></a>
+### A08 — Add 工程目标、目录、simplified key 与二进制关系
+
+- 仓库：`asc-devkit`；源路径：`examples/01_simd_cpp_api/02_features/99_acl_based/00_acl_compilation/custom_op_simplified_key/README.md`。
+- Git blob：`aeb95eb88a37d920d2e049f27ab4b4f81f027910`。
+- [原文 1–42 行](../sources/snippets/A08-1-42.txt)。
+
+<a id="c01"></a>
+### C01 — 完整基本 Cube：host 与 device、2201/3510 分支保留
+
+- 仓库：`asc-devkit`；源路径：`examples/01_simd_cpp_api/00_introduction/02_matrix/matmul_basic_api/matmul_basic_api.asc`。
+- Git blob：`55ded13a4ebfa57b3faf5ae2af54d3b46769e698`。
+- [原文 1–169 行](../sources/snippets/C01-1-169.txt)（完整文件）。
+
+<a id="c02"></a>
+### C02 — 基本 Cube 的产品支持、算法和完整阶段说明
+
+- 仓库：`asc-devkit`；源路径：`examples/01_simd_cpp_api/00_introduction/02_matrix/matmul_basic_api/README.md`。
+- Git blob：`9e398ba139bba8931ca754bcbb56421470d84a60`。
+- [原文 1–115 行](../sources/snippets/C02-1-115.txt)。
+
+<a id="c03"></a>
+### C03 — 基本 Cube 默认 dav-2201 构建目标
+
+- 仓库：`asc-devkit`；源路径：`examples/01_simd_cpp_api/00_introduction/02_matrix/matmul_basic_api/CMakeLists.txt`。
+- Git blob：`e099b926e7e6cec130384d3bfd6c26293c7812ef`。
+- [原文 1–26 行](../sources/snippets/C03-1-26.txt)（完整文件）。
+
+<a id="c04"></a>
+### C04 — 基本 Cube 输入形状和 float32 matmul→half 参考语义
+
+- 仓库：`asc-devkit`；源路径：`examples/01_simd_cpp_api/00_introduction/02_matrix/matmul_basic_api/scripts/gen_data.py`。
+- Git blob：`27a34dda16972c8a31145da65cd575fd50e2aa08`。
+- [原文 1–34 行](../sources/snippets/C04-1-34.txt)（完整文件）。

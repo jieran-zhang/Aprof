@@ -1,0 +1,103 @@
+{
+  "task_id": "raw-case-12",
+  "known_conditions": [
+    {
+      "predicate": "constraint.task_ownership",
+      "state": true,
+      "basis": "原host为输入/输出各自分配GM；每核begin=c*blockLength，end=min(begin+blockLength,total)，或RoPE以rowPerBlock分完整row。条件方案在每个输出有效片上只设置唯一owner，不引入写共享、原子或跨核归约。若改任务分解，必须在C2重新冻结实现；这里是数学所有权证明。",
+      "scope": "本项精确静态证明；没有把尚未核验的API、资源、完整精度或物理写许可默认置true。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/maximum_kernel.asc",
+          "sha256": "sha256:069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e",
+          "locator": "lines:12-168"
+        },
+        {
+          "path": "source/op_kernel/maximum_tiling.h",
+          "sha256": "sha256:f697d7fc66e5feeec035befd329429a896fb1538f3434f2ede13baa3118b362e",
+          "locator": "lines:17-54"
+        },
+        {
+          "path": "source/op_host/maximum.asc",
+          "sha256": "sha256:ec9a6b580b6b9623132633a700dd63398757a46da2fd8fceb7da65e5ecdda05f",
+          "locator": "lines:50-59"
+        }
+      ]
+    },
+    {
+      "predicate": "constraint.output_ownership",
+      "state": true,
+      "basis": "原host为输入/输出各自分配GM；每核begin=c*blockLength，end=min(begin+blockLength,total)，或RoPE以rowPerBlock分完整row。条件方案在每个输出有效片上只设置唯一owner，不引入写共享、原子或跨核归约。若改任务分解，必须在C2重新冻结实现；这里是数学所有权证明。",
+      "scope": "本项精确静态证明；没有把尚未核验的API、资源、完整精度或物理写许可默认置true。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/maximum_kernel.asc",
+          "sha256": "sha256:069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e",
+          "locator": "lines:12-168"
+        },
+        {
+          "path": "source/op_kernel/maximum_tiling.h",
+          "sha256": "sha256:f697d7fc66e5feeec035befd329429a896fb1538f3434f2ede13baa3118b362e",
+          "locator": "lines:17-54"
+        },
+        {
+          "path": "source/op_host/maximum.asc",
+          "sha256": "sha256:ec9a6b580b6b9623132633a700dd63398757a46da2fd8fceb7da65e5ecdda05f",
+          "locator": "lines:50-59"
+        }
+      ]
+    },
+    {
+      "predicate": "constraint.valid_lengths",
+      "state": true,
+      "basis": "全部20case非空；尾段定义valid=min(U,end-off)>0；每次GM只读写valid，不把padding当有效元素。Transpose矩形同时裁剪有效行列，RoPE完整row，Resize列片止于row末。原host与tiling形状上界给出地址域；R2矩阵/索引公式逐组复核。",
+      "scope": "本项精确静态证明；没有把尚未核验的API、资源、完整精度或物理写许可默认置true。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/maximum_kernel.asc",
+          "sha256": "sha256:069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e",
+          "locator": "lines:12-168"
+        },
+        {
+          "path": "source/op_kernel/maximum_tiling.h",
+          "sha256": "sha256:f697d7fc66e5feeec035befd329429a896fb1538f3434f2ede13baa3118b362e",
+          "locator": "lines:17-54"
+        },
+        {
+          "path": "source/op_host/maximum.asc",
+          "sha256": "sha256:ec9a6b580b6b9623132633a700dd63398757a46da2fd8fceb7da65e5ecdda05f",
+          "locator": "lines:50-59"
+        }
+      ]
+    },
+    {
+      "predicate": "constraint.broadcast_semantics",
+      "state": true,
+      "basis": "ComputeMaximumTiling右补1，原输入dim=1对应stride0。case11的b=(linear%513)，case12/13/20的b=(linear//W)%H，a=linear；CPU R2按所有20case抽样对比原rank解码。没有按测试值域转换int64。",
+      "scope": "本项精确静态证明；没有把尚未核验的API、资源、完整精度或物理写许可默认置true。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/maximum_kernel.asc",
+          "sha256": "sha256:069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e",
+          "locator": "lines:12-168"
+        },
+        {
+          "path": "source/op_kernel/maximum_tiling.h",
+          "sha256": "sha256:f697d7fc66e5feeec035befd329429a896fb1538f3434f2ede13baa3118b362e",
+          "locator": "lines:17-54"
+        }
+      ]
+    }
+  ],
+  "unknown_action_conditions": [
+    "constraint.capacity",
+    "constraint.semantic_equivalence"
+  ],
+  "implementation_note": "任何API/容量/numeric unknown未补齐前不得成为C3实施授权。所有true条件逐项有源码或数学依据，未按前提名称默认认定。",
+  "mathematical_facts": [],
+  "unknown_condition_details": {
+    "constraint.capacity": "需实际UB上限和静态Broadcast/比较临时区；U上限只能由3*A(U*s)+Tmp+R闭合。",
+    "constraint.target_api": "目标SDK对float/int32 Max或Compare+Select、局部Duplicate/Broadcast及非对齐尾接口支持未知。",
+    "constraint.semantic_equivalence": "float广播原scalar av>bv?av:bv与Vector Max的NaN/有符号零行为不自动等价；必须核对原oracle和明确异常值处理后才能替换。"
+  }
+}

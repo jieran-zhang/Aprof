@@ -1,0 +1,158 @@
+{
+  "schema": "aprof.history-qualitative-review/v1",
+  "reviewed_at_utc": "2026-10-21T12:01:11.071006+00:00",
+  "initial_grades_were_locked_before_history_read": true,
+  "initial_grades_sha256": "sha256:082087d0692142f720813a8747c60e9fccce9cd47b333e96b3d6f0781e15296e",
+  "masking_json_read": false,
+  "scored_separately": true,
+  "hardware_feedback": false,
+  "records": [
+    {
+      "operator": "grid_sampler_3d",
+      "round": 2,
+      "path": "history-runs/grid_sampler_3d-r2/answer.md",
+      "answer_sha256": "sha256:85f2ee190b5ee0e2d46909fbf8922f7f50cb3ccdadaddee552c26ece7de5a3a6",
+      "summary_consumption": true,
+      "new_information": "外部给定128KiB/核规划预算，不是设备观测",
+      "response": "保留原Action，但把未闭合alias改为18个独立FP32数组的保守条件布局，计算74T/72T+R及1024/1536/2048、双槽预算；几何复用仍保留注册意图缺口与成本。",
+      "evidence": [
+        {
+          "path": "history-runs/grid_sampler_3d-r2/answer.md",
+          "start_line": 1,
+          "end_line": 1,
+          "quote": "**简短更新：**先复用前轮摘要，再核对 R0 的计算、分核与缓冲区。源码、workload、结果状态均未变；新增的 **128KiB/核规划预算**使容量可定量约束，但没有证明收益或强迫换方案。保留三线性算术向量化的条件方案，收紧 tile/槽数；几何复用仍是强替代，不能因有容量预算就视为已获实施许可。"
+        },
+        {
+          "path": "history-runs/grid_sampler_3d-r2/answer.md",
+          "start_line": 16,
+          "end_line": 29,
+          "quote": "为避免依赖未证实的原地 alias，可采用保守布局：8个邻值、6个轴权重、2个乘法临时区、2个交替累加区，共18个 FP32 数组。原 `fpBuf` 计入累加区，不另重复计费；FP16 另保留输出 half 区。令其余实际 scratch、对齐和预留为 R：\n\n- FP16：`U=74T+R` 字节；\n- FP32：`U=72T+R` 字节。\n\n这是拟定布局，不是 R0 已有分配。按材料 `buffer-lifetime/recipes/reuse.md`，独立静态分配不能仅凭用途错峰就取最大值。\n\nFP16 下：\n- T=1024：74KiB，剩54KiB；\n- T=1536：111KiB，须 R≤17KiB；\n- T=2048：148KiB，**不合法**。\n- 全套双槽在1024同样超预算；768双槽为111KiB，但不代表已有重叠。\n\n因此暂以1024单槽为保守起点，不因容量允许就扩大。具体 scratch 未闭合前，不能宣布实施合法。"
+        },
+        {
+          "path": "history-runs/grid_sampler_3d-r2/answer.md",
+          "start_line": 39,
+          "end_line": 41,
+          "quote": "举例保存8个64位空间偏移、6个FP32轴权重及4字节有效标记，三线性描述约92字节/点；逐通道消费并保留FP16输出区时约 `98St+R`。St=1024约98KiB，1536已超预算。nearest 描述可更小，尤其值得继续比较 case5。\n\n代价是长存活表、描述读取、跨通道访问及任务数变化：约为 `N·ceil(C/Ct)·ceil(S/St)`。它不是向量化方案的免费附加项；组合须重算共同峰值，且派生几何复用的注册意图缺口仍未补齐。"
+        }
+      ],
+      "limits": [
+        "布局只是新纸面提案，未改R0。",
+        "具体scratch/alias仍未知，128KiB不是实施许可。"
+      ],
+      "issue": null
+    },
+    {
+      "operator": "grid_sampler_3d",
+      "round": 3,
+      "path": "history-runs/grid_sampler_3d-r3/answer.md",
+      "answer_sha256": "sha256:4c5d82eb655c334a90fc213559a08857eaef7fe106aba93882255efc21c98230",
+      "summary_consumption": true,
+      "new_information": "没有新增源码/实现/正确性/性能证据，外部三轮范围结束",
+      "response": "没有强换Action或造新候选，保留R0及条件方案，交付18数组容量、34/35调用表达式模型、几何复用/nearest残余，按外部三轮范围结束。",
+      "evidence": [
+        {
+          "path": "history-runs/grid_sampler_3d-r3/answer.md",
+          "start_line": 1,
+          "end_line": 1,
+          "quote": "**简短更新：**已先复用前轮摘要，再核对 R0 与相关材料。源码、20例 workload、128KiB/核规划预算及未测状态均未变；本轮只完成最终比较与收尾。**最终保留 `GS3D-R1-trilinear-vector` 条件方案，不实施、不晋升；实际保留实现仍为 R0。**三轮静态授权至此结束，不自动追加补证或实验轮次。"
+        },
+        {
+          "path": "history-runs/grid_sampler_3d-r3/answer.md",
+          "start_line": 15,
+          "end_line": 23,
+          "quote": "保守拟定布局为18个FP32数组，FP16另含输出half区；原 `fpBuf` 已计入，不重复收费。其余scratch、对齐及预留记为R：\n\n- FP16：`74T+R`字节；FP32：`72T+R`字节。\n- 保留 **T=1024、单槽**起点：分别占74/72KiB，余54/56KiB。\n- FP16的1536仅余17KiB；2048及1024全套双槽超预算，不采用。容量余量不等于scratch已经闭合。\n\n令各核有效长度为Lb，批次数为 `Σceil(Lb/T)`。按表达式模型，每批约24次Mul、8次Add、一次初始化和一次写回，FP16另一次Cast，即34/35次API调用，不含同步、不等于机器指令数。\n\n减少的是逐元素Scalar算术；新增邻值/权重UB写入、Vector读写和依赖。随机X读取、FP16标量扩位、坐标重算仍保留；FP32批量写回是方案组成，不能再重复计算收益。上述布局和工作变化**均未实现**。"
+        },
+        {
+          "path": "history-runs/grid_sampler_3d-r3/answer.md",
+          "start_line": 37,
+          "end_line": 37,
+          "quote": "**交付结论：静态分析已完成，工程实施未开始。保留R0及上述条件方案，不宣称正确性、收益或正式验收。**"
+        }
+      ],
+      "limits": [
+        "没有把R1/R2布局改写为实际实现。",
+        "调用计数为表达式模型，初始化选型/同步仍须实现核对。"
+      ],
+      "issue": null
+    },
+    {
+      "operator": "maximum",
+      "round": 2,
+      "path": "history-runs/maximum-r2/answer.md",
+      "answer_sha256": "sha256:3bfb6a14259466dc6bd88222919a91ecec12de9e814a2e8911caa34921c4b9a2",
+      "summary_consumption": true,
+      "new_information": "外部给定128KiB/核规划预算，不是设备观测",
+      "response": "保留int8转换链收缩，以128KiB核算R0 17T与S1 9T及4096/8192/16384参数边界，固定T的6L→3L与放大tile另减L分别计数；广播、双槽、case18驻留重新比较。",
+      "evidence": [
+        {
+          "path": "history-runs/maximum-r2/answer.md",
+          "start_line": 1,
+          "end_line": 1,
+          "quote": "**简短更新：**先沿用前轮三部分摘要，再核对 R0 的 `InitBuffer`、分派与新增预算。源码、workload、执行路径均未变，前轮删 Cast 的预测尚未兑现。128KiB 是本轮规划约束，不是设备探测值；它不否决 S1，但限制 tile 放大及多槽组合。保留 S1 条件方案，不作性能晋升。"
+        },
+        {
+          "path": "history-runs/maximum-r2/answer.md",
+          "start_line": 21,
+          "end_line": 31,
+          "quote": "- R0：\\(3A(T)+3A(4T)+A(2T)+H\\)\n- S1：\\(3A(T)+3A(2T)+H\\le131072\\) 字节\n\n| T（元素） | R0显式分配 | S1显式分配 |\n|---|---:|---:|\n|4096|69,632B|36,864B|\n|8192|139,264B，超预算|73,728B|\n\n因此**保留4096为首选纸面参数**；8192可比较，尚非最优结论。16384的 S1 数据区已达147,456B，不合法。忽略H且T取32倍数时，S1上限为14560；这不是可直接采用的完整容量结论。\n\n令 \\(L(T)=\\sum_c\\lceil N_c/T\\rceil\\)：固定4096时，Cast 调用由 \\(6L\\) 拟减为 \\(3L\\)，Max仍为L，搬入2L、搬出L；有效GM流量仍为3N字节。放大tile才另行减少L，不能重复计收益。"
+        },
+        {
+          "path": "history-runs/maximum-r2/answer.md",
+          "start_line": 35,
+          "end_line": 40,
+          "quote": "- **广播段化/源复用，case11/12/13/20：**可减少逐元素rank级解码，但新增搬运、展开、padding和同步。FP32 Compare/Select 的8192元素基础预算为107,520B，已含predicate和8KiB临时区；源驻留及其他分配还须加入。37、101短行若独立比较，分别需覆盖64、128执行元素；513×4不满足静态axis=0源宽32B约束，不能靠UB补齐假满足。整数路径不能套用浮点Compare/Select。\n- **int64 case5/19：**同形直接线性索引、广播段级解码仍有价值，预算不直接否决；不得转float损失完整值域。\n- **流水组合：**S1双份输入/输出、单份三个half scratch，在8192时为98,304B＋H；若全部翻倍则147,456B，超预算。共享scratch还须证明跨tile依赖，双槽不等于已重叠。\n- **case18驻留：**完整广播源对齐后16,416B；在原24,576B缓冲之外追加仍有预算空间，但收益取决于重复copy与依赖成本。\n\nS1继续保留，理由是消除工作明确、无新增广播布局；不是因更易验证或前轮已投入。其他方案潜在收益可能更大，现无时间依据排序。"
+        }
+      ],
+      "limits": [
+        "107520B比较/选择基础预算另加驻留与其他实际分配。",
+        "S1仍是conditional_plan，无SDK通过或收益。"
+      ],
+      "issue": null
+    },
+    {
+      "operator": "maximum",
+      "round": 3,
+      "path": "history-runs/maximum-r3/answer.md",
+      "answer_sha256": "sha256:b9dab8cc17ecf8ad2a4119140ea856a919211633feda1b382994fcf51fda8bb6",
+      "summary_consumption": true,
+      "new_information": "没有新增源码/实现/正确性/性能证据，外部三轮范围结束",
+      "response": "保留同一Action条件方案和R0，明确不因已投入而自动继续；结束本授权范围且不追加第四轮，资源/GM工作/未测残余持续保留。",
+      "evidence": [
+        {
+          "path": "history-runs/maximum-r3/answer.md",
+          "start_line": 1,
+          "end_line": 1,
+          "quote": "**简短更新：**先沿用前轮摘要，再核对 R0 的分派、`InitBuffer` 和有效尾块。源码、workload、128KiB分析预算及证据均未变化；删 Cast、放大 tile、流水重叠都未实施或验证。最终保留 S1 条件方案与 R0 实现，不强制换方案；三轮静态分析至此结束，无性能晋升。"
+        },
+        {
+          "path": "history-runs/maximum-r3/answer.md",
+          "start_line": 23,
+          "end_line": 25,
+          "quote": "T=4096时，显式分配69,632→36,864B，继续作为首选纸面参数；8192时R0为139,264B、超预算，S1为73,728B＋H，仍可比较但非最优结论；16384的S1数据区已超预算。\n\n令 \\(L=\\sum_c\\lceil N_c/T\\rceil\\)。固定T时拟将Cast调用6L减至3L，Max仍L、搬入2L、搬出L，有效GM流量仍3N字节。只有放大T才另减L，不能重复计收益；减少调用不等于时延同比下降。"
+        },
+        {
+          "path": "history-runs/maximum-r3/answer.md",
+          "start_line": 36,
+          "end_line": 36,
+          "quote": "S1保留是因为可消除的转换工作明确且不新增广播布局，不是因为更易验证或已有投入。广播/int64可能收益更大，现无时间依据判定赢家。`continuous.md`、`reuse.md`约束实际静态分配；`compare-select-tail.md`约束广播替代的执行粒度与容量。"
+        },
+        {
+          "path": "history-runs/maximum-r3/answer.md",
+          "start_line": 42,
+          "end_line": 42,
+          "quote": "**最终决定：结束本授权范围，交付S1条件方案，工程上保留R0，不提交性能结论。**这不是实现后的KEEP/NOOP，也不是机制证伪。若未来另获执行授权，应先闭合API、容量及完成边，再做全20例正确性与有效计时；保持NaN/Inf/±0及整数精确合同。若S1减少工作却不改善关键路径，再重开广播/int64比较；不自动追加第四轮。"
+        }
+      ],
+      "limits": [
+        "原工程正确性仍未验证。",
+        "同Action基于数值/工作依据保留，不是验证机制成立。"
+      ],
+      "issue": null
+    }
+  ],
+  "finding": "四份均实际回应所给三部分摘要和新增/未变约束。R2重算预算，R3无新证据时保留R0并按外部范围交付；未发现强换Action、未测当反证或纸面计划变实现的退化。",
+  "coverage_limits": [
+    "这组是摘要作为prompt输入的静态/合成后继，不能证明自主文件读取顺序或硬件反馈闭环。",
+    "四份没有真实失败候选、实际patch或有效/无效计时；相关行为不能据此外推。"
+  ]
+}

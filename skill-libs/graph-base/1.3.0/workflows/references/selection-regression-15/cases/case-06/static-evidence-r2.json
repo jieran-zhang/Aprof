@@ -1,0 +1,188 @@
+{
+  "task_id": "case-06",
+  "attempt_identity": {
+    "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+    "implementation_hash": null,
+    "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1"
+  },
+  "source_refs": [
+    {
+      "path": "source/op_kernel/gather_kernel.asc",
+      "sha256": "sha256:c2558645a1b97647993bf9179dae4f29385503c0f397801f202ffc398db75ade"
+    },
+    {
+      "path": "source/op_kernel/gather_tiling.h",
+      "sha256": "sha256:9022b7f3f4e5c4b15324266dc929ad421ef076d26df91539dd429a9820411b45"
+    },
+    {
+      "path": "source/matrix-20.json",
+      "sha256": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1"
+    }
+  ],
+  "finding": "新增逐case地址几何计算：case20虽尾轴Gather，index前轴为[4,127]而X为[4,255]，前缀必须按X stride保留255；case13 rank1且N=1000，所有source只等于index，段外提前缀收益接近零。于是R2明确rank1保持简单路径，其余保留分段地址方案，优先检验rank3/4/5的除模减少。",
+  "rows": [
+    {
+      "case_id": "1",
+      "original_divmod": 2097152,
+      "ideal_segment_decode": 2048,
+      "owner_boundary_note": "B active owners introduce at most B-1 additional segments; B unknown",
+      "source_inner_stride_warning": true,
+      "rank1_source_formula": null
+    },
+    {
+      "case_id": "2",
+      "original_divmod": 8388608,
+      "ideal_segment_decode": 4096,
+      "owner_boundary_note": "B active owners introduce at most B-1 additional segments; B unknown",
+      "source_inner_stride_warning": true,
+      "rank1_source_formula": null
+    },
+    {
+      "case_id": "3",
+      "original_divmod": 33554432,
+      "ideal_segment_decode": 8192,
+      "owner_boundary_note": "B active owners introduce at most B-1 additional segments; B unknown",
+      "source_inner_stride_warning": true,
+      "rank1_source_formula": null
+    },
+    {
+      "case_id": "4",
+      "original_divmod": 134217728,
+      "ideal_segment_decode": 16384,
+      "owner_boundary_note": "B active owners introduce at most B-1 additional segments; B unknown",
+      "source_inner_stride_warning": true,
+      "rank1_source_formula": null
+    },
+    {
+      "case_id": "5",
+      "original_divmod": 67108864,
+      "ideal_segment_decode": 16384,
+      "owner_boundary_note": "B active owners introduce at most B-1 additional segments; B unknown",
+      "source_inner_stride_warning": false,
+      "rank1_source_formula": null
+    },
+    {
+      "case_id": "6",
+      "original_divmod": 268435456,
+      "ideal_segment_decode": 32768,
+      "owner_boundary_note": "B active owners introduce at most B-1 additional segments; B unknown",
+      "source_inner_stride_warning": true,
+      "rank1_source_formula": null
+    },
+    {
+      "case_id": "7",
+      "original_divmod": 2091012,
+      "ideal_segment_decode": 2044,
+      "owner_boundary_note": "B active owners introduce at most B-1 additional segments; B unknown",
+      "source_inner_stride_warning": true,
+      "rank1_source_formula": null
+    },
+    {
+      "case_id": "8",
+      "original_divmod": 2062420,
+      "ideal_segment_decode": 2020,
+      "owner_boundary_note": "B active owners introduce at most B-1 additional segments; B unknown",
+      "source_inner_stride_warning": true,
+      "rank1_source_formula": null
+    },
+    {
+      "case_id": "9",
+      "original_divmod": 2365444,
+      "ideal_segment_decode": 3076,
+      "owner_boundary_note": "B active owners introduce at most B-1 additional segments; B unknown",
+      "source_inner_stride_warning": true,
+      "rank1_source_formula": null
+    },
+    {
+      "case_id": "10",
+      "original_divmod": 148663626,
+      "ideal_segment_decode": 398562,
+      "owner_boundary_note": "B active owners introduce at most B-1 additional segments; B unknown",
+      "source_inner_stride_warning": true,
+      "rank1_source_formula": null
+    },
+    {
+      "case_id": "11",
+      "original_divmod": 2101248,
+      "ideal_segment_decode": 4096,
+      "owner_boundary_note": "B active owners introduce at most B-1 additional segments; B unknown",
+      "source_inner_stride_warning": true,
+      "rank1_source_formula": null
+    },
+    {
+      "case_id": "12",
+      "original_divmod": 5825456,
+      "ideal_segment_decode": 1456,
+      "owner_boundary_note": "B active owners introduce at most B-1 additional segments; B unknown",
+      "source_inner_stride_warning": true,
+      "rank1_source_formula": null
+    },
+    {
+      "case_id": "13",
+      "original_divmod": 2000,
+      "ideal_segment_decode": 2,
+      "owner_boundary_note": "B active owners introduce at most B-1 additional segments; B unknown",
+      "source_inner_stride_warning": false,
+      "rank1_source_formula": "source=index[linear]"
+    },
+    {
+      "case_id": "14",
+      "original_divmod": 69444830,
+      "ideal_segment_decode": 1036490,
+      "owner_boundary_note": "B active owners introduce at most B-1 additional segments; B unknown",
+      "source_inner_stride_warning": true,
+      "rank1_source_formula": null
+    },
+    {
+      "case_id": "15",
+      "original_divmod": 20280260,
+      "ideal_segment_decode": 20020,
+      "owner_boundary_note": "B active owners introduce at most B-1 additional segments; B unknown",
+      "source_inner_stride_warning": true,
+      "rank1_source_formula": null
+    },
+    {
+      "case_id": "16",
+      "original_divmod": 2098176,
+      "ideal_segment_decode": 1024,
+      "owner_boundary_note": "B active owners introduce at most B-1 additional segments; B unknown",
+      "source_inner_stride_warning": true,
+      "rank1_source_formula": null
+    },
+    {
+      "case_id": "17",
+      "original_divmod": 4162044,
+      "ideal_segment_decode": 508,
+      "owner_boundary_note": "B active owners introduce at most B-1 additional segments; B unknown",
+      "source_inner_stride_warning": true,
+      "rank1_source_formula": null
+    },
+    {
+      "case_id": "18",
+      "original_divmod": 4186112,
+      "ideal_segment_decode": 8192,
+      "owner_boundary_note": "B active owners introduce at most B-1 additional segments; B unknown",
+      "source_inner_stride_warning": true,
+      "rank1_source_formula": null
+    },
+    {
+      "case_id": "19",
+      "original_divmod": 6269940,
+      "ideal_segment_decode": 3060,
+      "owner_boundary_note": "B active owners introduce at most B-1 additional segments; B unknown",
+      "source_inner_stride_warning": true,
+      "rank1_source_formula": null
+    },
+    {
+      "case_id": "20",
+      "original_divmod": 6245352,
+      "ideal_segment_decode": 3048,
+      "owner_boundary_note": "B active owners introduce at most B-1 additional segments; B unknown",
+      "source_inner_stride_warning": true,
+      "rank1_source_formula": null
+    }
+  ],
+  "counterfactual_probe": "反事实把rank1的N由1000放大且G缩到能容纳的连续短源行，UB Gather可复用整行，vector的源行加载成本下降并可能反转优先级；重命名或重排case不会改变rank/G/J判据。",
+  "implementation_state": "not_implemented",
+  "measurement": "not_measured"
+}

@@ -1,0 +1,163 @@
+{
+  "schema": "aprof.independent-initial-review/v1",
+  "reviewed_at_utc": "2026-10-21T11:38:25.711003+00:00",
+  "package": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/skill-libs/graph-base/1.3.0",
+  "evaluation": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/scaffolding/curation/graph-base-1.3.0-optimization-schemes",
+  "implementation_modified": false,
+  "hardware_used": false,
+  "old_optimization_analysis_read": false,
+  "subject_outputs_read": false,
+  "source_hash_check": {
+    "count": 29,
+    "all_match": true
+  },
+  "findings": [
+    {
+      "id": "IR-001",
+      "priority": "P2",
+      "kind": "documentation_inconsistency",
+      "title": "公共契约仍把新C1/C2/C3指向handoff/v3",
+      "evidence": [
+        {
+          "path": "skill-libs/graph-base/1.3.0/workflows/contracts/common.md",
+          "line": 72
+        },
+        {
+          "path": "skill-libs/graph-base/1.3.0/workflows/contracts/common.md",
+          "line": 95
+        },
+        {
+          "path": "skill-libs/graph-base/1.3.0/workflows/aprof-performance-workflow.md",
+          "line": 28
+        },
+        {
+          "path": "skill-libs/graph-base/1.3.0/workflows/contracts/diagnosis.md",
+          "line": 57
+        }
+      ],
+      "finding": "公共契约72行明确说当前诊断及C1/C2/C3使用aprof.handoff/v3，95行只描述v3和v1历史。四skill、主workflow和各阶段contract均要求新方案action-decision/v3 + handoff/v4。公共契约是所有角色必读的唯一交接入口，因此会导出互相冲突的格式要求。",
+      "recommendation": "明确新方案采用v4/v3，v3交接及v1/v2决策仅按冻结语义回放；保留旧文档和schema。"
+    },
+    {
+      "id": "IR-002",
+      "priority": "P2",
+      "kind": "evaluation_fact_boundary",
+      "title": "Sum的padding虽非有效归约结果，仍属于原oracle检查范围",
+      "evidence": [
+        {
+          "path": "scaffolding/curation/graph-base-1.3.0-optimization-schemes/evaluation/FACTS.md",
+          "line": 8
+        },
+        {
+          "path": "scaffolding/curation/graph-base-1.3.0-optimization-schemes/evaluation/sources/reduction_sum/sum.asc",
+          "line": 110
+        },
+        {
+          "path": "scaffolding/curation/graph-base-1.3.0-optimization-schemes/evaluation/sources/reduction_sum/sum.asc",
+          "line": 178
+        },
+        {
+          "path": "scaffolding/curation/graph-base-1.3.0-optimization-schemes/evaluation/sources/reduction_sum/scripts/gen_data.py",
+          "line": 60
+        }
+      ],
+      "finding": "FACTS说8个物理元素、仅前3有效，容易漏掉后5个padding必须为零的当前样例输出约束。原实现Duplicate清零8个元素，golden为8个零数组再写前3项，CompareResult遍历outSize/sizeof(float)=8项。不得因为只有3项有效而无证明删除清零或只写3项后将其他项留未定义。",
+      "recommendation": "评分时检查完整物理输出和oracle；允许等价地只清零padding等方案，但需证明Sum写入范围与依赖，不能按预选Action扣分。"
+    },
+    {
+      "id": "IR-003",
+      "priority": "P2",
+      "kind": "evaluation_fact_boundary",
+      "title": "Maximum的FP16广播专用路径没有通用广播适用保护",
+      "evidence": [
+        {
+          "path": "scaffolding/curation/graph-base-1.3.0-optimization-schemes/evaluation/FACTS.md",
+          "line": 6
+        },
+        {
+          "path": "scaffolding/curation/graph-base-1.3.0-optimization-schemes/evaluation/sources/maximum/op_kernel/maximum_kernel.asc",
+          "line": 91
+        },
+        {
+          "path": "scaffolding/curation/graph-base-1.3.0-optimization-schemes/evaluation/sources/maximum/op_kernel/maximum_kernel.asc",
+          "line": 109
+        },
+        {
+          "path": "scaffolding/curation/graph-base-1.3.0-optimization-schemes/evaluation/sources/maximum/op_kernel/maximum_kernel.asc",
+          "line": 158
+        },
+        {
+          "path": "scaffolding/curation/graph-base-1.3.0-optimization-schemes/evaluation/sources/maximum/op_kernel/maximum_tiling.h",
+          "line": 43
+        },
+        {
+          "path": "scaffolding/curation/graph-base-1.3.0-optimization-schemes/evaluation/sources/maximum/scripts/cases.py",
+          "line": 20
+        }
+      ],
+      "finding": "FP16任意非sameShape都走专用路径，实际寻址固定x1[off]和x2[off % outLastAxis]。矩阵唯一FP16广播case18满足这一结构；host tiler却接受一般broadcast。比如x1=[2,1],x2=[1,3]合法输出[2,3]，专用路径会把只有2个元素的x1按6元素访问。因此FACTS应被理解为当前路径说明，不能当作通用FP16广播正确性已经成立。",
+      "recommendation": "对声明全API范围的方案单独说明这一现存缺口；若只覆盖20case则标明范围。不能要求主体修复本轮范围以外的原始工程，也不能奖励虚称通用覆盖。"
+    },
+    {
+      "id": "IR-004",
+      "priority": "coverage_limit",
+      "kind": "evaluation_coverage",
+      "title": "一轮静态no-tools回答不能验证真实跨轮更新或router/contract执行",
+      "evidence": [
+        {
+          "path": "scaffolding/curation/graph-base-1.3.0-optimization-schemes/harness/prepare.py",
+          "line": 29
+        },
+        {
+          "path": "scaffolding/curation/graph-base-1.3.0-optimization-schemes/harness/prepare.py",
+          "line": 46
+        },
+        {
+          "path": "scaffolding/curation/graph-base-1.3.0-optimization-schemes/harness/prepare.py",
+          "line": 61
+        },
+        {
+          "path": "scaffolding/curation/graph-base-1.3.0-optimization-schemes/PROTOCOL.json",
+          "line": 6
+        },
+        {
+          "path": "scaffolding/curation/graph-base-1.3.0-optimization-schemes/evaluation/FACTS.md",
+          "line": 12
+        }
+      ],
+      "finding": "两次重复使用同一个独立一轮prompt，只要求输出下一轮可复用摘要；没有回传前轮失败/实际patch/有效或无效结果再要求后继重比较。材料只静态展开skills及三份reference、全部O/Problem、family P，没有执行角色contract读取、router或handoff回放。retrieval_cost_evaluated=false与no-tools限制已有正确声明。",
+      "recommendation": "八份输出只评价静态方案质量、知识实质采用和摘要初始内容；跨轮真实更新、按需阅读效率、真实逐成员路由和机器兼容性分别标未覆盖，交由后继场景和runtime检查，不以没调用工具为技术扣分。"
+    },
+    {
+      "id": "IR-005",
+      "priority": "evaluation_note",
+      "kind": "rubric_precision",
+      "title": "五维0/1/2缺少锚点和失败项对总分的处理规则",
+      "evidence": [
+        {
+          "path": "scaffolding/curation/graph-base-1.3.0-optimization-schemes/evaluation/FACTS.md",
+          "line": 10
+        }
+      ],
+      "finding": "当前列出五维与单列失败项，但未规定每维0/1/2含义、明确错误怎样影响对应维度、是否有总体验收阈值。若要报告验收结论，单纯总分容易掩盖越界/API/数值错误，且不能把Action数、多Action或换Action变成隐含加分。",
+      "recommendation": "匿名评审先逐维列证据和具体错误；0=关键缺失/冲突，1=有可用判断但缺会影响选择的具体环节，2=关键判断与源码/方法/代价充分相连。单列明确失败，不用总分抵消。无硬件测量、单Action、无变更或有条件方案不自动扣分。"
+    }
+  ],
+  "document_behavior": {
+    "single_action_allowed": true,
+    "necessary_multi_action_allowed": true,
+    "forced_action_change": false,
+    "forced_ablation": false,
+    "iteration_stop_external": true,
+    "summary_parts": [
+      "当前状态",
+      "已尝试路线",
+      "剩余机会"
+    ],
+    "summary_not_evidence_or_authorization": true
+  },
+  "pending": [
+    "runtime schema/decision/bindings v4 review",
+    "anonymous eight-output evaluation"
+  ]
+}

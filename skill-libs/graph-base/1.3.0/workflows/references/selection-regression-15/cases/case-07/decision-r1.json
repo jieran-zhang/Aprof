@@ -1,0 +1,1100 @@
+{
+  "schema_version": "aprof.action-decision/v2",
+  "task_id": "case-07",
+  "context_hash": "sha256:2392dbb27c8ea1f92eb2160cd3f59b549942e62f399ced3e4aef71389b127ae6",
+  "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+  "reasoning_ref": {
+    "path": "reasoning-r1.json",
+    "sha256": "sha256:3ed8114ac15e24c08ce12acbca103ff2124f293afcc2cf6cd29b4e1cf26e3210"
+  },
+  "reasoning_hash": "sha256:7cecffd08164542677a6a9ae60c402a982cdc4ab9143f1fd86104305b0907f52",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/ec82d8f535262a6e43869d71bce0e77d91aa71040c5f7f87a8e56f5adfd6f1e8.json",
+    "sha256": "sha256:fde21372195004f2ae06c2a295edd3ca726b0f00da220aa64ef8f1c0bc6507e2"
+  },
+  "round": 1,
+  "current_parent_ref": {
+    "path": "source-identity.json",
+    "sha256": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24"
+  },
+  "opportunities": [
+    {
+      "id": "batch",
+      "hypothesis_id": "h-batch",
+      "action_id": "action.vectorize_scalar_loop",
+      "action_instance_id": "batch-r1",
+      "case_ids": [
+        "1",
+        "3",
+        "4",
+        "5",
+        "6",
+        "8",
+        "9",
+        "12",
+        "2",
+        "7",
+        "10",
+        "11",
+        "13",
+        "14",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "workload.matrix"
+      ],
+      "cost_mechanism": "按最内有效轴组织片：s=1用按位DMA，s为小正步长时读s*(T-1)+1连续跨度并用同宽UB Gather压紧；大步长保留原标量路径。",
+      "predictions": [
+        {
+          "id": "batch-work",
+          "kind": "source_work",
+          "statement": "s=1/小s域N次标量读写及rank解码变为R*ceil(E/T)片级调度、UB选取；必要输出N元素不变",
+          "check_method": "逐域静态计数并核对原地址/运算次序；实施后再对照差异",
+          "on_support": "支持该工作减少预测，尚不证明时间收益",
+          "on_refute": "若工作已被编译消除或新增代价抵消，重开比较"
+        },
+        {
+          "id": "batch-time",
+          "kind": "performance",
+          "statement": "在合法完整正确性后检验 按最内有效轴组织片：s=1用按位DMA，s为小正步长时读s*(T-1)+1连续跨度并用同宽UB Gather压紧；大步长保留原标量路径。 是否降低同协议Task时间",
+          "check_method": "本轮禁止硬件；将来完整matrix20按统一Task协议测量，分域观察",
+          "on_support": "工程收益证据仍与机制归因分开",
+          "on_refute": "s大或短E使span读取放大胜过减少Scalar时，分段地址递增优先"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_scalar_hot",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "batch-time",
+          "unknown_id": "batch-perf-legacy_symptom_profile_scalar_hot",
+          "reason": "源码支持结构假设，编译器/关键路径和实际时间未测；不作为实施门禁"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "batch-time",
+          "unknown_id": "batch-perf-cost_reduction",
+          "reason": "源码支持结构假设，编译器/关键路径和实际时间未测；不作为实施门禁"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "batch-constraint.capacity",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "跨度读取新增至多(s-1)*N*b输入字节；UB=A((s*(T-1)+1)*b)+A(T*b)+A(T*offsetBytes)+Tmp+F；int64需同宽或两半按位处理API证明；实际可用UB、API tmp及保留区尚未查询，只有公式不授权容量。",
+          "affects": "implementation_legality",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "batch-perf-legacy_symptom_profile_scalar_hot",
+          "kind": "performance",
+          "fact": "symptom.profile.scalar_hot",
+          "expected_state": null,
+          "statement": "尚未测量 按最内有效轴组织片：s=1用按位DMA，s为小正步长时读s*(T-1)+1连续跨度并用同宽UB Gather压紧；大步长保留原标量路径。 的实际指令/等待减少是否超过 跨度读取新增至多(s-1)*N*b输入字节；UB=A((s*(T-1)+1)*b)+A(T*b)+A(T*offsetBytes)+Tmp+F；int64需同宽或两半按位处理API证明",
+          "affects": "benefit_magnitude and priority",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "batch-perf-cost_reduction",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "尚未测量 按最内有效轴组织片：s=1用按位DMA，s为小正步长时读s*(T-1)+1连续跨度并用同宽UB Gather压紧；大步长保留原标量路径。 的实际指令/等待减少是否超过 跨度读取新增至多(s-1)*N*b输入字节；UB=A((s*(T-1)+1)*b)+A(T*b)+A(T*offsetBytes)+Tmp+F；int64需同宽或两半按位处理API证明",
+          "affects": "benefit_magnitude and priority",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "batch-api",
+          "kind": "implementation_safety",
+          "fact": "constraint.api_legality",
+          "expected_state": true,
+          "statement": "目标910C/A3 SDK的具体同宽UB Gather、offset范围及dtype支持尚未核验；不使用950 GM Gather。",
+          "affects": "implementation_legality",
+          "resolution": "check_before_implementation"
+        }
+      ],
+      "strongest_alternative_id": "address",
+      "comparison": "s=1/小s域N次标量读写及rank解码变为R*ceil(E/T)片级调度、UB选取；必要输出N元素不变；付出 跨度读取新增至多(s-1)*N*b输入字节；UB=A((s*(T-1)+1)*b)+A(T*b)+A(T*offsetBytes)+Tmp+F；int64需同宽或两半按位处理API证明；替代敏感条件：s大或短E使span读取放大胜过减少Scalar时，分段地址递增优先",
+      "disposition": "selected",
+      "reason": "按最内有效轴组织片：s=1用按位DMA，s为小正步长时读s*(T-1)+1连续跨度并用同宽UB Gather压紧；大步长保留原标量路径。；s大或短E使span读取放大胜过减少Scalar时，分段地址递增优先",
+      "analysis": {
+        "intent_gap": null,
+        "work_delta": [
+          {
+            "id": "batch-reduced",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "small_stride",
+              "contiguous_inner"
+            ],
+            "change": "reduced",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "N",
+              "unit": "scalar element loop iteration eligible for replacement/invocation",
+              "symbols": [
+                {
+                  "name": "N",
+                  "meaning": "输出元素数",
+                  "unit": "element"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "按最内有效轴组织片：s=1用按位DMA，s为小正步长时读s*(T-1)+1连续跨度并用同宽UB Gather压紧；大步长保留原标量路径。"
+          },
+          {
+            "id": "batch-retained",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "small_stride",
+              "contiguous_inner",
+              "large_gap"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "qualitative",
+              "expression": "大步长column保留标量读；负stride与rank8是声明支持但当前矩阵未覆盖；不扩大GM越界读",
+              "unit": "separate logical operations/bytes",
+              "symbols": [],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "保留项不能消失在整体覆盖声明中"
+          },
+          {
+            "id": "batch-added-span",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "small_stride"
+            ],
+            "change": "added",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "(s-1)*N*b",
+              "unit": "upper-bound extra input byte/invocation",
+              "symbols": [
+                {
+                  "name": "s",
+                  "meaning": "Slice最内有效轴源步长",
+                  "unit": "element/element"
+                },
+                {
+                  "name": "N",
+                  "meaning": "输出元素数",
+                  "unit": "element"
+                },
+                {
+                  "name": "b",
+                  "meaning": "输入输出存储宽",
+                  "unit": "byte/element"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "小正stride连续span载入后UB取数；逐片实际跨度s*(valid-1)+1，末片不越界。"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "batch-coverage-small_stride",
+            "domain_id": "small_stride",
+            "status": "partial",
+            "region": "按最内有效轴组织片：s=1用按位DMA，s为小正步长时读s*(T-1)+1连续跨度并用同宽UB Gather压紧；大步长保留原标量路径。；域=small_stride",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "batch-coverage-contiguous_inner",
+            "domain_id": "contiguous_inner",
+            "status": "partial",
+            "region": "按最内有效轴组织片：s=1用按位DMA，s为小正步长时读s*(T-1)+1连续跨度并用同宽UB Gather压紧；大步长保留原标量路径。；域=contiguous_inner",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "batch-coverage-large_gap",
+            "domain_id": "large_gap",
+            "status": "unchanged",
+            "region": "case15的sourceStep2048保留原标量路径，禁止span放大读取",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "batch-cost",
+            "domain_ids": [
+              "small_stride",
+              "contiguous_inner",
+              "large_gap"
+            ],
+            "dimension": "resource_access_sync",
+            "change": {
+              "mode": "symbolic",
+              "expression": "A((s*(T-1)+1)*b)+A(T*b)+A(T*bo)+Tmp+F",
+              "unit": "UB allocation byte",
+              "symbols": [
+                {
+                  "name": "A",
+                  "meaning": "按已核验API字节对齐的向上取整函数",
+                  "unit": "byte->byte"
+                },
+                {
+                  "name": "s",
+                  "meaning": "Slice最内有效轴源步长",
+                  "unit": "element/element"
+                },
+                {
+                  "name": "T",
+                  "meaning": "候选tile有效元素上限",
+                  "unit": "element"
+                },
+                {
+                  "name": "b",
+                  "meaning": "输入输出存储宽",
+                  "unit": "byte/element"
+                },
+                {
+                  "name": "bo",
+                  "meaning": "UB偏移字段宽",
+                  "unit": "byte/element"
+                },
+                {
+                  "name": "Tmp",
+                  "meaning": "目标SDK/API要求的临时区",
+                  "unit": "byte"
+                },
+                {
+                  "name": "F",
+                  "meaning": "对齐外固定保留区",
+                  "unit": "byte"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "consequence": "s大或短E使span读取放大胜过减少Scalar时，分段地址递增优先"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "batch-residual",
+            "domain_ids": [
+              "small_stride",
+              "contiguous_inner",
+              "large_gap"
+            ],
+            "remaining_work": "大步长column保留标量读；负stride与rank8是声明支持但当前矩阵未覆盖；不扩大GM越界读",
+            "next_step": "s大或短E使span读取放大胜过减少Scalar时，分段地址递增优先",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling"
+            ]
+          }
+        ],
+        "no_alternative_reason": null
+      }
+    },
+    {
+      "id": "address",
+      "hypothesis_id": "h-address",
+      "action_id": "action.hoist_invariant_control",
+      "action_instance_id": "address-r1",
+      "case_ids": [
+        "1",
+        "3",
+        "4",
+        "5",
+        "6",
+        "8",
+        "9",
+        "12",
+        "2",
+        "7",
+        "10",
+        "11",
+        "13",
+        "14",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20",
+        "15"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "workload.matrix"
+      ],
+      "cost_mechanism": "每连续输出段保留sourceBase+外轴前缀，内轴用sourceStep增量；所有stride继续按原uint64位模式处理。",
+      "predictions": [
+        {
+          "id": "address-work",
+          "kind": "source_work",
+          "statement": "2*N*d次除模降为2*R*d；内轴用N次加法代替全rank乘加",
+          "check_method": "逐域静态计数并核对原地址/运算次序；实施后再对照差异",
+          "on_support": "支持该工作减少预测，尚不证明时间收益",
+          "on_refute": "若工作已被编译消除或新增代价抵消，重开比较"
+        },
+        {
+          "id": "address-time",
+          "kind": "performance",
+          "statement": "在合法完整正确性后检验 每连续输出段保留sourceBase+外轴前缀，内轴用sourceStep增量；所有stride继续按原uint64位模式处理。 是否降低同协议Task时间",
+          "check_method": "本轮禁止硬件；将来完整matrix20按统一Task协议测量，分域观察",
+          "on_support": "工程收益证据仍与机制归因分开",
+          "on_refute": "若大部分为s=1且E长，批量复制可减少更多标量数据访问"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "address-time",
+          "unknown_id": "address-perf-cost_reduction",
+          "reason": "源码支持结构假设，编译器/关键路径和实际时间未测；不作为实施门禁"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "address-constraint.capacity",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "O(d)状态，不增加GM请求或UB；段边界和编译spill未知；实际可用UB、API tmp及保留区尚未查询，只有公式不授权容量。",
+          "affects": "implementation_legality",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "address-perf-cost_reduction",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "尚未测量 每连续输出段保留sourceBase+外轴前缀，内轴用sourceStep增量；所有stride继续按原uint64位模式处理。 的实际指令/等待减少是否超过 O(d)状态，不增加GM请求或UB；段边界和编译spill未知",
+          "affects": "benefit_magnitude and priority",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "batch",
+      "comparison": "2*N*d次除模降为2*R*d；内轴用N次加法代替全rank乘加；付出 O(d)状态，不增加GM请求或UB；段边界和编译spill未知；替代敏感条件：若大部分为s=1且E长，批量复制可减少更多标量数据访问",
+      "disposition": "deferred",
+      "reason": "每连续输出段保留sourceBase+外轴前缀，内轴用sourceStep增量；所有stride继续按原uint64位模式处理。；若大部分为s=1且E长，批量复制可减少更多标量数据访问",
+      "analysis": {
+        "intent_gap": null,
+        "work_delta": [
+          {
+            "id": "address-reduced",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "small_stride",
+              "contiguous_inner",
+              "large_gap"
+            ],
+            "change": "reduced",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "max(2*N*d-2*R*d,0)",
+              "unit": "removed division_or_modulo operation/invocation",
+              "symbols": [
+                {
+                  "name": "N",
+                  "meaning": "输出元素数",
+                  "unit": "element"
+                },
+                {
+                  "name": "d",
+                  "meaning": "当前输出或index rank",
+                  "unit": "axis"
+                },
+                {
+                  "name": "R",
+                  "meaning": "与每核owner边界相交后的最内轴段数",
+                  "unit": "segment"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "每连续输出段保留sourceBase+外轴前缀，内轴用sourceStep增量；所有stride继续按原uint64位模式处理。"
+          },
+          {
+            "id": "address-retained",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "small_stride",
+              "contiguous_inner",
+              "large_gap"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "qualitative",
+              "expression": "N次标量load/store仍在，长连续行错过DMA机会",
+              "unit": "separate logical operations/bytes",
+              "symbols": [],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "保留项不能消失在整体覆盖声明中"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "address-coverage-small_stride",
+            "domain_id": "small_stride",
+            "status": "partial",
+            "region": "每连续输出段保留sourceBase+外轴前缀，内轴用sourceStep增量；所有stride继续按原uint64位模式处理。；域=small_stride",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "address-coverage-contiguous_inner",
+            "domain_id": "contiguous_inner",
+            "status": "partial",
+            "region": "每连续输出段保留sourceBase+外轴前缀，内轴用sourceStep增量；所有stride继续按原uint64位模式处理。；域=contiguous_inner",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "address-coverage-large_gap",
+            "domain_id": "large_gap",
+            "status": "partial",
+            "region": "每连续输出段保留sourceBase+外轴前缀，内轴用sourceStep增量；所有stride继续按原uint64位模式处理。；域=large_gap",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "address-cost",
+            "domain_ids": [
+              "small_stride",
+              "contiguous_inner",
+              "large_gap"
+            ],
+            "dimension": "resource_access_sync",
+            "change": {
+              "mode": "symbolic",
+              "expression": "8*d",
+              "unit": "logical coordinate state byte (not physical registers)",
+              "symbols": [
+                {
+                  "name": "d",
+                  "meaning": "当前输出或index rank",
+                  "unit": "axis"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "consequence": "若大部分为s=1且E长，批量复制可减少更多标量数据访问"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "address-residual",
+            "domain_ids": [
+              "small_stride",
+              "contiguous_inner",
+              "large_gap"
+            ],
+            "remaining_work": "N次标量load/store仍在，长连续行错过DMA机会",
+            "next_step": "若大部分为s=1且E长，批量复制可减少更多标量数据访问",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling"
+            ]
+          }
+        ],
+        "no_alternative_reason": null
+      }
+    }
+  ],
+  "evidence_requests": [
+    {
+      "id": "request-batch-constraint.capacity",
+      "opportunity_ids": [
+        "batch"
+      ],
+      "unknown_ids": [
+        "batch-constraint.capacity"
+      ],
+      "method": "跨度读取新增至多(s-1)*N*b输入字节；UB=A((s*(T-1)+1)*b)+A(T*b)+A(T*offsetBytes)+Tmp+F；int64需同宽或两半按位处理API证明；实际可用UB、API tmp及保留区尚未查询，只有公式不授权容量。",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "s大或短E使span读取放大胜过减少Scalar时，分段地址递增优先"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-batch-perf-legacy_symptom_profile_scalar_hot",
+      "opportunity_ids": [
+        "batch"
+      ],
+      "unknown_ids": [
+        "batch-perf-legacy_symptom_profile_scalar_hot"
+      ],
+      "method": "尚未测量 按最内有效轴组织片：s=1用按位DMA，s为小正步长时读s*(T-1)+1连续跨度并用同宽UB Gather压紧；大步长保留原标量路径。 的实际指令/等待减少是否超过 跨度读取新增至多(s-1)*N*b输入字节；UB=A((s*(T-1)+1)*b)+A(T*b)+A(T*offsetBytes)+Tmp+F；int64需同宽或两半按位处理API证明",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "s大或短E使span读取放大胜过减少Scalar时，分段地址递增优先"
+        }
+      ],
+      "required_before_implementation": false,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-batch-perf-cost_reduction",
+      "opportunity_ids": [
+        "batch"
+      ],
+      "unknown_ids": [
+        "batch-perf-cost_reduction"
+      ],
+      "method": "尚未测量 按最内有效轴组织片：s=1用按位DMA，s为小正步长时读s*(T-1)+1连续跨度并用同宽UB Gather压紧；大步长保留原标量路径。 的实际指令/等待减少是否超过 跨度读取新增至多(s-1)*N*b输入字节；UB=A((s*(T-1)+1)*b)+A(T*b)+A(T*offsetBytes)+Tmp+F；int64需同宽或两半按位处理API证明",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "s大或短E使span读取放大胜过减少Scalar时，分段地址递增优先"
+        }
+      ],
+      "required_before_implementation": false,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-batch-api",
+      "opportunity_ids": [
+        "batch"
+      ],
+      "unknown_ids": [
+        "batch-api"
+      ],
+      "method": "目标910C/A3 SDK的具体同宽UB Gather、offset范围及dtype支持尚未核验；不使用950 GM Gather。",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "s大或短E使span读取放大胜过减少Scalar时，分段地址递增优先"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-address-constraint.capacity",
+      "opportunity_ids": [
+        "address"
+      ],
+      "unknown_ids": [
+        "address-constraint.capacity"
+      ],
+      "method": "O(d)状态，不增加GM请求或UB；段边界和编译spill未知；实际可用UB、API tmp及保留区尚未查询，只有公式不授权容量。",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "若大部分为s=1且E长，批量复制可减少更多标量数据访问"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-address-perf-cost_reduction",
+      "opportunity_ids": [
+        "address"
+      ],
+      "unknown_ids": [
+        "address-perf-cost_reduction"
+      ],
+      "method": "尚未测量 每连续输出段保留sourceBase+外轴前缀，内轴用sourceStep增量；所有stride继续按原uint64位模式处理。 的实际指令/等待减少是否超过 O(d)状态，不增加GM请求或UB；段边界和编译spill未知",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "若大部分为s=1且E长，批量复制可减少更多标量数据访问"
+        }
+      ],
+      "required_before_implementation": false,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "batch",
+        "address"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+        "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+      },
+      "locator": "lines:85-126",
+      "effect_kind": "plan",
+      "before": "从原源码识别 Host解释begin/end/masks为outputShape/sourceStep/sourceBase；按64B写所有权对齐分核。Kernel逐元素rank解码，按位复制，不存在浮点算术。",
+      "after": "采用输出独占与真实source stride原则；Slice没有数据相关index，不采用完整Gather模板",
+      "applicability": "partial：只取owner/stride/bit-copy原则"
+    },
+    {
+      "opportunity_ids": [
+        "batch"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/strided-pad.md",
+        "sha256": "sha256:dbd61eaa8bb85b89b10ae445f1cff983baaaf8aa7a707b07900c18ac60262403"
+      },
+      "locator": "lines:77-138",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host解释begin/end/masks为outputShape/sourceStep/sourceBase；按64B写所有权对齐分核。Kernel逐元素rank解码，按位复制，不存在浮点算术。",
+      "after": "按有效行长/GM间隙/UB对齐分别定义单位；stride大到跨列不能整span载入",
+      "applicability": "partial：s=1规则连续段可完整表达，小stride压紧另需Gather"
+    },
+    {
+      "opportunity_ids": [
+        "address"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+        "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+      },
+      "locator": "lines:57-107",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host解释begin/end/masks为outputShape/sourceStep/sourceBase；按64B写所有权对齐分核。Kernel逐元素rank解码，按位复制，不存在浮点算术。",
+      "after": "大步长回退仍可按段地址递增，保持negative stride原位模式",
+      "applicability": "full：规则仿射地址且不改变原拷贝次序"
+    },
+    {
+      "opportunity_ids": [
+        "batch"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+        "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+      },
+      "locator": "lines:90-131",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host解释begin/end/masks为outputShape/sourceStep/sourceBase；按64B写所有权对齐分核。Kernel逐元素rank解码，按位复制，不存在浮点算术。",
+      "after": "普通整数bit-copy不能误用float Select，采用同宽UB取数需具体API证明",
+      "applicability": "partial：批处理控制与容量原则"
+    },
+    {
+      "opportunity_ids": [
+        "batch"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+        "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+      },
+      "locator": "lines:279-414",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host解释begin/end/masks为outputShape/sourceStep/sourceBase；按64B写所有权对齐分核。Kernel逐元素rank解码，按位复制，不存在浮点算术。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；本可按向量表达的元素处理使用逐元素Scalar访存或算术",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    },
+    {
+      "opportunity_ids": [
+        "address"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+        "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+      },
+      "locator": "lines:297-432",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host解释begin/end/masks为outputShape/sourceStep/sourceBase；按64B写所有权对齐分核。Kernel逐元素rank解码，按位复制，不存在浮点算术。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；循环不变字段或公共地址前缀在每轮重复加载/计算",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    },
+    {
+      "opportunity_ids": [
+        "batch"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+        "sha256": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db"
+      },
+      "locator": "lines:316-458",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host解释begin/end/masks为outputShape/sourceStep/sourceBase；按64B写所有权对齐分核。Kernel逐元素rank解码，按位复制，不存在浮点算术。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；切分或遍历轴跨过物理连续内轴",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    }
+  ],
+  "selection": {
+    "mode": "conditional_plan",
+    "opportunity_id": "batch",
+    "action_instance_id": "batch-r1",
+    "reason": "s=1/小s域N次标量读写及rank解码变为R*ceil(E/T)片级调度、UB选取；必要输出N元素不变；付出 跨度读取新增至多(s-1)*N*b输入字节；UB=A((s*(T-1)+1)*b)+A(T*b)+A(T*offsetBytes)+Tmp+F；int64需同宽或两半按位处理API证明；替代敏感条件：s大或短E使span读取放大胜过减少Scalar时，分段地址递增优先",
+    "concrete_plan": "先按host归一化后的outputShape/sourceStep建片而非case ID；去掉size1轴时仍保留base语义。s=1连续搬，已证明API的同宽小stride做UB选取，其余走原地址公式。保持64B owner划分及每owner统一写回；UB/SDK未确认前仅条件方案。",
+    "stop_reason": null,
+    "comparison_basis": [
+      {
+        "opportunity_id": "batch",
+        "item_ids": [
+          "batch-reduced"
+        ],
+        "role": "benefit",
+        "decision_effect": "s=1/小s域N次标量读写及rank解码变为R*ceil(E/T)片级调度、UB选取；必要输出N元素不变",
+        "reversal_condition": "s大或短E使span读取放大胜过减少Scalar时，分段地址递增优先"
+      },
+      {
+        "opportunity_id": "batch",
+        "item_ids": [
+          "batch-cost"
+        ],
+        "role": "cost",
+        "decision_effect": "跨度读取新增至多(s-1)*N*b输入字节；UB=A((s*(T-1)+1)*b)+A(T*b)+A(T*offsetBytes)+Tmp+F；int64需同宽或两半按位处理API证明",
+        "reversal_condition": "s大或短E使span读取放大胜过减少Scalar时，分段地址递增优先"
+      },
+      {
+        "opportunity_id": "batch",
+        "item_ids": [
+          "batch-coverage-small_stride",
+          "batch-coverage-contiguous_inner",
+          "batch-coverage-large_gap"
+        ],
+        "role": "coverage",
+        "decision_effect": "按上述语义域部分覆盖，未改变的主要工作明确保留；不以case数自动胜出",
+        "reversal_condition": "s大或短E使span读取放大胜过减少Scalar时，分段地址递增优先"
+      },
+      {
+        "opportunity_id": "batch",
+        "item_ids": [
+          "batch-residual"
+        ],
+        "role": "residual",
+        "decision_effect": "大步长column保留标量读；负stride与rank8是声明支持但当前矩阵未覆盖；不扩大GM越界读",
+        "reversal_condition": "s大或短E使span读取放大胜过减少Scalar时，分段地址递增优先"
+      },
+      {
+        "opportunity_id": "address",
+        "item_ids": [
+          "address-reduced",
+          "address-cost"
+        ],
+        "role": "alternative",
+        "decision_effect": "最强替代：2*N*d次除模降为2*R*d；内轴用N次加法代替全rank乘加；付出 O(d)状态，不增加GM请求或UB；段边界和编译spill未知；替代敏感条件：若大部分为s=1且E长，批量复制可减少更多标量数据访问",
+        "reversal_condition": "若大部分为s=1且E长，批量复制可减少更多标量数据访问"
+      }
+    ]
+  },
+  "previous_feedback": null,
+  "path_overview": {
+    "workload_ref": {
+      "path": "source/matrix-20.json",
+      "sha256": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c"
+    },
+    "case_ids": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20"
+    ],
+    "domains": [
+      {
+        "id": "small_stride",
+        "case_ids": [
+          "1",
+          "3",
+          "4",
+          "5",
+          "6",
+          "8",
+          "9",
+          "12"
+        ],
+        "predicate": "small_stride（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      },
+      {
+        "id": "contiguous_inner",
+        "case_ids": [
+          "2",
+          "7",
+          "10",
+          "11",
+          "13",
+          "14",
+          "16",
+          "17",
+          "18",
+          "19",
+          "20"
+        ],
+        "predicate": "contiguous_inner（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      },
+      {
+        "id": "large_gap",
+        "case_ids": [
+          "15"
+        ],
+        "predicate": "large_gap（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      }
+    ],
+    "stages": [
+      {
+        "id": "host",
+        "domain_ids": [
+          "small_stride",
+          "contiguous_inner",
+          "large_gap"
+        ],
+        "fact_ids": [
+          "source.host",
+          "source.tiling"
+        ],
+        "behavior": "参数验证、shape/stride/分核与tiling；分配/H2D和输出D2H在kernel外"
+      },
+      {
+        "id": "kernel",
+        "domain_ids": [
+          "small_stride",
+          "contiguous_inner",
+          "large_gap"
+        ],
+        "fact_ids": [
+          "source.kernel"
+        ],
+        "behavior": "Host解释begin/end/masks为outputShape/sourceStep/sourceBase；按64B写所有权对齐分核。Kernel逐元素rank解码，按位复制，不存在浮点算术。"
+      },
+      {
+        "id": "oracle",
+        "domain_ids": [
+          "small_stride",
+          "contiguous_inner",
+          "large_gap"
+        ],
+        "fact_ids": [
+          "source.oracle"
+        ],
+        "behavior": "读取全输出，保留原精度/特殊值/按位契约，本轮不运行"
+      }
+    ],
+    "baseline_work": [
+      {
+        "id": "base-host",
+        "stage_id": "host",
+        "domain_ids": [
+          "small_stride",
+          "contiguous_inner",
+          "large_gap"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "qualitative",
+          "expression": "每次调用一次host tiling与kernel launch；设备核心数动态查询但本轮未查询",
+          "unit": "separate logical operations/bytes",
+          "symbols": [],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.kernel",
+            "source.tiling",
+            "workload.matrix"
+          ]
+        },
+        "explanation": "不把host墙钟当kernel热点"
+      },
+      {
+        "id": "base-kernel",
+        "stage_id": "kernel",
+        "domain_ids": [
+          "small_stride",
+          "contiguous_inner",
+          "large_gap"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "symbolic",
+          "expression": "2*N*d",
+          "unit": "division_or_modulo operation/invocation",
+          "symbols": [
+            {
+              "name": "N",
+              "meaning": "输出元素数",
+              "unit": "element"
+            },
+            {
+              "name": "d",
+              "meaning": "当前输出或index rank",
+              "unit": "axis"
+            }
+          ],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.kernel",
+            "source.tiling",
+            "workload.matrix"
+          ]
+        },
+        "explanation": "各域具体N/d/stride/C/K与已分配字节由metrics列出，逻辑工作非时间占比"
+      },
+      {
+        "id": "base-oracle",
+        "stage_id": "oracle",
+        "domain_ids": [
+          "small_stride",
+          "contiguous_inner",
+          "large_gap"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "qualitative",
+          "expression": "完整输出元素比对；不参与目标Task时间",
+          "unit": "separate logical operations/bytes",
+          "symbols": [],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.kernel",
+            "source.tiling",
+            "workload.matrix"
+          ]
+        },
+        "explanation": "未实施未测试，不伪造passed"
+      }
+    ]
+  }
+}

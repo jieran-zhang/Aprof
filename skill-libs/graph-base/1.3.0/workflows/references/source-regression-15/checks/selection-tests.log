@@ -1,0 +1,106 @@
+........................................................................ [ 36%]
+.......................................................................F [ 73%]
+F....................................................                    [100%]
+=================================== FAILURES ===================================
+__________________ test_real_templates_route_and_cli_handoff ___________________
+
+tmp_path = PosixPath('/dev/shm/aprof-selection-tests-20261021/test_real_templates_route_and_0')
+
+    def test_real_templates_route_and_cli_handoff(tmp_path):
+        artifact = diagnosis.verify(ROOT)
+        assert len(artifact['records']) == 200
+        chain = chain_fixture(ROOT, artifact, tmp_path / 'task')
+>       result = bindings.validate_chain(ROOT, *chain, task_root=tmp_path / 'task')
+
+runtime/tests/test_diagnosis_integration_v130.py:42: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+runtime/src/aprof_runtime/bindings.py:525: in validate_chain
+    decision_result = validate_handoff_decision(root, c1, instance["instance_id"], task_root=task_root,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/skill-libs/graph-base/1.3.0')
+c1 = {'artifacts': [], 'candidate_id': None, 'parent_hash': None, 'reasoning': {'action_instances': [{'action_id': 'action.... 'context.json', 'sha256': 'sha256:6d9eb7305189181e04c2485879ec3b307f65cee267869aaf8a81dbe032a7a58d'}, ...}, ...}, ...}
+instance_id = 'action-instance.one'
+
+    
+    def validate_handoff_decision(root, c1, instance_id, *, task_root, artifact, implementation, artifacts=None, routing_config=None):
+        """新图使用 sidecar；旧 handoff schema、历史 D4 链及 frozen 来源保持原义。"""
+        if not requires_decision(artifact):
+            return None
+        decisions = []
+        for ref in c1["artifacts"]:
+            path = _file(task_root, ref)
+            if path.suffix == ".json":
+                value = _json(path)
+                if isinstance(value, dict) and value.get("schema_version") == "aprof.action-decision/v1":
+                    decisions.append(value)
+>       if len(decisions) != 1:
+E       aprof_runtime.errors.GraphError: D5+ C1.artifacts 必须引用唯一 action-decision/v1
+
+runtime/src/aprof_runtime/action_decision.py:383: GraphError
+__ test_v4_package_relocates_and_replays_without_checkout_network_or_scratch ___
+
+tmp_path = PosixPath('/dev/shm/aprof-selection-tests-20261021/test_v4_package_relocates_and_0')
+
+    def test_v4_package_relocates_and_replays_without_checkout_network_or_scratch(tmp_path):
+        package = tmp_path / 'retained-package'
+        shutil.copytree(ROOT, package, ignore=shutil.ignore_patterns(
+            '__pycache__', '.pytest_cache', '.runtime-env', '*.egg-info'))
+        artifact = diagnosis.verify(package)
+        chain = chain_fixture(package, artifact, package / 'task')
+        for index, record in enumerate(chain, 1):
+            write_json(package / f'C{index}.json', record)
+        script = r'''
+    import json, os, sys
+    from pathlib import Path
+    root = Path(sys.argv[1]).resolve()
+    blocked = [Path(p).resolve() for p in sys.argv[2:]]
+    def isolated(event, args):
+        if event in ('socket.connect', 'socket.getaddrinfo'):
+            raise RuntimeError('offline package forbids network')
+        if event == 'open' and isinstance(args[0], (str, bytes, os.PathLike)):
+            path = Path(os.fsdecode(args[0])).resolve()
+            if any(path.is_relative_to(parent) for parent in blocked):
+                raise RuntimeError('external package dependency: ' + str(path))
+    sys.addaudithook(isolated)
+    sys.path.insert(0, str(root / 'runtime/src'))
+    from aprof_runtime import bindings, diagnosis
+    from aprof_runtime.graph import load_snapshot
+    from aprof_runtime.knowledge import verify as verify_tree
+    from aprof_runtime.diagnosis_reasoning import validate_case, validate_proposal
+    assert diagnosis.verify(root)['version'] == 'v0004'
+    for owner, version in (('parallel-planning', 'v0002'), ('optimization', 'v0004')):
+        assert verify_tree(root, owner)['version'] == version
+    old, _ = load_snapshot(root / 'skills/ascendc-aprof-diagnosis/graph/versions/v0003')
+    assert old['version'] == 'v0003'
+    chain = [json.loads((root / f'C{i}.json').read_text()) for i in (1, 2, 3)]
+    assert bindings.validate_chain(root, *chain, task_root=root / 'task')['status'] == 'implemented'
+    skill = root / 'skills/ascendc-aprof-diagnosis'
+    for path in (skill / 'examples').glob('*.json'):
+        validate_case(root, json.loads(path.read_text()))
+    for path in (skill / 'proposals').glob('*.json'):
+        validate_proposal(root, json.loads(path.read_text()))
+    sys.path.insert(0, str(root / 'tools'))
+    from release import verify_unsealed
+    assert verify_unsealed(root)['publication_accepted'] is False
+    print(json.dumps({'standalone': True, 'network': False, 'original_tree': False,
+                      'hardware': False, 'timing': False, 'causal_claim': False}))
+    '''
+        # -I忽略宿主PYTHONPATH；只显式加载保留目录内runtime。
+        replay = subprocess.run([sys.executable, '-I', '-c', script, str(package), str(ROOT),
+            '/tmp/aprof-diagnosis-v4-exy42mhk', '/tmp/aprof-knowledge-sources-1SHAlx',
+            *([os.environ['APROF_TEST_SOURCE_REPO']] if os.environ.get('APROF_TEST_SOURCE_REPO') else [])],
+            cwd=package, text=True, capture_output=True)
+>       assert replay.returncode == 0, replay.stdout + replay.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<string>", line 19, in <module>
+E         AssertionError
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/usr/local/python3.11.15/bin/python3', '-I', '-c', "\nimport json, os, sys\nfrom pathlib impor...e=1, stdout='', stderr='Traceback (most recent call last):\n  File "<string>", line 19, in <module>\nAssertionError\n').returncode
+
+runtime/tests/test_diagnosis_integration_v130.py:112: AssertionError
+=========================== short test summary info ============================
+FAILED runtime/tests/test_diagnosis_integration_v130.py::test_real_templates_route_and_cli_handoff
+FAILED runtime/tests/test_diagnosis_integration_v130.py::test_v4_package_relocates_and_replays_without_checkout_network_or_scratch
+2 failed, 195 passed in 1042.88s (0:17:22)

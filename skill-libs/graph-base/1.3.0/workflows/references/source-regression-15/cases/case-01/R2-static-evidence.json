@@ -1,0 +1,19 @@
+{
+  "task_id": "raw15-case-01",
+  "kind": "new_static_evidence",
+  "parent_R1_analysis_ref": {
+    "path": "R1-analysis.md",
+    "sha256": "sha256:07fe0f9059c1bcecf927b10c83645c3ed4d4c330c27402acdd6e3d1251138e3a"
+  },
+  "matrix_costs_ref": {
+    "path": "matrix-costs.json",
+    "sha256": "sha256:e42018e284f3edae94e870720d969cdb10ab461483ef16fe58d374fd5f28dfbd"
+  },
+  "checks": [
+    "三dtype双输入/输出槽显式UB均16T；T4096=65536B。",
+    "20case有效读写字节逐项重算；base1不能跨IEEE输入域替换常数。"
+  ],
+  "conclusion": "复核base=1的case11/17/20：不得用全1填充替代原算式，合法输入仍可含NaN/Inf，0×Inf为NaN；原矩阵数值范围不是公共输入承诺。有限输入下也保留原乘加次序。本轮增加每case两路GM字节及T候选循环上界；16T容量来自物理槽而非队列depth。继续流水意图；若B不支持T4096，则比较T2048双槽与原4096单槽，不因无性能而退回字段缓存。",
+  "execution": "CPU integer/formula assertions only; no original module import, hardware or correctness run",
+  "performance": "not_measured"
+}

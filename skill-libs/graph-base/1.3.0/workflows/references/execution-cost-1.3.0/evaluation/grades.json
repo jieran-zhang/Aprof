@@ -1,0 +1,934 @@
+{
+  "review_started_at_utc": "2026-10-22T04:22:55.582281+00:00",
+  "protocol_version": 2,
+  "facts_lock": "FACTS-LOCK.json",
+  "v1_scores_excluded": true,
+  "rows": [
+    {
+      "run_id": "s1-value-domain-A-1-v2",
+      "scenario": "s1-value-domain",
+      "version": "A",
+      "repeat": 1,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "准确a普通向量、b扫描整4096元素通道命中未采样2^125而使全部输出software。",
+        "量化2048×8=16384整数软件FMA；保留触发粒度及fused/分离乘加区别。",
+        "所选合批/局部归约组织与四平面紧凑替代均给出全工作/初始化/存储/并行约束，不把API下降等同收益。",
+        "同元数据共用候选、保留阈值/特殊值/fallback和完成边，未以小值样本删除全域数值处理。"
+      ],
+      "selected_actions": [
+        "action.batch_vector_api_calls"
+      ],
+      "semantic_notes": "一次八邻居Gather配动态R=align(count,8)，保留两四邻居数值消费；比较少4KB的四平面紧凑替代。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.indexing.coordinate_neighborhood",
+        "implementation.vector-api.batch",
+        "implementation.memory-transfer.strided-pad",
+        "implementation.precision-boundaries.numeric",
+        "implementation.buffer-lifetime.reuse"
+      ],
+      "intent_coverage": {
+        "kind": "existing registered intent sufficient",
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s1-value-domain-A-2-v2",
+      "scenario": "s1-value-domain",
+      "version": "A",
+      "repeat": 2,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "准确a普通向量、b扫描整4096元素通道命中未采样2^125而使全部输出software。",
+        "量化2048×8=16384整数软件FMA；保留触发粒度及fused/分离乘加区别。",
+        "所选合批/局部归约组织与四平面紧凑替代均给出全工作/初始化/存储/并行约束，不把API下降等同收益。",
+        "同元数据共用候选、保留阈值/特殊值/fallback和完成边，未以小值样本删除全域数值处理。"
+      ],
+      "selected_actions": [
+        "action.batch_vector_api_calls"
+      ],
+      "semantic_notes": "一次Gather+八邻居消费；a全域Mul明确计dummy初始化/算术，b软件neighbors=8仅减少acc反馈。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.indexing.coordinate_neighborhood",
+        "implementation.vector-api.batch",
+        "implementation.memory-transfer.strided-pad",
+        "implementation.precision-boundaries.numeric",
+        "implementation.buffer-lifetime.reuse"
+      ],
+      "intent_coverage": {
+        "kind": "existing registered intent sufficient",
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s1-value-domain-B-1-v2",
+      "scenario": "s1-value-domain",
+      "version": "B",
+      "repeat": 1,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "准确a普通向量、b扫描整4096元素通道命中未采样2^125而使全部输出software。",
+        "量化2048×8=16384整数软件FMA；保留触发粒度及fused/分离乘加区别。",
+        "所选合批/局部归约组织与四平面紧凑替代均给出全工作/初始化/存储/并行约束，不把API下降等同收益。",
+        "同元数据共用候选、保留阈值/特殊值/fallback和完成边，未以小值样本删除全域数值处理。"
+      ],
+      "selected_actions": [
+        "action.restructure_reduction"
+      ],
+      "semantic_notes": "将局部8项加权和暂存/分组重排为八邻居，保持顺序；避免重复认领已存在的几何预计算，完整片才合批Mul。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.indexing.coordinate_neighborhood",
+        "implementation.vector-api.batch",
+        "implementation.memory-transfer.strided-pad",
+        "implementation.precision-boundaries.numeric",
+        "implementation.buffer-lifetime.reuse"
+      ],
+      "intent_coverage": {
+        "kind": "existing registered intent sufficient",
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s1-value-domain-B-2-v2",
+      "scenario": "s1-value-domain",
+      "version": "B",
+      "repeat": 2,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "准确a普通向量、b扫描整4096元素通道命中未采样2^125而使全部输出software。",
+        "量化2048×8=16384整数软件FMA；保留触发粒度及fused/分离乘加区别。",
+        "所选合批/局部归约组织与四平面紧凑替代均给出全工作/初始化/存储/并行约束，不把API下降等同收益。",
+        "同元数据共用候选、保留阈值/特殊值/fallback和完成边，未以小值样本删除全域数值处理。"
+      ],
+      "selected_actions": [
+        "action.batch_vector_api_calls"
+      ],
+      "semantic_notes": "八邻居合批+tile256；明确不使用新derived Action冒充已完成收益，不以输入分布派发。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.indexing.coordinate_neighborhood",
+        "implementation.vector-api.batch",
+        "implementation.memory-transfer.strided-pad",
+        "implementation.precision-boundaries.numeric",
+        "implementation.buffer-lifetime.reuse"
+      ],
+      "intent_coverage": {
+        "kind": "existing registered intent sufficient",
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s2-correctness-work-A-1-v2",
+      "scenario": "s2-correctness-work",
+      "version": "A",
+      "repeat": 1,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "准确还原half非同形实际进LastAxisBroadcast，a映射适用，b中间轴标量广播不适用。",
+        "正确b索引floor(l/5)%3，识别每行后2个half越界及前3项映射也错，SetGlobalBuffer声明不扩分配。",
+        "将修复后的合法新路径、比较/展开/发射/容量工作重新计算；不把非法180B请求当纯流量收益或可信父本。",
+        "给出合法结构快路与全广播域正确通用Vector Max fallback，保留边界/尾部/容量和后续正确性验证。"
+      ],
+      "selected_actions": [
+        "action.restructure_broadcast"
+      ],
+      "semantic_notes": "a行批量+x2驻留；b把[3,1]展开[3,5]并跨两平面复用，比较逐平面低容量备选。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.elementwise.broadcast",
+        "implementation.memory-transfer.strided-pad",
+        "implementation.memory-transfer.coalesce",
+        "implementation.memory-transfer.input-tile-residency",
+        "implementation.tiling-tail.valid-length"
+      ],
+      "intent_coverage": {
+        "kind": "existing registered broadcast intent sufficient",
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s2-correctness-work-A-2-v2",
+      "scenario": "s2-correctness-work",
+      "version": "A",
+      "repeat": 2,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "准确还原half非同形实际进LastAxisBroadcast，a映射适用，b中间轴标量广播不适用。",
+        "正确b索引floor(l/5)%3，识别每行后2个half越界及前3项映射也错，SetGlobalBuffer声明不扩分配。",
+        "将修复后的合法新路径、比较/展开/发射/容量工作重新计算；不把非法180B请求当纯流量收益或可信父本。",
+        "给出合法结构快路与全广播域正确通用Vector Max fallback，保留边界/尾部/容量和后续正确性验证。"
+      ],
+      "selected_actions": [
+        "action.restructure_broadcast"
+      ],
+      "semantic_notes": "b按c分组展开[1,1]到[1,5]并跨p复用，算入3次Broadcast与规则跨行20B间隙；API/scratch缺口具体。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.elementwise.broadcast",
+        "implementation.memory-transfer.strided-pad",
+        "implementation.memory-transfer.coalesce",
+        "implementation.memory-transfer.input-tile-residency",
+        "implementation.tiling-tail.valid-length"
+      ],
+      "intent_coverage": {
+        "kind": "existing registered broadcast intent sufficient",
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s2-correctness-work-B-1-v2",
+      "scenario": "s2-correctness-work",
+      "version": "B",
+      "repeat": 1,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "准确还原half非同形实际进LastAxisBroadcast，a映射适用，b中间轴标量广播不适用。",
+        "正确b索引floor(l/5)%3，识别每行后2个half越界及前3项映射也错，SetGlobalBuffer声明不扩分配。",
+        "将修复后的合法新路径、比较/展开/发射/容量工作重新计算；不把非法180B请求当纯流量收益或可信父本。",
+        "给出合法结构快路与全广播域正确通用Vector Max fallback，保留边界/尾部/容量和后续正确性验证。"
+      ],
+      "selected_actions": [
+        "action.restructure_broadcast"
+      ],
+      "semantic_notes": "b选无新增Broadcast的每元素32B槽批处理，明确30次Max/16倍槽膨胀，比合法Broadcast替代；没有把3次DMA当确定更快。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.elementwise.broadcast",
+        "implementation.memory-transfer.strided-pad",
+        "implementation.memory-transfer.coalesce",
+        "implementation.memory-transfer.input-tile-residency",
+        "implementation.tiling-tail.valid-length"
+      ],
+      "intent_coverage": {
+        "kind": "existing registered broadcast intent sufficient",
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s2-correctness-work-B-2-v2",
+      "scenario": "s2-correctness-work",
+      "version": "B",
+      "repeat": 2,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "准确还原half非同形实际进LastAxisBroadcast，a映射适用，b中间轴标量广播不适用。",
+        "正确b索引floor(l/5)%3，识别每行后2个half越界及前3项映射也错，SetGlobalBuffer声明不扩分配。",
+        "将修复后的合法新路径、比较/展开/发射/容量工作重新计算；不把非法180B请求当纯流量收益或可信父本。",
+        "给出合法结构快路与全广播域正确通用Vector Max fallback，保留边界/尾部/容量和后续正确性验证。"
+      ],
+      "selected_actions": [
+        "action.restructure_broadcast"
+      ],
+      "semantic_notes": "b整MH模式一次axis1展开，跨P复用；与每通道展开方案比较scratch/调用数，完整兜底按stride坐标。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.elementwise.broadcast",
+        "implementation.memory-transfer.strided-pad",
+        "implementation.memory-transfer.coalesce",
+        "implementation.memory-transfer.input-tile-residency",
+        "implementation.tiling-tail.valid-length"
+      ],
+      "intent_coverage": {
+        "kind": "existing registered broadcast intent sufficient",
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s3-pack-total-cost-A-1-v2",
+      "scenario": "s3-pack-total-cost",
+      "version": "A",
+      "repeat": 1,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "正确cp=64、双平面pack读8,257,536B写16,777,728B，geometry/有效输出/compact与分配量分别计。",
+        "S=8不能摊销全输入准备，S=32768保留paired发射优势有竞争依据；不是API减少即更快。",
+        "完整比较取消/保留/单份pack或局部融合路线，计入多block短搬运、Gather/padding、启动与共同资源。",
+        "双子例选择由I/S和布局事实说明，保持当前权重/k次序与特殊值备用/fallback；无已测收益。"
+      ],
+      "selected_actions": [
+        "action.fuse_kernel_chain",
+        "action.reduce_memory_traffic"
+      ],
+      "semantic_notes": "a保留paired pack并融合几何/输出；b取消pack按需读取，同owner本地几何；比较完整direct布局与阶段替代。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.indexing.coordinate_neighborhood",
+        "planning.layout.transpose",
+        "implementation.memory-transfer.strided-pad",
+        "implementation.precision-boundaries.numeric",
+        "implementation.buffer-lifetime.reuse"
+      ],
+      "intent_coverage": {
+        "kind": "existing traffic/fusion intent sufficient; no new derived reuse claimed because geometry already shared",
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s3-pack-total-cost-B-1-v2",
+      "scenario": "s3-pack-total-cost",
+      "version": "B",
+      "repeat": 1,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "正确cp=64、双平面pack读8,257,536B写16,777,728B，geometry/有效输出/compact与分配量分别计。",
+        "S=8不能摊销全输入准备，S=32768保留paired发射优势有竞争依据；不是API减少即更快。",
+        "完整比较取消/保留/单份pack或局部融合路线，计入多block短搬运、Gather/padding、启动与共同资源。",
+        "双子例选择由I/S和布局事实说明，保持当前权重/k次序与特殊值备用/fallback；无已测收益。"
+      ],
+      "selected_actions": [
+        "action.reduce_memory_traffic"
+      ],
+      "semantic_notes": "a仅直写最终输出删compact；b保留512B几何表并按需NCDHW读取+单owner紧凑写，比较单份pack。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.indexing.coordinate_neighborhood",
+        "planning.layout.transpose",
+        "implementation.memory-transfer.strided-pad",
+        "implementation.precision-boundaries.numeric",
+        "implementation.buffer-lifetime.reuse"
+      ],
+      "intent_coverage": {
+        "kind": "existing traffic/fusion intent sufficient; no new derived reuse claimed because geometry already shared",
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s3-pack-total-cost-B-2-v2",
+      "scenario": "s3-pack-total-cost",
+      "version": "B",
+      "repeat": 2,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "正确cp=64、双平面pack读8,257,536B写16,777,728B，geometry/有效输出/compact与分配量分别计。",
+        "S=8不能摊销全输入准备，S=32768保留paired发射优势有竞争依据；不是API减少即更快。",
+        "完整比较取消/保留/单份pack或局部融合路线，计入多block短搬运、Gather/padding、启动与共同资源。",
+        "双子例选择由I/S和布局事实说明，保持当前权重/k次序与特殊值备用/fallback；无已测收益。"
+      ],
+      "selected_actions": [
+        "action.reduce_memory_traffic"
+      ],
+      "semantic_notes": "a融合本地几何与输出；b单owner按需读取，staging逐点复用，明确整8点raw统一检测保持原software粒度。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.indexing.coordinate_neighborhood",
+        "planning.layout.transpose",
+        "implementation.memory-transfer.strided-pad",
+        "implementation.precision-boundaries.numeric",
+        "implementation.buffer-lifetime.reuse"
+      ],
+      "intent_coverage": {
+        "kind": "existing traffic/fusion intent sufficient; no new derived reuse claimed because geometry already shared",
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s4-derived-reuse-B-1-v2",
+      "scenario": "s4-derived-reuse",
+      "version": "B",
+      "repeat": 1,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "准确grid与几何仅依n/p，C128原重复524288次；X和结果仍依channel。",
+        "所选记录56B轴系数+偏移或72B坐标+轴系数，给实际存储/读取公式；明确禁止64B预合成3D权重以保护原左结合乘法。",
+        "比较本地状态/UB小表、GM全表与重算/向量化，计准备/消费/局部性/发布；C1无跨通道生成可省。",
+        "派生值与原输入驻留区分，保留每channel读取/24乘8加和全域边界；新Action有实际所有权/生命周期计划支撑。"
+      ],
+      "selected_actions": [
+        "action.batch_writeback",
+        "action.reuse_derived_results"
+      ],
+      "semantic_notes": "C1批量输出；C128采用Ct128/St16、8偏移+6轴系数=56B/点的UB记录，避免预合成权重；计896B局部容量和约29.36MB UB读取。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.indexing.coordinate_neighborhood",
+        "implementation.buffer-lifetime.derived-results",
+        "implementation.buffer-lifetime.reuse",
+        "implementation.precision-boundaries.numeric",
+        "implementation.scalar-control.constant_lifetime"
+      ],
+      "intent_coverage": {
+        "kind": "new derived-results intent and O recipe concretely applied",
+        "registered_action": "action.reuse_derived_results",
+        "method": "explicit producer/record/128 consumers/last use, resource and competing plans",
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s4-derived-reuse-B-2-v2",
+      "scenario": "s4-derived-reuse",
+      "version": "B",
+      "repeat": 2,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "准确grid与几何仅依n/p，C128原重复524288次；X和结果仍依channel。",
+        "所选记录56B轴系数+偏移或72B坐标+轴系数，给实际存储/读取公式；明确禁止64B预合成3D权重以保护原左结合乘法。",
+        "比较本地状态/UB小表、GM全表与重算/向量化，计准备/消费/局部性/发布；C1无跨通道生成可省。",
+        "派生值与原输入驻留区分，保留每channel读取/24乘8加和全域边界；新Action有实际所有权/生命周期计划支撑。"
+      ],
+      "selected_actions": [
+        "action.batch_writeback",
+        "action.reuse_derived_results"
+      ],
+      "semantic_notes": "C1批量输出；C128单点72B固定标量状态跨128通道复用，明确跨平面局部性/spill代价及St16、GM表竞争。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.indexing.coordinate_neighborhood",
+        "implementation.buffer-lifetime.derived-results",
+        "implementation.buffer-lifetime.reuse",
+        "implementation.precision-boundaries.numeric",
+        "implementation.scalar-control.constant_lifetime"
+      ],
+      "intent_coverage": {
+        "kind": "new derived-results intent and O recipe concretely applied",
+        "registered_action": "action.reuse_derived_results",
+        "method": "explicit producer/record/128 consumers/last use, resource and competing plans",
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s3-pack-total-cost-A-2-v2",
+      "scenario": "s3-pack-total-cost",
+      "version": "A",
+      "repeat": 2,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "正确cp=64、双平面pack读8,257,536B写16,777,728B，geometry/有效输出/compact与分配量分别计。",
+        "S=8不能摊销全输入准备，S=32768保留paired发射优势有竞争依据；不是API减少即更快。",
+        "完整比较取消/保留/单份pack或局部融合路线，计入多block短搬运、Gather/padding、启动与共同资源。",
+        "双子例选择由I/S和布局事实说明，保持当前权重/k次序与特殊值备用/fallback；无已测收益。"
+      ],
+      "selected_actions": [
+        "action.reduce_memory_traffic"
+      ],
+      "semantic_notes": "a保留paired pack并融合本地几何/输出；b每组2048B staging复用、32次Copy/Gather，保持raw整8点就绪后原数值判别。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.indexing.coordinate_neighborhood",
+        "planning.layout.transpose",
+        "implementation.memory-transfer.strided-pad",
+        "implementation.precision-boundaries.numeric",
+        "implementation.buffer-lifetime.reuse"
+      ],
+      "intent_coverage": {
+        "kind": "existing traffic/fusion intent sufficient; no new derived reuse claimed because geometry already shared",
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s4-derived-reuse-A-1-v2",
+      "scenario": "s4-derived-reuse",
+      "version": "A",
+      "repeat": 1,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "正确几何依n/p不依c，C128原524288次构造可降4096，X不可跨channel共享。",
+        "选3个int64低界+6个float轴系数48B记录，给48*S存/48*CS读及768B St16容量，避免非法合成权重。",
+        "比较本地D、原始grid驻留重算、GM表与内部转换，计全部消费、生命周期、布局/所有权与新成本；C1只做输出合批。",
+        "明确A缺适用派生复用Action但事实分析和条件计划正确，不用输入驻留/控制外提冒充；缺口不扣事实分。"
+      ],
+      "selected_actions": [
+        "action.batch_writeback"
+      ],
+      "semantic_notes": "b主方案为未注册派生复用提案，不能直接C3；另列reuse_input_tiles只驻留原grid的最强已注册替代。保留原左结合三次乘法与k顺序。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.indexing.coordinate_neighborhood",
+        "implementation.buffer-lifetime.reuse",
+        "implementation.scalar-control.constant_lifetime",
+        "implementation.precision-boundaries.numeric",
+        "implementation.memory-transfer.input-tile-residency"
+      ],
+      "intent_coverage": {
+        "kind": "accurate explicit missing registered derived-results intent; not a source-fact error",
+        "unregistered_proposal": "derived geometry reuse",
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s4-derived-reuse-A-2-v2",
+      "scenario": "s4-derived-reuse",
+      "version": "A",
+      "repeat": 2,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "正确几何依p不依c与128倍重复；不误算half或已预处理路径。",
+        "采用单点固定几何状态且不预乘三轴权重；单列私有状态/spill与8192B输出UB，比较本地/全表成本。",
+        "计520192次生成减少和访问顺序/32768个64B输出DMA等新成本；C1无跨通道复用，原grid驻留仍重算。",
+        "明确派生复用Action缺口，不能借batch_writeback给整个方案准入；来源事实正确，版本意图覆盖差异不扣事实分。"
+      ],
+      "selected_actions": [
+        "action.batch_writeback"
+      ],
+      "semantic_notes": "b每空间点几何即产即用跨128通道，输出St16块缓冲8192B；原grid驻留/几何重算为已注册替代；明确极大有限grid原契约缺口。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.indexing.coordinate_neighborhood",
+        "implementation.buffer-lifetime.reuse",
+        "implementation.scalar-control.constant_lifetime",
+        "implementation.precision-boundaries.numeric",
+        "implementation.memory-transfer.input-tile-residency"
+      ],
+      "intent_coverage": {
+        "kind": "accurate explicit missing registered derived-results intent; not a source-fact error",
+        "unregistered_proposal": "derived geometry reuse",
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s5-maximum-plan-cache-B-1-v2",
+      "scenario": "s5-maximum-plan-cache",
+      "version": "B",
+      "repeat": 1,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "准确float同形已是Vector Max，3单槽/49152B与每tile12项队列管理；必要数学和12MiB逻辑字节不变。",
+        "区分a仅D2H与b紧邻设备读，输入/输出cache分别比较，不把NORMAL当命中保证或DISABLE当确定收益。",
+        "比较管理表达、tile合批/预取与cache，计事件/分支/排空或新槽；5槽81920B等资源不沿用3槽计划。",
+        "p_same未覆盖所有拟议生命周期/策略/资源；补共同计划且不冒称broadcast/int64全域已验证，KEEP理由具体。"
+      ],
+      "selected_actions": [
+        "action.align_cache_policy"
+      ],
+      "semantic_notes": "主方案输入DISABLE/输出NORMAL，两例同代码；比较a输出bypass与b消费保留、双输入槽80KiB、tile96KiB、静态管理。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.elementwise.continuous",
+        "implementation.memory-transfer.cache-hint",
+        "implementation.pipeline-sync.pipeline",
+        "implementation.pipeline-sync.vector-static-lease",
+        "implementation.memory-transfer.coalesce"
+      ],
+      "intent_coverage": {
+        "kind": "new static-management Action/method available and compared, not selected as principal member",
+        "new_registered_action_available": "action.simplify_buffer_event_management",
+        "selected_new_intent": false,
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s5-maximum-plan-cache-B-2-v2",
+      "scenario": "s5-maximum-plan-cache",
+      "version": "B",
+      "repeat": 2,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "准确float同形已是Vector Max，3单槽/49152B与每tile12项队列管理；必要数学和12MiB逻辑字节不变。",
+        "区分a仅D2H与b紧邻设备读，输入/输出cache分别比较，不把NORMAL当命中保证或DISABLE当确定收益。",
+        "比较管理表达、tile合批/预取与cache，计事件/分支/排空或新槽；5槽81920B等资源不沿用3槽计划。",
+        "p_same未覆盖所有拟议生命周期/策略/资源；补共同计划且不冒称broadcast/int64全域已验证，KEEP理由具体。"
+      ],
+      "selected_actions": [
+        "action.coalesce_contiguous_transfers"
+      ],
+      "semantic_notes": "主方案两4096搬运合批8192但Max保留原count，96KiB；比较80KiB预取、静态租约及按输出消费者区别cache。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.elementwise.continuous",
+        "implementation.memory-transfer.cache-hint",
+        "implementation.pipeline-sync.pipeline",
+        "implementation.pipeline-sync.vector-static-lease",
+        "implementation.memory-transfer.coalesce"
+      ],
+      "intent_coverage": {
+        "kind": "new static-management Action/method available and compared, not selected as principal member",
+        "new_registered_action_available": "action.simplify_buffer_event_management",
+        "selected_new_intent": false,
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s6-history-parent-rename-B-1-v2",
+      "scenario": "s6-history-parent-rename",
+      "version": "B",
+      "repeat": 1,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "L1/Fir漏半数输出、1024错误，明确不能以0.4ms正确性能排名。",
+        "L2/Oak正确记录与其enqueue短窗计时分离，选L0/Pine作为可信父本且保留独立身份。",
+        "拒绝0.2ms五倍加速；未来完整正确性+同步完成窗比较，不外推修复后速度。",
+        "改名仅映射身份，保持相同机制/成本/Ct2-St16计划与比较；无工具/硬件/晋升虚构。"
+      ],
+      "selected_actions": [
+        "action.reuse_derived_results"
+      ],
+      "semantic_notes": "完整nearest理解，Ct2跨通道派生索引复用与原连续owner原值cache竞争；改名变体事实/计划一致，历史原始窗口不沿用收益。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.indexing.coordinate_neighborhood",
+        "implementation.buffer-lifetime.derived-results",
+        "implementation.precision-boundaries.numeric",
+        "optimization-history.md"
+      ],
+      "intent_coverage": {
+        "kind": "new derived-results intent concretely applied; history invariants unchanged",
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s6-history-parent-rename-B-2-v2",
+      "scenario": "s6-history-parent-rename",
+      "version": "B",
+      "repeat": 2,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "L1/Fir漏半数输出、1024错误，明确不能以0.4ms正确性能排名。",
+        "L2/Oak正确记录与其enqueue短窗计时分离，选L0/Pine作为可信父本且保留独立身份。",
+        "拒绝0.2ms五倍加速；未来完整正确性+同步完成窗比较，不外推修复后速度。",
+        "改名仅映射身份，保持相同机制/成本/Ct2-St16计划与比较；无工具/硬件/晋升虚构。"
+      ],
+      "selected_actions": [
+        "action.reuse_derived_results"
+      ],
+      "semantic_notes": "同样选L0/Pine；Ct2-St16派生索引复用与Ct8竞争，显式计安全guard和失败时额外重算读取；重命名后成本/方案相同。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.indexing.coordinate_neighborhood",
+        "implementation.buffer-lifetime.derived-results",
+        "implementation.precision-boundaries.numeric",
+        "optimization-history.md"
+      ],
+      "intent_coverage": {
+        "kind": "new derived-results intent concretely applied; history invariants unchanged",
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s6-history-parent-rename-A-1-v2",
+      "scenario": "s6-history-parent-rename",
+      "version": "A",
+      "repeat": 1,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "L1/Fir漏半数输出、1024错误，明确不能以0.4ms正确性能排名。",
+        "L2/Oak正确记录与其enqueue短窗计时分离，选L0/Pine作为可信父本且保留独立身份。",
+        "拒绝0.2ms五倍加速；未来完整正确性+同步完成窗比较，不外推修复后速度。",
+        "改名仅映射身份，保持相同机制/成本/Ct2-St16计划与比较；无工具/硬件/晋升虚构。"
+      ],
+      "selected_actions": [
+        "action.hoist_invariant_control"
+      ],
+      "semantic_notes": "选L0/Pine，按原owner固定channel空间段解码/地址递推，保留输出与原数值。比较原grid驻留，并将派生索引复用记为注册能力缺口，改名后所有成本一致。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.indexing.coordinate_neighborhood",
+        "implementation.scalar-control.hot_loop_address",
+        "implementation.scalar-control.tilingdata_access",
+        "implementation.precision-boundaries.numeric",
+        "optimization-history.md"
+      ],
+      "intent_coverage": {
+        "kind": "existing control intent selected; derived-results alternative correctly marked unregistered gap",
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s6-history-parent-rename-A-2-v2",
+      "scenario": "s6-history-parent-rename",
+      "version": "A",
+      "repeat": 2,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "L1/Fir漏半数输出、1024错误，明确不能以0.4ms正确性能排名。",
+        "L2/Oak正确记录与其enqueue短窗计时分离，选L0/Pine作为可信父本且保留独立身份。",
+        "拒绝0.2ms五倍加速；未来完整正确性+同步完成窗比较，不外推修复后速度。",
+        "改名仅映射身份，保持相同机制/成本/Ct2-St16计划与比较；无工具/硬件/晋升虚构。"
+      ],
+      "selected_actions": [
+        "action.batch_writeback"
+      ],
+      "semantic_notes": "同L0/Pine父本，U64单槽批量输出，原grid驻留和未注册派生复用为竞争方向；只改名后成本与方案严格一致。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.indexing.coordinate_neighborhood",
+        "implementation.memory-transfer.coalesce",
+        "implementation.tiling-tail.valid-length",
+        "implementation.pipeline-sync.fallback",
+        "implementation.precision-boundaries.numeric",
+        "optimization-history.md"
+      ],
+      "intent_coverage": {
+        "kind": "existing control intent selected; derived-results alternative correctly marked unregistered gap",
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s5-maximum-plan-cache-A-2-v2",
+      "scenario": "s5-maximum-plan-cache",
+      "version": "A",
+      "repeat": 2,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "准确同形float32已向量化、3单物理槽49152B；还原队列完整生产消费顺序，不认定存在全部串行。",
+        "a仅D2H/b紧邻设备读区别明确，输入DISABLE为竞争方案、输出保持默认/NORMAL，不统一bypass。",
+        "主选2+2+1输入前瞻，计81920B与序言/排空/队列depth1；与96KiB合批和cache比较全部必要流量/调用不变及新成本。",
+        "p_same只含3槽，不能给5槽/新生命周期背书；新共同计划、尾部、别名和fallback范围具体。"
+      ],
+      "selected_actions": [
+        "action.software_pipeline_stages"
+      ],
+      "semantic_notes": "主选输入双槽前瞻，cache/更大连续搬运为强替代；未讨论显式静态buffer/event方法，作为版本方法覆盖缺失另记，不将正确成本事实记错。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.elementwise.continuous",
+        "implementation.pipeline-sync.pipeline",
+        "implementation.pipeline-sync.fallback",
+        "implementation.memory-transfer.cache-hint",
+        "implementation.memory-transfer.coalesce"
+      ],
+      "intent_coverage": {
+        "kind": "existing pipeline intent selected; new static-management method absent from A and not independently compared",
+        "selected_new_intent": false,
+        "new_intent_name_bonus": false
+      }
+    },
+    {
+      "run_id": "s5-maximum-plan-cache-A-1-v2",
+      "scenario": "s5-maximum-plan-cache",
+      "version": "A",
+      "repeat": 1,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "准确同形float32已向量化、3单物理槽49152B；还原队列完整生产消费顺序，不认定存在全部串行。",
+        "a仅D2H/b紧邻设备读区别明确，输入DISABLE为竞争方案、输出保持默认/NORMAL，不统一bypass。",
+        "主选2+2+1输入前瞻，计81920B与序言/排空/队列depth1；与96KiB合批和cache比较全部必要流量/调用不变及新成本。",
+        "p_same只含3槽，不能给5槽/新生命周期背书；新共同计划、尾部、别名和fallback范围具体。"
+      ],
+      "selected_actions": [
+        "action.coalesce_contiguous_transfers"
+      ],
+      "semantic_notes": "主选两4096搬运合批8192，Max保持两原子片，96KiB；与80KiB预取和cache比较。未提供静态buffer/event方法比较，版本方法覆盖缺失单列。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance",
+      "adopted_document_ids": [
+        "planning.elementwise.continuous",
+        "implementation.memory-transfer.coalesce",
+        "implementation.pipeline-sync.pipeline",
+        "implementation.memory-transfer.cache-hint",
+        "implementation.tiling-tail.valid-length"
+      ],
+      "intent_coverage": {
+        "kind": "existing coalesce intent selected; new static-management method absent from A and not independently compared",
+        "selected_new_intent": false,
+        "new_intent_name_bonus": false
+      }
+    }
+  ]
+}

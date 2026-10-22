@@ -1,0 +1,265 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aprof.local/schemas/exploration-request.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "frozen_manifest_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "session_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_hashes": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "baseline": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "candidate": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              }
+            },
+            "required": [
+              "baseline",
+              "candidate"
+            ]
+          },
+          "patch_artifact_hash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "handler_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "handler_version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "parameters": {
+            "type": "object"
+          },
+          "coverage_gap": {
+            "type": "string",
+            "minLength": 1
+          },
+          "attempt_evidence_hash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "session_id",
+          "source_hashes",
+          "patch_artifact_hash",
+          "handler_id",
+          "handler_version",
+          "parameters",
+          "coverage_gap",
+          "attempt_evidence_hash"
+        ]
+      },
+      "minItems": 1
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "static_review": {
+            "enum": [
+              "passed",
+              "failed",
+              "not_run"
+            ]
+          },
+          "build": {
+            "enum": [
+              "passed",
+              "failed",
+              "not_run"
+            ]
+          },
+          "accuracy": {
+            "enum": [
+              "passed",
+              "failed",
+              "not_run"
+            ]
+          },
+          "runtime": {
+            "enum": [
+              "passed",
+              "failed",
+              "not_run"
+            ]
+          },
+          "semantic": {
+            "enum": [
+              "passed",
+              "failed",
+              "not_run"
+            ]
+          },
+          "scope": {
+            "enum": [
+              "passed",
+              "failed",
+              "not_run"
+            ]
+          },
+          "portability": {
+            "enum": [
+              "passed",
+              "failed",
+              "not_run"
+            ]
+          },
+          "baseline_samples_ns": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          },
+          "candidate_samples_ns": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          },
+          "mechanism_alignment": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "heldout_regressions": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "artifacts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          }
+        },
+        "required": [
+          "candidate_id",
+          "static_review",
+          "build",
+          "accuracy",
+          "runtime",
+          "semantic",
+          "scope",
+          "portability",
+          "artifacts"
+        ]
+      },
+      "minItems": 1
+    },
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_cv": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.05
+        },
+        "max_heldout_regression": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.03
+        },
+        "require_mechanism_alignment": {
+          "const": true
+        },
+        "required_artifacts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "allOf": [
+            {
+              "contains": {
+                "const": "build_log"
+              }
+            },
+            {
+              "contains": {
+                "const": "accuracy_report"
+              }
+            },
+            {
+              "contains": {
+                "const": "measurement_report"
+              }
+            }
+          ]
+        },
+        "min_pairs": {
+          "type": "integer",
+          "minimum": 30
+        },
+        "lcb_confidence": {
+          "type": "number",
+          "exclusiveMinimum": 0.5,
+          "exclusiveMaximum": 1
+        },
+        "min_speedup_lcb": {
+          "type": "number",
+          "minimum": 1.03
+        },
+        "bootstrap_resamples": {
+          "type": "integer",
+          "minimum": 100
+        }
+      },
+      "required": []
+    }
+  },
+  "required": [
+    "schema_version",
+    "frozen_manifest_hash",
+    "candidates",
+    "evidence",
+    "config"
+  ]
+}

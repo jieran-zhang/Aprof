@@ -1,0 +1,105 @@
+{
+  "task_id": "raw-case-13",
+  "known_conditions": [
+    {
+      "predicate": "constraint.task_ownership",
+      "state": true,
+      "basis": "原host为输入/输出各自分配GM；每核begin=c*blockLength，end=min(begin+blockLength,total)，或RoPE以rowPerBlock分完整row。条件方案在每个输出有效片上只设置唯一owner，不引入写共享、原子或跨核归约。若改任务分解，必须在C2重新冻结实现；这里是数学所有权证明。",
+      "scope": "本项精确静态证明；没有把尚未核验的API、资源、完整精度或物理写许可默认置true。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/apply_rotary_pos_emb_kernel.asc",
+          "sha256": "sha256:f6f595a710eb365ec0e75b5aaf88c49e1ab34676882d911c50b1279b8fa9e9dc",
+          "locator": "lines:10-22"
+        },
+        {
+          "path": "source/op_kernel/apply_rotary_pos_emb_tiling.h",
+          "sha256": "sha256:1b705c2c7df937c7d1aa6805d4323e9250f8ee200b428c42be0bee3674fecd44",
+          "locator": "lines:6-10"
+        },
+        {
+          "path": "source/op_host/apply_rotary_pos_emb.asc",
+          "sha256": "sha256:78aacec1912631806461ea039220f93fbb86ad0515d624c0f20c13bfc1986ca2",
+          "locator": "lines:14-15"
+        }
+      ]
+    },
+    {
+      "predicate": "constraint.output_ownership",
+      "state": true,
+      "basis": "原host为输入/输出各自分配GM；每核begin=c*blockLength，end=min(begin+blockLength,total)，或RoPE以rowPerBlock分完整row。条件方案在每个输出有效片上只设置唯一owner，不引入写共享、原子或跨核归约。若改任务分解，必须在C2重新冻结实现；这里是数学所有权证明。",
+      "scope": "本项精确静态证明；没有把尚未核验的API、资源、完整精度或物理写许可默认置true。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/apply_rotary_pos_emb_kernel.asc",
+          "sha256": "sha256:f6f595a710eb365ec0e75b5aaf88c49e1ab34676882d911c50b1279b8fa9e9dc",
+          "locator": "lines:10-22"
+        },
+        {
+          "path": "source/op_kernel/apply_rotary_pos_emb_tiling.h",
+          "sha256": "sha256:1b705c2c7df937c7d1aa6805d4323e9250f8ee200b428c42be0bee3674fecd44",
+          "locator": "lines:6-10"
+        },
+        {
+          "path": "source/op_host/apply_rotary_pos_emb.asc",
+          "sha256": "sha256:78aacec1912631806461ea039220f93fbb86ad0515d624c0f20c13bfc1986ca2",
+          "locator": "lines:14-15"
+        }
+      ]
+    },
+    {
+      "predicate": "constraint.valid_lengths",
+      "state": true,
+      "basis": "全部20case非空；尾段定义valid=min(U,end-off)>0；每次GM只读写valid，不把padding当有效元素。Transpose矩形同时裁剪有效行列，RoPE完整row，Resize列片止于row末。原host与tiling形状上界给出地址域；R2矩阵/索引公式逐组复核。",
+      "scope": "本项精确静态证明；没有把尚未核验的API、资源、完整精度或物理写许可默认置true。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/apply_rotary_pos_emb_kernel.asc",
+          "sha256": "sha256:f6f595a710eb365ec0e75b5aaf88c49e1ab34676882d911c50b1279b8fa9e9dc",
+          "locator": "lines:10-22"
+        },
+        {
+          "path": "source/op_kernel/apply_rotary_pos_emb_tiling.h",
+          "sha256": "sha256:1b705c2c7df937c7d1aa6805d4323e9250f8ee200b428c42be0bee3674fecd44",
+          "locator": "lines:6-10"
+        },
+        {
+          "path": "source/op_host/apply_rotary_pos_emb.asc",
+          "sha256": "sha256:78aacec1912631806461ea039220f93fbb86ad0515d624c0f20c13bfc1986ca2",
+          "locator": "lines:14-15"
+        }
+      ]
+    }
+  ],
+  "unknown_action_conditions": [
+    "constraint.capacity",
+    "constraint.semantic_equivalence"
+  ],
+  "implementation_note": "任何API/容量/numeric unknown未补齐前不得成为C3实施授权。所有true条件逐项有源码或数学依据，未按前提名称默认认定。",
+  "mathematical_facts": [
+    {
+      "predicate": "source.element_mapping_equivalence",
+      "state": true,
+      "basis": "计划冻结half-mode d<H时q[d]*c[d]+(-q[d+H])*s[d]以及另一半对应正号；k同理；每个输出不依赖其他输出，row边界不变。 此事实只证明地址/目标表达式关系，不证明完整浮点语义。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/apply_rotary_pos_emb_kernel.asc",
+          "sha256": "sha256:f6f595a710eb365ec0e75b5aaf88c49e1ab34676882d911c50b1279b8fa9e9dc",
+          "locator": "lines:10-22"
+        },
+        {
+          "path": "source/op_kernel/apply_rotary_pos_emb_tiling.h",
+          "sha256": "sha256:1b705c2c7df937c7d1aa6805d4323e9250f8ee200b428c42be0bee3674fecd44",
+          "locator": "lines:6-10"
+        }
+      ],
+      "limits": "half-mode partner/row映射和目标算术表达式已经静态证明，但目标Vector Mul/Muls/Add是否保留原volatile FP32逐步舍入、正负零、NaN/Inf传播，以及half CAST_NONE和BF16 CAST_ROUND，尚无完整API/编译语义依据。constraint.semantic_equivalence包含这些条件，故保持unknown；不能用数学映射代替全域等价。"
+    }
+  ],
+  "unknown_condition_details": {
+    "constraint.capacity": "实际UB与Mul临时区/保留未知；R=1..8须按36RD+低精度10RD+Tmp+reserve逐组预算。",
+    "constraint.target_api": "目标SDK Mul/Muls/Add count以及alias、尾长度、完成边支持未验证。",
+    "constraint.numeric_order": "Vector逐步舍入与原volatile float乘加及bf16 CAST_ROUND须核对；不允许FMA融合或改变特殊值规则。",
+    "constraint.semantic_equivalence": "half-mode partner/row映射和目标算术表达式已经静态证明，但目标Vector Mul/Muls/Add是否保留原volatile FP32逐步舍入、正负零、NaN/Inf传播，以及half CAST_NONE和BF16 CAST_ROUND，尚无完整API/编译语义依据。constraint.semantic_equivalence包含这些条件，故保持unknown；不能用数学映射代替全域等价。"
+  }
+}

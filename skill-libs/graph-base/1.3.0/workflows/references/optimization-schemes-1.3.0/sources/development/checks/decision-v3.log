@@ -1,0 +1,33 @@
+action-decision/v3 historical CPU regression evidence (curated; no rerun)
+Unique coverage: 21 base + 4 supplement - 1 overlap + 1 ancestor = 25 unique passing tests.
+Total successful test executions: 26. Hardware: none. Source package edits for this report: none.
+Summaries below reproduce prior tool results; this is not a complete raw stdout archive.
+
+base-21
+cwd: /mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/skill-libs/graph-base/1.3.0
+environment: PYTHONPATH=runtime/src
+command_argv: ["python", "-m", "pytest", "-q", "runtime/tests/test_action_decision_v3.py", "--basetemp", "/dev/shm/aprof-action-decision-v3-final", "--disable-warnings", "--maxfail=1"]
+fixture_package: /dev/shm/aprof-action-decision-v3-final/scheme-package0/package
+result: 21 passed in 384.43s (0:06:24)
+exit_code: 0
+
+supplement-4
+cwd: /mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/skill-libs/graph-base/1.3.0
+environment: PYTHONPATH=runtime/src
+command_argv: ["python", "-m", "pytest", "-q", "runtime/tests/test_action_decision_v3.py", "-k", "distinct_targets or distinct_registered or numerically_double or real_parameter_change", "--basetemp", "/dev/shm/aprof-action-decision-v3-extra-final", "--disable-warnings", "--maxfail=1"]
+fixture_package: /dev/shm/aprof-action-decision-v3-extra-final/scheme-package0/package
+result: 4 passed, 20 deselected in 139.68s (0:02:19)
+exit_code: 0
+
+ancestor-1
+cwd: /mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/skill-libs/graph-base/1.3.0
+environment: PYTHONPATH=runtime/src
+command_argv: ["python", "-m", "pytest", "-q", "runtime/tests/test_action_decision_v3.py", "-k", "bound_ancestor", "--basetemp", "/dev/shm/aprof-action-decision-v3-history", "--disable-warnings", "--maxfail=1"]
+fixture_package: /dev/shm/aprof-action-decision-v3-history/scheme-package0/package
+result: 1 passed, 24 deselected in 95.94s (0:01:35)
+exit_code: 0
+
+Overlap: test_members_can_have_distinct_targets_without_borrowing_evidence
+Source/schema hashes and all 25 test IDs are recorded in decision-v3.json.
+Hashes distinguish each retained fixture snapshot from the current working tree.
+No single final-tree 25-case rerun is claimed. Earlier fixture-development failures are disclosed in the JSON.

@@ -1,0 +1,553 @@
+{
+  "schema_version": "aprof.action-decision/v1",
+  "task_id": "raw15-case-01",
+  "context_hash": "sha256:7a564c209399b02650433a706a6c323535d9ac071fc6c1bf10da64ce309590cf",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "reasoning_ref": {
+    "path": "R1-reasoning.json",
+    "sha256": "sha256:4da04c6d945ab4dc2e9be7f00b9f8179c1f1719da4671e69960edd2597215f71"
+  },
+  "reasoning_hash": "sha256:f594092196bdddfb6bcd283713166c0e6dabf6a0507166c3720bcc52ad701847",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/f3a6d55be57ea647180e624b4fffe6a25b55beea2b35d140d50fe71108f4232d.json",
+    "sha256": "sha256:02d64ca8cc4efafae4665940ea3cfd6bf955b40e79d76125906445f4337450a4"
+  },
+  "round": 1,
+  "current_parent_ref": {
+    "path": "source-refs.json",
+    "sha256": "sha256:f81e02f6cfea766d984503daf84f0e4164825075a47a98488a83cb6d262a2d85"
+  },
+  "opportunities": [
+    {
+      "id": "pipeline",
+      "hypothesis_id": "pipeline",
+      "action_id": "action.software_pipeline_stages",
+      "action_instance_id": "selected-intent",
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel_structure",
+        "source.host_dispatch",
+        "workload.matrix",
+        "derived.source_cost"
+      ],
+      "cost_mechanism": "每tile固定CopyIn→Compute→CopyOut，输入输出各1物理槽；跨tile无数学依赖，新增槽可打开预取窗口。",
+      "predictions": [
+        {
+          "id": "pipeline.source",
+          "kind": "source_work",
+          "statement": "输入输出物理槽各由1变2，GM有效字节不变2sN；允许copy(t+1)与compute(t)依赖独立。",
+          "check_method": "源码/整数公式及R2-static-evidence.json；后续候选需对照真实patch",
+          "on_support": "保留此结构候选并满足API/容量域",
+          "on_refute": "修正字节/生命周期/地址模型后重新比较"
+        },
+        {
+          "id": "pipeline.time",
+          "kind": "performance",
+          "statement": "此结构变化可能降低所列case的Task时间；当前没有测得改善。",
+          "check_method": "后继完整原20case正确性后按包统一协议测试，区分大小/尾/特殊值组",
+          "on_support": "按同scope结果确认适用域，不能直接授予因果归因",
+          "on_refute": "检查预测是否落实以及额外shuffle/小tile/同步成本，回退或再规划"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_overlap_low",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "pipeline.time",
+          "unknown_id": "pipeline.legacy_symptom_profile_overlap_low",
+          "reason": "来源机制与当前结构支持比较；未将源码次数推导为测得时延。"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "pipeline.time",
+          "unknown_id": "pipeline.cost_reduction",
+          "reason": "来源机制与当前结构支持比较；未将源码次数推导为测得时延。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "pipeline.legacy_symptom_profile_overlap_low",
+          "kind": "performance",
+          "fact": "symptom.profile.overlap_low",
+          "expected_state": null,
+          "statement": "当前同scope硬件阶段重叠/发射与关键路径成本未测；相比仅缓存multiplier/shift，本方案作用于两路GM与完整Vector链的调度；相比扩大4096 tile，不要求先认定发射成本主导。代价是额外物理槽和序言尾声。 低精度fi/fo复用可减少4T并作为B不足时的后继，但不覆盖FP32路径，也不单独产生预取窗口。",
+          "affects": "旧条件 symptom.profile.overlap_low 的期望状态为 true。低重叠是性能假设/判别依据，依赖及生命周期正确才是重排的实施安全条件。",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "pipeline.cost_reduction",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "当前同scope硬件阶段重叠/发射与关键路径成本未测；相比仅缓存multiplier/shift，本方案作用于两路GM与完整Vector链的调度；相比扩大4096 tile，不要求先认定发射成本主导。代价是额外物理槽和序言尾声。 低精度fi/fo复用可减少4T并作为B不足时的后继，但不覆盖FP32路径，也不单独产生预取窗口。",
+          "affects": "合法预取/计算/写回重排可能缩短稳态关键路径；短任务、单tile、最慢阶段不变或额外buffer成本会限制收益。",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "pipeline.constraint.capacity",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "目标B可用与双物理槽队列/事件支持尚无真实architecture/SDK证据；T=4096数据区65536字节，不把它当已获容量。",
+          "affects": "具体T/物理槽或alias/shuffle的实施合法性",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "pipeline.constraint.target_api_support",
+          "kind": "implementation_safety",
+          "fact": "constraint.target_api_support",
+          "expected_state": true,
+          "statement": "目标B可用与双物理槽队列/事件支持尚无真实architecture/SDK证据；T=4096数据区65536字节，不把它当已获容量。",
+          "affects": "具体T/物理槽或alias/shuffle的实施合法性",
+          "resolution": "check_before_implementation"
+        }
+      ],
+      "strongest_alternative_id": "storage",
+      "comparison": "相比仅缓存multiplier/shift，本方案作用于两路GM与完整Vector链的调度；相比扩大4096 tile，不要求先认定发射成本主导。代价是额外物理槽和序言尾声。 低精度fi/fo复用可减少4T并作为B不足时的后继，但不覆盖FP32路径，也不单独产生预取窗口。",
+      "disposition": "selected",
+      "reason": "相比仅缓存multiplier/shift，本方案作用于两路GM与完整Vector链的调度；相比扩大4096 tile，不要求先认定发射成本主导。代价是额外物理槽和序言尾声。 低精度fi/fo复用可减少4T并作为B不足时的后继，但不覆盖FP32路径，也不单独产生预取窗口。"
+    },
+    {
+      "id": "storage",
+      "hypothesis_id": "storage",
+      "action_id": "action.reuse_disjoint_onchip_buffers",
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "3",
+        "4",
+        "6",
+        "7",
+        "9",
+        "10",
+        "12",
+        "14",
+        "16",
+        "17",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel_structure",
+        "source.host_dispatch",
+        "workload.matrix",
+        "derived.source_cost"
+      ],
+      "cost_mechanism": "低精度Exp的fi只在Muls(fo,fi,multiplier)被消费，后续Adds/Exp均只读fo；使用fi作完全原地计算可删除fpOut_的4T字节，FP32路径原本已直接用out。",
+      "predictions": [
+        {
+          "id": "storage.source",
+          "kind": "source_work",
+          "statement": "低精度单槽显式UB从12T变8T，T4096省16384字节；GM字节、Cast次数与原Muls/Adds/Exp次序保持。",
+          "check_method": "源码/整数公式及R2-static-evidence.json；后续候选需对照真实patch",
+          "on_support": "保留此结构候选并满足API/容量域",
+          "on_refute": "修正字节/生命周期/地址模型后重新比较"
+        },
+        {
+          "id": "storage.time",
+          "kind": "performance",
+          "statement": "此结构变化可能降低所列case的Task时间；当前没有测得改善。",
+          "check_method": "后继完整原20case正确性后按包统一协议测试，区分大小/尾/特殊值组",
+          "on_support": "按同scope结果确认适用域，不能直接授予因果归因",
+          "on_refute": "检查预测是否落实以及额外shuffle/小tile/同步成本，回退或再规划"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_source_ub_live_bytes_near_capacity",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "storage.time",
+          "unknown_id": "storage.legacy_symptom_source_ub_live_bytes_near_capacity",
+          "reason": "来源机制与当前结构支持比较；未将源码次数推导为测得时延。"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "storage.time",
+          "unknown_id": "storage.cost_reduction",
+          "reason": "来源机制与当前结构支持比较；未将源码次数推导为测得时延。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "storage.legacy_symptom_source_ub_live_bytes_near_capacity",
+          "kind": "performance",
+          "fact": "symptom.source.ub_live_bytes_near_capacity",
+          "expected_state": null,
+          "statement": "当前真实容量占比未知；物理分配减少已单独推导，是否释放关键资源/能提高T仍需目标B。是流水的最强资源替代：低精度可省16384字节并扩tile域，但不直接打开跨tile重叠，且不影响7个FP32 case。本轮先检验作用全部dtype的独立槽流水；若双槽B不足，优先把这个复用方案作为条件后继，不能直接拼成未确认的两动作实现。",
+          "affects": "旧条件 symptom.source.ub_live_bytes_near_capacity 的期望状态为 true。接近容量上限影响收益与选择，不决定不重叠buffer复用是否合法；安全由生命周期、容量和语义约束负责。",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "storage.cost_reduction",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "当前同scope硬件阶段重叠/发射与关键路径成本未测；是流水的最强资源替代：低精度可省16384字节并扩tile域，但不直接打开跨tile重叠，且不影响7个FP32 case。本轮先检验作用全部dtype的独立槽流水；若双槽B不足，优先把这个复用方案作为条件后继，不能直接拼成未确认的两动作实现。",
+          "affects": "复用可降低物理峰值，并可能使更合适tile或流水深度可行；若释放容量无用途，时延可能不变。",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "pipeline",
+      "comparison": "是流水的最强资源替代：低精度可省16384字节并扩tile域，但不直接打开跨tile重叠，且不影响7个FP32 case。本轮先检验作用全部dtype的独立槽流水；若双槽B不足，优先把这个复用方案作为条件后继，不能直接拼成未确认的两动作实现。",
+      "disposition": "deferred",
+      "reason": "是流水的最强资源替代：低精度可省16384字节并扩tile域，但不直接打开跨tile重叠，且不影响7个FP32 case。本轮先检验作用全部dtype的独立槽流水；若双槽B不足，优先把这个复用方案作为条件后继，不能直接拼成未确认的两动作实现。"
+    },
+    {
+      "id": "tile",
+      "hypothesis_id": "tile",
+      "action_id": "action.dispatch_by_workload",
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel_structure",
+        "source.host_dispatch",
+        "workload.matrix",
+        "derived.source_cost"
+      ],
+      "cost_mechanism": "三dtype使用同一个4096 tile；FP32为8T字节、低精度为12T字节，允许按资源选择不同T。",
+      "predictions": [
+        {
+          "id": "tile.source",
+          "kind": "source_work",
+          "statement": "T改变使总tile数变为Σceil(length_core/T)，单次算法元素运算不变。",
+          "check_method": "源码/整数公式及R2-static-evidence.json；后续候选需对照真实patch",
+          "on_support": "保留此结构候选并满足API/容量域",
+          "on_refute": "修正字节/生命周期/地址模型后重新比较"
+        },
+        {
+          "id": "tile.time",
+          "kind": "performance",
+          "statement": "此结构变化可能降低所列case的Task时间；当前没有测得改善。",
+          "check_method": "后继完整原20case正确性后按包统一协议测试，区分大小/尾/特殊值组",
+          "on_support": "按同scope结果确认适用域，不能直接授予因果归因",
+          "on_refute": "检查预测是否落实以及额外shuffle/小tile/同步成本，回退或再规划"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "tile.time",
+          "unknown_id": "tile.cost_reduction",
+          "reason": "来源机制与当前结构支持比较；未将源码次数推导为测得时延。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "tile.cost_reduction",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "当前同scope硬件阶段重叠/发射与关键路径成本未测；大tile可减循环但不能直接解决单槽依赖；20case均约百万级以上，缺少独立的小任务开销区间证据，因此不先造shape阈值。",
+          "affects": "若不同区间受不同工作量/容量/调度成本控制，分组策略可改善相应case；额外分支也可能无益。",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "pipeline",
+      "comparison": "大tile可减循环但不能直接解决单槽依赖；20case均约百万级以上，缺少独立的小任务开销区间证据，因此不先造shape阈值。",
+      "disposition": "deferred",
+      "reason": "大tile可减循环但不能直接解决单槽依赖；20case均约百万级以上，缺少独立的小任务开销区间证据，因此不先造shape阈值。"
+    },
+    {
+      "id": "metadata",
+      "hypothesis_id": "metadata",
+      "action_id": "action.hoist_invariant_control",
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel_structure",
+        "source.host_dispatch",
+        "workload.matrix",
+        "derived.source_cost"
+      ],
+      "cost_mechanism": "Process反复读取tileElements，Compute读multiplier/shift；字段在一次launch内不变。",
+      "predictions": [
+        {
+          "id": "metadata.source",
+          "kind": "source_work",
+          "statement": "源码字段访问由每tile移至Init，真实指令减少须编译确认。",
+          "check_method": "源码/整数公式及R2-static-evidence.json；后续候选需对照真实patch",
+          "on_support": "保留此结构候选并满足API/容量域",
+          "on_refute": "修正字节/生命周期/地址模型后重新比较"
+        },
+        {
+          "id": "metadata.time",
+          "kind": "performance",
+          "statement": "此结构变化可能降低所列case的Task时间；当前没有测得改善。",
+          "check_method": "后继完整原20case正确性后按包统一协议测试，区分大小/尾/特殊值组",
+          "on_support": "按同scope结果确认适用域，不能直接授予因果归因",
+          "on_refute": "检查预测是否落实以及额外shuffle/小tile/同步成本，回退或再规划"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "metadata.time",
+          "unknown_id": "metadata.cost_reduction",
+          "reason": "来源机制与当前结构支持比较；未将源码次数推导为测得时延。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "metadata.cost_reduction",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "当前同scope硬件阶段重叠/发射与关键路径成本未测；编译器可能已外提且每tile处理4096个Exp，当前没有证据说明字段load比流水更重要；保留竞争候选。",
+          "affects": "只有编译后仍保留的重复load/控制被减少且作用于关键路径时才可能加速；增加活跃寄存器、代码体积或CSE已完成时可能无益。",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "pipeline",
+      "comparison": "编译器可能已外提且每tile处理4096个Exp，当前没有证据说明字段load比流水更重要；保留竞争候选。",
+      "disposition": "deferred",
+      "reason": "编译器可能已外提且每tile处理4096个Exp，当前没有证据说明字段load比流水更重要；保留竞争候选。"
+    }
+  ],
+  "evidence_requests": [
+    {
+      "id": "check.constraint.capacity",
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "unknown_ids": [
+        "pipeline.constraint.capacity"
+      ],
+      "method": "由后继获准的实际设备/SDK资料核验 constraint.capacity；以本报告公式和全部20case有效域查参数，当前不调用硬件。",
+      "discriminating_results": [
+        {
+          "outcome": "目标支持且公式≤真实B",
+          "decision_effect": "冻结合法T/槽/alias参数，构建并做原20case正确性后试验"
+        },
+        {
+          "outcome": "某参数超容量或API不支持",
+          "decision_effect": "减T/保留原独立buffer或原segment fallback，不改精度与输入域"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本次只允许源码与CPU分析",
+      "defer_reason": "目标B可用与双物理槽队列/事件支持尚无真实architecture/SDK证据；T=4096数据区65536字节，不把它当已获容量。"
+    },
+    {
+      "id": "check.constraint.target_api_support",
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "unknown_ids": [
+        "pipeline.constraint.target_api_support"
+      ],
+      "method": "由后继获准的实际设备/SDK资料核验 constraint.target_api_support；以本报告公式和全部20case有效域查参数，当前不调用硬件。",
+      "discriminating_results": [
+        {
+          "outcome": "目标支持且公式≤真实B",
+          "decision_effect": "冻结合法T/槽/alias参数，构建并做原20case正确性后试验"
+        },
+        {
+          "outcome": "某参数超容量或API不支持",
+          "decision_effect": "减T/保留原独立buffer或原segment fallback，不改精度与输入域"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本次只允许源码与CPU分析",
+      "defer_reason": "目标B可用与双物理槽队列/事件支持尚无真实architecture/SDK证据；T=4096数据区65536字节，不把它当已获容量。"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+        "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+      },
+      "locator": "lines:272-316",
+      "effect_kind": "mechanism",
+      "before": "当前源码结构：每tile固定CopyIn→Compute→CopyOut，输入输出各1物理槽；跨tile无数学依赖，新增槽可打开预取窗口。",
+      "after": "正文机制/边界确认：相比仅缓存multiplier/shift，本方案作用于两路GM与完整Vector链的调度；相比扩大4096 tile，不要求先认定发射成本主导。代价是额外物理槽和序言尾声。 低精度fi/fo复用可减少4T并作为B不足时的后继，但不覆盖FP32路径，也不单独产生预取窗口。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "storage"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+        "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+      },
+      "locator": "lines:308-351",
+      "effect_kind": "mechanism",
+      "before": "当前源码结构：低精度Exp的fi只在Muls(fo,fi,multiplier)被消费，后续Adds/Exp均只读fo；使用fi作完全原地计算可删除fpOut_的4T字节，FP32路径原本已直接用out。",
+      "after": "正文机制/边界确认：是流水的最强资源替代：低精度可省16384字节并扩tile域，但不直接打开跨tile重叠，且不影响7个FP32 case。本轮先检验作用全部dtype的独立槽流水；若双槽B不足，优先把这个复用方案作为条件后继，不能直接拼成未确认的两动作实现。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "tile"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.dynamic_shape_mismatch.md",
+        "sha256": "sha256:24caeddf6063226e52e28c8d8fbd07a6cf7193ee2c3a2575d2a78f0cf28ea4b2"
+      },
+      "locator": "lines:306-349",
+      "effect_kind": "mechanism",
+      "before": "当前源码结构：三dtype使用同一个4096 tile；FP32为8T字节、低精度为12T字节，允许按资源选择不同T。",
+      "after": "正文机制/边界确认：大tile可减循环但不能直接解决单槽依赖；20case均约百万级以上，缺少独立的小任务开销区间证据，因此不先造shape阈值。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "metadata"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+        "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+      },
+      "locator": "lines:298-341",
+      "effect_kind": "mechanism",
+      "before": "当前源码结构：Process反复读取tileElements，Compute读multiplier/shift；字段在一次launch内不变。",
+      "after": "正文机制/边界确认：编译器可能已外提且每tile处理4096个Exp，当前没有证据说明字段load比流水更重要；保留竞争候选。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+      },
+      "locator": "lines:72-108",
+      "effect_kind": "plan",
+      "before": "有元素总数与原始块长，但尚未明确新方案的owner/存储范围。",
+      "after": "保留每核独占输出与原逐元素数学链，T和物理槽分别计入字节公式；已有分区提取不算新并行优化。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+        "sha256": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603"
+      },
+      "locator": "lines:62-144",
+      "effect_kind": "parameters",
+      "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+      "after": "保留blockNum/blockLength与精确有效长度；T∈{1024,2048,4096}，原始输入/输出各2物理槽，FP32工作区仍仅当前计算tile一套。UB=(4s+8·[s=2])T+API预留≤B可用，即三dtype数据区均16T。序言只预取tile0；每轮DeQue当前输入后，合法发射下一tile到另一空闲槽，再计算当前tile、入输出队列并发有效长度写回。输出槽仅在MTE3完成后回收；tileCount<2保留单槽。Exp乘加顺序及Cast模式不变。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+        "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+      },
+      "locator": "lines:75-110",
+      "effect_kind": "parameters",
+      "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+      "after": "保留输入/输出Cast、原算术顺序、NaN/Inf及±0；没有把值域case当公共输入保证。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    }
+  ],
+  "selection": {
+    "mode": "conditional_plan",
+    "opportunity_id": "pipeline",
+    "action_instance_id": "selected-intent",
+    "reason": "相比仅缓存multiplier/shift，本方案作用于两路GM与完整Vector链的调度；相比扩大4096 tile，不要求先认定发射成本主导。代价是额外物理槽和序言尾声。 低精度fi/fo复用可减少4T并作为B不足时的后继，但不覆盖FP32路径，也不单独产生预取窗口。",
+    "concrete_plan": "保留blockNum/blockLength与精确有效长度；T∈{1024,2048,4096}，原始输入/输出各2物理槽，FP32工作区仍仅当前计算tile一套。UB=(4s+8·[s=2])T+API预留≤B可用，即三dtype数据区均16T。序言只预取tile0；每轮DeQue当前输入后，合法发射下一tile到另一空闲槽，再计算当前tile、入输出队列并发有效长度写回。输出槽仅在MTE3完成后回收；tileCount<2保留单槽。Exp乘加顺序及Cast模式不变。",
+    "stop_reason": null
+  },
+  "previous_feedback": null
+}

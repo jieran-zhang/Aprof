@@ -1,0 +1,72 @@
+..F                                                                      [100%]
+=================================== FAILURES ===================================
+__ test_v5_package_relocates_and_replays_without_checkout_network_or_scratch ___
+
+tmp_path = PosixPath('/dev/shm/aprof-integration-fixed.CDTWX1/test_v5_package_relocates_and_0')
+
+    def test_v5_package_relocates_and_replays_without_checkout_network_or_scratch(tmp_path):
+        package = tmp_path / 'retained-package'
+        shutil.copytree(ROOT, package, ignore=shutil.ignore_patterns(
+            '__pycache__', '.pytest_cache', '.runtime-env', '*.egg-info'))
+        artifact = diagnosis.verify(package)
+        decision, chain = make_decision(package, artifact, package / 'task')
+        attach(decision, chain, package / 'task')
+        for index, record in enumerate(chain, 1):
+            write_json(package / f'C{index}.json', record)
+        script = r'''
+    import json, os, sys
+    from pathlib import Path
+    root = Path(sys.argv[1]).resolve()
+    blocked = [Path(p).resolve() for p in sys.argv[2:]]
+    def isolated(event, args):
+        if event in ('socket.connect', 'socket.getaddrinfo'):
+            raise RuntimeError('offline package forbids network')
+        if event == 'open' and isinstance(args[0], (str, bytes, os.PathLike)):
+            path = Path(os.fsdecode(args[0])).resolve()
+            if any(path.is_relative_to(parent) for parent in blocked):
+                raise RuntimeError('external package dependency: ' + str(path))
+    sys.addaudithook(isolated)
+    sys.path.insert(0, str(root / 'runtime/src'))
+    from aprof_runtime import __version__, bindings, diagnosis
+    from aprof_runtime.graph import load_snapshot
+    from aprof_runtime.knowledge import verify as verify_tree
+    from aprof_runtime.diagnosis_reasoning import validate_case, validate_proposal
+    assert __version__ == '0.6.0'
+    assert diagnosis.verify(root)['version'] == 'v0005'
+    for owner, version in (('parallel-planning', 'v0002'), ('optimization', 'v0004')):
+        assert verify_tree(root, owner)['version'] == version
+    for version in ('v0003', 'v0004'):
+        old, _ = load_snapshot(root / 'skills/ascendc-aprof-diagnosis/graph/versions' / version)
+        assert old['version'] == version
+    chain = [json.loads((root / f'C{i}.json').read_text()) for i in (1, 2, 3)]
+    assert bindings.validate_chain(root, *chain, task_root=root / 'task')['status'] == 'implemented'
+    skill = root / 'skills/ascendc-aprof-diagnosis'
+    for path in (skill / 'examples').glob('*.json'):
+        validate_case(root, json.loads(path.read_text()))
+    for path in (skill / 'proposals').glob('*.json'):
+        validate_proposal(root, json.loads(path.read_text()))
+    sys.path.insert(0, str(root / 'tools'))
+    from release import verify_unsealed
+    assert verify_unsealed(root)['publication_accepted'] is False
+    print(json.dumps({'standalone': True, 'network': False, 'original_tree': False,
+                      'hardware': False, 'timing': False, 'causal_claim': False}))
+    '''
+        # -I忽略宿主PYTHONPATH；只显式加载保留目录内runtime。
+        replay = subprocess.run([sys.executable, '-I', '-c', script, str(package), str(ROOT),
+            '/tmp/aprof-diagnosis-v4-exy42mhk', '/tmp/aprof-knowledge-sources-1SHAlx',
+            *([os.environ['APROF_TEST_SOURCE_REPO']] if os.environ.get('APROF_TEST_SOURCE_REPO') else [])],
+            cwd=package, text=True, capture_output=True)
+>       assert replay.returncode == 0, replay.stdout + replay.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<string>", line 22, in <module>
+E         AssertionError
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/usr/local/python3.11.15/bin/python3', '-I', '-c', "\nimport json, os, sys\nfrom pathlib impor...e=1, stdout='', stderr='Traceback (most recent call last):\n  File "<string>", line 22, in <module>\nAssertionError\n').returncode
+
+runtime/tests/test_diagnosis_integration_v130.py:117: AssertionError
+=========================== short test summary info ============================
+FAILED runtime/tests/test_diagnosis_integration_v130.py::test_v5_package_relocates_and_replays_without_checkout_network_or_scratch
+1 failed, 2 passed in 331.93s (0:05:31)
+.                                                                        [100%]
+1 passed in 120.65s (0:02:00)

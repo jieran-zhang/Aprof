@@ -1,0 +1,52 @@
+{
+  "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+  "task_id": "case-09",
+  "context_hash": "sha256:71065fea7c0bc8758663cbe633162624749e3d43a9d6b266095812f8a2587bd1",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "graph_version": "v0005",
+  "source_context_ref": {
+    "path": "authority.json",
+    "sha256": "sha256:caafc0937b91334e658fabeb7407aff8a15f85fabc12cec68384bd80235e9b9f"
+  },
+  "retrieval_hash": "sha256:ba664452e7d8bd277d40981910858101b45fde882dd7e982e5971a9f88634f82",
+  "selections": [
+    {
+      "problem_id": "problem.onchip_capacity_pressure",
+      "reason": "tanh从不使用Erfc临时区却保留5个fp32数组；是否只能证明多余分配而非容量瓶颈",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "tanh从不使用Erfc临时区却保留5个fp32数组；是否只能证明多余分配而非容量瓶颈"
+      ]
+    },
+    {
+      "problem_id": "problem.dynamic_shape_mismatch",
+      "reason": "none/tanh使用同一1024tile，按模式预算tile是否值得",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "none/tanh使用同一1024tile，按模式预算tile是否值得"
+      ]
+    },
+    {
+      "problem_id": "problem.redundant_cast",
+      "reason": "保留必要cast/2^-23量化边界，避免错误删除舍入",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "保留必要cast/2^-23量化边界，避免错误删除舍入"
+      ]
+    },
+    {
+      "problem_id": "problem.pipeline_serialization",
+      "reason": "正文提出的替代解释/代价：结合当前gelu源码，进一步区分新增局部状态spill、地址控制或容量对流水的限制。",
+      "trigger": "alternative_mechanism",
+      "related_problem_ids": [
+        "problem.dynamic_shape_mismatch"
+      ],
+      "unexplained_observations": [
+        "源码预测是否被该替代机制抵消尚待判别，不能凭没有profile排除"
+      ]
+    }
+  ]
+}

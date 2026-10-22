@@ -1,0 +1,18 @@
+{
+  "review": "P/O knowledge actual-diff review",
+  "baseline": "/dev/shm/aprof-selection-v2-hx6s1amt/baseline-package",
+  "issues": [
+    {
+      "id": "K-P2-001",
+      "severity": "P2",
+      "file": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/skill-libs/graph-base/1.3.0/skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+      "line": 186,
+      "title": "核内 tile 变大不等于独立 task 变少",
+      "finding": "本叶先固定 C 个输出 owner，再在每核内部以 U 分 tile。新增段落却断言更大 h/U 会减少 task，把核内循环 L 与独立 task 数 C 混为一谈。这会使规划阶段把增大 U 错当成削弱核间并行度的方案。",
+      "evidence": "第103–105行以 g/Q/C 分配核区间，U 是核内工作集；第179行给出 L=Σ_c ceil(N_c/U)。N=4096,g=64,C=8 时，U=64 到 128 只使 L 从64降32，C一直是8。同 owner 的行批量也不必改变 owner 数。",
+      "fix": "改为：增大 h/U 可减少核内批次/循环；只有同时改变跨 owner 的划分/工作域时，独立 task 数才可能减少。保留已有尾部、活跃区和槽位代价说明。",
+      "status": "reported_to_parent",
+      "basis": "independent mathematical counterexample; no device run"
+    }
+  ]
+}

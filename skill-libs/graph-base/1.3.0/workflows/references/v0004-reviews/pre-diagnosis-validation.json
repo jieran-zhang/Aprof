@@ -1,0 +1,128 @@
+{
+  "package": "graph-base/1.3.0",
+  "status": "draft_complete",
+  "checked_at_utc": "2026-10-20T10:07:26.723617+00:00",
+  "publication_accepted": false,
+  "release_sealed": false,
+  "default_version_changed": false,
+  "runtime_version": "0.3.0",
+  "knowledge": [
+    {
+      "owner": "parallel-planning",
+      "version": "v0002",
+      "records": 43,
+      "index_sha256": "sha256:909abaf0b7c885601920d19e137acb03b3241f5786f004b106c66b49fd6c4ed8"
+    },
+    {
+      "owner": "optimization",
+      "version": "v0002",
+      "records": 49,
+      "index_sha256": "sha256:5aa5b4d73efd9898e5a977d386f2bb855a680a26b93004c25fa5d64b8e7a4eda"
+    }
+  ],
+  "structure": {
+    "valid": true,
+    "release_id": "graph-base/1.3.0",
+    "files": 768,
+    "status": "unsealed",
+    "verification": "structure_only"
+  },
+  "sources": {
+    "pinned_repositories": 5,
+    "pinned_checkout_heads_verified": true,
+    "archived_files_with_hashes": 172,
+    "file_hashes_line_ranges_excerpt_hashes": "通过知识构建/校验；档案与许可另按清单逐文件校验",
+    "symbolic_links": 0,
+    "archived_files_world_readable": true
+  },
+  "protection": {
+    "baseline_1.2.0_unchanged_files": 586,
+    "subtrees": {
+      "runtime/src": {
+        "files": 38,
+        "identical_to_1.2.0": true
+      },
+      "schemas": {
+        "files": 29,
+        "identical_to_1.2.0": true
+      },
+      "skills/ascendc-aprof-diagnosis": {
+        "files": 232,
+        "identical_to_1.2.0": true
+      }
+    },
+    "repository_tracked_changes": [
+      "README.md"
+    ],
+    "catalog_default_and_historical_versions": "未改动"
+  },
+  "independent_reviews": [
+    {
+      "review": "review_planning",
+      "inspected_ids": 43,
+      "result": "已复核并合并适用修正，无剩余实质问题"
+    },
+    {
+      "review": "review_memory_fusion",
+      "inspected_ids": 19,
+      "result": "已复核并合并适用修正，无剩余实质问题"
+    },
+    {
+      "review": "review_cube_vector_scalar",
+      "inspected_ids": 13,
+      "result": "已复核并合并适用修正，无剩余实质问题"
+    }
+  ],
+  "resolved_review_findings": [
+    "TopK K=N 与越界 K 分开；越界遵循原接口，不钳制成完整排序。",
+    "CrossCore 同核 flagId 不能按 mode 当独立资源并存复用。",
+    "L2 局部复用按实际静态 UB 分配；live-byte 总和仅为共享下界。",
+    "五篇继承案例补足具体方法、背景、原失败和有限适用域。",
+    "MMAD 分形示例限定 m>1；m=1 的 GEMV/ND 和3510开关分别说明。",
+    "Fixpipe 多矩阵 stride 单位/范围与3510 kDirectionAlign 限制补齐。"
+  ],
+  "cpu_tests": {
+    "status": "passed",
+    "tests": 61,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1,
+    "passed": 60,
+    "skipped_cases": [
+      "test_scaffolding_dispatch_requires_explicit_package_and_keeps_legacy_bytes"
+    ],
+    "skipped_scope": "开发仓库 scaffolding 分派兼容专项需要包外历史脚本；本工作树与独立包均未提供该脚本，显式跳过。不属于技能包运行入口。",
+    "suites": [
+      "test_knowledge.py",
+      "test_knowledge_v130.py",
+      "test_workflow_package.py",
+      "test_local_archive.py"
+    ],
+    "execution_location": "独立内存目录中的完整包副本；runtime/src与schema不修改",
+    "new_knowledge_cases": 7
+  },
+  "standalone": {
+    "complete_package_copy": true,
+    "external_file_reads": "子进程审计钩子拒绝原工作树、上游 checkout、写作临时目录的 open",
+    "network": "子进程审计钩子拒绝 socket.connect 与 socket.getaddrinfo",
+    "checks": [
+      "两棵树重建与重复校验",
+      "原 diagnosis 校验",
+      "来源与本地链接",
+      "插件/角色/包身份未封版结构检查",
+      "新旧入口、多分支、缺失前提及平台隔离",
+      "带算法/所有权/通路/资源与正文快照的 C2/C3 纸面交接"
+    ],
+    "handoff": {
+      "causal_claim": false,
+      "legacy_episode_eligible": false,
+      "real_timing": false
+    },
+    "final_copy_bytes_and_modes_identical": true
+  },
+  "not_performed": [
+    "NPU 编译/正确性/性能测试",
+    "逆向优化或诊断 SPA 扩充",
+    "性能接纳/发布验收/封版/默认切换"
+  ]
+}

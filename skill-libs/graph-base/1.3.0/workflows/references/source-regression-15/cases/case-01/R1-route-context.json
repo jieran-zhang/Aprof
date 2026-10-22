@@ -1,0 +1,105 @@
+{
+  "schema_version": "aprof.evidence/v1",
+  "task_id": "raw15-case-01",
+  "source_context_ref": {
+    "path": "origin.json",
+    "sha256": "sha256:5ea83cd75836eff2090b988b473654449eae4b376d54178818ab19a6f45e4aab"
+  },
+  "attributes": {
+    "family": [
+      "elementwise"
+    ],
+    "dtype": [
+      "float16",
+      "float32",
+      "bfloat16"
+    ],
+    "features": [
+      "tiling-tail",
+      "memory-transfer",
+      "pipeline-sync",
+      "vector-api",
+      "precision-boundaries",
+      "scalar-control"
+    ]
+  },
+  "facts": {
+    "source.kernel_structure": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "exp_kernel.asc#lines:1-94",
+      "ref": {
+        "path": "source/op_kernel/exp_kernel.asc",
+        "sha256": "sha256:ab81778156f54d348c36dcca5b5831ccc0d159d36e5ee7ef66c9d5699bac869a",
+        "locator": "lines:1-94"
+      },
+      "view": "source"
+    },
+    "source.host_dispatch": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "exp.asc#lines:1-77",
+      "ref": {
+        "path": "source/op_host/exp.asc",
+        "sha256": "sha256:405597f7fba96c5f76fffedb4d9600a28f9e131561f899b1afa3de383a2c5dee",
+        "locator": "lines:1-77"
+      },
+      "view": "source"
+    },
+    "workload.matrix": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "matrix-20.json#cases:1-20",
+      "ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:112f1150be8c3eadccd3b9b1cb63faea653f2fd9a2e503f04b49243c6f803785",
+        "locator": "cases:1-20"
+      },
+      "view": "workload"
+    },
+    "source.tiling": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "exp_tiling.h#lines:1-30",
+      "ref": {
+        "path": "source/op_kernel/exp_tiling.h",
+        "sha256": "sha256:411ed60d96b961f9ffd7e6ec883f6ceae760a54b764cad1e8456112a38af0d8f",
+        "locator": "lines:1-30"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order.component_1": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "exp_kernel.asc#explicit-source-proof: Process 26–33逐轮CopyIn/Compute/CopyOut；下一轮CopyIn在当前CopyOut之后发射，源码未设置跨轮预取。",
+      "ref": {
+        "path": "source/op_kernel/exp_kernel.asc",
+        "sha256": "sha256:ab81778156f54d348c36dcca5b5831ccc0d159d36e5ee7ef66c9d5699bac869a",
+        "locator": "explicit-source-proof: Process 26–33逐轮CopyIn/Compute/CopyOut；下一轮CopyIn在当前CopyOut之后发射，源码未设置跨轮预取。"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order.component_2": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "exp_kernel.asc#explicit-source-proof: Init 18–22为inQ/outQ各一个物理块；CopyIn EnQue，Compute DeQue/Free，CopyOut DeQue/Free形成单块复用闭环。",
+      "ref": {
+        "path": "source/op_kernel/exp_kernel.asc",
+        "sha256": "sha256:ab81778156f54d348c36dcca5b5831ccc0d159d36e5ee7ef66c9d5699bac869a",
+        "locator": "explicit-source-proof: Init 18–22为inQ/outQ各一个物理块；CopyIn EnQue，Compute DeQue/Free，CopyOut DeQue/Free形成单块复用闭环。"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order.component_3": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "exp_kernel.asc#explicit-source-proof: length=min(total-offset,blockLength)，每次count=min(length-off,4096)；首次由TPipe分配可用槽，不存在手写Set/Wait。Exp底层内部指令排程未知，未把它写成无重叠实测。",
+      "ref": {
+        "path": "source/op_kernel/exp_kernel.asc",
+        "sha256": "sha256:ab81778156f54d348c36dcca5b5831ccc0d159d36e5ee7ef66c9d5699bac869a",
+        "locator": "explicit-source-proof: length=min(total-offset,blockLength)，每次count=min(length-off,4096)；首次由TPipe分配可用槽，不存在手写Set/Wait。Exp底层内部指令排程未知，未把它写成无重叠实测。"
+      },
+      "view": "source"
+    }
+  }
+}

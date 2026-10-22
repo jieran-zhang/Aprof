@@ -1,0 +1,183 @@
+{
+  "schema_version": 1,
+  "library": {
+    "name": "aprof-skills",
+    "version": "0.5.1",
+    "description": "Self-contained AProf skills for architecture-aware parallel planning, metadata tiling-key dispatch, profiling, bounded execution optimization and trace preservation."
+  },
+  "workflow_plugin": {
+    "name": "aprof-performance-workflow",
+    "version": "0.5.1",
+    "description": "AProf self-contained architecture-aware parallel planning and workload-dispatched execution optimization, with versioned SkillGraph routes, machine gates and preserved traces.",
+    "dependencies": [],
+    "agents": [
+      "agents/aprof-parallel-planning-wrapper.md",
+      "agents/aprof-diagnosis-wrapper.md",
+      "agents/aprof-profiling-wrapper.md",
+      "agents/aprof-optimization-wrapper.md"
+    ],
+    "codex": {
+      "marketplace_name": "aprof",
+      "marketplace_display_name": "AProf",
+      "display_name": "AProf Performance Workflow",
+      "short_description": "Trace-producing Ascend C performance optimization",
+      "long_description": "Route, diagnose, profile, and optimize Ascend C operators with immutable SkillGraph versions, machine-verified gates, bounded budgets, and reusable training traces.",
+      "developer_name": "AProf",
+      "category": "Productivity",
+      "capabilities": [
+        "Read",
+        "Write"
+      ],
+      "default_prompt": [
+        "Optimize this Ascend C operator with AProf and preserve a verified trace.",
+        "Run a plan-only AProf diagnosis and SkillGraph route.",
+        "Explain which AProf episodes are eligible for policy training."
+      ]
+    }
+  },
+  "capabilities": {
+    "core": [
+      {
+        "name": "ascendc-aprof-workflow",
+        "source": "skills/ascendc-aprof-workflow",
+        "purpose": "Stable user-facing entry for trace-producing AProf optimization sessions."
+      },
+      {
+        "name": "ascendc-aprof-parallel-planning",
+        "source": "skills/ascendc-aprof-parallel-planning",
+        "purpose": "Architecture-aware algorithm/task decomposition and workload dispatch before execution tuning."
+      },
+      {
+        "name": "ascendc-aprof-diagnosis",
+        "source": "skills/ascendc-aprof-diagnosis",
+        "purpose": "Source and profiling-evidence diagnosis.",
+        "legacy_names": [
+          "aprof-ascendc-diagnosis"
+        ]
+      },
+      {
+        "name": "ascendc-aprof-profiling",
+        "source": "skills/ascendc-aprof-profiling",
+        "purpose": "Profiling plan, collection, and parsing.",
+        "legacy_names": [
+          "aprof-ascendc-profiling"
+        ]
+      },
+      {
+        "name": "ascendc-aprof-optimization",
+        "source": "skills/ascendc-aprof-optimization",
+        "purpose": "Bounded candidate proposal and optimization.",
+        "legacy_names": [
+          "aprof-ascendc-optimization"
+        ]
+      },
+      {
+        "name": "ascendc-kernel-direct-invoke",
+        "source": "skills/ascendc-kernel-direct-invoke",
+        "purpose": "Convert a kernel into a runnable direct-invoke project.",
+        "legacy_names": [
+          "aprof-ascendc-kernel-direct-invoke"
+        ]
+      }
+    ],
+    "optional_adapters": [
+      {
+        "name": "ascendc-remote-kernel-deploy",
+        "source": "adapters/ascendc-remote-kernel-deploy",
+        "purpose": "Optional SSH deployment and remote profiling adapter."
+      }
+    ]
+  },
+  "support_skills": [
+    {
+      "name": "ascendc-env-check",
+      "source": "skills/ascendc-env-check"
+    },
+    {
+      "name": "ascendc-perf-optimize",
+      "source": "skills/ascendc-perf-optimize"
+    },
+    {
+      "name": "ascendc-tiling-design",
+      "source": "skills/ascendc-tiling-design"
+    },
+    {
+      "name": "ascendc-performance-best-practices",
+      "source": "skills/ascendc-performance-best-practices"
+    },
+    {
+      "name": "ascendc-api-best-practices",
+      "source": "skills/ascendc-api-best-practices"
+    },
+    {
+      "name": "ascendc-docs-search",
+      "source": "skills/ascendc-docs-search"
+    },
+    {
+      "name": "ascendc-code-review",
+      "source": "skills/ascendc-code-review"
+    },
+    {
+      "name": "ascendc-precision-debug",
+      "source": "skills/ascendc-precision-debug"
+    },
+    {
+      "name": "ascendc-runtime-debug",
+      "source": "skills/ascendc-runtime-debug"
+    },
+    {
+      "name": "ascendc-crash-debug",
+      "source": "skills/ascendc-crash-debug"
+    },
+    {
+      "name": "ops-profiling",
+      "source": "skills/ops-profiling"
+    },
+    {
+      "name": "ops-simulator",
+      "source": "skills/ops-simulator"
+    },
+    {
+      "name": "npu-arch",
+      "source": "skills/npu-arch"
+    },
+    {
+      "name": "tool-npu-compute",
+      "source": "skills/tool-npu-compute"
+    }
+  ],
+  "cursor_agents": [
+    {
+      "name": "aprof-performance-workflow",
+      "source": "AGENTS.md"
+    },
+    {
+      "name": "aprof-diagnosis-agent",
+      "source": "skills/ascendc-aprof-diagnosis/AGENTS.md"
+    },
+    {
+      "name": "aprof-profiling-agent",
+      "source": "skills/ascendc-aprof-profiling/AGENTS.md"
+    },
+    {
+      "name": "aprof-optimization-agent",
+      "source": "skills/ascendc-aprof-optimization/AGENTS.md"
+    },
+    {
+      "name": "aprof-diagnosis-wrapper",
+      "source": "agents/aprof-diagnosis-wrapper.md"
+    },
+    {
+      "name": "aprof-profiling-wrapper",
+      "source": "agents/aprof-profiling-wrapper.md"
+    },
+    {
+      "name": "aprof-optimization-wrapper",
+      "source": "agents/aprof-optimization-wrapper.md"
+    },
+    {
+      "name": "aprof-parallel-planning-wrapper",
+      "source": "agents/aprof-parallel-planning-wrapper.md"
+    }
+  ]
+}

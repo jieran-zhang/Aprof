@@ -1,0 +1,78 @@
+{
+  "task_id": "autonomy-c-14",
+  "kind": "preselection/internal-router-feasibility-consultation",
+  "round": 1,
+  "parallel_route_ref": {
+    "path": "parallel-planning-consult-route.json",
+    "sha256": "sha256:be3a6480bbe8993cf71102b9e2dbb3b91bfe6b5e15644ce47de658b59de96916"
+  },
+  "optimization_route_ref": {
+    "path": "optimization-consult-route.json",
+    "sha256": "sha256:1b35b3ccb067bdf03bc3a58dd76b2e8c2a09831606e6b28ab5ce11bf62eb6f8d"
+  },
+  "actual_body_readings": [
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md",
+        "sha256": "sha256:9b830c4ea01484b8a7e2d89e8c44d4d8087a821a2b887f3bd28c1e2172c53d49"
+      },
+      "locator": "lines:78-128",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "采用输出坐标到源perm映射、互斥矩形owner和有效宽度/物理pitch分离；先连续后缀、再规则矩形，复杂perm保留fallback。明确额外GM中转写读2W和局部表/transpose成本，禁止直接套小C TransDataTo5HD方案到全部dtype。",
+      "applicability": "full conditional skeleton：输出到输入perm映射、Raw位宽、非原址、互斥矩形、fallback齐备；具体transpose API范围尚待证。"
+    },
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/strided-pad.md",
+        "sha256": "sha256:dbd61eaa8bb85b89b10ae445f1cff983baaaf8aa7a707b07900c18ac60262403"
+      },
+      "locator": "lines:77-138",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "矩形源GM srcStride=(pitch-valid)*s按字节，UB dstStride按32B块；UB每行AlignUp(valid*s,32)并不改变GM有效长度。A3字段blockCount<=4095/blockLen<2^21作为实现检查，尾行只写有效域。",
+      "applicability": "partial：仅采用容量、有效域、所有权/数值边界原则；未声称整套模板API已验证。"
+    },
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+        "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+      },
+      "locator": "lines:57-107",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "公共地址前缀只能升到依赖不变的最小外层，rank/stride缓存扩大活跃期并可能spill；保留源索引/位宽语义，编译器已CSE会削弱收益，不能仅因小改动优先。",
+      "applicability": "partial：仅采用容量、有效域、所有权/数值边界原则；未声称整套模板API已验证。"
+    }
+  ],
+  "confirmed_C2": false,
+  "P_KEEP": false,
+  "O_KEEP": false,
+  "implementation_authorized": false,
+  "reason": "采用条件骨架和方法咨询，当前未有完整已确认计划，不生成虚构C2/C3。",
+  "action_bound_route_refs": [
+    {
+      "path": "parallel-planning-action-consult-r1.json",
+      "sha256": "sha256:3493e8a73c8270955d3d47ee2954a13ea475e792a0511e581f853aa7da52a599"
+    },
+    {
+      "path": "optimization-action-consult-r1.json",
+      "sha256": "sha256:d1ea296bde9e00440f7a4d202ec5014784d85bc90234fac15f37ce29efdc1471"
+    }
+  ]
+}

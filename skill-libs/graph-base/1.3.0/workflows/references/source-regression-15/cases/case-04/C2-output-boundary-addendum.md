@@ -1,0 +1,1 @@
+SwiGLU 条件规划的物理写边界补充：整段分核仍须满足所用CopyPad重载的物理输出独占粒度。设要求A字节边界，dtype宽s、segment长S，则core切分的段数粒度取g=A/gcd(A,S*s)，每核起点q为g的倍数，末核处理唯一全局有效尾部。A=32若由实际目标API文档确认，则g=32/gcd(32,S*s)。这保证核边界q*S*s按A对齐，不用相邻核对同一物理块补写。原逐段fallback的边界也按其API契约单独核验。此为参数域补充，尚未建立实际architecture/dispatch实现，未计性能。

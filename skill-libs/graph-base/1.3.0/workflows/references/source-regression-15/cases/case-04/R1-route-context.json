@@ -1,0 +1,106 @@
+{
+  "schema_version": "aprof.evidence/v1",
+  "task_id": "raw15-case-04",
+  "source_context_ref": {
+    "path": "origin.json",
+    "sha256": "sha256:282cbc5907021f6ccf8df97d53deb963da9c13f2f5e178b9cf7e2311362b2ab6"
+  },
+  "attributes": {
+    "family": [
+      "elementwise",
+      "layout"
+    ],
+    "dtype": [
+      "float16",
+      "float32",
+      "bfloat16"
+    ],
+    "features": [
+      "tiling-tail",
+      "memory-transfer",
+      "pipeline-sync",
+      "vector-api",
+      "precision-boundaries",
+      "scalar-control"
+    ]
+  },
+  "facts": {
+    "source.kernel_structure": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "swi_glu_kernel.asc#lines:1-115",
+      "ref": {
+        "path": "source/op_kernel/swi_glu_kernel.asc",
+        "sha256": "sha256:af2a5487dc0de5d4603a8fa40fcae21bc053cf2e1c87d8e2bd6f33123afabf2e",
+        "locator": "lines:1-115"
+      },
+      "view": "source"
+    },
+    "source.host_dispatch": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "swi_glu.asc#lines:1-98",
+      "ref": {
+        "path": "source/op_host/swi_glu.asc",
+        "sha256": "sha256:60b5c5abd8d90341dc6d582708e4ae0863ab0c1b49c55a8fdabf020880f57ec6",
+        "locator": "lines:1-98"
+      },
+      "view": "source"
+    },
+    "workload.matrix": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "matrix-20.json#cases:1-20",
+      "ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:089035867297c067ce37314d4d6e8fe5f0252d2cd572a3f8f3a967a8b9559d50",
+        "locator": "cases:1-20"
+      },
+      "view": "workload"
+    },
+    "source.tiling": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "swi_glu_tiling.h#lines:1-27",
+      "ref": {
+        "path": "source/op_kernel/swi_glu_tiling.h",
+        "sha256": "sha256:c4aa34496d465de47b13b962e258ff1cbe88c4f47cb2a1f01a89575e9465791d",
+        "locator": "lines:1-27"
+      },
+      "view": "source"
+    },
+    "symptom.source.inner_loop_copy.component_1": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "swi_glu_kernel.asc#explicit-source-proof: Process按segment余量、block余量和tile4096取min，每段调用两次输入DataCopyPad和一次输出DataCopyPad；短S候选case9/12/20分别7/1/50。",
+      "ref": {
+        "path": "source/op_kernel/swi_glu_kernel.asc",
+        "sha256": "sha256:af2a5487dc0de5d4603a8fa40fcae21bc053cf2e1c87d8e2bd6f33123afabf2e",
+        "locator": "explicit-source-proof: Process按segment余量、block余量和tile4096取min，每段调用两次输入DataCopyPad和一次输出DataCopyPad；短S候选case9/12/20分别7/1/50。"
+      },
+      "view": "source"
+    },
+    "symptom.source.inner_loop_copy.component_2": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "swi_glu_kernel.asc#explicit-source-proof: 每个DataCopyExtParams均blockCount=1、blockLen=count*sizeof(T)字节、stride0；matrix-costs.json保存所有20case的S、Q及无核切分调用下界，核边界还可能增加段数。",
+      "ref": {
+        "path": "source/op_kernel/swi_glu_kernel.asc",
+        "sha256": "sha256:af2a5487dc0de5d4603a8fa40fcae21bc053cf2e1c87d8e2bd6f33123afabf2e",
+        "locator": "explicit-source-proof: 每个DataCopyExtParams均blockCount=1、blockLen=count*sizeof(T)字节、stride0；matrix-costs.json保存所有20case的S、Q及无核切分调用下界，核边界还可能增加段数。"
+      },
+      "view": "source"
+    },
+    "symptom.source.inner_loop_copy.component_3": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "swi_glu_kernel.asc#explicit-source-proof: out=qS+j，x0=2qS+j，x1=2qS+S+j；host确保split轴偶数、S=(shape[dim]/2)*inner、inputLength=2*outputLength，所有原有效地址均落各自分配内。",
+      "ref": {
+        "path": "source/op_kernel/swi_glu_kernel.asc",
+        "sha256": "sha256:af2a5487dc0de5d4603a8fa40fcae21bc053cf2e1c87d8e2bd6f33123afabf2e",
+        "locator": "explicit-source-proof: out=qS+j，x0=2qS+j，x1=2qS+S+j；host确保split轴偶数、S=(shape[dim]/2)*inner、inputLength=2*outputLength，所有原有效地址均落各自分配内。"
+      },
+      "view": "source"
+    }
+  }
+}

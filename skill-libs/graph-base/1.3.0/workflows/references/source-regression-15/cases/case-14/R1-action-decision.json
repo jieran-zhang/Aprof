@@ -1,0 +1,481 @@
+{
+  "schema_version": "aprof.action-decision/v1",
+  "task_id": "raw-case-14",
+  "context_hash": "sha256:ee21892687a10c42d529243997ec3bb326f3aa748c6fd41f9f3f9882b4884ad2",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "reasoning_ref": {
+    "path": "R1-reasoning.json",
+    "sha256": "sha256:8b2b3c3ec61c8a265b857c7aa7ae07a0d7204e36168d5e0b21b5790477754f89"
+  },
+  "reasoning_hash": "sha256:aed8354ffc43766b51e118a5004fbdd4b52401a5490ddbe3a82ee844cdc2578f",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/f3a6d55be57ea647180e624b4fffe6a25b55beea2b35d140d50fe71108f4232d.json",
+    "sha256": "sha256:02d64ca8cc4efafae4665940ea3cfd6bf955b40e79d76125906445f4337450a4"
+  },
+  "round": 1,
+  "current_parent_ref": {
+    "path": "source/SOURCE-MANIFEST.json",
+    "sha256": "sha256:beb461553b0661052ea4347dd1d5b1a6e46529103c2d99603e4768cbacc0b2e3"
+  },
+  "opportunities": [
+    {
+      "id": "o1",
+      "hypothesis_id": "h1",
+      "action_id": "action.reorder_contiguous_access",
+      "action_instance_id": "intent-1",
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "17",
+        "18",
+        "19"
+      ],
+      "source_fact_ids": [
+        "source.observation_2"
+      ],
+      "cost_mechanism": "二维矩形转置降低跨stride逐元素GM访问，连续suffix可直接块拷；新增局部重排与UB资源。",
+      "predictions": [
+        {
+          "id": "o1-work",
+          "kind": "source_work",
+          "statement": "二维矩形转置降低跨stride逐元素GM访问，连续suffix可直接块拷；新增局部重排与UB资源。",
+          "check_method": "源码与完整case形状的逻辑访问/运算量复核；R2静态证据文件",
+          "on_support": "继续具体参数与API合法性核对",
+          "on_refute": "修订目标或保留fallback"
+        },
+        {
+          "id": "o1-perf",
+          "kind": "performance",
+          "statement": "满足合法性并通过完整oracle后，比较本机会对所列case的Task时间；不预设加速比。",
+          "check_method": "未来同协议原20case清L2 Task计时，必要时补指令/timeline；本次不运行",
+          "on_support": "记录同源合法结果并确认是否有回归",
+          "on_refute": "检查新增资源/控制成本，重新比较该机会"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "o1-perf",
+          "unknown_id": "o1-performance",
+          "reason": "片内转置成本、短行DMA和尾处理是否小于原离散GM逐元素开销，特别int8与127列。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "o1-performance",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "片内转置成本、短行DMA和尾处理是否小于原离散GM逐元素开销，特别int8与127列。",
+          "affects": "该机会的收益及优先级，不决定结构合法性",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "o1-safety-0",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "需要UB_available、目标Transpose/Gather临时区以及地址表物理字节。",
+          "affects": "具体参数/API实施是否合法",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "o1-safety-1",
+          "kind": "implementation_safety",
+          "fact": "constraint.target_api",
+          "expected_state": true,
+          "statement": "实际SDK按1/2/4/8字节位宽的局部转置或Gather支持未知；64位需成对32位重排而不是数值转换。",
+          "affects": "具体参数/API实施是否合法",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "review-output_ownership",
+          "kind": "implementation_safety",
+          "fact": "constraint.output_ownership",
+          "expected_state": true,
+          "statement": "逻辑矩形无交不能证明不同核的DMA物理写块无交。实际A、GM基址对齐、DataCopyPad尾写粒度/可见性和最终短块不越界均未核验；必须按真实物理块同owner并裁切/汇集输出行段，之后才可将constraint.output_ownership设true。",
+          "affects": "具体Vector/搬出方案实施合法性；性能未知不因此被否决",
+          "resolution": "check_before_implementation"
+        }
+      ],
+      "strongest_alternative_id": "o2",
+      "comparison": "矩形/连续suffix方案直接改变离散GM数据通路；地址递增只减少除模仍逐元素GM。前者必须额外解决物理写owner，若该条件无法闭合再采用控制优化fallback。",
+      "disposition": "selected",
+      "reason": "二维矩形转置降低跨stride逐元素GM访问，连续suffix可直接块拷；新增局部重排与UB资源。"
+    },
+    {
+      "id": "o2",
+      "hypothesis_id": "h2",
+      "action_id": "action.vectorize_scalar_loop",
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.observation_1"
+      ],
+      "cost_mechanism": "只对逐元素循环做Vector gather仍可能保留离散GM访问，先把数据通路规则化更直接。",
+      "predictions": [
+        {
+          "id": "o2-work",
+          "kind": "source_work",
+          "statement": "只对逐元素循环做Vector gather仍可能保留离散GM访问，先把数据通路规则化更直接。",
+          "check_method": "源码与完整case形状的逻辑访问/运算量复核；R2静态证据文件",
+          "on_support": "继续具体参数与API合法性核对",
+          "on_refute": "修订目标或保留fallback"
+        },
+        {
+          "id": "o2-perf",
+          "kind": "performance",
+          "statement": "满足合法性并通过完整oracle后，比较本机会对所列case的Task时间；不预设加速比。",
+          "check_method": "未来同协议原20case清L2 Task计时，必要时补指令/timeline；本次不运行",
+          "on_support": "记录同源合法结果并确认是否有回归",
+          "on_refute": "检查新增资源/控制成本，重新比较该机会"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_scalar_hot",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "o2-perf",
+          "unknown_id": "o2-performance",
+          "reason": "只对逐元素循环做Vector gather仍可能保留离散GM访问，先把数据通路规则化更直接。"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "o2-perf",
+          "unknown_id": "o2-performance",
+          "reason": "只对逐元素循环做Vector gather仍可能保留离散GM访问，先把数据通路规则化更直接。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "o2-performance",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "只对逐元素循环做Vector gather仍可能保留离散GM访问，先把数据通路规则化更直接。 当前源结构可估算，实际主导程度/代价尚未测得。",
+          "affects": "该机会的收益及优先级，不决定结构合法性",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "o1",
+      "comparison": "只对逐元素循环做Vector gather仍可能保留离散GM访问，先把数据通路规则化更直接。 与主方案比较：二维矩形转置降低跨stride逐元素GM访问，连续suffix可直接块拷；新增局部重排与UB资源。",
+      "disposition": "deferred",
+      "reason": "只对逐元素循环做Vector gather仍可能保留离散GM访问，先把数据通路规则化更直接。"
+    },
+    {
+      "id": "o3",
+      "hypothesis_id": "h3",
+      "action_id": "action.hoist_invariant_control",
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.observation_1"
+      ],
+      "cost_mechanism": "混合基数递增消除大部分每元素除模，能覆盖复杂perm但仍每元素GM搬运；作为fallback后继。",
+      "predictions": [
+        {
+          "id": "o3-work",
+          "kind": "source_work",
+          "statement": "混合基数递增消除大部分每元素除模，能覆盖复杂perm但仍每元素GM搬运；作为fallback后继。",
+          "check_method": "源码与完整case形状的逻辑访问/运算量复核；R2静态证据文件",
+          "on_support": "继续具体参数与API合法性核对",
+          "on_refute": "修订目标或保留fallback"
+        },
+        {
+          "id": "o3-perf",
+          "kind": "performance",
+          "statement": "满足合法性并通过完整oracle后，比较本机会对所列case的Task时间；不预设加速比。",
+          "check_method": "未来同协议原20case清L2 Task计时，必要时补指令/timeline；本次不运行",
+          "on_support": "记录同源合法结果并确认是否有回归",
+          "on_refute": "检查新增资源/控制成本，重新比较该机会"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "o3-perf",
+          "unknown_id": "o3-performance",
+          "reason": "混合基数递增消除大部分每元素除模，能覆盖复杂perm但仍每元素GM搬运；作为fallback后继。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "o3-performance",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "混合基数递增消除大部分每元素除模，能覆盖复杂perm但仍每元素GM搬运；作为fallback后继。 当前源结构可估算，实际主导程度/代价尚未测得。",
+          "affects": "该机会的收益及优先级，不决定结构合法性",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "o1",
+      "comparison": "混合基数递增消除大部分每元素除模，能覆盖复杂perm但仍每元素GM搬运；作为fallback后继。 与主方案比较：二维矩形转置降低跨stride逐元素GM访问，连续suffix可直接块拷；新增局部重排与UB资源。",
+      "disposition": "deferred",
+      "reason": "混合基数递增消除大部分每元素除模，能覆盖复杂perm但仍每元素GM搬运；作为fallback后继。"
+    }
+  ],
+  "evidence_requests": [
+    {
+      "id": "request-o1-safety-0",
+      "opportunity_ids": [
+        "o1"
+      ],
+      "unknown_ids": [
+        "o1-safety-0"
+      ],
+      "method": "需要UB_available、目标Transpose/Gather临时区以及地址表物理字节。 核验对象：全部适用case；后续允许设备/SDK只读查询及候选代码审查。",
+      "discriminating_results": [
+        {
+          "outcome": "证据满足计划公式及API/语义条件",
+          "decision_effect": "允许以该参数形成严格C2并隔离实施"
+        },
+        {
+          "outcome": "不满足或未知",
+          "decision_effect": "减tile/缩适用域或保留原fallback，不伪造ready"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本轮仅源码/CPU权限，保留明确参数域。",
+      "defer_reason": "禁止SDK build、native、设备probe；实际architecture缺项不能靠目标名称补齐。"
+    },
+    {
+      "id": "request-o1-safety-1",
+      "opportunity_ids": [
+        "o1"
+      ],
+      "unknown_ids": [
+        "o1-safety-1"
+      ],
+      "method": "实际SDK按1/2/4/8字节位宽的局部转置或Gather支持未知；64位需成对32位重排而不是数值转换。 核验对象：全部适用case；后续允许设备/SDK只读查询及候选代码审查。",
+      "discriminating_results": [
+        {
+          "outcome": "证据满足计划公式及API/语义条件",
+          "decision_effect": "允许以该参数形成严格C2并隔离实施"
+        },
+        {
+          "outcome": "不满足或未知",
+          "decision_effect": "减tile/缩适用域或保留原fallback，不伪造ready"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本轮仅源码/CPU权限，保留明确参数域。",
+      "defer_reason": "禁止SDK build、native、设备probe；实际architecture缺项不能靠目标名称补齐。"
+    },
+    {
+      "id": "request-review-output_ownership",
+      "opportunity_ids": [
+        "o1"
+      ],
+      "unknown_ids": [
+        "review-output_ownership"
+      ],
+      "method": "逻辑矩形无交不能证明不同核的DMA物理写块无交。实际A、GM基址对齐、DataCopyPad尾写粒度/可见性和最终短块不越界均未核验；必须按真实物理块同owner并裁切/汇集输出行段，之后才可将constraint.output_ownership设true。 核验当前拟采用API完整语义、编译选项、有效域及原oracle全部20case；本轮无此证据。",
+      "discriminating_results": [
+        {
+          "outcome": "完整语义/物理写契约证明覆盖所有适用case",
+          "decision_effect": "将对应谓词建立有来源的true后继，再进入严格C2/隔离实施"
+        },
+        {
+          "outcome": "不满足或仍未知",
+          "decision_effect": "保持Vector/矩形条件方案，缩小适用域或原fallback；不得宣称C3就绪"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "静态映射成立不足以回答这个完整条件。",
+      "defer_reason": "当前只有源码/CPU分析权限，缺目标SDK/编译语义或真实写粒度契约。"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "o1"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+        "sha256": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db"
+      },
+      "locator": "lines:329-341",
+      "effect_kind": "mechanism",
+      "before": "源码显示：perm[rank-1]==rank-1仅case1/14；其他case输入跨stride，矩形能令搬入/搬出分别连续。",
+      "after": "二维矩形转置降低跨stride逐元素GM访问，连续suffix可直接块拷；新增局部重排与UB资源。",
+      "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+    },
+    {
+      "opportunity_ids": [
+        "o2"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+        "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+      },
+      "locator": "lines:292-304",
+      "effect_kind": "mechanism",
+      "before": "源码显示：TransposeScalar每输出rank次除模、1个原始位宽GM读和1个写；没有Vector或UB分块。",
+      "after": "只对逐元素循环做Vector gather仍可能保留离散GM访问，先把数据通路规则化更直接。",
+      "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+    },
+    {
+      "opportunity_ids": [
+        "o3"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+        "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+      },
+      "locator": "lines:310-322",
+      "effect_kind": "mechanism",
+      "before": "源码显示：TransposeScalar每输出rank次除模、1个原始位宽GM读和1个写；没有Vector或UB分块。",
+      "after": "混合基数递增消除大部分每元素除模，能覆盖复杂perm但仍每元素GM搬运；作为fallback后继。",
+      "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+    },
+    {
+      "opportunity_ids": [
+        "o1"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md",
+        "sha256": "sha256:678b709d7ea4092de4145febb3c7174155094d097e47f2b42b3f073d499b1c25"
+      },
+      "locator": "lines:51-69",
+      "effect_kind": "parameters",
+      "before": "尚未把源循环转换为有界任务/内存方案。",
+      "after": "transpose正文53要求不同owner不因DMA对齐触及同一物理块，故撤回output_ownership=true。采用真实A全局物理块同owner、矩形行段与owner区间求交，尾块须核验有效写许可；原矩形思路保留为条件方案。",
+      "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+    },
+    {
+      "opportunity_ids": [
+        "o1"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+        "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+      },
+      "locator": "lines:76-88",
+      "effect_kind": "parameters",
+      "before": "尚未把源循环转换为有界任务/内存方案。",
+      "after": "transpose仅连续suffix或局部重排后的输出行片可合并；输出行片先裁切至真实物理块owner，不能跨owner补齐写。",
+      "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+    },
+    {
+      "opportunity_ids": [
+        "o1",
+        "o2"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+        "sha256": "sha256:d1a2e2eb822d93e4962d5c0198fd3a124e81e5af354c73596b513bd53ee13f08"
+      },
+      "locator": "lines:85-97",
+      "effect_kind": "alternative",
+      "before": "此前尚未比较该方法的边界。",
+      "after": "transpose批量重排必须保持原始位；count或mask不能保护GM写，且局部位宽重排API与物理写owner分别待核验。",
+      "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+    },
+    {
+      "opportunity_ids": [
+        "o1",
+        "o2"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+        "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+      },
+      "locator": "lines:70-82",
+      "effect_kind": "alternative",
+      "before": "此前尚未比较该方法的边界。",
+      "after": "外提只减少地址控制，不会自行改善离散GM；复杂perm保留混合基数递增fallback，矩形方案优先解决数据通路。",
+      "applicability": "perm与逻辑矩形映射静态成立；真实DMA写粒度及owner边界尚未证，不将逻辑无交当物理无交。"
+    }
+  ],
+  "selection": {
+    "mode": "conditional_plan",
+    "opportunity_id": "o1",
+    "action_instance_id": "intent-1",
+    "reason": "二维矩形转置降低跨stride逐元素GM访问，连续suffix可直接块拷；新增局部重排与UB资源。 物理写owner未证，补全A粒度字节分区后再判断实施资格。",
+    "concrete_plan": "以bitwise搬运设计三组：case1/14保留连续末轴128/127，按suffix一次DataCopyPad；2D置换case2/3/4/5/7/8/9/11/17/18/19与case13的batched二维采用M×N矩形UB tile（候选16×16、32×32），连续输入行→片内位保持转置→连续输出行。int64按两个uint32通道同时保持8字节元素配对，不做数值Cast。复杂perm case6/10/12可合相邻轴再比较矩形；15/16/20保留通用索引fallback。预算2*A(tileM*tileN*s)+索引表+Tmp+reserve≤UB；每输出矩形唯一owner且只写有效行列。 物理写所有权后继：先核验目标搬出接口的真实物理写粒度A、GM基址对齐、A与元素字节s的整除关系及非对齐尾写契约，A尚未知，不固定成32B或64B。令Q=ceil(totalBytes/A)，按q/r将连续物理块编号分配给核；核c唯一拥有[A*b_c,min(A*(b_c+n_c),totalBytes))。矩形tile只作为计算/搬入分块，每条输出行段须与本核物理字节区间求交后发射；同一物理块即使跨两行也只能由同一核写，必要时该核汇集该块多行片段再单次写回。禁止跨owner补齐写，最后不足A字节只用已验证不越过分配末端的接口或原合法尾路径。API/粒度未证时保留原scalar fallback，不声称矩形DMA就绪。裁切可能重复输入搬运，必须重新计算成本。",
+    "stop_reason": null
+  },
+  "previous_feedback": null
+}

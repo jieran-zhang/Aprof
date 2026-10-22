@@ -1,0 +1,1574 @@
+{
+  "operator": "conv_3d_backprop_filter",
+  "level": 3,
+  "soc_version": "Ascend910_9362",
+  "npu_arch": "dav-2201",
+  "execution": "direct_custom_ascendc_3d_im2col_cube_filter_gradient",
+  "correctness_only": true,
+  "profiling": "not_collected_per_user",
+  "total_cases": 20,
+  "passed_cases": 20,
+  "all_passed": true,
+  "cases": [
+    {
+      "case_id": 1,
+      "x_shape": [
+        2,
+        32,
+        16,
+        32,
+        32
+      ],
+      "grad_shape": [
+        2,
+        64,
+        14,
+        30,
+        30
+      ],
+      "output_shape": [
+        64,
+        32,
+        3,
+        3,
+        3
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1
+        ],
+        "pads": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dilations": [
+          1,
+          1,
+          1
+        ],
+        "groups": 1,
+        "filter_size": [
+          64,
+          32,
+          3,
+          3,
+          3
+        ]
+      },
+      "note": "S-float16-1M-\u5bf9\u9f50-3x3x3k-valid | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Conv3DBackpropFilter\u00d71",
+      "numel": 55296,
+      "kernel_us": null,
+      "max_abs_error": 0.125,
+      "raw_mere": 6.668789953639336e-06,
+      "raw_mare": 0.027591466903686523,
+      "absolute_error_floor": 0.03125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "one_ulp_equivalence": true,
+      "forward_error_rule": "ill-conditioned only: abs(oracle)<=2*gamma_K*sum_abs_products and abs(device-oracle)<=same bound",
+      "ill_conditioned_count": 0,
+      "max_bound_ratio": 0.0,
+      "special_values_match": true,
+      "exact_match": false,
+      "primary_oracle": "torch_float32_conv3d_weight_then_single_output_cast",
+      "native_dtype_reference_diagnostic": {
+        "max_abs_error": 0.125,
+        "mere": 0.0026061176693693362,
+        "mare": 114.9981689453125,
+        "special_values_match": true,
+        "exact_match": false
+      },
+      "passed": true
+    },
+    {
+      "case_id": 2,
+      "x_shape": [
+        3,
+        32,
+        16,
+        32,
+        32
+      ],
+      "grad_shape": [
+        3,
+        64,
+        16,
+        32,
+        32
+      ],
+      "output_shape": [
+        64,
+        32,
+        3,
+        3,
+        3
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1,
+          1
+        ],
+        "groups": 1,
+        "filter_size": [
+          64,
+          32,
+          3,
+          3,
+          3
+        ]
+      },
+      "note": "M-float16-3M-\u8d28\u6570\u975e\u5bf9\u9f50-3x3x3k-same | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Conv3DBackpropFilter\u00d71",
+      "numel": 55296,
+      "kernel_us": null,
+      "max_abs_error": 0.5,
+      "raw_mere": 7.600697412297248e-06,
+      "raw_mare": 0.015109065920114517,
+      "absolute_error_floor": 0.03125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "one_ulp_equivalence": true,
+      "forward_error_rule": "ill-conditioned only: abs(oracle)<=2*gamma_K*sum_abs_products and abs(device-oracle)<=same bound",
+      "ill_conditioned_count": 0,
+      "max_bound_ratio": 0.0,
+      "special_values_match": true,
+      "exact_match": false,
+      "primary_oracle": "torch_float32_conv3d_weight_then_single_output_cast",
+      "native_dtype_reference_diagnostic": {
+        "max_abs_error": 1.0,
+        "mere": 0.001056709096207829,
+        "mare": 9.023187637329102,
+        "special_values_match": true,
+        "exact_match": false
+      },
+      "passed": true
+    },
+    {
+      "case_id": 3,
+      "x_shape": [
+        2,
+        64,
+        8,
+        64,
+        64
+      ],
+      "grad_shape": [
+        2,
+        128,
+        8,
+        64,
+        64
+      ],
+      "output_shape": [
+        128,
+        64,
+        5,
+        5,
+        5
+      ],
+      "dtype": "bfloat16",
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1
+        ],
+        "pads": [
+          2,
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "dilations": [
+          1,
+          1,
+          1
+        ],
+        "groups": 1,
+        "filter_size": [
+          128,
+          64,
+          5,
+          5,
+          5
+        ]
+      },
+      "note": "M-bfloat16-33M-\u5bf9\u9f50-5x5x5k | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Conv3DBackpropFilter\u00d71",
+      "numel": 1024000,
+      "kernel_us": null,
+      "max_abs_error": 8.0,
+      "raw_mere": 1.557466648364425e-05,
+      "raw_mare": 4.671937942504883,
+      "absolute_error_floor": 0.03125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0078125,
+      "one_ulp_equivalence": true,
+      "forward_error_rule": "ill-conditioned only: abs(oracle)<=2*gamma_K*sum_abs_products and abs(device-oracle)<=same bound",
+      "ill_conditioned_count": 0,
+      "max_bound_ratio": 0.0,
+      "special_values_match": true,
+      "exact_match": false,
+      "primary_oracle": "torch_float32_conv3d_weight_then_single_output_cast",
+      "native_dtype_reference_diagnostic": {
+        "max_abs_error": 8.0,
+        "mere": 6.291463391335128e-06,
+        "mare": 0.0078125,
+        "special_values_match": true,
+        "exact_match": false
+      },
+      "passed": true
+    },
+    {
+      "case_id": 4,
+      "x_shape": [
+        4,
+        64,
+        16,
+        32,
+        32
+      ],
+      "grad_shape": [
+        4,
+        128,
+        8,
+        16,
+        16
+      ],
+      "output_shape": [
+        128,
+        64,
+        3,
+        3,
+        3
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "strides": [
+          2,
+          2,
+          2
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1,
+          1
+        ],
+        "groups": 1,
+        "filter_size": [
+          128,
+          64,
+          3,
+          3,
+          3
+        ]
+      },
+      "note": "L-float16-134M-\u5bf9\u9f50-stride=1,2,2 | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Conv3DBackpropFilter\u00d71",
+      "numel": 221184,
+      "kernel_us": null,
+      "max_abs_error": 4.0,
+      "raw_mere": 6.772429133379605e-06,
+      "raw_mare": 0.16297300159931183,
+      "absolute_error_floor": 0.03125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "one_ulp_equivalence": true,
+      "forward_error_rule": "ill-conditioned only: abs(oracle)<=2*gamma_K*sum_abs_products and abs(device-oracle)<=same bound",
+      "ill_conditioned_count": 0,
+      "max_bound_ratio": 0.0,
+      "special_values_match": true,
+      "exact_match": false,
+      "primary_oracle": "torch_float32_conv3d_weight_then_single_output_cast",
+      "native_dtype_reference_diagnostic": {
+        "max_abs_error": 8.0,
+        "mere": 0.0010950513497192033,
+        "mare": 6.282955646514893,
+        "special_values_match": true,
+        "exact_match": false
+      },
+      "passed": true
+    },
+    {
+      "case_id": 5,
+      "x_shape": [
+        2,
+        64,
+        8,
+        32,
+        32
+      ],
+      "grad_shape": [
+        2,
+        128,
+        6,
+        30,
+        30
+      ],
+      "output_shape": [
+        128,
+        64,
+        3,
+        3,
+        3
+      ],
+      "dtype": "bfloat16",
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          2,
+          2,
+          2
+        ],
+        "groups": 1,
+        "filter_size": [
+          128,
+          64,
+          3,
+          3,
+          3
+        ]
+      },
+      "note": "M-bfloat16-84M-\u8d28\u6570\u975e\u5bf9\u9f50-dilation=2 | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Conv3DBackpropFilter\u00d71",
+      "numel": 221184,
+      "kernel_us": null,
+      "max_abs_error": 4096.0,
+      "raw_mere": 3.1439151034309936e-06,
+      "raw_mare": 0.07407405227422714,
+      "absolute_error_floor": 0.03125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0078125,
+      "one_ulp_equivalence": true,
+      "forward_error_rule": "ill-conditioned only: abs(oracle)<=2*gamma_K*sum_abs_products and abs(device-oracle)<=same bound",
+      "ill_conditioned_count": 5,
+      "max_bound_ratio": 8.303172762680333e-06,
+      "special_values_match": true,
+      "exact_match": false,
+      "primary_oracle": "torch_float32_conv3d_weight_then_single_output_cast",
+      "native_dtype_reference_diagnostic": {
+        "max_abs_error": 4096.0,
+        "mere": 3.01196506892733e-06,
+        "mare": 0.018691588193178177,
+        "special_values_match": true,
+        "exact_match": false
+      },
+      "passed": true
+    },
+    {
+      "case_id": 6,
+      "x_shape": [
+        2,
+        128,
+        4,
+        16,
+        16
+      ],
+      "grad_shape": [
+        2,
+        256,
+        4,
+        16,
+        16
+      ],
+      "output_shape": [
+        256,
+        128,
+        1,
+        1,
+        1
+      ],
+      "dtype": "bfloat16",
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1
+        ],
+        "pads": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dilations": [
+          1,
+          1,
+          1
+        ],
+        "groups": 1,
+        "filter_size": [
+          256,
+          128,
+          1,
+          1,
+          1
+        ]
+      },
+      "note": "S-bfloat16-900K-\u8d28\u6570\u975e\u5bf9\u9f50-1x1x1k-valid | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Conv3DBackpropFilter\u00d71",
+      "numel": 32768,
+      "kernel_us": null,
+      "max_abs_error": 512.0,
+      "raw_mere": 2.4815756205498474e-06,
+      "raw_mare": 0.02604166604578495,
+      "absolute_error_floor": 0.03125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0078125,
+      "one_ulp_equivalence": true,
+      "forward_error_rule": "ill-conditioned only: abs(oracle)<=2*gamma_K*sum_abs_products and abs(device-oracle)<=same bound",
+      "ill_conditioned_count": 3,
+      "max_bound_ratio": 2.3377506295219064e-05,
+      "special_values_match": true,
+      "exact_match": false,
+      "primary_oracle": "torch_float32_conv3d_weight_then_single_output_cast",
+      "native_dtype_reference_diagnostic": {
+        "max_abs_error": 65536.0,
+        "mere": 1.0831237204911304e-06,
+        "mare": 0.007692307699471712,
+        "special_values_match": true,
+        "exact_match": false
+      },
+      "passed": true
+    },
+    {
+      "case_id": 7,
+      "x_shape": [
+        3,
+        31,
+        15,
+        31,
+        31
+      ],
+      "grad_shape": [
+        3,
+        63,
+        15,
+        31,
+        31
+      ],
+      "output_shape": [
+        63,
+        31,
+        3,
+        3,
+        3
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1,
+          1
+        ],
+        "groups": 1,
+        "filter_size": [
+          63,
+          31,
+          3,
+          3,
+          3
+        ]
+      },
+      "note": "S-float16-3M-\u8d28\u6570\u975e\u5bf9\u9f50-\u5fae\u5c0f\u503c\u57df | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Conv3DBackpropFilter\u00d71",
+      "numel": 52731,
+      "kernel_us": null,
+      "max_abs_error": 0.0009765625,
+      "raw_mere": 8.195141157788253e-06,
+      "raw_mare": 0.023314058780670166,
+      "absolute_error_floor": 0.03125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "one_ulp_equivalence": true,
+      "forward_error_rule": "ill-conditioned only: abs(oracle)<=2*gamma_K*sum_abs_products and abs(device-oracle)<=same bound",
+      "ill_conditioned_count": 0,
+      "max_bound_ratio": 0.0,
+      "special_values_match": true,
+      "exact_match": false,
+      "primary_oracle": "torch_float32_conv3d_weight_then_single_output_cast",
+      "native_dtype_reference_diagnostic": {
+        "max_abs_error": 0.001953125,
+        "mere": 0.0010390592729157243,
+        "mare": 7.474802017211914,
+        "special_values_match": true,
+        "exact_match": false
+      },
+      "passed": true
+    },
+    {
+      "case_id": 8,
+      "x_shape": [
+        2,
+        63,
+        7,
+        61,
+        61
+      ],
+      "grad_shape": [
+        2,
+        127,
+        7,
+        61,
+        61
+      ],
+      "output_shape": [
+        127,
+        63,
+        3,
+        3,
+        3
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1,
+          1
+        ],
+        "groups": 1,
+        "filter_size": [
+          127,
+          63,
+          3,
+          3,
+          3
+        ]
+      },
+      "note": "M-float16-6M-\u975e\u5bf9\u9f50-\u975e\u5bf9\u79f0 | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Conv3DBackpropFilter\u00d71",
+      "numel": 216027,
+      "kernel_us": null,
+      "max_abs_error": 8.0,
+      "raw_mere": 1.2936289949919085e-06,
+      "raw_mare": 0.0007782101165503263,
+      "absolute_error_floor": 0.03125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "one_ulp_equivalence": true,
+      "forward_error_rule": "ill-conditioned only: abs(oracle)<=2*gamma_K*sum_abs_products and abs(device-oracle)<=same bound",
+      "ill_conditioned_count": 0,
+      "max_bound_ratio": 0.0,
+      "special_values_match": true,
+      "exact_match": false,
+      "primary_oracle": "torch_float32_conv3d_weight_then_single_output_cast",
+      "native_dtype_reference_diagnostic": {
+        "max_abs_error": 8.0,
+        "mere": 8.677520541411418e-05,
+        "mare": 0.0007955449400469661,
+        "special_values_match": true,
+        "exact_match": false
+      },
+      "passed": true
+    },
+    {
+      "case_id": 9,
+      "x_shape": [
+        3,
+        47,
+        5,
+        23,
+        23
+      ],
+      "grad_shape": [
+        3,
+        95,
+        3,
+        12,
+        12
+      ],
+      "output_shape": [
+        95,
+        47,
+        3,
+        3,
+        3
+      ],
+      "dtype": "bfloat16",
+      "attrs": {
+        "strides": [
+          2,
+          2,
+          2
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1,
+          1
+        ],
+        "groups": 1,
+        "filter_size": [
+          95,
+          47,
+          3,
+          3,
+          3
+        ]
+      },
+      "note": "S-bfloat16-100K-\u8d28\u6570\u975e\u5bf9\u9f50-stride\u975e\u5bf9\u79f0 | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Conv3DBackpropFilter\u00d71",
+      "numel": 120555,
+      "kernel_us": null,
+      "max_abs_error": 64.0,
+      "raw_mere": 2.594645534154613e-07,
+      "raw_mare": 0.007575757801532745,
+      "absolute_error_floor": 0.03125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0078125,
+      "one_ulp_equivalence": true,
+      "forward_error_rule": "ill-conditioned only: abs(oracle)<=2*gamma_K*sum_abs_products and abs(device-oracle)<=same bound",
+      "ill_conditioned_count": 0,
+      "max_bound_ratio": 0.0,
+      "special_values_match": true,
+      "exact_match": false,
+      "primary_oracle": "torch_float32_conv3d_weight_then_single_output_cast",
+      "native_dtype_reference_diagnostic": {
+        "max_abs_error": 64.0,
+        "mere": 2.4505321049694204e-07,
+        "mare": 0.007575757801532745,
+        "special_values_match": true,
+        "exact_match": false
+      },
+      "passed": true
+    },
+    {
+      "case_id": 10,
+      "x_shape": [
+        5,
+        97,
+        7,
+        43,
+        43
+      ],
+      "grad_shape": [
+        5,
+        195,
+        5,
+        41,
+        41
+      ],
+      "output_shape": [
+        195,
+        97,
+        3,
+        3,
+        3
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          2,
+          2,
+          2
+        ],
+        "groups": 1,
+        "filter_size": [
+          195,
+          97,
+          3,
+          3,
+          3
+        ]
+      },
+      "note": "M-float16-4M-\u8d28\u6570\u975e\u5bf9\u9f50-dilation=2 | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Conv3DBackpropFilter\u00d71",
+      "numel": 510705,
+      "kernel_us": null,
+      "max_abs_error": 0.0,
+      "raw_mere": 0.0,
+      "raw_mare": 0.0,
+      "absolute_error_floor": 0.03125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "one_ulp_equivalence": true,
+      "forward_error_rule": "ill-conditioned only: abs(oracle)<=2*gamma_K*sum_abs_products and abs(device-oracle)<=same bound",
+      "ill_conditioned_count": 0,
+      "max_bound_ratio": 0.0,
+      "special_values_match": true,
+      "exact_match": true,
+      "primary_oracle": "torch_float32_conv3d_weight_then_single_output_cast",
+      "native_dtype_reference_diagnostic": {
+        "max_abs_error": 0.0,
+        "mere": 0.0,
+        "mare": 0.0,
+        "special_values_match": true,
+        "exact_match": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": 11,
+      "x_shape": [
+        2,
+        33,
+        17,
+        33,
+        33
+      ],
+      "grad_shape": [
+        2,
+        65,
+        17,
+        33,
+        33
+      ],
+      "output_shape": [
+        65,
+        33,
+        3,
+        3,
+        3
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1,
+          1
+        ],
+        "groups": 1,
+        "filter_size": [
+          65,
+          33,
+          3,
+          3,
+          3
+        ]
+      },
+      "note": "S-float16-1M-\u975e\u5bf9\u9f50-float16\u8fb9\u754c\u503c | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Conv3DBackpropFilter\u00d71",
+      "numel": 57915,
+      "kernel_us": null,
+      "max_abs_error": 0.0,
+      "raw_mere": 0.0,
+      "raw_mare": 0.0,
+      "absolute_error_floor": 0.03125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "one_ulp_equivalence": true,
+      "forward_error_rule": "ill-conditioned only: abs(oracle)<=2*gamma_K*sum_abs_products and abs(device-oracle)<=same bound",
+      "ill_conditioned_count": 0,
+      "max_bound_ratio": 0.0,
+      "special_values_match": true,
+      "exact_match": true,
+      "primary_oracle": "torch_float32_conv3d_weight_then_single_output_cast",
+      "native_dtype_reference_diagnostic": {
+        "max_abs_error": 0.0,
+        "mere": 0.0,
+        "mare": 0.0,
+        "special_values_match": false,
+        "exact_match": false
+      },
+      "passed": true
+    },
+    {
+      "case_id": 12,
+      "x_shape": [
+        3,
+        7,
+        13,
+        13,
+        13
+      ],
+      "grad_shape": [
+        3,
+        14,
+        13,
+        13,
+        13
+      ],
+      "output_shape": [
+        14,
+        7,
+        3,
+        3,
+        3
+      ],
+      "dtype": "bfloat16",
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1,
+          1
+        ],
+        "groups": 1,
+        "filter_size": [
+          14,
+          7,
+          3,
+          3,
+          3
+        ]
+      },
+      "note": "S-bfloat16-100K-\u8d28\u6570\u975e\u5bf9\u9f50-bfloat16\u8fb9\u754c\u503c | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Conv3DBackpropFilter\u00d71",
+      "numel": 2646,
+      "kernel_us": null,
+      "max_abs_error": 0.0,
+      "raw_mere": 0.0,
+      "raw_mare": 0.0,
+      "absolute_error_floor": 0.03125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0078125,
+      "one_ulp_equivalence": true,
+      "forward_error_rule": "ill-conditioned only: abs(oracle)<=2*gamma_K*sum_abs_products and abs(device-oracle)<=same bound",
+      "ill_conditioned_count": 0,
+      "max_bound_ratio": 0.0,
+      "special_values_match": true,
+      "exact_match": true,
+      "primary_oracle": "torch_float32_conv3d_weight_then_single_output_cast",
+      "native_dtype_reference_diagnostic": {
+        "max_abs_error": 0.0,
+        "mere": 0.0,
+        "mare": 0.0,
+        "special_values_match": true,
+        "exact_match": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": 13,
+      "x_shape": [
+        2,
+        31,
+        15,
+        31,
+        31
+      ],
+      "grad_shape": [
+        2,
+        63,
+        15,
+        31,
+        31
+      ],
+      "output_shape": [
+        63,
+        31,
+        3,
+        3,
+        3
+      ],
+      "dtype": "bfloat16",
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1,
+          1
+        ],
+        "groups": 1,
+        "filter_size": [
+          63,
+          31,
+          3,
+          3,
+          3
+        ]
+      },
+      "note": "S-bfloat16-3M-\u975e\u5bf9\u9f50-inf\u7279\u6b8a\u503c | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Conv3DBackpropFilter\u00d71",
+      "numel": 52731,
+      "kernel_us": null,
+      "max_abs_error": 0.0,
+      "raw_mere": 0.0,
+      "raw_mare": 0.0,
+      "absolute_error_floor": 0.03125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0078125,
+      "one_ulp_equivalence": true,
+      "forward_error_rule": "ill-conditioned only: abs(oracle)<=2*gamma_K*sum_abs_products and abs(device-oracle)<=same bound",
+      "ill_conditioned_count": 0,
+      "max_bound_ratio": 0.0,
+      "special_values_match": true,
+      "exact_match": true,
+      "primary_oracle": "torch_float32_conv3d_weight_then_single_output_cast",
+      "native_dtype_reference_diagnostic": {
+        "max_abs_error": 0.0,
+        "mere": 0.0,
+        "mare": 0.0,
+        "special_values_match": true,
+        "exact_match": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": 14,
+      "x_shape": [
+        2,
+        11,
+        5,
+        13,
+        17
+      ],
+      "grad_shape": [
+        2,
+        22,
+        5,
+        13,
+        17
+      ],
+      "output_shape": [
+        22,
+        11,
+        3,
+        3,
+        3
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1,
+          1
+        ],
+        "groups": 1,
+        "filter_size": [
+          22,
+          11,
+          3,
+          3,
+          3
+        ]
+      },
+      "note": "S-float16-20K-\u8d28\u6570\u975e\u5bf9\u9f50-nan\u7279\u6b8a\u503c | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Conv3DBackpropFilter\u00d71",
+      "numel": 6534,
+      "kernel_us": null,
+      "max_abs_error": 0.0,
+      "raw_mere": 0.0,
+      "raw_mare": 0.0,
+      "absolute_error_floor": 0.03125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "one_ulp_equivalence": true,
+      "forward_error_rule": "ill-conditioned only: abs(oracle)<=2*gamma_K*sum_abs_products and abs(device-oracle)<=same bound",
+      "ill_conditioned_count": 0,
+      "max_bound_ratio": 0.0,
+      "special_values_match": true,
+      "exact_match": true,
+      "primary_oracle": "torch_float32_conv3d_weight_then_single_output_cast",
+      "native_dtype_reference_diagnostic": {
+        "max_abs_error": 0.0,
+        "mere": 0.0,
+        "mare": 0.0,
+        "special_values_match": true,
+        "exact_match": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": 15,
+      "x_shape": [
+        4,
+        63,
+        7,
+        31,
+        31
+      ],
+      "grad_shape": [
+        4,
+        127,
+        7,
+        31,
+        31
+      ],
+      "output_shape": [
+        127,
+        63,
+        3,
+        3,
+        3
+      ],
+      "dtype": "bfloat16",
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1,
+          1
+        ],
+        "groups": 1,
+        "filter_size": [
+          127,
+          63,
+          3,
+          3,
+          3
+        ]
+      },
+      "note": "S-bfloat16-2M-\u975e\u5bf9\u9f50-\u96f6\u503c | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Conv3DBackpropFilter\u00d71",
+      "numel": 216027,
+      "kernel_us": null,
+      "max_abs_error": 0.0,
+      "raw_mere": 0.0,
+      "raw_mare": 0.0,
+      "absolute_error_floor": 0.03125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0078125,
+      "one_ulp_equivalence": true,
+      "forward_error_rule": "ill-conditioned only: abs(oracle)<=2*gamma_K*sum_abs_products and abs(device-oracle)<=same bound",
+      "ill_conditioned_count": 0,
+      "max_bound_ratio": 0.0,
+      "special_values_match": true,
+      "exact_match": true,
+      "primary_oracle": "torch_float32_conv3d_weight_then_single_output_cast",
+      "native_dtype_reference_diagnostic": {
+        "max_abs_error": 0.0,
+        "mere": 0.0,
+        "mare": 0.0,
+        "special_values_match": true,
+        "exact_match": true
+      },
+      "passed": true
+    },
+    {
+      "case_id": 16,
+      "x_shape": [
+        2,
+        32,
+        8,
+        16,
+        16
+      ],
+      "grad_shape": [
+        2,
+        32,
+        8,
+        16,
+        16
+      ],
+      "output_shape": [
+        32,
+        16,
+        3,
+        3,
+        3
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1,
+          1
+        ],
+        "groups": 2,
+        "filter_size": [
+          32,
+          16,
+          3,
+          3,
+          3
+        ]
+      },
+      "note": "S-float16-1M-\u6df7\u5408\u975e\u5bf9\u9f50-\u5fae\u5c0f\u503c\u57df | baseline_kernels: TransData\u00d74 + MemSet\u00d72 + Conv3DBackpropFilter\u00d71",
+      "numel": 13824,
+      "kernel_us": null,
+      "max_abs_error": 0.03125,
+      "raw_mere": 2.0911403158539477e-06,
+      "raw_mare": 0.0036224019713699818,
+      "absolute_error_floor": 0.03125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "one_ulp_equivalence": true,
+      "forward_error_rule": "ill-conditioned only: abs(oracle)<=2*gamma_K*sum_abs_products and abs(device-oracle)<=same bound",
+      "ill_conditioned_count": 0,
+      "max_bound_ratio": 0.0,
+      "special_values_match": true,
+      "exact_match": false,
+      "primary_oracle": "torch_float32_conv3d_weight_then_single_output_cast",
+      "native_dtype_reference_diagnostic": {
+        "max_abs_error": 0.0625,
+        "mere": 0.0007785203573365396,
+        "mare": 4.2076215744018555,
+        "special_values_match": true,
+        "exact_match": false
+      },
+      "passed": true
+    },
+    {
+      "case_id": 17,
+      "x_shape": [
+        2,
+        64,
+        8,
+        32,
+        32
+      ],
+      "grad_shape": [
+        2,
+        64,
+        8,
+        32,
+        32
+      ],
+      "output_shape": [
+        64,
+        1,
+        1,
+        1,
+        1
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1
+        ],
+        "pads": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dilations": [
+          1,
+          1,
+          1
+        ],
+        "groups": 64,
+        "filter_size": [
+          64,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "note": "M-float16-20M-\u975e\u5bf9\u9f50-stride=1,2,2 | baseline_kernels: TransData\u00d74 + MemSet\u00d72 + Conv3DBackpropFilter\u00d71",
+      "numel": 64,
+      "kernel_us": null,
+      "max_abs_error": 0.0,
+      "raw_mere": 0.0,
+      "raw_mare": 0.0,
+      "absolute_error_floor": 0.03125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "one_ulp_equivalence": true,
+      "forward_error_rule": "ill-conditioned only: abs(oracle)<=2*gamma_K*sum_abs_products and abs(device-oracle)<=same bound",
+      "ill_conditioned_count": 0,
+      "max_bound_ratio": 0.0,
+      "special_values_match": true,
+      "exact_match": true,
+      "primary_oracle": "torch_float32_conv3d_weight_then_single_output_cast",
+      "native_dtype_reference_diagnostic": {
+        "max_abs_error": 0.0625,
+        "mere": 0.00022080007147451397,
+        "mare": 0.0022675737272948027,
+        "special_values_match": true,
+        "exact_match": false
+      },
+      "passed": true
+    },
+    {
+      "case_id": 18,
+      "x_shape": [
+        2,
+        128,
+        8,
+        64,
+        64
+      ],
+      "grad_shape": [
+        2,
+        256,
+        8,
+        64,
+        64
+      ],
+      "output_shape": [
+        256,
+        128,
+        5,
+        5,
+        5
+      ],
+      "dtype": "bfloat16",
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1
+        ],
+        "pads": [
+          2,
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "dilations": [
+          1,
+          1,
+          1
+        ],
+        "groups": 1,
+        "filter_size": [
+          256,
+          128,
+          5,
+          5,
+          5
+        ]
+      },
+      "note": "M-bfloat16-120M-\u975e\u5bf9\u9f50-dilation=3-\u5927\u503c\u57df | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Conv3DBackpropFilter\u00d71",
+      "numel": 4096000,
+      "kernel_us": null,
+      "max_abs_error": 1048576.0,
+      "raw_mere": 1.6094115639020856e-05,
+      "raw_mare": 5.4375,
+      "absolute_error_floor": 0.03125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0078125,
+      "one_ulp_equivalence": true,
+      "forward_error_rule": "ill-conditioned only: abs(oracle)<=2*gamma_K*sum_abs_products and abs(device-oracle)<=same bound",
+      "ill_conditioned_count": 503,
+      "max_bound_ratio": 8.052136763581075e-06,
+      "special_values_match": true,
+      "exact_match": false,
+      "primary_oracle": "torch_float32_conv3d_weight_then_single_output_cast",
+      "native_dtype_reference_diagnostic": {
+        "max_abs_error": 2097152.0,
+        "mere": 1.3852179698687905e-05,
+        "mare": 2.7746479511260986,
+        "special_values_match": true,
+        "exact_match": false
+      },
+      "passed": true
+    },
+    {
+      "case_id": 19,
+      "x_shape": [
+        2,
+        64,
+        16,
+        128,
+        128
+      ],
+      "grad_shape": [
+        2,
+        128,
+        16,
+        128,
+        128
+      ],
+      "output_shape": [
+        128,
+        64,
+        3,
+        3,
+        3
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          1,
+          1,
+          1
+        ],
+        "groups": 1,
+        "filter_size": [
+          128,
+          64,
+          3,
+          3,
+          3
+        ]
+      },
+      "note": "S-float16-400K-\u8d28\u6570\u975e\u5bf9\u9f50-\u5fae\u5c0f\u503c\u57df | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Conv3DBackpropFilter\u00d71",
+      "numel": 221184,
+      "kernel_us": null,
+      "max_abs_error": 0.25,
+      "raw_mere": 0.0001261248420766071,
+      "raw_mare": 17.68549156188965,
+      "absolute_error_floor": 0.03125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "one_ulp_equivalence": true,
+      "forward_error_rule": "ill-conditioned only: abs(oracle)<=2*gamma_K*sum_abs_products and abs(device-oracle)<=same bound",
+      "ill_conditioned_count": 0,
+      "max_bound_ratio": 0.0,
+      "special_values_match": true,
+      "exact_match": false,
+      "primary_oracle": "torch_float32_conv3d_weight_then_single_output_cast",
+      "native_dtype_reference_diagnostic": {
+        "max_abs_error": 0.25,
+        "mere": 0.0007742360415495274,
+        "mare": 37.58029556274414,
+        "special_values_match": true,
+        "exact_match": false
+      },
+      "passed": true
+    },
+    {
+      "case_id": 20,
+      "x_shape": [
+        2,
+        128,
+        16,
+        64,
+        64
+      ],
+      "grad_shape": [
+        2,
+        256,
+        14,
+        62,
+        62
+      ],
+      "output_shape": [
+        256,
+        128,
+        3,
+        3,
+        3
+      ],
+      "dtype": "float16",
+      "attrs": {
+        "strides": [
+          1,
+          1,
+          1
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "dilations": [
+          2,
+          2,
+          2
+        ],
+        "groups": 1,
+        "filter_size": [
+          256,
+          128,
+          3,
+          3,
+          3
+        ]
+      },
+      "note": "M-float16-4M-\u8d28\u6570\u975e\u5bf9\u9f50-dilation=2-\u975e\u5bf9\u79f0\u4e2d\u503c\u57df | baseline_kernels: TransData\u00d73 + MemSet\u00d71 + Conv3DBackpropFilter\u00d71",
+      "numel": 884736,
+      "kernel_us": null,
+      "max_abs_error": 0.0,
+      "raw_mere": 0.0,
+      "raw_mare": 0.0,
+      "absolute_error_floor": 0.03125,
+      "mere": 0.0,
+      "mare": 0.0,
+      "threshold": 0.0009765625,
+      "one_ulp_equivalence": true,
+      "forward_error_rule": "ill-conditioned only: abs(oracle)<=2*gamma_K*sum_abs_products and abs(device-oracle)<=same bound",
+      "ill_conditioned_count": 0,
+      "max_bound_ratio": 0.0,
+      "special_values_match": true,
+      "exact_match": true,
+      "primary_oracle": "torch_float32_conv3d_weight_then_single_output_cast",
+      "native_dtype_reference_diagnostic": {
+        "max_abs_error": 0.0,
+        "mere": 0.0,
+        "mare": 0.0,
+        "special_values_match": true,
+        "exact_match": true
+      },
+      "passed": true
+    }
+  ]
+}

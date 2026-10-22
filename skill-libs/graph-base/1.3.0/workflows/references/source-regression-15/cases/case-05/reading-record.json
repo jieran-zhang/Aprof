@@ -1,0 +1,185 @@
+{
+  "task_id": "raw15-case-05",
+  "skills": [
+    "ascendc-aprof-diagnosis",
+    "ascendc-aprof-parallel-planning",
+    "ascendc-aprof-optimization"
+  ],
+  "source_read": [
+    {
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0"
+      },
+      "purpose": "核内计算、队列、有效长与Cast顺序"
+    },
+    {
+      "ref": {
+        "path": "source/op_host/apply_adam_w.asc",
+        "sha256": "sha256:f9e628435d48f27a9521f65f0eac276f58bc8f7929adbc7d54d31e3672cc9dc2"
+      },
+      "purpose": "实际launch一次、分配与dtype/shape检查"
+    },
+    {
+      "ref": {
+        "path": "source/op_host/apply_adam_w_common.h",
+        "sha256": "sha256:d010363013f57030ab4c465008fd79028c7ff65471c74ca069b21a35af7773c7"
+      },
+      "purpose": "tile/核分配/UB公式"
+    },
+    {
+      "ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:0bcdecc53621402511d6631fde12caa836a1980898e844da3f8e9bdc2bfd46bf"
+      },
+      "purpose": "原20case全部元数据"
+    },
+    {
+      "ref": {
+        "path": "source/scripts/verify_result.py",
+        "sha256": "sha256:912261e20f27bdeabbe7229913be4d9970fcd0a63d450b013f4de6b1e257d901"
+      },
+      "purpose": "原oracle门槛和特殊值比较"
+    }
+  ],
+  "problem_catalog": "retrieval.json全部28项；已按各自源码挑选正文，无预设Action数量",
+  "expansion_ref": {
+    "path": "expansion.json",
+    "sha256": "sha256:2b902a1bad6f3299908efb622b7183edc9e6fa5f0ac99ac0b20341d2d122b230"
+  },
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "input_pipeline"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+        "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+      },
+      "locator": "lines:272-316",
+      "effect_kind": "mechanism",
+      "before": "当前源码结构：四输入每tile全部读入后执行safeSqrt/safeDiv长链，再单输出写回；四路输入各一槽。",
+      "after": "正文机制/边界确认：与12个字段缓存相比，预取作用于每元素四路读流量。相比复用5个FP32算术缓冲，原代码已经就地覆盖grad/m/v并复用scratch，进一步alias易破坏safe分支。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "storage"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+        "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+      },
+      "locator": "lines:308-351",
+      "effect_kind": "mechanism",
+      "before": "当前源码结构：FP32用5队列，低精度用5原始队列加5FP32缓冲；同一bufB/C/D/E已多用途覆盖。",
+      "after": "正文机制/边界确认：host按20/30字节系数及mask+10240预留选最大tile，容量是显式约束；没有证据再合并a/b/c/d/e可保留var、分母与特殊值恢复，因此不先减少缓冲。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "metadata"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+        "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+      },
+      "locator": "lines:298-341",
+      "effect_kind": "mechanism",
+      "before": "当前源码结构：每tile复制beta1/beta2/oneMinus/invBias/weightDecay/epsilon/signedLr与三个常量bits。",
+      "after": "正文机制/边界确认：编译器可能消除；该链有四路GM与大量Compare/Select，先选更直接的跨tile调度。字段外提会增长标量生存期，留作编译结果后的后继。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "input_pipeline"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+      },
+      "locator": "lines:72-108",
+      "effect_kind": "plan",
+      "before": "有元素总数与原始块长，但尚未明确新方案的owner/存储范围。",
+      "after": "保留每核独占输出与原逐元素数学链，T和物理槽分别计入字节公式；已有分区提取不算新并行优化。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "input_pipeline"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+        "sha256": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603"
+      },
+      "locator": "lines:62-144",
+      "effect_kind": "parameters",
+      "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+      "after": "保留host对齐512的blockFormer与输出owner，四路输入队列各配置2物理槽，输出1槽，低精度5个FP32 compute buffer仍1套。T=64k，系数float32=36、half/bf16=38；alpha*T+ceil(ceil(T/8)/256)*256+8192+2048≤B，并保留copy字段上限2097151/s。在当前tile DeQue/读入计算前后为下一tile独立槽预取，队列最大未DeQue数受SDK深度约束，逐代完成后回收。保持SafeSqrt、SafeDiv、weightDecay条件、bias与输出RoundMode全部不变；单tile回退原槽数。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "input_pipeline"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+        "sha256": "sha256:04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483"
+      },
+      "locator": "lines:74-119",
+      "effect_kind": "parameters",
+      "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+      "after": "保留host对齐512的blockFormer与输出owner，四路输入队列各配置2物理槽，输出1槽，低精度5个FP32 compute buffer仍1套。T=64k，系数float32=36、half/bf16=38；alpha*T+ceil(ceil(T/8)/256)*256+8192+2048≤B，并保留copy字段上限2097151/s。在当前tile DeQue/读入计算前后为下一tile独立槽预取，队列最大未DeQue数受SDK深度约束，逐代完成后回收。保持SafeSqrt、SafeDiv、weightDecay条件、bias与输出RoundMode全部不变；单tile回退原槽数。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "input_pipeline"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+        "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+      },
+      "locator": "lines:75-110",
+      "effect_kind": "parameters",
+      "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+      "after": "保留输入/输出Cast、原算术顺序、NaN/Inf及±0；没有把值域case当公共输入保证。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    }
+  ],
+  "conditional_P_adoption": "planning.elementwise.continuous",
+  "O_consulted_documents_no_confirmed_C2": [
+    "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+    "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+    "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md"
+  ],
+  "limits": "仅采用正文作为条件规划依据；route匹配不等于已阅读/已实施，本文仅记录实际读过并解释的条目。",
+  "routing_layers": {
+    "full_tree_consultation": {
+      "P": "R2-parallel-planning-route.json",
+      "O": "R2-optimization-route.json"
+    },
+    "action_bound_candidates": {
+      "P": [
+        "planning.elementwise.continuous"
+      ],
+      "O": [
+        "implementation.pipeline-sync.pipeline",
+        "implementation.pipeline-sync.slots"
+      ]
+    },
+    "conditional_adoption": {
+      "P": "planning.elementwise.continuous",
+      "proposed_O_method": "implementation.pipeline-sync.pipeline",
+      "status": "条件采用规划/实现知识，未形成confirmed C2，因此O不是C3正式选定/实施"
+    },
+    "supporting_docs_outside_action_subtrees": "numeric用于原精度与特殊值约束；vector-api fallback用于未核验API的限制；AdamW中reuse用于拒绝不合法进一步合并。这些是咨询/审读，不是额外Action或正式O选定。"
+  }
+}

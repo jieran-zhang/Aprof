@@ -1,0 +1,114 @@
+{
+  "task_id": "autonomy-c-12",
+  "kind": "preselection/internal-router-feasibility-consultation",
+  "round": 1,
+  "parallel_route_ref": {
+    "path": "parallel-planning-consult-route.json",
+    "sha256": "sha256:d07cf7ac0b757bb5ee999d47fc36d492cd16ee934599ef385afa1973ca609e2f"
+  },
+  "optimization_route_ref": {
+    "path": "optimization-consult-route.json",
+    "sha256": "sha256:69f05c382e876872448ab44db1b08d84c1691344d115e8df46a9ee6e1427b651"
+  },
+  "actual_body_readings": [
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/broadcast.md",
+        "sha256": "sha256:485c6aec11ef4e73458f85be904d0692bf7ed6b97db0ecd88d7694b039c505f0"
+      },
+      "locator": "lines:131-244",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "采用完整zero-stride位图合轴和按行源起点公式。A3静态Broadcast不能用补齐冒充真实shape对齐，int32不在该文给出的静态Broadcast dtype表内，因此比较Duplicate/合法TensorScalar替代，未闭合前不承诺实现。513*4与8193*2不对齐需分段/保留源，不直接套axis=0整行Broadcast。",
+      "applicability": "partial：仅采用容量、有效域、所有权/数值边界原则；未声称整套模板API已验证。"
+    },
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+      },
+      "locator": "lines:83-188",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "确认按连续输出owner分区和valid长度，tile容量必须计所有实际分配；单槽/双槽只是假设。foreach完整结构适用；Maximum只覆盖同形；RoPE伴随partner读不满足逐元素同下标前提，仅采用owner/容量原则。",
+      "applicability": "partial：仅采用容量、有效域、所有权/数值边界原则；未声称整套模板API已验证。"
+    },
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+        "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+      },
+      "locator": "lines:90-131",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "采用A3 memory Vector连续count与合法repeat的地址范围公式，避免950 Reg/VF。数值操作顺序和mask尾部须逐API核验；有Cast不代表主要Scalar算术已向量化。Compare非整256B边界不能从Add的count推合法性。",
+      "applicability": "partial：仅采用容量、有效域、所有权/数值边界原则；未声称整套模板API已验证。"
+    },
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+        "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+      },
+      "locator": "lines:97-264",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "只有原输入同地址同版本才能驻留；保留到最后异步消费者结束，删除copy不自动扣除独立InitBuffer分配。RoPE限同owner trig key窗口；Maximum限broadcast源；Resize限同nc窗口公共原值，几何权重表不是原输入。",
+      "applicability": "partial：仅采用容量、有效域、所有权/数值边界原则；未声称整套模板API已验证。"
+    },
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/compare-select-tail.md",
+        "sha256": "sha256:e0cf231e0bd3c6f821342c3d96c262230f009a68e19fc86e0136bf75e2885d62"
+      },
+      "locator": "lines:68-115",
+      "effect_kind": "plan",
+      "before": "原方案把FP32/int32统称Vector Max，且只算三数据区，遗漏Compare尾部和Select临时区。",
+      "after": "保留action.restructure_broadcast：按zero-stride位图合轴，每个owner与行交集只解码一次外轴并递增内轴地址。int32广播使用A3文档支持的int32 Max(count)，不走GT Compare/Select；FP32广播保留av>bv?av:bv条件，优先GT Compare(c)+Select模式2(n)，不预设Max等价。FP32输入只补[n,c)，predicate按32B分配，预留8192B Select临时区，只回写4n有效字节；短行同时比较按行解码后scalar条件选择。其它dtype/同形/既有half广播原样保留。 FP32单槽保守峰值U=max_j(12*c_j+M_j+8192)+Bresident+Bother，c_j=64*ceil(n_j/64)，M_j=32*ceil(ceil(c_j/8)/32)。三个数据区独立且各c_j个float；predicate独立；8192B按非重叠生命周期复用。int32 U=3*A(4*T)+Bresident+Bother。实际UB容量与SDK未知，以U<=Uavailable为条件；多槽须重新计数，不默认alias。 最强已注册替代仍为action.vectorize_scalar_loop：同样分别用FP32 GT+Select与int32 Max，减少N次scalar比较，但泛化逐元素收集仍保留N*rank地址解码和可能的Boffset/gather代价。它也必须支付FP32的padding、predicate、8192B及同步，不能因称为vectorize而免计。广播重构额外减少重复解码并复用zero-stride输入，故仍优先；短行是否批量化由新增成本决定，可保持广播重构但使用每行scalar条件选择。",
+      "applicability": "partial：完整采用A2/A3 memory-vector FP32 GT+Select合法尾部骨架；实际SDK待核对。int32仅采用此文的排除边界并结合已读Max来源证明支持，不套用GT+Select；其它dtype/同形路径不变。"
+    }
+  ],
+  "confirmed_C2": false,
+  "P_KEEP": false,
+  "O_KEEP": false,
+  "implementation_authorized": false,
+  "reason": "采用条件骨架和方法咨询，当前未有完整已确认计划，不生成虚构C2/C3。",
+  "action_bound_route_refs": [
+    {
+      "path": "parallel-planning-action-consult-r1.json",
+      "sha256": "sha256:57ee61854a2399410e8f891883a44c19252cac15ceedfc355eeb60485fe6757d"
+    },
+    {
+      "path": "optimization-action-consult-r1.json",
+      "sha256": "sha256:d2b8627791d674535bd54fe2d54b8533c42ebdf166eef6f1415333e45d174fe2"
+    }
+  ],
+  "source_api_reading_ref": {
+    "path": "compare-select-review.json",
+    "sha256": "sha256:aa50f1a1452e04e8ebead3e74fd600ee896be201750a482da83b987c555bbc7c"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "schema": "aprof.independent-outcome-execution-verification/v1",
+  "reviewed_at_utc": "2026-10-21T12:24:48.898131+00:00",
+  "supplements": "review/OUTCOME-SUPPLEMENT.json",
+  "finding": "OR-001",
+  "status": "static fix reviewed; parent affected fresh-process CPU regression verified from metadata and log",
+  "execution_by_reviewer": false,
+  "execution_by_parent": true,
+  "result": {
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-q",
+      "runtime/tests/test_scheme_cli.py",
+      "-k",
+      "old_v3_link",
+      "-p",
+      "no:cacheprovider",
+      "--basetemp",
+      "/dev/shm/aprof-scheme-v3-outcome-operator-20261021"
+    ],
+    "environment": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONPATH": "runtime/src"
+    },
+    "cwd": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/skill-libs/graph-base/1.3.0",
+    "status": "passed",
+    "hardware": false,
+    "reason": "独立复核新增算子身份检查后重跑受影响的旧v3正反例",
+    "exit_code": 0,
+    "pytest_seconds": 269.03,
+    "summary": "1 passed, 3 deselected in 269.03s (0:04:29)",
+    "assertions": [
+      "正常v3结果关联",
+      "相同source/candidate但request与result均属于其他operator被拒",
+      "request/result operator不一致被拒",
+      "修改result而不重算decision_hash被拒"
+    ],
+    "source_hashes": {
+      "runtime/src/aprof_runtime/knowledge_outcome.py": "sha256:0a89ac30c2d0e6747c8f2da18529c0edee60a94cf3bed71393a5e598500fe122",
+      "runtime/tests/test_scheme_cli.py": "sha256:dee995a39578b805def9066d843426bd0cf7e85c37fde386073461e37b71cf7c"
+    }
+  },
+  "current_source_hashes_match_recorded_run": true,
+  "evidence": {
+    "checks/old-v3-outcome-operator.json": "sha256:d91d9397be667b657f1e2f415bc5a684ca03bc6a8f17d010230a502bb9283f5d",
+    "checks/old-v3-outcome-operator.log": "sha256:b9ccec52c735c9eda672ea89501fd2ef3d83e0e5ad454bdd8216ee0d8353265a",
+    "review/OUTCOME-SUPPLEMENT.json": "sha256:e1ed6008aed23000dc0f7e1ee8917136e65af555912c049c46399b8c9e8452dd"
+  },
+  "prior_public_cli_run_scope": "原4项通过在operator修复前；此新进程1项受影响回归单独报告，不叠加为5项唯一用例。",
+  "implementation_modified_by_reviewer": false,
+  "grades_sha256_verified": "sha256:082087d0692142f720813a8747c60e9fccce9cd47b333e96b3d6f0781e15296e",
+  "hardware_used": false
+}

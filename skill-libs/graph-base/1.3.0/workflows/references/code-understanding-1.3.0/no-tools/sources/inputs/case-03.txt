@@ -1,0 +1,357 @@
+你正在AProf算子优化的code-understanding阶段。以下消息已经给出源码、workload和本次可用资料；仅凭这些上下文及你已有知识完成理解，不调用任何工具，不执行代码、CPU脚本或心算工具，不访问文件、网络、设备或其他Agent。不要请求工具或补充材料。
+
+提交一份供后续diagnosis使用的中文代码理解说明：整体算法与数值语义、当前实现策略、实际分派/任务/循环/尾块、数据/存储/依赖，以及对应的910C硬件行为。用当前workload做必要的具体推导，给出文件/符号/行号定位。区分源码事实、平台/API知识、具体推断及尚不能确认的边界；缺少性能测量不妨碍静态理解。不要预选Problem/Action，不设计新优化方案。
+
+所有资料正文已内联；链接和历史路径只作定位，不提供外部手册或检索能力。尽量在3500个中文或ASCII字符内完成，正确且具体的解释比字数和引用数量重要。最终直接提交完整的中文代码理解说明，使用Markdown，不输出JSON外壳。
+
+=== 平台与workload ===
+目标平台：Ascend 910C / Atlas A3，实际device架构条件为 __NPU_ARCH__=2201。host侧NPU_ARCH以workload指定值为准，不与device宏混用。3510只在题面指定时作为静态对照。没有设备编译、运行或profiling结果。
+# 题 3
+
+请阅读完整 source（含 host、参数/tiling 和 kernel 上下文）及 workload。本题要求理解现有实现，请提交一份连贯的代码理解说明：先解释输入输出与整体算法，再解释当前实现怎样分工、搬运、计算和同步，最后说明目标硬件上的执行行为、适用边界和证据不足之处。
+
+用 workload 中的值做必要的具体推导，让地址/计数的单位明确。请给出能定位到源文件/符号的依据。不要预选 Problem/Action，不要求提出优化或改代码。只写能由本题材料支持的结论；字数和引用数量不计分。
+
+
+分析 `source/op_host/maximum.asc`、`source/op_kernel/maximum_tiling.h` 和 `source/op_kernel/maximum_kernel.asc`。固定 host 查询得到的 Vector 核数为 4，所有输入是连续 ND，无额外分配余量。
+
+比较以下三次独立调用，每次 x1 的逻辑值都为 `[[1,4,8],[2,5,9]]`：
+
+| 调用 | dtype | x1 shape | x2 shape | x2 数据 |
+| --- | --- | --- | --- | --- |
+| P | float16 | [2,3] | [2,1] | [[3],[7]] |
+| Q | float32 | [2,3] | [2,1] | [[3],[7]] |
+| R | float16 | [2,3] | [3] | [3,7,6] |
+
+请分别沿 host tiling、分派条件、实际地址与计算路径说明这三次调用。再概述文件中其他 dtype/shape 分支的实现策略。对三次调用的输出或执行边界，给出由当前源码可以支持的结论和必要的保留项。
+=== 完整输入源码 ===
+=== SOURCE FILE: source/op_host/data_utils.h ; sha256=c56d96c3859c66080329c242d1a4f9fee63178b49a4aaa5e545909b0ac5c80d8 ===
+0001: #pragma once
+0002: #include <filesystem>
+0003: #include <fstream>
+0004: #include <string>
+0005: 
+0006: inline bool ReadFile(const std::string &path, void *data, size_t bytes) {
+0007:     std::ifstream f(path, std::ios::binary);
+0008:     return f && static_cast<bool>(f.read(reinterpret_cast<char *>(data), bytes));
+0009: }
+0010: inline bool WriteFile(const std::string &path, const void *data, size_t bytes) {
+0011:     std::filesystem::path p(path);
+0012:     if (p.has_parent_path()) std::filesystem::create_directories(p.parent_path());
+0013:     std::ofstream f(path, std::ios::binary);
+0014:     return f && static_cast<bool>(f.write(reinterpret_cast<const char *>(data), bytes));
+0015: }
+
+=== SOURCE FILE: source/op_host/maximum.asc ; sha256=ec9a6b580b6b9623132633a700dd63398757a46da2fd8fceb7da65e5ecdda05f ===
+0001: #include <cstdint>
+0002: #include <cstdlib>
+0003: #include <iostream>
+0004: #include <sstream>
+0005: #include <stdexcept>
+0006: #include <string>
+0007: #include <vector>
+0008: #include "acl/acl.h"
+0009: #include "maximum_tiling.h"
+0010: #include "data_utils.h"
+0011: #include "../op_kernel/maximum_kernel.asc"
+0012: 
+0013: namespace {
+0014: void Check(aclError ret, const char *what) {
+0015:     if (ret != ACL_SUCCESS) throw std::runtime_error(std::string(what) + " failed: " + std::to_string(ret));
+0016: }
+0017: std::string Arg(int argc, char **argv, const std::string &name, const std::string &def = "") {
+0018:     for (int i = 1; i + 1 < argc; ++i) if (argv[i] == name) return argv[i + 1];
+0019:     return def;
+0020: }
+0021: std::vector<uint64_t> Shape(const std::string &s) {
+0022:     std::vector<uint64_t> out; std::stringstream ss(s); std::string token;
+0023:     while (std::getline(ss, token, ',')) out.push_back(std::stoull(token));
+0024:     return out;
+0025: }
+0026: uint32_t DType(const std::string &s) {
+0027:     if (s == "float16") return MAX_FLOAT16; if (s == "float32") return MAX_FLOAT32;
+0028:     if (s == "bfloat16") return MAX_BFLOAT16; if (s == "int8") return MAX_INT8;
+0029:     if (s == "int32") return MAX_INT32; if (s == "int64") return MAX_INT64;
+0030:     throw std::invalid_argument("unsupported dtype: " + s);
+0031: }
+0032: size_t ItemSize(uint32_t d) { return d == MAX_INT8 ? 1 : (d == MAX_FLOAT16 || d == MAX_BFLOAT16 ? 2 : (d == MAX_INT64 ? 8 : 4)); }
+0033: uint64_t Numel(const std::vector<uint64_t> &shape) { uint64_t n = 1; for (auto d : shape) n *= d; return n; }
+0034: }
+0035: 
+0036: int main(int argc, char **argv) {
+0037:     if (argc < 2) { std::cerr << "usage: maximum --x1-shape DIMS --x2-shape DIMS --dtype TYPE --x1 FILE --x2 FILE --output FILE [--device N]\n"; return 2; }
+0038:     int device = 0; aclrtStream stream = nullptr;
+0039:     void *hostX1 = nullptr, *hostX2 = nullptr, *hostOut = nullptr;
+0040:     void *devX1 = nullptr, *devX2 = nullptr, *devOut = nullptr, *devTiling = nullptr;
+0041:     try {
+0042:         const auto s1 = Shape(Arg(argc, argv, "--x1-shape")), s2 = Shape(Arg(argc, argv, "--x2-shape"));
+0043:         const uint32_t dtype = DType(Arg(argc, argv, "--dtype")); const size_t item = ItemSize(dtype);
+0044:         const size_t x1Bytes = Numel(s1) * item, x2Bytes = Numel(s2) * item;
+0045:         device = std::stoi(Arg(argc, argv, "--device", "0"));
+0046:         Check(aclInit(nullptr), "aclInit"); Check(aclrtSetDevice(device), "aclrtSetDevice");
+0047:         int64_t cores = 1; Check(aclrtGetDeviceInfo(device, ACL_DEV_ATTR_VECTOR_CORE_NUM, &cores), "query vector cores");
+0048:         const auto tiling = ComputeMaximumTiling(s1, s2, dtype, cores); const size_t outBytes = tiling.totalLength * item;
+0049:         Check(aclrtCreateStream(&stream), "aclrtCreateStream");
+0050:         Check(aclrtMallocHost(&hostX1, x1Bytes), "aclrtMallocHost x1"); Check(aclrtMallocHost(&hostX2, x2Bytes), "aclrtMallocHost x2");
+0051:         Check(aclrtMallocHost(&hostOut, outBytes), "aclrtMallocHost output");
+0052:         Check(aclrtMalloc(&devX1, x1Bytes, ACL_MEM_MALLOC_HUGE_FIRST), "aclrtMalloc x1"); Check(aclrtMalloc(&devX2, x2Bytes, ACL_MEM_MALLOC_HUGE_FIRST), "aclrtMalloc x2");
+0053:         Check(aclrtMalloc(&devOut, outBytes, ACL_MEM_MALLOC_HUGE_FIRST), "aclrtMalloc output"); Check(aclrtMalloc(&devTiling, sizeof(tiling), ACL_MEM_MALLOC_HUGE_FIRST), "aclrtMalloc tiling");
+0054:         if (!ReadFile(Arg(argc, argv, "--x1"), hostX1, x1Bytes)) throw std::runtime_error("read x1 failed");
+0055:         if (!ReadFile(Arg(argc, argv, "--x2"), hostX2, x2Bytes)) throw std::runtime_error("read x2 failed");
+0056:         Check(aclrtMemcpy(devX1, x1Bytes, hostX1, x1Bytes, ACL_MEMCPY_HOST_TO_DEVICE), "H2D x1"); Check(aclrtMemcpy(devX2, x2Bytes, hostX2, x2Bytes, ACL_MEMCPY_HOST_TO_DEVICE), "H2D x2");
+0057:         Check(aclrtMemcpy(devTiling, sizeof(tiling), &tiling, sizeof(tiling), ACL_MEMCPY_HOST_TO_DEVICE), "H2D tiling");
+0058:         maximum_kernel<<<tiling.blockNum, nullptr, stream>>>(static_cast<uint8_t *>(devX1), static_cast<uint8_t *>(devX2), static_cast<uint8_t *>(devOut), static_cast<uint8_t *>(devTiling));
+0059:         Check(aclrtSynchronizeStream(stream), "kernel synchronize"); Check(aclrtMemcpy(hostOut, outBytes, devOut, outBytes, ACL_MEMCPY_DEVICE_TO_HOST), "D2H output");
+0060:         if (!WriteFile(Arg(argc, argv, "--output"), hostOut, outBytes)) throw std::runtime_error("write output failed");
+0061:         std::cout << "maximum_kernel completed: numel=" << tiling.totalLength << " blocks=" << tiling.blockNum << " tile=" << tiling.tileElements << "\n";
+0062:         aclrtFree(devTiling); aclrtFree(devOut); aclrtFree(devX2); aclrtFree(devX1); aclrtFreeHost(hostOut); aclrtFreeHost(hostX2); aclrtFreeHost(hostX1); aclrtDestroyStream(stream); aclrtResetDevice(device); aclFinalize(); return 0;
+0063:     } catch (const std::exception &e) {
+0064:         std::cerr << "maximum failed: " << e.what() << "\n";
+0065:         if (devTiling) aclrtFree(devTiling); if (devOut) aclrtFree(devOut); if (devX2) aclrtFree(devX2); if (devX1) aclrtFree(devX1);
+0066:         if (hostOut) aclrtFreeHost(hostOut); if (hostX2) aclrtFreeHost(hostX2); if (hostX1) aclrtFreeHost(hostX1); if (stream) aclrtDestroyStream(stream);
+0067:         aclrtResetDevice(device); aclFinalize(); return 1;
+0068:     }
+0069: }
+
+=== SOURCE FILE: source/op_kernel/maximum_kernel.asc ; sha256=069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e ===
+0001: #pragma once
+0002: #include <type_traits>
+0003: #include "kernel_operator.h"
+0004: #include "maximum_tiling.h"
+0005: 
+0006: template <typename T>
+0007: class KernelMaximumSame {
+0008: public:
+0009:     __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+0010:                                 const __gm__ MaximumTilingData *t) {
+0011:         t_ = t;
+0012:         const uint64_t offset = static_cast<uint64_t>(AscendC::GetBlockIdx()) * t_->blockLength;
+0013:         const uint64_t remain = t_->totalLength > offset ? t_->totalLength - offset : 0;
+0014:         length_ = remain < t_->blockLength ? remain : t_->blockLength;
+0015:         x1_.SetGlobalBuffer((__gm__ T *)x1 + offset, length_);
+0016:         x2_.SetGlobalBuffer((__gm__ T *)x2 + offset, length_);
+0017:         y_.SetGlobalBuffer((__gm__ T *)y + offset, length_);
+0018:         const uint32_t count = t_->tileElements;
+0019:         pipe_.InitBuffer(x1Q_, 1, count * sizeof(T));
+0020:         pipe_.InitBuffer(x2Q_, 1, count * sizeof(T));
+0021:         pipe_.InitBuffer(yQ_, 1, count * sizeof(T));
+0022:         if constexpr (std::is_same<T, bfloat16_t>::value || std::is_same<T, int8_t>::value) {
+0023:             pipe_.InitBuffer(tmp1_, count * sizeof(float));
+0024:             pipe_.InitBuffer(tmp2_, count * sizeof(float));
+0025:             pipe_.InitBuffer(tmpOut_, count * sizeof(float));
+0026:             if constexpr (std::is_same<T, int8_t>::value)
+0027:                 pipe_.InitBuffer(tmpHalf_, count * sizeof(half));
+0028:         }
+0029:     }
+0030: 
+0031:     __aicore__ inline void Process() {
+0032:         for (uint64_t off = 0; off < length_; off += t_->tileElements) {
+0033:             const uint32_t count = static_cast<uint32_t>(
+0034:                 (length_ - off) < t_->tileElements ? length_ - off : t_->tileElements);
+0035:             auto a = x1Q_.AllocTensor<T>();
+0036:             auto b = x2Q_.AllocTensor<T>();
+0037:             AscendC::DataCopyExtParams p{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
+0038:             AscendC::DataCopyPadExtParams<T> pad{false, 0, 0, 0};
+0039:             AscendC::DataCopyPad(a, x1_[off], p, pad);
+0040:             AscendC::DataCopyPad(b, x2_[off], p, pad);
+0041:             x1Q_.EnQue(a); x2Q_.EnQue(b);
+0042:             a = x1Q_.DeQue<T>(); b = x2Q_.DeQue<T>();
+0043:             auto out = yQ_.AllocTensor<T>();
+0044:             if constexpr (std::is_same<T, bfloat16_t>::value) {
+0045:                 auto af = tmp1_.Get<float>(); auto bf = tmp2_.Get<float>(); auto of = tmpOut_.Get<float>();
+0046:                 AscendC::Cast(af, a, AscendC::RoundMode::CAST_NONE, count);
+0047:                 AscendC::Cast(bf, b, AscendC::RoundMode::CAST_NONE, count);
+0048:                 AscendC::Max(of, af, bf, count);
+0049:                 AscendC::Cast(out, of, AscendC::RoundMode::CAST_RINT, count);
+0050:             } else if constexpr (std::is_same<T, int8_t>::value) {
+0051:                 auto ah = tmpHalf_.Get<half>(); auto af = tmp1_.Get<float>();
+0052:                 auto bf = tmp2_.Get<float>(); auto of = tmpOut_.Get<float>();
+0053:                 AscendC::Cast(ah, a, AscendC::RoundMode::CAST_NONE, count);
+0054:                 AscendC::Cast(af, ah, AscendC::RoundMode::CAST_NONE, count);
+0055:                 AscendC::Cast(ah, b, AscendC::RoundMode::CAST_NONE, count);
+0056:                 AscendC::Cast(bf, ah, AscendC::RoundMode::CAST_NONE, count);
+0057:                 AscendC::Max(of, af, bf, count);
+0058:                 AscendC::Cast(ah, of, AscendC::RoundMode::CAST_RINT, count);
+0059:                 AscendC::Cast(out, ah, AscendC::RoundMode::CAST_RINT, count);
+0060:             } else {
+0061:                 AscendC::Max(out, a, b, count);
+0062:             }
+0063:             yQ_.EnQue(out); x2Q_.FreeTensor(b); x1Q_.FreeTensor(a);
+0064:             out = yQ_.DeQue<T>();
+0065:             AscendC::DataCopyPad(y_[off], out, p);
+0066:             yQ_.FreeTensor(out);
+0067:         }
+0068:     }
+0069: private:
+0070:     AscendC::TPipe pipe_;
+0071:     const __gm__ MaximumTilingData *t_;
+0072:     uint64_t length_;
+0073:     AscendC::GlobalTensor<T> x1_, x2_, y_;
+0074:     AscendC::TQue<AscendC::TPosition::VECIN, 1> x1Q_, x2Q_;
+0075:     AscendC::TQue<AscendC::TPosition::VECOUT, 1> yQ_;
+0076:     AscendC::TBuf<AscendC::TPosition::VECCALC> tmp1_, tmp2_, tmpOut_, tmpHalf_;
+0077: };
+0078: 
+0079: // FP16 broadcast cases are processed as contiguous innermost-axis segments.
+0080: // This keeps all half comparisons in the vector unit; dav-2201 does not allow
+0081: // half scalar arithmetic in an aicore function.
+0082: class KernelMaximumHalfLastAxisBroadcast {
+0083: public:
+0084:     __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+0085:                                 const __gm__ MaximumTilingData *t) {
+0086:         t_ = t;
+0087:         begin_ = static_cast<uint64_t>(AscendC::GetBlockIdx()) * t_->blockLength;
+0088:         end_ = begin_ + t_->blockLength;
+0089:         if (end_ > t_->totalLength) end_ = t_->totalLength;
+0090:         row_ = t_->outShape[t_->rank - 1];
+0091:         x1_.SetGlobalBuffer((__gm__ half *)x1, t_->totalLength);
+0092:         x2_.SetGlobalBuffer((__gm__ half *)x2, row_);
+0093:         y_.SetGlobalBuffer((__gm__ half *)y, t_->totalLength);
+0094:         const uint32_t count = t_->tileElements;
+0095:         pipe_.InitBuffer(x1Q_, 1, count * sizeof(half));
+0096:         pipe_.InitBuffer(x2Q_, 1, count * sizeof(half));
+0097:         pipe_.InitBuffer(yQ_, 1, count * sizeof(half));
+0098:     }
+0099:     __aicore__ inline void Process() {
+0100:         for (uint64_t off = begin_; off < end_;) {
+0101:             uint64_t count64 = end_ - off;
+0102:             if (count64 > t_->tileElements) count64 = t_->tileElements;
+0103:             const uint64_t rowRemain = row_ - (off % row_);
+0104:             if (count64 > rowRemain) count64 = rowRemain;
+0105:             const uint32_t count = static_cast<uint32_t>(count64);
+0106:             auto a = x1Q_.AllocTensor<half>(); auto b = x2Q_.AllocTensor<half>();
+0107:             AscendC::DataCopyExtParams p{1, static_cast<uint32_t>(count * sizeof(half)), 0, 0, 0};
+0108:             AscendC::DataCopyPadExtParams<half> pad{false, 0, 0, 0};
+0109:             AscendC::DataCopyPad(a, x1_[off], p, pad);
+0110:             AscendC::DataCopyPad(b, x2_[off % row_], p, pad);
+0111:             x1Q_.EnQue(a); x2Q_.EnQue(b); a = x1Q_.DeQue<half>(); b = x2Q_.DeQue<half>();
+0112:             auto out = yQ_.AllocTensor<half>(); AscendC::Max(out, a, b, count); yQ_.EnQue(out);
+0113:             x2Q_.FreeTensor(b); x1Q_.FreeTensor(a); out = yQ_.DeQue<half>();
+0114:             AscendC::DataCopyPad(y_[off], out, p); yQ_.FreeTensor(out); off += count;
+0115:         }
+0116:     }
+0117: private:
+0118:     AscendC::TPipe pipe_; const __gm__ MaximumTilingData *t_;
+0119:     uint64_t begin_, end_, row_;
+0120:     AscendC::GlobalTensor<half> x1_, x2_, y_;
+0121:     AscendC::TQue<AscendC::TPosition::VECIN, 1> x1Q_, x2Q_;
+0122:     AscendC::TQue<AscendC::TPosition::VECOUT, 1> yQ_;
+0123: };
+0124: 
+0125: template <typename T>
+0126: __aicore__ inline void MaximumScalar(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+0127:                                      const __gm__ MaximumTilingData *t) {
+0128:     __gm__ T *a = reinterpret_cast<__gm__ T *>(x1);
+0129:     __gm__ T *b = reinterpret_cast<__gm__ T *>(x2);
+0130:     __gm__ T *out = reinterpret_cast<__gm__ T *>(y);
+0131:     const uint64_t begin = static_cast<uint64_t>(AscendC::GetBlockIdx()) * t->blockLength;
+0132:     uint64_t end = begin + t->blockLength;
+0133:     if (end > t->totalLength) end = t->totalLength;
+0134:     for (uint64_t linear = begin; linear < end; ++linear) {
+0135:         uint64_t rem = linear, ai = 0, bi = 0;
+0136:         for (int dim = static_cast<int>(t->rank) - 1; dim >= 0; --dim) {
+0137:             const uint64_t coord = rem % t->outShape[dim];
+0138:             rem /= t->outShape[dim];
+0139:             ai += coord * t->x1Stride[dim];
+0140:             bi += coord * t->x2Stride[dim];
+0141:         }
+0142:         const T av = a[ai], bv = b[bi];
+0143:         if constexpr (std::is_same<T, half>::value || std::is_same<T, bfloat16_t>::value) {
+0144:             const float af = AscendC::ScalarCast<T, float, AscendC::RoundMode::CAST_NONE>(av);
+0145:             const float bf = AscendC::ScalarCast<T, float, AscendC::RoundMode::CAST_NONE>(bv);
+0146:             out[linear] = af > bf ? av : bv;
+0147:         } else {
+0148:             out[linear] = av > bv ? av : bv;
+0149:         }
+0150:     }
+0151: }
+0152: 
+0153: template <typename T>
+0154: __aicore__ inline void DispatchMaximum(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+0155:                                        const __gm__ MaximumTilingData *t) {
+0156:     if constexpr (std::is_same<T, int64_t>::value) {
+0157:         MaximumScalar<T>(x1, x2, y, t);
+0158:     } else if constexpr (std::is_same<T, half>::value) {
+0159:         if (t->sameShape) {
+0160:             KernelMaximumSame<T> op; op.Init(x1, x2, y, t); op.Process();
+0161:         } else {
+0162:             KernelMaximumHalfLastAxisBroadcast op; op.Init(x1, x2, y, t); op.Process();
+0163:         }
+0164:     } else {
+0165:         if (t->sameShape) {
+0166:             KernelMaximumSame<T> op; op.Init(x1, x2, y, t); op.Process();
+0167:         } else {
+0168:             MaximumScalar<T>(x1, x2, y, t);
+0169:         }
+0170:     }
+0171: }
+0172: 
+0173: extern "C" __global__ __aicore__ void maximum_kernel(
+0174:     GM_ADDR x1, GM_ADDR x2, GM_ADDR y, GM_ADDR tilingAddr) {
+0175:     const __gm__ MaximumTilingData *t =
+0176:         reinterpret_cast<const __gm__ MaximumTilingData *>(tilingAddr);
+0177:     if (t->dtype == MAX_FLOAT16) DispatchMaximum<half>(x1, x2, y, t);
+0178:     else if (t->dtype == MAX_FLOAT32) DispatchMaximum<float>(x1, x2, y, t);
+0179:     else if (t->dtype == MAX_BFLOAT16) DispatchMaximum<bfloat16_t>(x1, x2, y, t);
+0180:     else if (t->dtype == MAX_INT8) DispatchMaximum<int8_t>(x1, x2, y, t);
+0181:     else if (t->dtype == MAX_INT32) DispatchMaximum<int32_t>(x1, x2, y, t);
+0182:     else DispatchMaximum<int64_t>(x1, x2, y, t);
+0183: }
+
+=== SOURCE FILE: source/op_kernel/maximum_tiling.h ; sha256=f697d7fc66e5feeec035befd329429a896fb1538f3434f2ede13baa3118b362e ===
+0001: #pragma once
+0002: #include <algorithm>
+0003: #include <cstdint>
+0004: #include <stdexcept>
+0005: #include <vector>
+0006: 
+0007: enum MaximumDType : uint32_t {
+0008:     MAX_FLOAT16 = 0,
+0009:     MAX_FLOAT32 = 1,
+0010:     MAX_BFLOAT16 = 2,
+0011:     MAX_INT8 = 3,
+0012:     MAX_INT32 = 4,
+0013:     MAX_INT64 = 5,
+0014: };
+0015: 
+0016: struct MaximumTilingData {
+0017:     uint64_t totalLength;
+0018:     uint64_t blockLength;
+0019:     uint64_t outShape[8];
+0020:     uint64_t x1Stride[8];
+0021:     uint64_t x2Stride[8];
+0022:     uint32_t blockNum;
+0023:     uint32_t tileElements;
+0024:     uint32_t dtype;
+0025:     uint32_t rank;
+0026:     uint32_t sameShape;
+0027: };
+0028: 
+0029: inline MaximumTilingData ComputeMaximumTiling(
+0030:     const std::vector<uint64_t> &x1Shape, const std::vector<uint64_t> &x2Shape,
+0031:     uint32_t dtype, int64_t cores) {
+0032:     if (x1Shape.empty() || x2Shape.empty() || x1Shape.size() > 8 || x2Shape.size() > 8)
+0033:         throw std::invalid_argument("rank must be in [1, 8]");
+0034:     MaximumTilingData t{};
+0035:     t.rank = static_cast<uint32_t>(std::max(x1Shape.size(), x2Shape.size()));
+0036:     t.dtype = dtype;
+0037:     t.tileElements = 4096;
+0038:     t.sameShape = x1Shape == x2Shape;
+0039:     std::vector<uint64_t> a(t.rank, 1), b(t.rank, 1);
+0040:     std::copy(x1Shape.begin(), x1Shape.end(), a.begin() + t.rank - x1Shape.size());
+0041:     std::copy(x2Shape.begin(), x2Shape.end(), b.begin() + t.rank - x2Shape.size());
+0042:     uint64_t aStride = 1, bStride = 1, total = 1;
+0043:     for (int i = static_cast<int>(t.rank) - 1; i >= 0; --i) {
+0044:         if (a[i] != b[i] && a[i] != 1 && b[i] != 1)
+0045:             throw std::invalid_argument("incompatible broadcast shapes");
+0046:         t.outShape[i] = std::max(a[i], b[i]);
+0047:         t.x1Stride[i] = a[i] == 1 ? 0 : aStride;
+0048:         t.x2Stride[i] = b[i] == 1 ? 0 : bStride;
+0049:         aStride *= a[i]; bStride *= b[i]; total *= t.outShape[i];
+0050:     }
+0051:     t.totalLength = total;
+0052:     const uint64_t useful = std::max<uint64_t>(1, (total + 4095) / 4096);
+0053:     t.blockNum = static_cast<uint32_t>(std::max<int64_t>(1, std::min<int64_t>(cores, useful)));
+0054:     t.blockLength = (total + t.blockNum - 1) / t.blockNum;
+0055:     return t;
+0056: }

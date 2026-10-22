@@ -1,0 +1,168 @@
+--- a/runtime/src/aprof_runtime/task_window_timing.py
++++ b/runtime/src/aprof_runtime/task_window_timing.py
+@@ -25,6 +25,45 @@
+               and all(isinstance(name, str) and name and name.strip() == name for name in sequence),
+               "invalid serial kernel sequence")
+     return value
++
++
++def case_task_config(config, case_id=None):
++    """Validate all v5 case bindings and project one case for the v4 parser.
++
++    Only this temporary view has scalar counts/sequences. Registered config,
++    source inventory, case commands and workload refs retain the complete maps.
++    """
++    _need(isinstance(config, dict), "invalid case Task config")
++    ids = config.get("expected_case_ids")
++    _need(isinstance(ids, list) and ids and all(type(cid) is int and cid > 0 for cid in ids)
++          and len(ids) == len(set(ids)), "invalid case Task scope")
++    selected = ids[0] if case_id is None else case_id
++    _need(type(selected) is int and selected in ids, "unregistered Task case")
++    keys = {str(cid) for cid in ids}
++    roles = config.get("roles")
++    profile = config.get("task_profile")
++    _need(isinstance(roles, dict) and set(roles) == set(ROLES)
++          and isinstance(profile, dict), "invalid case Task roles/profile")
++    names = profile.get("role_kernel_names")
++    _need(isinstance(names, dict) and set(names) == set(ROLES), "case kernel roles differ")
++    projected_roles, projected_names = {}, {}
++    for role in ROLES:
++        definition = roles[role]
++        _need(isinstance(definition, dict), "invalid case callback definition")
++        counts, sequences = definition.get("launches_per_operator"), names[role]
++        _need(isinstance(counts, dict) and set(counts) == keys
++              and isinstance(sequences, dict) and set(sequences) == keys,
++              "case callback map scope differs")
++        for key in keys:
++            count, sequence = counts[key], sequences[key]
++            _need(type(count) is int and count > 0
++                  and isinstance(sequence, list) and len(sequence) == count
++                  and all(isinstance(name, str) and name and name.strip() == name for name in sequence),
++                  "invalid case complete-call kernel sequence")
++        projected_roles[role] = {**definition, "launches_per_operator": counts[str(selected)]}
++        projected_names[role] = list(sequences[str(selected)])
++    return {**config, "roles": projected_roles,
++            "task_profile": {**profile, "role_kernel_names": projected_names}}
+ 
+ 
+ def _derived_events(messages, mode):
+--- a/runtime/src/aprof_runtime/measurement_admission.py
++++ b/runtime/src/aprof_runtime/measurement_admission.py
+@@ -97,7 +97,7 @@
+     return paths
+ 
+ 
+-def _config_identity(reader, receipt, *, extra_fields=()):
++def _config_identity(reader, receipt, *, extra_fields=(), case_launch_counts=False):
+     config = _load(reader, receipt["config_ref"])
+     _require(isinstance(config, dict) and set(config) == {"schema_version", "operator", "run_id", "session_id", "candidate_id",
+              "device", "physical_device", "expected_case_ids", "roles", "build", "cases"}
+@@ -117,10 +117,13 @@
+     _require(set(config.get("roles", {})) == set(ROLES), "both source roles are required")
+     for role in ROLES:
+         definition = config["roles"][role]
++        count = definition.get("launches_per_operator")
++        valid_count = (isinstance(count, dict) and set(count) == {str(cid) for cid in ids}
++                       and all(type(value) is int and value > 0 for value in count.values())
++                       if case_launch_counts else type(count) is int and count > 0)
+         _require(set(definition) == {"source_dir", "symbol", "launches_per_operator"}
+                  and isinstance(definition.get("symbol"), str) and definition["symbol"]
+-                 and type(definition.get("launches_per_operator")) is int
+-                 and definition["launches_per_operator"] > 0, "invalid callback binding")
++                 and valid_count, "invalid callback binding")
+     _require(config["roles"]["baseline"]["symbol"] != config["roles"]["candidate"]["symbol"],
+              "formal callbacks must have distinct source symbols")
+     return config
+--- a/runtime/src/aprof_runtime/task_window_measurement_admission.py
++++ b/runtime/src/aprof_runtime/task_window_measurement_admission.py
+@@ -12,10 +12,10 @@
+ from .jsonio import canonical_json
+ from .profile_evidence import _json, _load
+ from .task_timing import protocol_commands
+-from .task_window_timing import partition_window_tasks, choose_task_repeat
+-
+-
+-PROTOCOL = "shared_buffer_msprof_task_window_v4"
++from .task_window_timing import case_task_config, partition_window_tasks, choose_task_repeat
++
++
++PROTOCOL = "shared_buffer_msprof_task_window_v5"
+ METRIC = task.METRIC
+ HEADER_FILE = "skills/ascendc-aprof-profiling/assets/device_task_profile.h"
+ PRODUCER_FILES = task.PRODUCER_FILES + (
+@@ -234,9 +234,10 @@
+         elif "APROF_SHARED_TIMING" in line:
+             raise ContractError("measurement admission: malformed Task window native stdout")
+     _need(_load(reader, session["native_messages_ref"]) == messages, "Task window stdout payload differs")
++    selected_config = case_task_config(config, session["case_id"])
+     partition = partition_window_tasks(table_path=reader.verify_artifact(session["task_table_ref"]),
+-        messages=messages, config=config, mode=mode, cycle=cycle, repeat=repeat,
+-        role_kernel_names=config["task_profile"]["role_kernel_names"])
++        messages=messages, config=selected_config, mode=mode, cycle=cycle, repeat=repeat,
++        role_kernel_names=selected_config["task_profile"]["role_kernel_names"])
+     ready = messages[0]
+     _need(ready["pid"] == session["capture"]["pid"] and ready["device"] == config["device"]
+           and ready["cpu_affinity"] == registration["cpu_affinity"],
+@@ -261,17 +262,13 @@
+             "unsupported Task window admission receipt")
+         for key, value in expected.items():
+             _need(receipt.get(key) == value, "Task window receipt " + key + " differs")
+-        config = shared._config_identity(reader, receipt, extra_fields=("task_profile",))
++        config = shared._config_identity(reader, receipt, extra_fields=("task_profile",),
++                                         case_launch_counts=True)
+         profile = config["task_profile"]
+         _need(isinstance(profile, dict) and set(profile) == {"profiler", "role_kernel_names", "scratch_root"}
+               and profile["profiler"] == _CANN + "/tools/profiler/bin/msprof", "Task window profile config differs")
+         task._path(profile["scratch_root"])
+-        names = profile["role_kernel_names"]
+-        _need(isinstance(names, dict) and set(names) == set(ROLES), "Task window kernel role scope differs")
+-        for role in ROLES:
+-            _need(isinstance(names[role], list) and len(names[role]) == config["roles"][role]["launches_per_operator"]
+-                  and all(isinstance(name, str) and name and name.strip() == name for name in names[role]),
+-                  "Task window complete-call kernel sequence differs")
++        case_task_config(config)  # Validate every registered case, not only the current session.
+         registration = _load(reader, receipt["registration_ref"])
+         _need(isinstance(registration, dict) and set(registration) == {
+             "protocol", "created_at", "config_ref", "identity", "inventory", "producer_files", "attempt_policy",
+--- a/skills/ascendc-aprof-profiling/scripts/device_task_window_timing.py
++++ b/skills/ascendc-aprof-profiling/scripts/device_task_window_timing.py
+@@ -35,11 +35,11 @@
+ from aprof_runtime.profile_evidence import _json
+ from aprof_runtime.local_evidence import LocalEvidence
+ from aprof_runtime.task_timing import protocol_commands
+-from aprof_runtime.task_window_timing import partition_window_tasks, choose_task_repeat
++from aprof_runtime.task_window_timing import case_task_config, partition_window_tasks, choose_task_repeat
+ from aprof_runtime.traces import register_json_artifact
+ 
+ 
+-PROTOCOL = "shared_buffer_msprof_task_window_v4"
++PROTOCOL = "shared_buffer_msprof_task_window_v5"
+ METRIC = "msprof.op_summary.Task_Duration"
+ HEADER_ASSET = RELEASE / "skills/ascendc-aprof-profiling/assets/device_task_profile.h"
+ SUMMARY_ENTRY = Path("/usr/local/Ascend/cann-9.0.0/tools/profiler/profiler_tool/analysis/msprof/msprof.py")
+@@ -125,7 +125,11 @@
+ 
+ 
+ def config_value(value, *, _proof=None):
+-    config = old.config_value(value)
++    # Keep all legacy source/build/workload/path checks on a scalar view.
++    config = old.config_value(case_task_config(value))
++    for role in ROLES:
++        config["roles"][role]["launches_per_operator"] = deepcopy(value["roles"][role]["launches_per_operator"])
++    config["task_profile"]["role_kernel_names"] = deepcopy(value["task_profile"]["role_kernel_names"])
+     if Path(sys.executable).resolve(strict=True) != SUMMARY_PYTHON:
+         raise ValueError("active Python differs from fixed Task summary export interpreter")
+     proof = _InventoryProof() if _proof is None else _proof
+@@ -401,9 +405,10 @@
+         table = profile / tables[0]
+         if table.is_symlink() or not table.is_file() or file_hash(table) != session["task_table_ref"]:
+             raise ValueError("local Task CSV differs before parsing")
+-        partition = partition_window_tasks(table_path=table, messages=messages, config=config,
++        selected_config = case_task_config(config, case["case_id"])
++        partition = partition_window_tasks(table_path=table, messages=messages, config=selected_config,
+             mode=mode, cycle=session["cycle"], repeat=repeat,
+-            role_kernel_names=config["task_profile"]["role_kernel_names"])
++            role_kernel_names=selected_config["task_profile"]["role_kernel_names"])
+         if file_hash(table) != session["task_table_ref"]:
+             raise ValueError("Task CSV changed during parsing")
+         session["partition_ref"] = register_json_artifact(store, partition)

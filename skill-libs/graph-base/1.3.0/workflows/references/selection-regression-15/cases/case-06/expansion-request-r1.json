@@ -1,0 +1,41 @@
+{
+  "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+  "task_id": "case-06",
+  "context_hash": "sha256:dd3ecc3b359aeeb687ca154251c5c3a2712d114a00329b2069b6de1c67b1696c",
+  "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+  "graph_version": "v0006",
+  "source_context_ref": {
+    "path": "context-origin.json",
+    "sha256": "sha256:8d66d6fb38e13d2234b9dcc6e65df99d3c948cda1b44dedac47a4026e6e84e93"
+  },
+  "retrieval_hash": "sha256:f8451b8b592bdf17991bb0e5e0a9c6fb64a72ae4af405ef0f4405c88e44e48eb",
+  "selections": [
+    {
+      "problem_id": "problem.control_metadata_overhead",
+      "reason": "每输出按rank执行除模和地址前缀，需区分字段缓存与按段地址控制",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "每输出按rank执行除模和地址前缀，需区分字段缓存与按段地址控制"
+      ]
+    },
+    {
+      "problem_id": "problem.scalar_control_hot_loop",
+      "reason": "随机源读取与连续index/output共存，考察可向量化边界",
+      "trigger": "alternative_mechanism",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "随机源读取与连续index/output共存，考察可向量化边界"
+      ]
+    },
+    {
+      "problem_id": "problem.noncontiguous_access",
+      "reason": "数据相关source不是简单连续轴重排，检查替代的适用条件",
+      "trigger": "alternative_mechanism",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "数据相关source不是简单连续轴重排，检查替代的适用条件"
+      ]
+    }
+  ]
+}

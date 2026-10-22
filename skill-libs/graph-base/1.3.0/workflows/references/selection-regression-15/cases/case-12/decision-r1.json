@@ -1,0 +1,1830 @@
+{
+  "schema_version": "aprof.action-decision/v2",
+  "task_id": "autonomy-c-12",
+  "context_hash": "sha256:cbb2391dd09de327caf721161f646447cb4f2727587a3f967ea6b9de59ef4596",
+  "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/ec82d8f535262a6e43869d71bce0e77d91aa71040c5f7f87a8e56f5adfd6f1e8.json",
+    "sha256": "sha256:fde21372195004f2ae06c2a295edd3ca726b0f00da220aa64ef8f1c0bc6507e2"
+  },
+  "current_parent_ref": {
+    "path": "parent-source.json",
+    "sha256": "sha256:b30d3f328841124083643ce7ba5b177dc79ac607b460c0f49f9ee39e3cb38ee9"
+  },
+  "opportunities": [
+    {
+      "id": "primary",
+      "hypothesis_id": "H-primary",
+      "action_id": "action.restructure_broadcast",
+      "action_instance_id": "I-primary",
+      "case_ids": [
+        "11",
+        "12",
+        "13",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "source.workload",
+        "source.api_review"
+      ],
+      "cost_mechanism": "每个非空owner与行交集一次rank解码，减少(N-Rowner)*rank轴解码迭代，保留段内递增；zero-stride源按行/窗口复用。",
+      "predictions": [
+        {
+          "id": "primary-work",
+          "kind": "source_work",
+          "statement": "每个非空owner与行交集一次rank解码，减少(N-Rowner)*rank轴解码迭代，保留段内递增；zero-stride源按行/窗口复用。",
+          "check_method": "修改前后工作计数及地址序列审查，当前未实施",
+          "on_support": "保留减少工作假设；另验证新增代价",
+          "on_refute": "重新比较最强替代"
+        },
+        {
+          "id": "primary-time",
+          "kind": "performance",
+          "statement": "减少的源码工作能否抵消FP32单槽保守峰值U=max_j(12*c_j+M_j+8192)+Bresident+Bother，c_j=64*ceil(n_j/64)，M_j=32*ceil(ceil(c_j/8)/32)。三个数据区独立且各c_j个float；predicate独立；8192B按非重叠生命周期复用。int32 U=3*A(4*T)+Bresident+Bother。实际UB容量与SDK未知，以U<=Uavailable为条件；多槽须重新计数，不默认alias。 以及批次、padding、predicate、同步；未测。",
+          "check_method": "完整correctness后统一Task timing，按语义域比较",
+          "on_support": "仅支持工程收益，不自动证明主瓶颈",
+          "on_refute": "检查编译消除、新增发射与残余，再决定缩参数或改方法"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "primary-time",
+          "unknown_id": "primary-perf-0",
+          "reason": "源码工作模型是待检验预测，未把未测性能置真。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "primary-safe-1",
+          "kind": "implementation_safety",
+          "fact": "constraint.broadcast_semantics",
+          "expected_state": true,
+          "statement": "逐行证明zero-stride地址、输入复用窗口、owner交集与尾写有效域；不能把带padding多行直接当有效连续数组。",
+          "affects": "保留action.restructure_broadcast：按zero-stride位图合轴，每个owner与行交集只解码一次外轴并递增内轴地址。int32广播使用A3文档支持的int32 Max(count)，不走GT Compare/Select；FP32广播保留av>bv?av:bv条件，优先GT Compare(c)+Select模式2(n)，不预设Max等价。FP32输入只补[n,c)，predicate按32B分配，预留8192B Select临时区，只回写4n有效字节；短行同时比较按行解码后scalar条件选择。其它dtype/同形/既有half广播原样保留。",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "primary-safe-2",
+          "kind": "implementation_safety",
+          "fact": "constraint.semantic_equivalence",
+          "expected_state": true,
+          "statement": "已知原FP32条件是GT，false分支选择bv：相等及±0选择第二输入；任一NaN令GT为false，故av=NaN,bv有限时取bv，bv=NaN时取bv。FP32 Max的数学名称不能证明这些选择规则等价。GT+Select仅在实际SDK同重载支持、有效predicate与数据位保持、特殊值和原oracle一致性检查闭合后实施。原oracle调用torch.maximum并检查NaN/Inf掩码；NaN输入的原条件与oracle可能冲突，不能通过改oracle或宣称整个API已正确来消除。int32最大值无此浮点分支差异，A3 Max支持int32；A3 Compare int32仅EQ且Select仅half/float，禁止int32 GT+Select。",
+          "affects": "FP32选择GT+Select或保留scalar；禁止未经证明的Max替换。int32独立Max路径。",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "primary-safe-3",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "FP32单槽保守峰值U=max_j(12*c_j+M_j+8192)+Bresident+Bother，c_j=64*ceil(n_j/64)，M_j=32*ceil(ceil(c_j/8)/32)。三个数据区独立且各c_j个float；predicate独立；8192B按非重叠生命周期复用。int32 U=3*A(4*T)+Bresident+Bother。实际UB容量与SDK未知，以U<=Uavailable为条件；多槽须重新计数，不默认alias。",
+          "affects": "决定有效T、单槽能否成立、是否选择按行scalar，不推定设备容量。",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "primary-perf-0",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "重组广播轴或小输入复用可能减少重复读取/展开工作；新索引或UB展开也可能更贵。；当前compiled成本与Task关键路径占比未知",
+          "affects": "收益大小及主替代优先级，不阻止有来源的条件规划",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "alternative",
+      "comparison": "最强已注册替代仍为action.vectorize_scalar_loop：同样分别用FP32 GT+Select与int32 Max，减少N次scalar比较，但泛化逐元素收集仍保留N*rank地址解码和可能的Boffset/gather代价。它也必须支付FP32的padding、predicate、8192B及同步，不能因称为vectorize而免计。广播重构额外减少重复解码并复用zero-stride输入，故仍优先；短行是否批量化由新增成本决定，可保持广播重构但使用每行scalar条件选择。",
+      "disposition": "selected",
+      "reason": "保留action.restructure_broadcast：按zero-stride位图合轴，每个owner与行交集只解码一次外轴并递增内轴地址。int32广播使用A3文档支持的int32 Max(count)，不走GT Compare/Select；FP32广播保留av>bv?av:bv条件，优先GT Compare(c)+Select模式2(n)，不预设Max等价。FP32输入只补[n,c)，predicate按32B分配，预留8192B Select临时区，只回写4n有效字节；短行同时比较按行解码后scalar条件选择。其它dtype/同形/既有half广播原样保留。",
+      "analysis": {
+        "intent_gap": null,
+        "work_delta": [
+          {
+            "id": "primary-reduced",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "reduced",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "(N-Rowner)*rank",
+              "unit": "axis decode iterations",
+              "symbols": [
+                {
+                  "name": "N",
+                  "meaning": "当前dtype子域全部输出元素数",
+                  "unit": "elements"
+                },
+                {
+                  "name": "Rowner",
+                  "meaning": "非空owner与行交集数；可能大于完整行数R",
+                  "unit": "row-owner intersections"
+                },
+                {
+                  "name": "rank",
+                  "meaning": "广播维数",
+                  "unit": "axes"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "主方案减少每元素rank解码；owner切行按Rowner计，不假定核数。"
+          },
+          {
+            "id": "primary-scalar-compares",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "reduced",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "N",
+              "unit": "scalar comparisons",
+              "symbols": [
+                {
+                  "name": "N",
+                  "meaning": "当前dtype子域全部输出元素数",
+                  "unit": "elements"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "仅采用批量算术的dtype子域；短行scalar参数分支保留该项工作。"
+          },
+          {
+            "id": "primary-batches",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "added",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "sum_owner,row ceil(valid_owner_row/T)",
+              "unit": "batches",
+              "symbols": [
+                {
+                  "name": "valid_owner_row",
+                  "meaning": "一个owner与一行交集的有效长度",
+                  "unit": "elements"
+                },
+                {
+                  "name": "T",
+                  "meaning": "候选最大有效段长，n=0跳过",
+                  "unit": "elements"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "逐dtype统计Lbatch，不跨owner或行隐式拼接。"
+          },
+          {
+            "id": "primary-fp32-calls",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "added",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "2*Lbatch",
+              "unit": "API calls",
+              "symbols": [
+                {
+                  "name": "Lbatch",
+                  "meaning": "sum_owner,row ceil(valid_owner_row/T)，当前dtype子域的批次数",
+                  "unit": "batches"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "仅FP32：每批GT Compare与Select模式2各一次。"
+          },
+          {
+            "id": "primary-int32-calls",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "added",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "Lbatch",
+              "unit": "API calls",
+              "symbols": [
+                {
+                  "name": "Lbatch",
+                  "meaning": "sum_owner,row ceil(valid_owner_row/T)，当前dtype子域的批次数",
+                  "unit": "batches"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "仅int32：每批Max(count)一次；不适用Compare/Select成本。"
+          },
+          {
+            "id": "primary-compare-repeats",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "added",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "sum_j(c_j/64)",
+              "unit": "Compare repeats",
+              "symbols": [
+                {
+                  "name": "c_j",
+                  "meaning": "FP32第j段Compare长度64*ceil(n_j/64)",
+                  "unit": "elements"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "仅FP32：256B=64 float的完整Compare执行组；不是运行测量。"
+          },
+          {
+            "id": "primary-select-repeats",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "added",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "sum_j ceil(n_j/64)",
+              "unit": "Select logical repeat groups",
+              "symbols": [
+                {
+                  "name": "n_j",
+                  "meaning": "第j个非空owner内行段的有效元素数，n_j<=T",
+                  "unit": "elements"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "仅FP32：有效元素的256B逻辑分组；Select count=n_j，编译指令数未测。"
+          },
+          {
+            "id": "primary-select-elements",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "added",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "N",
+              "unit": "selected elements",
+              "symbols": [
+                {
+                  "name": "N",
+                  "meaning": "当前dtype子域全部输出元素数",
+                  "unit": "elements"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "仅FP32有效元素；不把c_j个padding元素写出。"
+          },
+          {
+            "id": "primary-padding",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "added",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "2*sum_j(c_j-n_j)",
+              "unit": "input padding element writes upper bound",
+              "symbols": [
+                {
+                  "name": "c_j",
+                  "meaning": "FP32第j段Compare长度64*ceil(n_j/64)",
+                  "unit": "elements"
+                },
+                {
+                  "name": "n_j",
+                  "meaning": "第j个非空owner内行段的有效元素数，n_j<=T",
+                  "unit": "elements"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "仅FP32，最多补两个输入缺口；DataCopyPad32B不保证256B，已初始化缺口可扣除。"
+          },
+          {
+            "id": "primary-predicate-produce",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "added",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "sum_j c_j",
+              "unit": "predicate bits produced",
+              "symbols": [
+                {
+                  "name": "c_j",
+                  "meaning": "FP32第j段Compare长度64*ceil(n_j/64)",
+                  "unit": "elements"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "仅FP32每个比较元素一bit；物理分配另计M_j，不能按元素字节误算。"
+          },
+          {
+            "id": "primary-predicate-consume",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "added",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "N",
+              "unit": "valid predicate bits consumed",
+              "symbols": [
+                {
+                  "name": "N",
+                  "meaning": "当前dtype子域全部输出元素数",
+                  "unit": "elements"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "仅FP32模式2逐repeat消费不同bit；实际物理读取不据此声称。"
+          },
+          {
+            "id": "primary-tail-write",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "4*sum_j n_j",
+              "unit": "valid output bytes",
+              "symbols": [
+                {
+                  "name": "n_j",
+                  "meaning": "第j个非空owner内行段的有效元素数，n_j<=T",
+                  "unit": "elements"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "FP32与int32均4B，按所属子域统计；依赖完成后只写有效字节，padding不写GM。"
+          },
+          {
+            "id": "primary-retained",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "same-vector",
+              "int64-scalar",
+              "broadcast-scalar",
+              "half-broadcast-vector"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "qualitative",
+              "expression": "同形Vector域原样；int64没有已核验A3 Vector Max能力，逐元素比较仍在；FP16通用广播host允许范围比kernel last-axis专路宽，不能冒称完整API已正确。",
+              "unit": "logical work",
+              "symbols": [],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload"
+              ]
+            },
+            "explanation": "未覆盖计算/搬运明确保留。"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "primary-cov-same-vector",
+            "domain_id": "same-vector",
+            "status": "unchanged",
+            "region": "保留现路径；见残余。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "primary-cov-int64-scalar",
+            "domain_id": "int64-scalar",
+            "status": "unchanged",
+            "region": "保留现路径；见残余。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "primary-cov-broadcast-scalar",
+            "domain_id": "broadcast-scalar",
+            "status": "partial",
+            "region": "FP32 cases11/12/20：GT+Select条件计划；int32 case13：独立Max条件计划。只涵盖相应广播地址/数值域；短行scalar仍是计划参数，不计其比较已消除。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload",
+              "source.api_review"
+            ]
+          },
+          {
+            "id": "primary-cov-half-broadcast-vector",
+            "domain_id": "half-broadcast-vector",
+            "status": "unchanged",
+            "region": "既有half last-axis Vector路径保持；驻留仅后续机会，不计本轮解码减少。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "primary-cost",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "dimension": "UB allocated bytes",
+            "change": {
+              "mode": "symbolic",
+              "expression": "max_j(12*c_j+M_j+8192)+Bresident+Bother",
+              "unit": "bytes",
+              "symbols": [
+                {
+                  "name": "c_j",
+                  "meaning": "FP32第j段Compare长度64*ceil(n_j/64)",
+                  "unit": "elements"
+                },
+                {
+                  "name": "M_j",
+                  "meaning": "predicate分配32*ceil(ceil(c_j/8)/32)",
+                  "unit": "bytes"
+                },
+                {
+                  "name": "Bresident",
+                  "meaning": "额外独立广播源驻留区，不重复计算三数据区中展开的b",
+                  "unit": "bytes"
+                },
+                {
+                  "name": "Bother",
+                  "meaning": "其它真实分配/对齐和scratch；已列8192不重复计",
+                  "unit": "bytes"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "consequence": "仅FP32、三个独立单槽数据区、一个predicate、非重叠段共用8192B临时区；必须<=Uavailable，实际容量未知。最强已注册替代仍为action.vectorize_scalar_loop：同样分别用FP32 GT+Select与int32 Max，减少N次scalar比较，但泛化逐元素收集仍保留N*rank地址解码和可能的Boffset/gather代价。它也必须支付FP32的padding、predicate、8192B及同步，不能因称为vectorize而免计。广播重构额外减少重复解码并复用zero-stride输入，故仍优先；短行是否批量化由新增成本决定，可保持广播重构但使用每行scalar条件选择。"
+          },
+          {
+            "id": "primary-int32-cost",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "dimension": "UB allocated bytes",
+            "change": {
+              "mode": "symbolic",
+              "expression": "3*A(4*T)+Bresident+Bother",
+              "unit": "bytes",
+              "symbols": [
+                {
+                  "name": "A",
+                  "meaning": "A(x)=32*ceil(x/32)字节对齐函数",
+                  "unit": "bytes"
+                },
+                {
+                  "name": "T",
+                  "meaning": "候选最大有效段长，n=0跳过",
+                  "unit": "elements"
+                },
+                {
+                  "name": "Bresident",
+                  "meaning": "额外独立广播源驻留区，不重复计算三数据区中展开的b",
+                  "unit": "bytes"
+                },
+                {
+                  "name": "Bother",
+                  "meaning": "其它真实分配/对齐和scratch；已列8192不重复计",
+                  "unit": "bytes"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "consequence": "仅int32 Max(count)，不移植FP32 predicate和8192B Select费用；具体API额外区与alignment仍需核对。"
+          },
+          {
+            "id": "primary-dependencies",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "dimension": "dependency and padding legality",
+            "change": {
+              "mode": "qualitative",
+              "expression": "MTE2→V；Compare→Select predicate写读（同V管线依赖）；V→MTE3；如scalar填padding另闭合Scalar→Vector",
+              "unit": "ordering constraints",
+              "symbols": [],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "consequence": "不能无条件Duplicate(a[n],...,c-n)到未对齐尾址；选对齐尾片/合法mask/scalar填缺口。短行准备与同步成本可能支持按行scalar路线，未测耗时。"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "primary-residual",
+            "domain_ids": [
+              "same-vector",
+              "int64-scalar",
+              "broadcast-scalar",
+              "half-broadcast-vector"
+            ],
+            "remaining_work": "同形Vector、既有half广播与int64原路径保持。FP32 exceptional-value/oracle边界未闭合；短行scalar分支保留比较，批量分支保留predicate、padding和依赖。泛化替代保留N*rank逐元素地址处理。",
+            "next_step": "保留fallback并在后续独立候选比较；不把部分减少当整个算子解决。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          }
+        ],
+        "no_alternative_reason": null
+      }
+    },
+    {
+      "id": "alternative",
+      "hypothesis_id": "H-alternative",
+      "action_id": "action.vectorize_scalar_loop",
+      "action_instance_id": "I-alternative",
+      "case_ids": [
+        "11",
+        "12",
+        "13",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "source.workload",
+        "source.api_review"
+      ],
+      "cost_mechanism": "在所选广播子域减少N次scalar比较（有条件批量化路线）；新增Lbatch=sum_owner,row ceil(valid_owner_row/T)个批次。FP32每批Compare和Select各1次，Compare执行sum_j(c_j/64)个repeat；Select消费N个有效元素，逻辑repeat组sum_j ceil(n_j/64)另计。int32每批1次Max；各项不能与N相减或混合成时间。",
+      "predictions": [
+        {
+          "id": "alternative-work",
+          "kind": "source_work",
+          "statement": "在所选广播子域减少N次scalar比较（有条件批量化路线）；新增Lbatch=sum_owner,row ceil(valid_owner_row/T)个批次。FP32每批Compare和Select各1次，Compare执行sum_j(c_j/64)个repeat；Select消费N个有效元素，逻辑repeat组sum_j ceil(n_j/64)另计。int32每批1次Max；各项不能与N相减或混合成时间。",
+          "check_method": "修改前后工作计数及地址序列审查，当前未实施",
+          "on_support": "保留减少工作假设；另验证新增代价",
+          "on_refute": "重新比较最强替代"
+        },
+        {
+          "id": "alternative-time",
+          "kind": "performance",
+          "statement": "减少的源码工作能否抵消FP32单槽保守峰值U=max_j(12*c_j+M_j+8192)+Bresident+Bother，c_j=64*ceil(n_j/64)，M_j=32*ceil(ceil(c_j/8)/32)。三个数据区独立且各c_j个float；predicate独立；8192B按非重叠生命周期复用。int32 U=3*A(4*T)+Bresident+Bother。实际UB容量与SDK未知，以U<=Uavailable为条件；多槽须重新计数，不默认alias。 以及批次、padding、predicate、同步；未测。",
+          "check_method": "完整correctness后统一Task timing，按语义域比较",
+          "on_support": "仅支持工程收益，不自动证明主瓶颈",
+          "on_refute": "检查编译消除、新增发射与残余，再决定缩参数或改方法"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_scalar_hot",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "alternative-time",
+          "unknown_id": "alternative-perf-0",
+          "reason": "源码工作模型是待检验预测，未把未测性能置真。"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "alternative-time",
+          "unknown_id": "alternative-perf-1",
+          "reason": "源码工作模型是待检验预测，未把未测性能置真。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "alternative-safe-1",
+          "kind": "implementation_safety",
+          "fact": "constraint.semantic_equivalence",
+          "expected_state": true,
+          "statement": "已知原FP32条件是GT，false分支选择bv：相等及±0选择第二输入；任一NaN令GT为false，故av=NaN,bv有限时取bv，bv=NaN时取bv。FP32 Max的数学名称不能证明这些选择规则等价。GT+Select仅在实际SDK同重载支持、有效predicate与数据位保持、特殊值和原oracle一致性检查闭合后实施。原oracle调用torch.maximum并检查NaN/Inf掩码；NaN输入的原条件与oracle可能冲突，不能通过改oracle或宣称整个API已正确来消除。int32最大值无此浮点分支差异，A3 Max支持int32；A3 Compare int32仅EQ且Select仅half/float，禁止int32 GT+Select。",
+          "affects": "FP32选择GT+Select或保留scalar；禁止未经证明的Max替换。int32独立Max路径。",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "alternative-safe-2",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "FP32单槽保守峰值U=max_j(12*c_j+M_j+8192)+Bresident+Bother，c_j=64*ceil(n_j/64)，M_j=32*ceil(ceil(c_j/8)/32)。三个数据区独立且各c_j个float；predicate独立；8192B按非重叠生命周期复用。int32 U=3*A(4*T)+Bresident+Bother。实际UB容量与SDK未知，以U<=Uavailable为条件；多槽须重新计数，不默认alias。",
+          "affects": "决定有效T、单槽能否成立、是否选择按行scalar，不推定设备容量。",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "alternative-perf-0",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "旧条件 symptom.profile.scalar_hot 的期望状态为 true。Scalar热点证据提高试验优先级，但不是等价逐元素向量化的安全前提。；当前compiled成本与Task关键路径占比未知",
+          "affects": "收益大小及主替代优先级，不阻止有来源的条件规划",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "alternative-perf-1",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "合法向量化可能减少逐元素Scalar处理与发射，但Gather/转换、UB暂存和精度路径可成为新成本。；当前compiled成本与Task关键路径占比未知",
+          "affects": "收益大小及主替代优先级，不阻止有来源的条件规划",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "primary",
+      "comparison": "最强已注册替代仍为action.vectorize_scalar_loop：同样分别用FP32 GT+Select与int32 Max，减少N次scalar比较，但泛化逐元素收集仍保留N*rank地址解码和可能的Boffset/gather代价。它也必须支付FP32的padding、predicate、8192B及同步，不能因称为vectorize而免计。广播重构额外减少重复解码并复用zero-stride输入，故仍优先；短行是否批量化由新增成本决定，可保持广播重构但使用每行scalar条件选择。",
+      "disposition": "deferred",
+      "reason": "最强已注册替代仍为action.vectorize_scalar_loop：同样分别用FP32 GT+Select与int32 Max，减少N次scalar比较，但泛化逐元素收集仍保留N*rank地址解码和可能的Boffset/gather代价。它也必须支付FP32的padding、predicate、8192B及同步，不能因称为vectorize而免计。广播重构额外减少重复解码并复用zero-stride输入，故仍优先；短行是否批量化由新增成本决定，可保持广播重构但使用每行scalar条件选择。",
+      "analysis": {
+        "intent_gap": null,
+        "work_delta": [
+          {
+            "id": "alternative-reduced",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "reduced",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "N",
+              "unit": "scalar comparisons",
+              "symbols": [
+                {
+                  "name": "N",
+                  "meaning": "当前dtype子域全部输出元素数",
+                  "unit": "elements"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "减少的是N次scalar比较；新增批次/API/repeat另列，绝不以N-Lbatch混减。"
+          },
+          {
+            "id": "alternative-batches",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "added",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "sum_owner,row ceil(valid_owner_row/T)",
+              "unit": "batches",
+              "symbols": [
+                {
+                  "name": "valid_owner_row",
+                  "meaning": "一个owner与一行交集的有效长度",
+                  "unit": "elements"
+                },
+                {
+                  "name": "T",
+                  "meaning": "候选最大有效段长，n=0跳过",
+                  "unit": "elements"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "逐dtype统计Lbatch，不跨owner或行隐式拼接。"
+          },
+          {
+            "id": "alternative-fp32-calls",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "added",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "2*Lbatch",
+              "unit": "API calls",
+              "symbols": [
+                {
+                  "name": "Lbatch",
+                  "meaning": "sum_owner,row ceil(valid_owner_row/T)，当前dtype子域的批次数",
+                  "unit": "batches"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "仅FP32：每批GT Compare与Select模式2各一次。"
+          },
+          {
+            "id": "alternative-int32-calls",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "added",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "Lbatch",
+              "unit": "API calls",
+              "symbols": [
+                {
+                  "name": "Lbatch",
+                  "meaning": "sum_owner,row ceil(valid_owner_row/T)，当前dtype子域的批次数",
+                  "unit": "batches"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "仅int32：每批Max(count)一次；不适用Compare/Select成本。"
+          },
+          {
+            "id": "alternative-compare-repeats",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "added",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "sum_j(c_j/64)",
+              "unit": "Compare repeats",
+              "symbols": [
+                {
+                  "name": "c_j",
+                  "meaning": "FP32第j段Compare长度64*ceil(n_j/64)",
+                  "unit": "elements"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "仅FP32：256B=64 float的完整Compare执行组；不是运行测量。"
+          },
+          {
+            "id": "alternative-select-repeats",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "added",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "sum_j ceil(n_j/64)",
+              "unit": "Select logical repeat groups",
+              "symbols": [
+                {
+                  "name": "n_j",
+                  "meaning": "第j个非空owner内行段的有效元素数，n_j<=T",
+                  "unit": "elements"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "仅FP32：有效元素的256B逻辑分组；Select count=n_j，编译指令数未测。"
+          },
+          {
+            "id": "alternative-select-elements",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "added",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "N",
+              "unit": "selected elements",
+              "symbols": [
+                {
+                  "name": "N",
+                  "meaning": "当前dtype子域全部输出元素数",
+                  "unit": "elements"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "仅FP32有效元素；不把c_j个padding元素写出。"
+          },
+          {
+            "id": "alternative-padding",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "added",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "2*sum_j(c_j-n_j)",
+              "unit": "input padding element writes upper bound",
+              "symbols": [
+                {
+                  "name": "c_j",
+                  "meaning": "FP32第j段Compare长度64*ceil(n_j/64)",
+                  "unit": "elements"
+                },
+                {
+                  "name": "n_j",
+                  "meaning": "第j个非空owner内行段的有效元素数，n_j<=T",
+                  "unit": "elements"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "仅FP32，最多补两个输入缺口；DataCopyPad32B不保证256B，已初始化缺口可扣除。"
+          },
+          {
+            "id": "alternative-predicate-produce",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "added",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "sum_j c_j",
+              "unit": "predicate bits produced",
+              "symbols": [
+                {
+                  "name": "c_j",
+                  "meaning": "FP32第j段Compare长度64*ceil(n_j/64)",
+                  "unit": "elements"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "仅FP32每个比较元素一bit；物理分配另计M_j，不能按元素字节误算。"
+          },
+          {
+            "id": "alternative-predicate-consume",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "added",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "N",
+              "unit": "valid predicate bits consumed",
+              "symbols": [
+                {
+                  "name": "N",
+                  "meaning": "当前dtype子域全部输出元素数",
+                  "unit": "elements"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "仅FP32模式2逐repeat消费不同bit；实际物理读取不据此声称。"
+          },
+          {
+            "id": "alternative-tail-write",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "4*sum_j n_j",
+              "unit": "valid output bytes",
+              "symbols": [
+                {
+                  "name": "n_j",
+                  "meaning": "第j个非空owner内行段的有效元素数，n_j<=T",
+                  "unit": "elements"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "explanation": "FP32与int32均4B，按所属子域统计；依赖完成后只写有效字节，padding不写GM。"
+          },
+          {
+            "id": "alternative-retained",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "same-vector",
+              "int64-scalar",
+              "broadcast-scalar",
+              "half-broadcast-vector"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "qualitative",
+              "expression": "同形Vector域原样；int64没有已核验A3 Vector Max能力，逐元素比较仍在；FP16通用广播host允许范围比kernel last-axis专路宽，不能冒称完整API已正确。",
+              "unit": "logical work",
+              "symbols": [],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload"
+              ]
+            },
+            "explanation": "未覆盖计算/搬运明确保留。"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "alternative-cov-same-vector",
+            "domain_id": "same-vector",
+            "status": "unchanged",
+            "region": "保留现路径；见残余。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "alternative-cov-int64-scalar",
+            "domain_id": "int64-scalar",
+            "status": "unchanged",
+            "region": "保留现路径；见残余。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "alternative-cov-broadcast-scalar",
+            "domain_id": "broadcast-scalar",
+            "status": "partial",
+            "region": "FP32 cases11/12/20：GT+Select条件计划；int32 case13：独立Max条件计划。只涵盖相应广播地址/数值域；短行scalar仍是计划参数，不计其比较已消除。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload",
+              "source.api_review"
+            ]
+          },
+          {
+            "id": "alternative-cov-half-broadcast-vector",
+            "domain_id": "half-broadcast-vector",
+            "status": "unchanged",
+            "region": "保留现路径；见残余。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "alternative-cost",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "dimension": "UB allocated bytes",
+            "change": {
+              "mode": "symbolic",
+              "expression": "max_j(12*c_j+M_j+8192)+Bresident+Bother + Boffset",
+              "unit": "bytes",
+              "symbols": [
+                {
+                  "name": "c_j",
+                  "meaning": "FP32第j段Compare长度64*ceil(n_j/64)",
+                  "unit": "elements"
+                },
+                {
+                  "name": "M_j",
+                  "meaning": "predicate分配32*ceil(ceil(c_j/8)/32)",
+                  "unit": "bytes"
+                },
+                {
+                  "name": "Bresident",
+                  "meaning": "额外独立广播源驻留区，不重复计算三数据区中展开的b",
+                  "unit": "bytes"
+                },
+                {
+                  "name": "Bother",
+                  "meaning": "其它真实分配/对齐和scratch；已列8192不重复计",
+                  "unit": "bytes"
+                },
+                {
+                  "name": "Boffset",
+                  "meaning": "泛化逐元素收集的额外偏移/索引区，若采用",
+                  "unit": "bytes"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "consequence": "仅FP32、三个独立单槽数据区、一个predicate、非重叠段共用8192B临时区；必须<=Uavailable，实际容量未知。最强已注册替代仍为action.vectorize_scalar_loop：同样分别用FP32 GT+Select与int32 Max，减少N次scalar比较，但泛化逐元素收集仍保留N*rank地址解码和可能的Boffset/gather代价。它也必须支付FP32的padding、predicate、8192B及同步，不能因称为vectorize而免计。广播重构额外减少重复解码并复用zero-stride输入，故仍优先；短行是否批量化由新增成本决定，可保持广播重构但使用每行scalar条件选择。"
+          },
+          {
+            "id": "alternative-int32-cost",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "dimension": "UB allocated bytes",
+            "change": {
+              "mode": "symbolic",
+              "expression": "3*A(4*T)+Bresident+Bother + Boffset",
+              "unit": "bytes",
+              "symbols": [
+                {
+                  "name": "A",
+                  "meaning": "A(x)=32*ceil(x/32)字节对齐函数",
+                  "unit": "bytes"
+                },
+                {
+                  "name": "T",
+                  "meaning": "候选最大有效段长，n=0跳过",
+                  "unit": "elements"
+                },
+                {
+                  "name": "Bresident",
+                  "meaning": "额外独立广播源驻留区，不重复计算三数据区中展开的b",
+                  "unit": "bytes"
+                },
+                {
+                  "name": "Bother",
+                  "meaning": "其它真实分配/对齐和scratch；已列8192不重复计",
+                  "unit": "bytes"
+                },
+                {
+                  "name": "Boffset",
+                  "meaning": "泛化逐元素收集的额外偏移/索引区，若采用",
+                  "unit": "bytes"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "consequence": "仅int32 Max(count)，不移植FP32 predicate和8192B Select费用；具体API额外区与alignment仍需核对。"
+          },
+          {
+            "id": "alternative-dependencies",
+            "domain_ids": [
+              "broadcast-scalar"
+            ],
+            "dimension": "dependency and padding legality",
+            "change": {
+              "mode": "qualitative",
+              "expression": "MTE2→V；Compare→Select predicate写读（同V管线依赖）；V→MTE3；如scalar填padding另闭合Scalar→Vector",
+              "unit": "ordering constraints",
+              "symbols": [],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload",
+                "source.api_review"
+              ]
+            },
+            "consequence": "不能无条件Duplicate(a[n],...,c-n)到未对齐尾址；选对齐尾片/合法mask/scalar填缺口。短行准备与同步成本可能支持按行scalar路线，未测耗时。"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "alternative-residual",
+            "domain_ids": [
+              "same-vector",
+              "int64-scalar",
+              "broadcast-scalar",
+              "half-broadcast-vector"
+            ],
+            "remaining_work": "同形Vector、既有half广播与int64原路径保持。FP32 exceptional-value/oracle边界未闭合；短行scalar分支保留比较，批量分支保留predicate、padding和依赖。泛化替代保留N*rank逐元素地址处理。",
+            "next_step": "保留fallback并在后续独立候选比较；不把部分减少当整个算子解决。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          }
+        ],
+        "no_alternative_reason": null
+      }
+    }
+  ],
+  "evidence_requests": [
+    {
+      "id": "REQ-primary-safe-1",
+      "opportunity_ids": [
+        "primary"
+      ],
+      "unknown_ids": [
+        "primary-safe-1"
+      ],
+      "method": "逐行证明zero-stride地址、输入复用窗口、owner交集与尾写有效域；不能把带padding多行直接当有效连续数组。",
+      "discriminating_results": [
+        {
+          "outcome": "实际SDK、地址、容量及原oracle特殊值边界闭合",
+          "decision_effect": "按FP32 GT+Select或int32 Max具体路线推进；不允许无证明FP32 Max"
+        },
+        {
+          "outcome": "短行批量费用或合法性不成立",
+          "decision_effect": "保留广播重构，调整到每行scalar条件选择或合法压紧多行；不得放宽oracle"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "已实际读取固定A3文档并定位原GT条件，具体结论见compare-select-review.json；实际SDK/UB与设备语义未核验。",
+      "defer_reason": "未实施，实际SDK/可用UB未知。"
+    },
+    {
+      "id": "REQ-primary-safe-2",
+      "opportunity_ids": [
+        "primary"
+      ],
+      "unknown_ids": [
+        "primary-safe-2"
+      ],
+      "method": "已知原FP32条件是GT，false分支选择bv：相等及±0选择第二输入；任一NaN令GT为false，故av=NaN,bv有限时取bv，bv=NaN时取bv。FP32 Max的数学名称不能证明这些选择规则等价。GT+Select仅在实际SDK同重载支持、有效predicate与数据位保持、特殊值和原oracle一致性检查闭合后实施。原oracle调用torch.maximum并检查NaN/Inf掩码；NaN输入的原条件与oracle可能冲突，不能通过改oracle或宣称整个API已正确来消除。int32最大值无此浮点分支差异，A3 Max支持int32；A3 Compare int32仅EQ且Select仅half/float，禁止int32 GT+Select。",
+      "discriminating_results": [
+        {
+          "outcome": "实际SDK、地址、容量及原oracle特殊值边界闭合",
+          "decision_effect": "按FP32 GT+Select或int32 Max具体路线推进；不允许无证明FP32 Max"
+        },
+        {
+          "outcome": "短行批量费用或合法性不成立",
+          "decision_effect": "保留广播重构，调整到每行scalar条件选择或合法压紧多行；不得放宽oracle"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "已实际读取固定A3文档并定位原GT条件，具体结论见compare-select-review.json；实际SDK/UB与设备语义未核验。",
+      "defer_reason": "未实施，实际SDK/可用UB未知。"
+    },
+    {
+      "id": "REQ-primary-safe-3",
+      "opportunity_ids": [
+        "primary"
+      ],
+      "unknown_ids": [
+        "primary-safe-3"
+      ],
+      "method": "FP32单槽保守峰值U=max_j(12*c_j+M_j+8192)+Bresident+Bother，c_j=64*ceil(n_j/64)，M_j=32*ceil(ceil(c_j/8)/32)。三个数据区独立且各c_j个float；predicate独立；8192B按非重叠生命周期复用。int32 U=3*A(4*T)+Bresident+Bother。实际UB容量与SDK未知，以U<=Uavailable为条件；多槽须重新计数，不默认alias。",
+      "discriminating_results": [
+        {
+          "outcome": "实际SDK、地址、容量及原oracle特殊值边界闭合",
+          "decision_effect": "按FP32 GT+Select或int32 Max具体路线推进；不允许无证明FP32 Max"
+        },
+        {
+          "outcome": "短行批量费用或合法性不成立",
+          "decision_effect": "保留广播重构，调整到每行scalar条件选择或合法压紧多行；不得放宽oracle"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "已实际读取固定A3文档并定位原GT条件，具体结论见compare-select-review.json；实际SDK/UB与设备语义未核验。",
+      "defer_reason": "未实施，实际SDK/可用UB未知。"
+    },
+    {
+      "id": "REQ-alternative-safe-1",
+      "opportunity_ids": [
+        "alternative"
+      ],
+      "unknown_ids": [
+        "alternative-safe-1"
+      ],
+      "method": "已知原FP32条件是GT，false分支选择bv：相等及±0选择第二输入；任一NaN令GT为false，故av=NaN,bv有限时取bv，bv=NaN时取bv。FP32 Max的数学名称不能证明这些选择规则等价。GT+Select仅在实际SDK同重载支持、有效predicate与数据位保持、特殊值和原oracle一致性检查闭合后实施。原oracle调用torch.maximum并检查NaN/Inf掩码；NaN输入的原条件与oracle可能冲突，不能通过改oracle或宣称整个API已正确来消除。int32最大值无此浮点分支差异，A3 Max支持int32；A3 Compare int32仅EQ且Select仅half/float，禁止int32 GT+Select。",
+      "discriminating_results": [
+        {
+          "outcome": "实际SDK、地址、容量及原oracle特殊值边界闭合",
+          "decision_effect": "按FP32 GT+Select或int32 Max具体路线推进；不允许无证明FP32 Max"
+        },
+        {
+          "outcome": "短行批量费用或合法性不成立",
+          "decision_effect": "保留广播重构，调整到每行scalar条件选择或合法压紧多行；不得放宽oracle"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "已实际读取固定A3文档并定位原GT条件，具体结论见compare-select-review.json；实际SDK/UB与设备语义未核验。",
+      "defer_reason": "未实施，实际SDK/可用UB未知。"
+    },
+    {
+      "id": "REQ-alternative-safe-2",
+      "opportunity_ids": [
+        "alternative"
+      ],
+      "unknown_ids": [
+        "alternative-safe-2"
+      ],
+      "method": "FP32单槽保守峰值U=max_j(12*c_j+M_j+8192)+Bresident+Bother，c_j=64*ceil(n_j/64)，M_j=32*ceil(ceil(c_j/8)/32)。三个数据区独立且各c_j个float；predicate独立；8192B按非重叠生命周期复用。int32 U=3*A(4*T)+Bresident+Bother。实际UB容量与SDK未知，以U<=Uavailable为条件；多槽须重新计数，不默认alias。",
+      "discriminating_results": [
+        {
+          "outcome": "实际SDK、地址、容量及原oracle特殊值边界闭合",
+          "decision_effect": "按FP32 GT+Select或int32 Max具体路线推进；不允许无证明FP32 Max"
+        },
+        {
+          "outcome": "短行批量费用或合法性不成立",
+          "decision_effect": "保留广播重构，调整到每行scalar条件选择或合法压紧多行；不得放宽oracle"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "已实际读取固定A3文档并定位原GT条件，具体结论见compare-select-review.json；实际SDK/UB与设备语义未核验。",
+      "defer_reason": "未实施，实际SDK/可用UB未知。"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "primary"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.broadcast_strategy_mismatch.md",
+        "sha256": "sha256:1b2609ac77d163bda7a1992cd1e36fbc698fac4bfd4b1140afc3298472a38fb1"
+      },
+      "locator": "lines:298-353",
+      "effect_kind": "mechanism",
+      "before": "从源码观察到路径但尚未区分成本类别。",
+      "after": "每个非空owner与行交集一次rank解码，减少(N-Rowner)*rank轴解码迭代，保留段内递增；zero-stride源按行/窗口复用。 来源逻辑机制，不当作实测瓶颈；API路线和新增代价见compare-select-tail实际咨询。",
+      "applicability": "来源机制原则适用；当前性能不明，不作为实测结论。"
+    },
+    {
+      "opportunity_ids": [
+        "alternative"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+        "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+      },
+      "locator": "lines:279-334",
+      "effect_kind": "mechanism",
+      "before": "从源码观察到路径但尚未区分成本类别。",
+      "after": "在所选广播子域减少N次scalar比较（有条件批量化路线）；新增Lbatch=sum_owner,row ceil(valid_owner_row/T)个批次。FP32每批Compare和Select各1次，Compare执行sum_j(c_j/64)个repeat；Select消费N个有效元素，逻辑repeat组sum_j ceil(n_j/64)另计。int32每批1次Max；各项不能与N相减或混合成时间。 来源逻辑机制，不当作实测瓶颈；API路线和新增代价见compare-select-tail实际咨询。",
+      "applicability": "来源机制原则适用；当前性能不明，不作为实测结论。"
+    },
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/broadcast.md",
+        "sha256": "sha256:485c6aec11ef4e73458f85be904d0692bf7ed6b97db0ecd88d7694b039c505f0"
+      },
+      "locator": "lines:131-244",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "采用完整zero-stride位图合轴和按行源起点公式。A3静态Broadcast不能用补齐冒充真实shape对齐，int32不在该文给出的静态Broadcast dtype表内，因此比较Duplicate/合法TensorScalar替代，未闭合前不承诺实现。513*4与8193*2不对齐需分段/保留源，不直接套axis=0整行Broadcast。",
+      "applicability": "partial：仅采用容量、有效域、所有权/数值边界原则；未声称整套模板API已验证。"
+    },
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+      },
+      "locator": "lines:83-188",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "确认按连续输出owner分区和valid长度，tile容量必须计所有实际分配；单槽/双槽只是假设。foreach完整结构适用；Maximum只覆盖同形；RoPE伴随partner读不满足逐元素同下标前提，仅采用owner/容量原则。",
+      "applicability": "partial：仅采用容量、有效域、所有权/数值边界原则；未声称整套模板API已验证。"
+    },
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+        "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+      },
+      "locator": "lines:90-131",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "采用A3 memory Vector连续count与合法repeat的地址范围公式，避免950 Reg/VF。数值操作顺序和mask尾部须逐API核验；有Cast不代表主要Scalar算术已向量化。Compare非整256B边界不能从Add的count推合法性。",
+      "applicability": "partial：仅采用容量、有效域、所有权/数值边界原则；未声称整套模板API已验证。"
+    },
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+        "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+      },
+      "locator": "lines:97-264",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "只有原输入同地址同版本才能驻留；保留到最后异步消费者结束，删除copy不自动扣除独立InitBuffer分配。RoPE限同owner trig key窗口；Maximum限broadcast源；Resize限同nc窗口公共原值，几何权重表不是原输入。",
+      "applicability": "partial：仅采用容量、有效域、所有权/数值边界原则；未声称整套模板API已验证。"
+    },
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/compare-select-tail.md",
+        "sha256": "sha256:e0cf231e0bd3c6f821342c3d96c262230f009a68e19fc86e0136bf75e2885d62"
+      },
+      "locator": "lines:68-115",
+      "effect_kind": "plan",
+      "before": "原方案把FP32/int32统称Vector Max，且只算三数据区，遗漏Compare尾部和Select临时区。",
+      "after": "保留action.restructure_broadcast：按zero-stride位图合轴，每个owner与行交集只解码一次外轴并递增内轴地址。int32广播使用A3文档支持的int32 Max(count)，不走GT Compare/Select；FP32广播保留av>bv?av:bv条件，优先GT Compare(c)+Select模式2(n)，不预设Max等价。FP32输入只补[n,c)，predicate按32B分配，预留8192B Select临时区，只回写4n有效字节；短行同时比较按行解码后scalar条件选择。其它dtype/同形/既有half广播原样保留。 FP32单槽保守峰值U=max_j(12*c_j+M_j+8192)+Bresident+Bother，c_j=64*ceil(n_j/64)，M_j=32*ceil(ceil(c_j/8)/32)。三个数据区独立且各c_j个float；predicate独立；8192B按非重叠生命周期复用。int32 U=3*A(4*T)+Bresident+Bother。实际UB容量与SDK未知，以U<=Uavailable为条件；多槽须重新计数，不默认alias。 最强已注册替代仍为action.vectorize_scalar_loop：同样分别用FP32 GT+Select与int32 Max，减少N次scalar比较，但泛化逐元素收集仍保留N*rank地址解码和可能的Boffset/gather代价。它也必须支付FP32的padding、predicate、8192B及同步，不能因称为vectorize而免计。广播重构额外减少重复解码并复用zero-stride输入，故仍优先；短行是否批量化由新增成本决定，可保持广播重构但使用每行scalar条件选择。",
+      "applicability": "partial：完整采用A2/A3 memory-vector FP32 GT+Select合法尾部骨架；实际SDK待核对。int32仅采用此文的排除边界并结合已读Max来源证明支持，不套用GT+Select；其它dtype/同形路径不变。"
+    }
+  ],
+  "selection": {
+    "mode": "conditional_plan",
+    "opportunity_id": "primary",
+    "action_instance_id": "I-primary",
+    "reason": "保留广播重构：地址解码和zero-stride复用优势仍成立；数值/API知识改变计算路线与预算，不构成必须换Action的理由。最强已注册替代仍为action.vectorize_scalar_loop：同样分别用FP32 GT+Select与int32 Max，减少N次scalar比较，但泛化逐元素收集仍保留N*rank地址解码和可能的Boffset/gather代价。它也必须支付FP32的padding、predicate、8192B及同步，不能因称为vectorize而免计。广播重构额外减少重复解码并复用zero-stride输入，故仍优先；短行是否批量化由新增成本决定，可保持广播重构但使用每行scalar条件选择。",
+    "concrete_plan": "保留action.restructure_broadcast：按zero-stride位图合轴，每个owner与行交集只解码一次外轴并递增内轴地址。int32广播使用A3文档支持的int32 Max(count)，不走GT Compare/Select；FP32广播保留av>bv?av:bv条件，优先GT Compare(c)+Select模式2(n)，不预设Max等价。FP32输入只补[n,c)，predicate按32B分配，预留8192B Select临时区，只回写4n有效字节；短行同时比较按行解码后scalar条件选择。其它dtype/同形/既有half广播原样保留。",
+    "stop_reason": null,
+    "comparison_basis": [
+      {
+        "opportunity_id": "primary",
+        "item_ids": [
+          "primary-reduced"
+        ],
+        "role": "benefit",
+        "decision_effect": "每个非空owner与行交集一次rank解码，减少(N-Rowner)*rank轴解码迭代，保留段内递增；zero-stride源按行/窗口复用。",
+        "reversal_condition": "反事实纸面probe，非实测：保持FP32输出总量近似不变，把完整行n=513改成37。独立单槽段预算由15200B变8992B，但每有效元素padding写由126/513变54/37，API批次数每元素约增513/37倍，固定8192B并未随有效数据缩小。Compare/Select可能失去对按行scalar条件选择的优势；仍可保留广播重构消除外轴解码，调整其计算路线。若合法压紧多行合并能减少发射，则重审pitch、predicate位偏移与owner后才采用，不以case ID设阈值。"
+      },
+      {
+        "opportunity_id": "primary",
+        "item_ids": [
+          "primary-cost",
+          "primary-int32-cost",
+          "primary-dependencies"
+        ],
+        "role": "cost",
+        "decision_effect": "FP32单槽保守峰值U=max_j(12*c_j+M_j+8192)+Bresident+Bother，c_j=64*ceil(n_j/64)，M_j=32*ceil(ceil(c_j/8)/32)。三个数据区独立且各c_j个float；predicate独立；8192B按非重叠生命周期复用。int32 U=3*A(4*T)+Bresident+Bother。实际UB容量与SDK未知，以U<=Uavailable为条件；多槽须重新计数，不默认alias。 批次、padding和predicate新增工作分别见work_delta，不混同字节预算。",
+        "reversal_condition": "反事实纸面probe，非实测：保持FP32输出总量近似不变，把完整行n=513改成37。独立单槽段预算由15200B变8992B，但每有效元素padding写由126/513变54/37，API批次数每元素约增513/37倍，固定8192B并未随有效数据缩小。Compare/Select可能失去对按行scalar条件选择的优势；仍可保留广播重构消除外轴解码，调整其计算路线。若合法压紧多行合并能减少发射，则重审pitch、predicate位偏移与owner后才采用，不以case ID设阈值。"
+      },
+      {
+        "opportunity_id": "primary",
+        "item_ids": [
+          "primary-cov-same-vector",
+          "primary-cov-int64-scalar",
+          "primary-cov-broadcast-scalar",
+          "primary-cov-half-broadcast-vector"
+        ],
+        "role": "coverage",
+        "decision_effect": "覆盖按真实语义域映射，partial不等于全部工作消失",
+        "reversal_condition": "反事实纸面probe，非实测：保持FP32输出总量近似不变，把完整行n=513改成37。独立单槽段预算由15200B变8992B，但每有效元素padding写由126/513变54/37，API批次数每元素约增513/37倍，固定8192B并未随有效数据缩小。Compare/Select可能失去对按行scalar条件选择的优势；仍可保留广播重构消除外轴解码，调整其计算路线。若合法压紧多行合并能减少发射，则重审pitch、predicate位偏移与owner后才采用，不以case ID设阈值。"
+      },
+      {
+        "opportunity_id": "primary",
+        "item_ids": [
+          "primary-residual"
+        ],
+        "role": "residual",
+        "decision_effect": "同形Vector域原样；int64没有已核验A3 Vector Max能力，逐元素比较仍在；FP16通用广播host允许范围比kernel last-axis专路宽，不能冒称完整API已正确。",
+        "reversal_condition": "反事实纸面probe，非实测：保持FP32输出总量近似不变，把完整行n=513改成37。独立单槽段预算由15200B变8992B，但每有效元素padding写由126/513变54/37，API批次数每元素约增513/37倍，固定8192B并未随有效数据缩小。Compare/Select可能失去对按行scalar条件选择的优势；仍可保留广播重构消除外轴解码，调整其计算路线。若合法压紧多行合并能减少发射，则重审pitch、predicate位偏移与owner后才采用，不以case ID设阈值。"
+      },
+      {
+        "opportunity_id": "alternative",
+        "item_ids": [
+          "alternative-reduced",
+          "alternative-cost",
+          "alternative-batches",
+          "alternative-compare-repeats",
+          "alternative-select-repeats"
+        ],
+        "role": "alternative",
+        "decision_effect": "最强已注册替代仍为action.vectorize_scalar_loop：同样分别用FP32 GT+Select与int32 Max，减少N次scalar比较，但泛化逐元素收集仍保留N*rank地址解码和可能的Boffset/gather代价。它也必须支付FP32的padding、predicate、8192B及同步，不能因称为vectorize而免计。广播重构额外减少重复解码并复用zero-stride输入，故仍优先；短行是否批量化由新增成本决定，可保持广播重构但使用每行scalar条件选择。",
+        "reversal_condition": "反事实纸面probe，非实测：保持FP32输出总量近似不变，把完整行n=513改成37。独立单槽段预算由15200B变8992B，但每有效元素padding写由126/513变54/37，API批次数每元素约增513/37倍，固定8192B并未随有效数据缩小。Compare/Select可能失去对按行scalar条件选择的优势；仍可保留广播重构消除外轴解码，调整其计算路线。若合法压紧多行合并能减少发射，则重审pitch、predicate位偏移与owner后才采用，不以case ID设阈值。"
+      }
+    ]
+  },
+  "path_overview": {
+    "workload_ref": {
+      "path": "source/matrix-20.json",
+      "sha256": "sha256:8366218a4c70e19a878efedfd9d8677c535fb006cf3e74b91c21e5e91e58ed77"
+    },
+    "case_ids": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20"
+    ],
+    "domains": [
+      {
+        "id": "same-vector",
+        "case_ids": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "6",
+          "7",
+          "8",
+          "9",
+          "10",
+          "14",
+          "15",
+          "16",
+          "17"
+        ],
+        "predicate": "same-vector determined by actual dtype/layout/broadcast/perm/scale metadata, never by case ID",
+        "supported_scope": "当前20case成员；API合法范围还包括未覆盖shape，未覆盖部分不声明验证。",
+        "fact_ids": [
+          "source.kernel",
+          "source.workload"
+        ]
+      },
+      {
+        "id": "int64-scalar",
+        "case_ids": [
+          "5",
+          "19"
+        ],
+        "predicate": "int64-scalar determined by actual dtype/layout/broadcast/perm/scale metadata, never by case ID",
+        "supported_scope": "当前20case成员；API合法范围还包括未覆盖shape，未覆盖部分不声明验证。",
+        "fact_ids": [
+          "source.kernel",
+          "source.workload"
+        ]
+      },
+      {
+        "id": "broadcast-scalar",
+        "case_ids": [
+          "11",
+          "12",
+          "13",
+          "20"
+        ],
+        "predicate": "broadcast-scalar determined by actual dtype/layout/broadcast/perm/scale metadata, never by case ID",
+        "supported_scope": "当前20case成员；API合法范围还包括未覆盖shape，未覆盖部分不声明验证。",
+        "fact_ids": [
+          "source.kernel",
+          "source.workload"
+        ]
+      },
+      {
+        "id": "half-broadcast-vector",
+        "case_ids": [
+          "18"
+        ],
+        "predicate": "half-broadcast-vector determined by actual dtype/layout/broadcast/perm/scale metadata, never by case ID",
+        "supported_scope": "当前20case成员；API合法范围还包括未覆盖shape，未覆盖部分不声明验证。",
+        "fact_ids": [
+          "source.kernel",
+          "source.workload"
+        ]
+      }
+    ],
+    "stages": [
+      {
+        "id": "host",
+        "domain_ids": [
+          "same-vector",
+          "int64-scalar",
+          "broadcast-scalar",
+          "half-broadcast-vector"
+        ],
+        "fact_ids": [
+          "source.host",
+          "source.tiling"
+        ],
+        "behavior": "分配和H2D准备后按tiling启动kernel；完整调用范围见原host，host输出kernel_us不作性能证据。"
+      },
+      {
+        "id": "kernel",
+        "domain_ids": [
+          "same-vector",
+          "int64-scalar",
+          "broadcast-scalar",
+          "half-broadcast-vector"
+        ],
+        "fact_ids": [
+          "source.kernel",
+          "source.tiling",
+          "source.workload"
+        ],
+        "behavior": "host广播对齐rank并生成zero stride；同形非int64走4096 Vector Max；FP16非同形走last-axis段搬运；其余广播及全部int64走MaximumScalar，每输出rank次除模加双地址累加。"
+      },
+      {
+        "id": "output",
+        "domain_ids": [
+          "same-vector",
+          "int64-scalar",
+          "broadcast-scalar",
+          "half-broadcast-vector"
+        ],
+        "fact_ids": [
+          "source.host",
+          "source.oracle"
+        ],
+        "behavior": "输出同步D2H和原oracle检验；本次未执行。"
+      }
+    ],
+    "baseline_work": [
+      {
+        "id": "base-host",
+        "stage_id": "host",
+        "domain_ids": [
+          "same-vector",
+          "int64-scalar",
+          "broadcast-scalar",
+          "half-broadcast-vector"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "qualitative",
+          "expression": "host分配、H2D及按源码完整launch链；不作为已测Task时间",
+          "unit": "logical work",
+          "symbols": [],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.host"
+          ]
+        },
+        "explanation": "设备外准备与kernel执行分开"
+      },
+      {
+        "id": "base-kernel",
+        "stage_id": "kernel",
+        "domain_ids": [
+          "same-vector",
+          "int64-scalar",
+          "broadcast-scalar",
+          "half-broadcast-vector"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "symbolic",
+          "expression": "3*N*s",
+          "unit": "logical GM requested bytes",
+          "symbols": [
+            {
+              "name": "N",
+              "meaning": "输出元素数",
+              "unit": "elements"
+            },
+            {
+              "name": "s",
+              "meaning": "当前dtype每元素字节",
+              "unit": "bytes/element"
+            }
+          ],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.kernel",
+            "source.tiling",
+            "source.workload"
+          ]
+        },
+        "explanation": "N=该语义域输出元素数；s=该域dtype字节；R=行数；E=内轴长度；T=候选tile；A为32B向上对齐。单位分别计，不相加评分。"
+      },
+      {
+        "id": "base-output",
+        "stage_id": "output",
+        "domain_ids": [
+          "same-vector",
+          "int64-scalar",
+          "broadcast-scalar",
+          "half-broadcast-vector"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "qualitative",
+          "expression": "每声明输出一次D2H与oracle全域检查",
+          "unit": "logical work",
+          "symbols": [],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.host",
+            "source.oracle"
+          ]
+        },
+        "explanation": "未执行不能写passed"
+      }
+    ]
+  },
+  "previous_feedback": null,
+  "round": 1,
+  "reasoning_ref": {
+    "path": "reasoning-r1.json",
+    "sha256": "sha256:a9198dcafcb430071dc992ab5386ff5fcd4cf85c6e9742983bdda7279c984fa3"
+  },
+  "reasoning_hash": "sha256:7b68713c9af16dc78b41b298190ce1ad51e1cc51d6ed0f0dfd616842e37b2b06"
+}

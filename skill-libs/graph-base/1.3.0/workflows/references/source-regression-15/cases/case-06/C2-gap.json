@@ -1,0 +1,25 @@
+{
+  "task_id": "case-06",
+  "status": "conditional_analysis_only",
+  "strict_C2_constructed": false,
+  "selected_P": [
+    "planning.indexing.gather_output_owned"
+  ],
+  "selected_O": [
+    "implementation.scalar-control.hot_loop_address"
+  ],
+  "plan": "保持原每核输出区间和Raw按位拷贝；每核begin只解码一次indexShape坐标，base=Σ(d≠dim)coord[d]*xStride[d]。逐元素用base+index[linear]*xStride[dim]读取；mixed-radix odometer按indexShape进位，以xStride加/减更新base，gather轴不加入base。rank1直接x[index]。只缓存rank、dim及实际使用stride/shape，最多8轴；不引入全量索引表、workspace或UB分配。保留host拒绝/设备guard及各dtype位模式；源shape非gather轴不等长仍用原xStride。",
+  "missing": [
+    "实际device/SKU/hardware_fingerprint及CANN/compiler身份",
+    "真实可见AIV与可用UB及API预留（影响最终核数/tile/槽域）",
+    "有来源的architecture_profile与冻结parallel_plan/dispatch_plan及其能力/容量回执",
+    "新实现真实入口/dispatch源码绑定；本轮只有计划没有C3"
+  ],
+  "not_claimed": [
+    "C2实施就绪",
+    "C3 implemented",
+    "正确性passed",
+    "性能加速比"
+  ],
+  "reason": "不以占位hardware facts或书面参数替代严格计划；target-provenance仅目标适用域。"
+}

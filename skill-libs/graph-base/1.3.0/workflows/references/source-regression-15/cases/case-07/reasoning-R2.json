@@ -1,0 +1,642 @@
+{
+  "schema_version": "aprof.diagnosis-reasoning/v1",
+  "task_id": "case-07",
+  "context_hash": "sha256:f401c02f16aa0cd448f3949f2729f9d393245fdf048d3e7f54cdefd8cfebdea9",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "source_context_ref": {
+    "path": "authority.json",
+    "sha256": "sha256:fd66b0309930ea002aa2f2c59663c977070cc0095db0c3ce20d341f2b86f1b18"
+  },
+  "context_snapshot": {
+    "schema_version": "aprof.evidence/v1",
+    "task_id": "case-07",
+    "source_context_ref": {
+      "path": "authority.json",
+      "sha256": "sha256:fd66b0309930ea002aa2f2c59663c977070cc0095db0c3ce20d341f2b86f1b18"
+    },
+    "attributes": {
+      "family": [
+        "layout"
+      ],
+      "dtype": [
+        "bfloat16",
+        "float16",
+        "float32",
+        "int32",
+        "int64"
+      ],
+      "features": [
+        "memory-transfer",
+        "scalar-control",
+        "tiling-tail"
+      ],
+      "platform": "dav-2201"
+    },
+    "facts": {
+      "source.kernel": {
+        "state": true,
+        "kind": "source_review",
+        "view": "source",
+        "evidence_id": "source.kernel",
+        "ref": {
+          "path": "source/op_kernel/strided_slice_kernel.asc",
+          "sha256": "sha256:46080207eb1e6dada5df620d8a255ec92707356d763d631194f53c4533b48206",
+          "locator": "lines:1-34"
+        }
+      },
+      "source.tiling": {
+        "state": true,
+        "kind": "source_review",
+        "view": "source",
+        "evidence_id": "source.tiling",
+        "ref": {
+          "path": "source/op_kernel/strided_slice_tiling.h",
+          "sha256": "sha256:a038f2dc047926c24f3c86ad64e2812010e1123b7217dffe3f49150606d6c16b",
+          "locator": "lines:1-107"
+        }
+      },
+      "source.host": {
+        "state": true,
+        "kind": "source_review",
+        "view": "source",
+        "evidence_id": "source.host",
+        "ref": {
+          "path": "source/op_host/strided_slice.asc",
+          "sha256": "sha256:2e6d82ce5b6b4e15200ddebb952322f3b932b9134818786e646a14b405438166",
+          "locator": "lines:1-88"
+        }
+      },
+      "source.matrix": {
+        "state": true,
+        "kind": "source_review",
+        "view": "workload",
+        "evidence_id": "source.matrix",
+        "ref": {
+          "path": "source/matrix-20.json",
+          "sha256": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "locator": "lines:1-639"
+        }
+      },
+      "source.oracle": {
+        "state": true,
+        "kind": "source_review",
+        "view": "source",
+        "evidence_id": "source.oracle",
+        "ref": {
+          "path": "source/scripts/verify_result.py",
+          "sha256": "sha256:c2db195f474dc3c563d92d01c0e0e0f97f3796cf6143fcadd2d131bbbd26286b",
+          "locator": "lines:1-25"
+        }
+      },
+      "symptom.source.noncontiguous_access.component_1": {
+        "state": true,
+        "kind": "source_review",
+        "view": "source",
+        "evidence_id": "source.kernel",
+        "ref": {
+          "path": "source/op_kernel/strided_slice_kernel.asc",
+          "sha256": "sha256:46080207eb1e6dada5df620d8a255ec92707356d763d631194f53c4533b48206",
+          "locator": "lines:1-34"
+        }
+      },
+      "symptom.source.noncontiguous_access.component_2": {
+        "state": true,
+        "kind": "source_review",
+        "view": "source",
+        "evidence_id": "source.tiling",
+        "ref": {
+          "path": "source/op_kernel/strided_slice_tiling.h",
+          "sha256": "sha256:a038f2dc047926c24f3c86ad64e2812010e1123b7217dffe3f49150606d6c16b",
+          "locator": "lines:1-107"
+        }
+      },
+      "symptom.source.noncontiguous_access.component_3": {
+        "state": true,
+        "kind": "source_review",
+        "view": "source",
+        "evidence_id": "source.host",
+        "ref": {
+          "path": "source/op_host/strided_slice.asc",
+          "sha256": "sha256:2e6d82ce5b6b4e15200ddebb952322f3b932b9134818786e646a14b405438166",
+          "locator": "lines:1-88"
+        }
+      },
+      "constraint.semantic_equivalence": {
+        "state": true,
+        "kind": "source_proof",
+        "view": "constraint",
+        "evidence_id": "semantic-proof",
+        "ref": {
+          "path": "source-analysis-R1.md",
+          "sha256": "sha256:b34de3aa7e4d6c54191700229ae3eca825e2f62e1abc9d8e6b4444d1a5d0af28",
+          "locator": "lines:1-24"
+        }
+      },
+      "constraint.layout_semantics": {
+        "state": true,
+        "kind": "source_proof",
+        "view": "constraint",
+        "evidence_id": "semantic-proof",
+        "ref": {
+          "path": "source-analysis-R1.md",
+          "sha256": "sha256:b34de3aa7e4d6c54191700229ae3eca825e2f62e1abc9d8e6b4444d1a5d0af28",
+          "locator": "lines:1-24"
+        }
+      },
+      "constraint.capacity": {
+        "state": "unknown",
+        "kind": "not_observed",
+        "view": "constraint"
+      },
+      "constraint.target_api": {
+        "state": "unknown",
+        "kind": "not_observed",
+        "view": "constraint"
+      }
+    }
+  },
+  "current": {
+    "implementation_ref": {
+      "path": "source-index.json",
+      "sha256": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f"
+    },
+    "workload_ref": {
+      "path": "source/matrix-20.json",
+      "sha256": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c"
+    },
+    "objects": [
+      {
+        "object_id": "target",
+        "kind": "object",
+        "description": "strided_slice当前kernel数据路径"
+      },
+      {
+        "object_id": "stage",
+        "kind": "stage",
+        "description": "host tiling至kernel执行范围"
+      },
+      {
+        "object_id": "workload",
+        "kind": "workload",
+        "description": "原20case全部域"
+      },
+      {
+        "object_id": "implementation",
+        "kind": "implementation",
+        "description": "原始host/tiling/kernel快照，未实施候选"
+      }
+    ],
+    "scope": {
+      "task_id": "case-07",
+      "parent_implementation_hash": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f",
+      "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+      "target_ids": [
+        "target"
+      ],
+      "stage": "kernel"
+    }
+  },
+  "facts": {
+    "source.kernel": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.kernel",
+      "ref": {
+        "path": "source/op_kernel/strided_slice_kernel.asc",
+        "sha256": "sha256:46080207eb1e6dada5df620d8a255ec92707356d763d631194f53c4533b48206",
+        "locator": "lines:1-34"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-07",
+        "parent_implementation_hash": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f",
+        "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "source.tiling": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.tiling",
+      "ref": {
+        "path": "source/op_kernel/strided_slice_tiling.h",
+        "sha256": "sha256:a038f2dc047926c24f3c86ad64e2812010e1123b7217dffe3f49150606d6c16b",
+        "locator": "lines:1-107"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-07",
+        "parent_implementation_hash": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f",
+        "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "source.host": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.host",
+      "ref": {
+        "path": "source/op_host/strided_slice.asc",
+        "sha256": "sha256:2e6d82ce5b6b4e15200ddebb952322f3b932b9134818786e646a14b405438166",
+        "locator": "lines:1-88"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-07",
+        "parent_implementation_hash": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f",
+        "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "source.matrix": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.matrix",
+      "ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+        "locator": "lines:1-639"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-07",
+        "parent_implementation_hash": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f",
+        "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "workload"
+    },
+    "source.oracle": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.oracle",
+      "ref": {
+        "path": "source/scripts/verify_result.py",
+        "sha256": "sha256:c2db195f474dc3c563d92d01c0e0e0f97f3796cf6143fcadd2d131bbbd26286b",
+        "locator": "lines:1-25"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-07",
+        "parent_implementation_hash": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f",
+        "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "source.analysis": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "semantic-proof",
+      "ref": {
+        "path": "source-analysis-R1.md",
+        "sha256": "sha256:b34de3aa7e4d6c54191700229ae3eca825e2f62e1abc9d8e6b4444d1a5d0af28",
+        "locator": "lines:1-24"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-07",
+        "parent_implementation_hash": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f",
+        "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "symptom.source.noncontiguous_access.component_1": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [
+        "source.kernel",
+        "source.tiling",
+        "source.host",
+        "source.matrix",
+        "source.analysis"
+      ],
+      "scope": {
+        "task_id": "case-07",
+        "parent_implementation_hash": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f",
+        "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "symptom.source.noncontiguous_access.component_2": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [
+        "source.kernel",
+        "source.tiling",
+        "source.host",
+        "source.matrix",
+        "source.analysis"
+      ],
+      "scope": {
+        "task_id": "case-07",
+        "parent_implementation_hash": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f",
+        "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "symptom.source.noncontiguous_access.component_3": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [
+        "source.kernel",
+        "source.tiling",
+        "source.host",
+        "source.matrix",
+        "source.analysis"
+      ],
+      "scope": {
+        "task_id": "case-07",
+        "parent_implementation_hash": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f",
+        "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "symptom.source.noncontiguous_access": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [
+        "symptom.source.noncontiguous_access.component_1",
+        "symptom.source.noncontiguous_access.component_2",
+        "symptom.source.noncontiguous_access.component_3"
+      ],
+      "components": [
+        "symptom.source.noncontiguous_access.component_1",
+        "symptom.source.noncontiguous_access.component_2",
+        "symptom.source.noncontiguous_access.component_3"
+      ],
+      "scope": {
+        "task_id": "case-07",
+        "parent_implementation_hash": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f",
+        "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "constraint.layout_semantics": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [
+        "source.analysis",
+        "source.kernel",
+        "source.tiling"
+      ],
+      "scope": {
+        "task_id": "case-07",
+        "parent_implementation_hash": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f",
+        "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "constraint"
+    },
+    "constraint.semantic_equivalence": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [
+        "source.analysis",
+        "source.kernel",
+        "source.tiling"
+      ],
+      "scope": {
+        "task_id": "case-07",
+        "parent_implementation_hash": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f",
+        "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "constraint"
+    },
+    "constraint.capacity": {
+      "state": "unknown",
+      "kind": "raw",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-07",
+        "parent_implementation_hash": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f",
+        "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "constraint"
+    },
+    "constraint.target_api": {
+      "state": "unknown",
+      "kind": "raw",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-07",
+        "parent_implementation_hash": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f",
+        "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "constraint"
+    },
+    "source.second_review": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "static-review-R2",
+      "ref": {
+        "path": "static-evidence-R2.json",
+        "sha256": "sha256:cb0ad68799282a61eee464c70cc7ec2c004f823f94ddfb6b89ee4b4fda58073e",
+        "locator": "rows (all 20 original case IDs)"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-07",
+        "parent_implementation_hash": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f",
+        "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    }
+  },
+  "candidates": [
+    {
+      "hypothesis_id": "hypothesis.primary",
+      "problem_id": "problem.noncontiguous_access",
+      "mechanism": "Host将masks归一化为outputShape/sourceStep/sourceBase；kernel每输出做2*outputRank次除模并Raw单元素GM拷贝。输出64字节对齐分核，必须保留物理独占边界。所有原case正stride，负stride仍走原fallback。",
+      "targets": [
+        "target"
+      ],
+      "scope": {
+        "task_id": "case-07",
+        "parent_implementation_hash": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f",
+        "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "support": [
+        "source.kernel",
+        "source.tiling",
+        "source.matrix",
+        "source.second_review"
+      ],
+      "counter": [],
+      "unknown": [
+        "constraint.capacity",
+        "constraint.target_api"
+      ],
+      "alternatives": [
+        "hypothesis.alt1"
+      ],
+      "checks": [
+        "目标DataCopyPad的字节长度/地址对齐和实际UB证据齐备后实现；先完整20case位模式oracle。若127等短段发射过多，再比较保持相同地址集的多块strided API；run1组另开增量地址方案，不从本轮无测结果推断。"
+      ],
+      "status": "plausible",
+      "reason": "11个case存在100至1048576等长度连续段，批量搬运同时去掉逐元素拷贝和段内rank解码；地址外提对其余9case有价值但保留每元素Scalar访存，作为最强替代。 R2：重算所有mask、shrink/new-axis/ellipsis后得到连续组2/7/10/11/13/14/16/17/18/19/20；81处边界断言验证run内source(root+k)=source(root)+k且最大地址在输入内。case16/17的size1新轴不能阻止合轴；case20 run=127，跨行有空洞，不能把整个输出当连续。",
+      "excluded_by": [],
+      "independent_evidence_groups": []
+    },
+    {
+      "hypothesis_id": "hypothesis.alt1",
+      "problem_id": "problem.control_metadata_overhead",
+      "mechanism": "对全部case采用归一化sourceStep的odometer，消除rank除模但保留每元素GM读写；在run1组更适用。",
+      "targets": [
+        "target"
+      ],
+      "scope": {
+        "task_id": "case-07",
+        "parent_implementation_hash": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f",
+        "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "support": [
+        "source.kernel",
+        "source.tiling",
+        "source.matrix"
+      ],
+      "counter": [],
+      "unknown": [],
+      "alternatives": [
+        "hypothesis.primary"
+      ],
+      "checks": [
+        "对全部case采用归一化sourceStep的odometer，消除rank除模但保留每元素GM读写；在run1组更适用。；若重新采用，先核对其地址/API/资源和数值合同。"
+      ],
+      "status": "plausible",
+      "reason": "对全部case采用归一化sourceStep的odometer，消除rank除模但保留每元素GM读写；在run1组更适用。",
+      "excluded_by": [],
+      "independent_evidence_groups": []
+    }
+  ],
+  "action_instances": [
+    {
+      "instance_id": "instance.primary",
+      "action_id": "action.reorder_contiguous_access",
+      "template_hash": "sha256:1a2df2e4c96fcbd6273064aaec495473dfa9db0caa6da0b364b685f2fe015201",
+      "hypothesis_id": "hypothesis.primary",
+      "targets": {
+        "target": "target",
+        "stage": "stage",
+        "workload": "workload",
+        "implementation": "implementation"
+      },
+      "scope": {
+        "task_id": "case-07",
+        "parent_implementation_hash": "sha256:0808bc27681f90aa4bb8fd8657dfe73bab6a1203bf30256f67f36dbb433df20f",
+        "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+        "target_ids": [
+          "target"
+        ],
+        "stage": "kernel"
+      },
+      "parameters": {
+        "T_candidates": [
+          256,
+          1024,
+          4096
+        ],
+        "run_predicate": "normalized positive sourceStep trailing contiguous run>1",
+        "workspace_bytes": 0,
+        "fallback": "原StridedSliceCopy"
+      },
+      "evidence_bindings": {
+        "symptom.source.noncontiguous_access": "symptom.source.noncontiguous_access",
+        "constraint.layout_semantics": "constraint.layout_semantics",
+        "constraint.semantic_equivalence": "constraint.semantic_equivalence",
+        "constraint.capacity": "constraint.capacity"
+      },
+      "unknowns": [
+        "constraint.capacity"
+      ],
+      "status": "conditional",
+      "reason": "当前源码支持此意图；实施合法性与性能收益分开。11个case存在100至1048576等长度连续段，批量搬运同时去掉逐元素拷贝和段内rank解码；地址外提对其余9case有价值但保留每元素Scalar访存，作为最强替代。",
+      "parent_plan_hash": null
+    }
+  ],
+  "predecessor_ref": {
+    "path": "reasoning-R1.json",
+    "sha256": "sha256:186209531fc896f73a272da0b36480a9c2f02ca0d5ef2375f2cb5e70ce209e25"
+  }
+}

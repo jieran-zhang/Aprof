@@ -1,0 +1,19 @@
+{
+  "task_id": "raw15-case-05",
+  "kind": "new_static_evidence",
+  "parent_R1_analysis_ref": {
+    "path": "R1-analysis.md",
+    "sha256": "sha256:c9575644e6dae2688e563bc067b3a3385746c5834d9ddaacd94cd7f9b70775b4"
+  },
+  "matrix_costs_ref": {
+    "path": "matrix-costs.json",
+    "sha256": "sha256:9533d03510aaf302c2604e01fc6dd9154b48e45b5bc4a8eacfda893ba397a913"
+  },
+  "checks": [
+    "shape权威：case4=16777216，case5=33554432，拒用note中的67M/268M。",
+    "双输入槽预算系数36/38；原20/30最大tile不得直接沿用。"
+  ],
+  "conclusion": "新增容量核算确认不能保留原ubFormer直接翻倍输入槽：FP32由20T变36T，低精度由30T变38T。原host按接近可用UB选T，因此必须重算T，比较缩水tile产生的额外循环与潜在重叠。解析shape纠正matrix note：case4实际4096²=16777216而非note67M，case5实际4096×8192=33554432而非note268M。SafeSqrt仍需原v_hat直到GE恢复、SafeDiv仍需分母到最后Select，不能合并这些活区。",
+  "execution": "CPU integer/formula assertions only; no original module import, hardware or correctness run",
+  "performance": "not_measured"
+}

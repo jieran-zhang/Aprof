@@ -1,0 +1,27 @@
+两个入口相互独立；DELTA.json只记录测试标识符更名，没有改变数值或API。以下按题面指定的910C/2201解释实际路径，3510仅作静态对照。
+
+入口V读入25019个连续ND格式的bfloat16元素，输出同形同类型，共25019×2=50038字节。host完成文件读取、输入及tiling上传、kernel启动，等待stream结束后下载并写文件（source/vector/op_host/nacre.asc:38–63）。MakeNacrePlan把正底数的幂转为自然指数：gain=scale·ln(base)，bias=shift·ln(base)。本题分别约为0.34657359和−0.69314718，数学目标为y[i]=2^(0.5x[i]−1)。实际数值路径是bfloat16输入转float，依次Muls、Adds、Exp，再以CAST_RINT转回bfloat16；因此有float运算、指数实现及最终舍入的影响，不能视为无限精度幂运算，也不是先将指数舍入为bfloat16。CAST_RINT按本地Cast.md契约为最近偶数舍入。其他参数下，base≤0的源码含义是使用自然指数，并非计算非正底数的幂。
+
+分工由source/vector/op_kernel/nacre_plan.h:18–29决定：useful=ceil(25019/4096)=7，可用Vector核数为3，故laneCount=3，laneExtent=ceil(25019/3)=8340，windowElements=4096。nacre_stage.asc:9–33据此使核0、1、2分别覆盖元素半开区间[0,8340)、[8340,16680)、[16680,25019)，长度8340、8340、8339；对应GM字节起点0、16680、33360。每核执行三轮，元素数分别为4096、4096、148或147，共九个窗口，完整覆盖输入且互不重叠。
+
+V的数据流为GM经MTE2进入UB，在V流水计算，再经MTE3写回GM（nacre_stage.asc:37–73）。DataCopyExtParams的blockCount=1，blockLen以字节计：完整窗口8192B，尾窗口296B或294B，所有stride为0。按A3普通DataCopyPad契约，尾窗口在UB中补齐至320B；isPad=false不能解释成补零，但计算仅处理count个有效元素，写回也只写296B或294B，因此dummy不参与结果，GM终点恰为50038B。核间起点不必按32B对齐，该重载支持这些非对齐有效范围。
+
+每核inQ和outQ各分配一个8192B槽，fpIn、fpOut各16384B，共49152B，即48KiB UB；VECIN、VECOUT、VECCALC是同一物理UB的逻辑用途，并非三级存储。队列深度与物理槽数本题均为1。Alloc/EnQue/DeQue/Free构成输入和输出的生命周期，队列框架承担跨流水就绪与复用同步；float临时区每轮重复使用，没有双缓冲。源码未手写V运算间barrier，相关依赖由编译器同步机制处理，具体插入指令不能仅凭源码确定。队列存在不证明搬运和计算已发生有效重叠。
+
+入口C计算half矩阵A[512,128]乘B[128,128]，随后逐元素做LeakyRelu，输出half C[512,128]。A、B、C的GM大小分别为131072、32768、131072B。数值上先由half乘法输入形成float累加结果S，再经Fixpipe以F322F16、最近偶数舍入生成half中间值H，最后执行H≥0时保持、H<0时乘half系数0.001。因此激活前已有一次half转换，不能等同于对float累加结果直接激活后才转换（source/cube/mica.asc:113–176）。
+
+C没有独立运行时tiling，main:200–215将singleCore和base均固定为256×128×128，启动组合数=(512/256)×(128/128)=2。入口声明__mix__(1,2)，对应2个AIC和4个AIV实例；这不是整颗910C的物理核数。按simd_builtin_keywords.md，GetBlockIdx返回AIC逻辑号0、1，AIV逻辑号0至3。Init:36–45使AIC沿M分工：各处理256行A和C，A/C起点为0或32768个half，即0或65536B；两核均读取完整B。AIV用编号整除2找到所属C块，再用编号模2选择128行半块，最终GM起点为0、16384、32768、49152个half，即0、32768、65536、98304B。
+
+每个AIC只计算一个256×128输出tile，K=128一次覆盖；源码没有外层M/N/K循环，也没有跨核归约，注释中的“K方向累加”发生在单次Mmad内部。Process:52–68按元素数分配A的L1/L0A各32768个half，即65536B；B的L1/L0B各16384个half，即32768B；L0C分配32768个float，即131072B。L1中两块合计98304B，互不重叠。GM→L1由MTE2随路完成ND→NZ：A参数nValue=256、dValue=128、srcDValue=128，B为128、128、128；两者都只有一个矩阵，行跨度为128元素。
+
+2201分支（mica.asc:75–91）由MTE1将A的NZ重排为L0A的ZZ，将B的NZ重排为L0B的ZN。half分形为16×16=256元素=512B。A循环16次，每次搬8个分形：源起点i×256元素，迭代间源跨度16×512=8192B；目标起点i×2048元素，连续放置8个分形。即源分形i+16j映射到目标8i+j。B循环8次，每次搬8个分形，源起点i×256元素，源跨度8×512=4096B，目标起点i×2048元素，并转置每个16×16分形。此处转置是布局转换，不改变数学目标A×B。
+
+随后Mmad{256,128,128,0,false,true}清零初始化L0C并完成乘加，结果为float NZ。FIX将它转成half ND写入对应GM输出块；Fixpipe的srcStride=256以16×sizeof(float)=64B计，故相邻Z块起点相差16384B，dstStride=128以输出元素计，故GM行跨度256B。reluEn=false，unitFlag=0，没有启用随路ReLU或分形级Mmad/Fixpipe联动。
+
+C的显式事件依次保护MTE2写L1→MTE1读L1、MTE1写L0A/B→M读输入、M写L0C→FIX读结果（mica.asc:70–120）。AIC随后用CrossCoreSetFlag<2,PIPE_FIX>(0)，在FIX前序写回完成后通知同组两个AIV；AIV等待后才从GM读结果。这是组内AIC→两个AIV的交接，不是两个AIC之间的全局屏障。每个AIV有32768B UB，DataCopyPad读取128行，每行256B，GM与UB块间间隔均为0；行长已经32B对齐，不产生实际padding。MTE2_V事件保证读入完成，原地LeakyRelu后V_MTE3事件保证写回读取的是激活结果。四个AIV写入区间互斥；tile只使用一次，无须再通知AIC复用。入口末尾PIPE_ALL及host的stream同步负责收尾。
+
+3510条件下，host常量、工作划分、局部分配元素数、GM→L1的ND→NZ、Mmad参数、FIX→GM以及AIV经GM/UB激活的源码均保持一致；不会因为另一平台具备其他通路就自动变成L0C直送UB。变化首先在mica.asc:92–106：A改用一次LoadData2DParamsV2，mStep=16、kStep=8、src/dstStride=16，非转置，保持L0A的NZ；B一次调用，mStep=kStep=8、src/dstStride=8并转置，得到ZN。mStep以16元素、kStep以32B、stride以512B计，仍覆盖A的128个、B的64个half分形。本地LoadData_2D_V2.md明确A3不支持此API；Mmad.md也分别规定2201的A为ZZ、3510的A为NZ，不能直接互换分支。
+
+另一差异来自CrossCoreWaitFlag_ISASI.md:54–79：2201的modeId和pipe不作为硬件输入，Wait阻塞全部流水的后续指令；3510模式2对应的pipe有效，本代码省略后默认PIPE_S，不能赋予它2201的全流水阻塞语义。两者Set仍按模式2在FIX完成后通知对应AIV。DataCopyPad两者当前均走普通模式，3510额外支持的Compact模式未被选择。
+
+这些结论来自静态源码及固定rawdocs契约。输入实际数值、特殊值配置、编译器生成的同步和转换细节均未给出；例如A3的Fixpipe特殊值输出还受CTRL饱和设置影响。材料不能证明任一目标已成功编译运行、得到特定误差或实现流水重叠，也不能由3510静态分支推断910C具备3510能力。

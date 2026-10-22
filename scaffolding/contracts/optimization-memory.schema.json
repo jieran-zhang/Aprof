@@ -1,0 +1,410 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aprof:scaffolding:optimization-memory",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "aprof.optimization-memory/v3"
+    },
+    "memory_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "previous_ref": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/artifact"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "batch_ref": {
+      "$ref": "#/$defs/artifact"
+    },
+    "task_result_ref": {
+      "$ref": "#/$defs/artifact"
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "C0_ref": {
+      "$ref": "#/$defs/artifact"
+    },
+    "recorder": {
+      "type": "object",
+      "properties": {
+        "agent_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "producer_ref": {
+          "$ref": "#/$defs/artifact"
+        }
+      },
+      "required": [
+        "agent_id",
+        "model",
+        "producer_ref"
+      ],
+      "additionalProperties": false
+    },
+    "attempts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "attempt_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "parent_attempt_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "parent_source_ref": {
+            "$ref": "#/$defs/artifact"
+          },
+          "parent_source_hash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "candidate_source_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/artifact"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "candidate_source_hash": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "patch_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/artifact"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "handoffs": {
+            "type": "object",
+            "properties": {
+              "C1": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/artifact"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "C2": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/artifact"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "C3": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/artifact"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "C1",
+              "C2",
+              "C3"
+            ],
+            "additionalProperties": false
+          },
+          "C4_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/artifact"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "C5_ref": {
+            "$ref": "#/$defs/artifact"
+          },
+          "execution_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/artifact"
+            },
+            "minItems": 0
+          },
+          "timing_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/artifact"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "outcome_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/artifact"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "completed",
+              "failed",
+              "blocked",
+              "cancelled",
+              "noop"
+            ]
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "stage": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "category": {
+                    "enum": [
+                      "semantic",
+                      "implementation",
+                      "infrastructure",
+                      "budget",
+                      "measurement"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "stage",
+                  "category",
+                  "reason"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "missing": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 0
+          },
+          "observations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "claim_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "owner": {
+                  "enum": [
+                    "diagnosis",
+                    "parallel-planning",
+                    "optimization"
+                  ]
+                },
+                "target_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "statement": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "basis_kind": {
+                  "enum": [
+                    "source_review",
+                    "mechanism_test",
+                    "isolated_action",
+                    "comparison",
+                    "implementation_failure",
+                    "proxy",
+                    "retrospective"
+                  ]
+                },
+                "status": {
+                  "enum": [
+                    "supported",
+                    "refuted",
+                    "inconclusive"
+                  ]
+                },
+                "evidence_refs": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/artifact"
+                  },
+                  "minItems": 1
+                },
+                "limitation": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "claim_id",
+                "owner",
+                "target_id",
+                "statement",
+                "basis_kind",
+                "status",
+                "evidence_refs",
+                "limitation"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0
+          },
+          "optimization_seconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "tokens": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "attempt_id",
+          "parent_attempt_id",
+          "parent_source_ref",
+          "parent_source_hash",
+          "candidate_source_ref",
+          "candidate_source_hash",
+          "patch_ref",
+          "handoffs",
+          "C4_ref",
+          "C5_ref",
+          "execution_refs",
+          "timing_ref",
+          "outcome_ref",
+          "status",
+          "failure",
+          "missing",
+          "observations",
+          "optimization_seconds",
+          "tokens"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "memory_seconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0
+    }
+  },
+  "required": [
+    "schema_version",
+    "memory_id",
+    "revision",
+    "previous_ref",
+    "batch_ref",
+    "task_result_ref",
+    "task_id",
+    "C0_ref",
+    "recorder",
+    "attempts",
+    "memory_seconds",
+    "limitations"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

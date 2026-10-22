@@ -1,0 +1,1378 @@
+{
+  "schema_version": "aprof.knowledge-route/v1",
+  "owner": "optimization",
+  "version": "v0006",
+  "knowledge_hash": "sha256:76dc0fb86667d0c2f1428729435420e1d3f43f143e784843b5ec7d77df094fae",
+  "context_hash": "sha256:77110f93949acddabcb2b64a988621e2cfc31e2a01236def81da08c2604fd13f",
+  "task_id": "autonomy-c-15",
+  "override_hash": null,
+  "selection_mode": "deterministic",
+  "evidence": {},
+  "context_snapshot": {
+    "schema_version": "aprof.evidence/v1",
+    "task_id": "autonomy-c-15",
+    "source_context_ref": {
+      "path": "authority.json",
+      "sha256": "sha256:eb125a94bee6321b35ca6d6ad0a80eac4dcd1499eb8c244c9f42526c5b4ec587"
+    },
+    "attributes": {
+      "platform": "dav-2201",
+      "family": [
+        "indexing",
+        "elementwise"
+      ],
+      "dtype": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "features": [
+        "scalar-control",
+        "memory-transfer",
+        "vector-api"
+      ]
+    },
+    "facts": {}
+  },
+  "matches": [
+    {
+      "id": "implementation.memory-transfer.coalesce",
+      "version": "1.1.0",
+      "path": [
+        "implementation.root",
+        "implementation.memory-transfer",
+        "implementation.memory-transfer.coalesce"
+      ],
+      "score": 6,
+      "missing": [
+        "constraint.capacity",
+        "constraint.output_ownership",
+        "constraint.plan_freedom",
+        "constraint.semantic_equivalence"
+      ],
+      "status": "needs_evidence",
+      "snapshot": {
+        "body": "# 连续搬运合并与批量写回\n\n## 原理与适用条件\n\n一次 DMA 的固定发射、循环控制和同步成本会被小块搬运反复支付。合并相邻且同属一个任务的有效区间，或用一个多块参数描述规则行段，可在不增加数学工作量的前提下减少发射次数。输入是 C2 已选 action、任务所有权、tile 范围、输入输出 stride、别名约束和 API 证据；只在其允许的参数范围内实现。行间有空洞时使用 `implementation.memory-transfer.strided-pad`，不能把空洞当作有效连续元素。\n\n先列出每个输入/输出的 `(起始元素偏移, 有效元素数, 物理行跨度)`。只有前一段的末端等于后一段的起点、dtype/布局相同、且同一核拥有完整输出区间时，才直接合并；不同 batch、跨行 padding、广播输入和其他核的输出都构成边界。合并写回还要求全部结果在写回之前已生成且不会被覆写。\n\n## 落地步骤与成本\n\n1. 对固定 shape、相同地址集合比较原版与合并版；每个 tile 必须保留完整有效范围，不能通过漏搬尾段减少次数。\n2. 读入若本来就是连续区间，优先延长一次搬运；规则矩形可增加 `blockCount`，同步重算 UB 的行间对齐。禁止用补齐的 GM 长度代替实际有效长度。\n3. 多个短输出可积累到 UB 中连续槽，再统一写回；每个槽保留 producer→最后写回完成的存活期。结果需要立即被下阶段消费、存在 atomic/部分和语义或输出存在跨任务别名时，保留原写回顺序。\n4. 合并后确认 MTE2/MTE3 与计算的完成边不变；队列 `EnQue/DeQue` 或现有显式事件必须覆盖更大的区间。只改变调用数量不足以证明流水合法。\n\n记总有效元素 `N`、每元素字节 `s`、单次 tile 元素 `T`、每 tile 搬运次数 `c`，调用量约为 `c×ceil(N/T)`，有效流量应仍为 `N×s`（每个输入/输出分别计）。读写不同的两个 half 输入并产生一个 half 输出时，最小逻辑 GM 流量是 `6N` 字节；MTE2 和 MTE3 可重叠，不能把某一引擎时间当作三路总带宽的纯读时间。估算 `t≈calls×launchCost + bytes/effectiveBandwidth` 仅用于解释候选，最终比较同协议 Task 时间。\n\n批量输出额外占用 `AlignUp(k×resultBytes,32)` 字节；完整 UB 预算还包括输入槽、转换、临时区、API workspace、queue 槽数和 padding。若这使输入 tile 变小、失去双缓冲或引入 spill，减少的写回次数可能得不偿失。\n\n## 有上下文的搬运片段\n\n下例只描述连续 float 区间；`xGm`、`yGm` 是长度至少 `offset+count` 的 `GlobalTensor<float>`，`xLocal/yLocal` 是不重叠、32B 对齐且各有 `count` 元素的有效 UB 视图。`offset/count` 均为元素数，Host 已证明 `count>0`、`count*sizeof(float)` 为 32B 倍数、字段/计数范围合法、输出只归本任务。沿用工程已核验的 producer/consumer 事件，不能从片段省略同步得到“无同步实现”。\n\n```cpp\n// CopyIn 阶段；将原先 k 个相邻小区间合为一个合法连续 count。\nAscendC::DataCopy(xLocal, xGm[offset], count); // count 单位：float 元素\n// 等现有 MTE2 -> Vector 完成边后，执行 C2 冻结的计算，生成 yLocal。\n// 等现有 Vector -> MTE3 完成边后：\nAscendC::DataCopy(yGm[offset], yLocal, count); // 同样只写有效元素\n// MTE3 尚未完成读取 yLocal 时，仍不能复用其 UB 存储。\n```\n\n非对齐段使用核验过的 DataCopyPad 重载，以有效字节指定 `blockLen`；若合并后跨过不能读取的空洞，应拆成矩形多块或保留逐段搬运，而不是读取分配范围外的补齐数据。\n\n## 失败边界、验证与来源\n\n覆盖短于 tile、整 tile、tile±1、奇数行宽、不同物理 stride、alias 允许/禁止和最后一个核。检查总读写有效字节、最后有效地址、每个输出只写一次、峰值 UB 和流水完成边。性能观察调用次数、MTE2/MTE3 时间与 Task 时间；MTE 指令减少而总流量增长、核尾覆盖其他核、UB 槽提前覆写均应撤回该候选。构建前完成代码审查；精度错保留 oracle/完整日志，不以跑通的子集替代原 case 域。\n\n来源事实：asc-devkit `data_copy` 用不同矩形 tile 展示发射粒度与 UB 占用的权衡；Add 样例展示双缓冲下的读写生命周期。这里的连续区间合并判据、流量等式与输出累积预算是工程提炼。样例的 tile、核数和实测收益仅限原配置，不构成 910C 的默认参数；本条没有目标硬件性能验证。",
+        "evidence_status": "source_reviewed_not_benchmarked",
+        "id": "implementation.memory-transfer.coalesce",
+        "kind": "recipe",
+        "learning": {},
+        "parent": "implementation.memory-transfer",
+        "references": [
+          "implementation.buffer-lifetime.reuse",
+          "implementation.memory-transfer.strided-pad",
+          "implementation.tiling-tail.valid-length"
+        ],
+        "schema_version": "aprof.knowledge-record/v1",
+        "scope": {
+          "dtypes": [
+            "all"
+          ],
+          "platforms": [
+            "all"
+          ],
+          "workloads": [
+            "all"
+          ]
+        },
+        "seed_reason": "审读固定开源修订并提炼中文实现配方，保留既有 ID 语义；API 单位以实际 API 文档为准；未做目标 SDK 编译或 NPU 性能验证。",
+        "source_hash": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c",
+        "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+        "sources": [
+          {
+            "excerpt_sha256": "sha256:e8cc9f2915a016c276cf431de51a66748779c510f82de2cc293e523beaed679e",
+            "lines": [
+              1,
+              351
+            ],
+            "original_path": "ops/ascendc-performance-best-practices/reference/common/datacopy_optimization_design.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/ops/ascendc-performance-best-practices/reference/common/datacopy_optimization_design.md",
+            "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+            "sha256": "sha256:e8cc9f2915a016c276cf431de51a66748779c510f82de2cc293e523beaed679e"
+          },
+          {
+            "excerpt_sha256": "sha256:848f0dfa47facbfcddf126f931b9a62f125a0aced77b4f9229eb7eb23768b8f0",
+            "lines": [
+              21,
+              145
+            ],
+            "original_path": "examples/01_simd_cpp_api/05_best_practices/04_memory_access/data_copy/data_copy_ub.h",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/04_memory_access/data_copy/data_copy_ub.h",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:f5ca47ce371eb60e16d3fac8bb0a5f8921c62de8515d22de92b900e3c7733911"
+          },
+          {
+            "excerpt_sha256": "sha256:9f27996a1bd449d385a01b00b0a11a0562c3e17bf8762c3e55e33dd241596031",
+            "lines": [
+              82,
+              394
+            ],
+            "original_path": "examples/01_simd_cpp_api/05_best_practices/04_memory_access/data_copy/README.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/04_memory_access/data_copy/README.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:7126d511236c3539b2710934c468c56500e39ac336531597a3360d6c74282cff"
+          },
+          {
+            "excerpt_sha256": "sha256:d2b85d269202c81ba81366f010df36bf3c512f17f84bd0b145c0dd1425e49cda",
+            "lines": [
+              27,
+              345
+            ],
+            "original_path": "examples/01_simd_cpp_api/05_best_practices/00_vector_compute/add_high_performance/add.asc",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/00_vector_compute/add_high_performance/add.asc",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:f7d075958365a8fc1af9879e90ab6494573f8869d3a538832c537d8e0f905042"
+          },
+          {
+            "excerpt_sha256": "sha256:10621504e99f08b702f2b096bf353ab282bc4da997e2d7e8b96df1a9f60c4c45",
+            "lines": [
+              1,
+              55
+            ],
+            "original_path": "ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:dbb672d9f6f872d02ba5a255ac9b1949595d8fa869efb174c27895da04560a38"
+          }
+        ],
+        "status": "active",
+        "tags": [
+          "batch-writeback",
+          "byte-accounting",
+          "contiguous-copy"
+        ],
+        "title": "连续搬运合并与批量写回",
+        "version": "1.1.0"
+      }
+    },
+    {
+      "id": "implementation.vector-api.batch",
+      "version": "1.2.0",
+      "path": [
+        "implementation.root",
+        "implementation.vector-api",
+        "implementation.vector-api.batch"
+      ],
+      "score": 6,
+      "missing": [
+        "constraint.capacity",
+        "constraint.plan_freedom",
+        "constraint.semantic_equivalence",
+        "constraint.target_api"
+      ],
+      "status": "needs_evidence",
+      "snapshot": {
+        "body": "# Repeat、mask、stride 与批量 Vector API\n\n## 原理与条件\n\n对同一计算、规则地址和相同有效 lane 的短调用，count 或高维 repeat 重载可减少 Scalar 参数计算与 API 发射。先确定是 API 发射/地址控制热点；如果瓶颈是 GM 搬运、数据依赖或 UB bank conflict，仅增加 repeat 不一定缩短 Task 时间。C2 需允许该局部实现，算法、算术操作顺序、跨核所有权和同步不变；归约重排、跨算子融合与改累加精度不属于本条。\n\n普通 memory vector API 的一 repeat 处理 8 个 32B DataBlock，共 256B；FP16 为 128 元素、FP32 为 64 元素。具体 API/混合 dtype 以支持文档为准。固定高维 API 文档的 repeatTime 上限为 255，不能将任意长 tensor 强塞进 uint8_t 发生截断。count 重载的单位是元素，但是否完整处理非整 repeat 的尾部必须查具体 API、重载和平台；例如 A2/A3 Compare 只处理 count 所占空间中完整的 256B 块，而 Add 的连续 count 不能代表它。它与 repeat 重载不是同一单位。\n\n## 落地步骤和地址闭合\n\n1. 先选最简单合法重载：连续区域优先 count；有规则间隔且同类调用很多时再选高维 mask/repeat/stride。分别列 src/dst 的元素类型、基址、逻辑 shape、块内与 repeat 间跨度。\n2. 普通等宽 dtype 设 `s=sizeof(T)`、`E=256/s`、`B=32/s`。`mask` 在一次 repeat 内选择有效 lane；`blockStride` 连接同一 repeat 的不同 32B 块，`repeatStride` 连接相邻 repeat 的同位置块，均以 32B 块计。dst block stride 不可为 0；src stride 0 是广播复用，必须证明符合原语义。\n3. 对 r 次 repeat、块 stride b、repeat stride p，最坏地址范围为 `(r−1)×p×32 + (已选最后块索引)×b×32 + 该块有效字节`，每个操作数独立算，并核验参数位宽和 UB 容量。不能只用 `r×mask` 检查非连续 buffer，不能把 Vector mask 当 GM 访问保护。\n4. 主块按最多合法 repeat 分组，组间按实际地址跨度推进；尾部有效 lane 不同就单独处理。若外部设置 mask 或 counter，明确模式、mask 值和恢复位置，在下一段 API 前恢复其要求的正常状态；没有接口级证据时保留每次内部 mask 设置。\n5. 检查原地 alias：后一个 repeat 的源不得被前一个 repeat 提前覆写，除非具体 API 明确允许。较大 batch 延长 buffer 读写时间，原 queue/event 的完成边必须覆盖整个批量，释放不能只等“第一小段完成”。\n\n设原有 `k` 次小调用，合并后 `ceil(fullRepeats/Rmax)` 次主调用加至多一条 tail，减少的是发射/控制；有效算术与源/目标访问集合应保持不变。UB 需求为各实际跨度而非有用元素简单相加，另计队列槽、padding 和 API tmp。吞吐提升与否看同协议 Task 时间，不能把调用数下降直接报告为加速比。\n\n## 可读且明确的片段\n\n示例为三个独立 float UB tensor：`xLocal/yLocal/zLocal` 均有 `validElements` 个有效连续元素、32B 对齐且互不重叠；原 MTE2→Vector 和 Vector→消费者事件仍保留。`validElements` 是 `uint32_t` 元素数，已由 Host 证明合法；选择 count 方式时：\n\n```cpp\nif (validElements != 0) {\n    AscendC::Add(zLocal, xLocal, yLocal, validElements);\n}\n```\n\n选择高维方式且本批次恰有 512 个 float 元素时，可用 `mask=64, repeatTime=8, {1,1,1,8,8,8}`；各路 block stride 1、repeat stride 8 的单位均为 32B 块。对于 513 个元素，不能设 mask=65；须在合法主调用后用独立有效 count=1 的尾部（或合法 count 重载），同时保持尾地址与 buffer 范围。Cast 等异宽 API 的 mask 与 repeat stride 要按较大 dtype 另算，不能沿用 Add 的参数。\n\n## 平台、数值与验证\n\n固定 cannbot vector 文档明确 arch35/3510 的 RegBase、Reg/MicroAPI/VF 内容专属；其收益百分比、32 RegTensor 预算或展开建议不当作 A2/A3 判据。这里的 A2/A3 memory vector count/repeat 依据 asc-devkit API；950 的兼容实现需独立核验支持和零 count 行为。跨平台显式跳过空调用更容易保持语义，不将 3510 SIMT/VF 片段放入 A3 kernel。\n\n普通逐元素 batch 应保持每元素运算和 RoundMode；reduction/scan、随机数或跨 repeat 依赖要单独证明顺序，不进入本条直接合并。测试 count=0/1、每 repeat±1、255 repeat±1、不同 dtype/stride、mask 全开/局部与 bit 模式、alias 合法/不合法，并在 buffer 周围放可检查哨兵。部分 lane 错、每 repeat 周期性错位、后续 API 全错多为 mask/stride/恢复错误；撤回至 count 或原小调用，保留失败日志。来源事实是固定高维 API、Add 与 mask 的单位/状态契约，地址闭合公式与合并步骤为工程提炼；未进行目标 SDK/NPU 验证。\n\n## 从调用合并转到实际工作量比较\n\n选择前分别记原 `k` 次调用、合并后的主/尾调用数、有效元素数、为 API 补齐而新增的元素数、predicate/转换区、同步次数。调用少而初始化/转换多的方案可能不合适；同时比较保持小调用、规则 repeat、连续 count 三种表达中真实可用的方案，不要求全部都实现。队列存在不证明 Vector 已批量化，源码调用数也不等于编译后发射成本。\n\n当拟用比较生成 predicate 再选择时，按需展开 [Compare/Select 的尾部与 predicate 契约](compare-select-tail.md)。该正文是此方法的唯一完整归属：A2/A3 Compare 的 count 对齐、Select 模式和临时空间不能从 Add 的连续 count 推断。已有明确 API 依据可以支持未测收益的条件候选；接口合法性与性能价值分别判断。",
+        "evidence_status": "source_reviewed_not_benchmarked",
+        "id": "implementation.vector-api.batch",
+        "kind": "recipe",
+        "learning": {},
+        "parent": "implementation.vector-api",
+        "references": [
+          "implementation.buffer-lifetime.reuse",
+          "implementation.precision-boundaries.bounds",
+          "implementation.vector-api.cast"
+        ],
+        "schema_version": "aprof.knowledge-record/v1",
+        "scope": {
+          "dtypes": [
+            "all"
+          ],
+          "platforms": [
+            "Ascend 910B",
+            "Ascend 910C",
+            "Ascend 950",
+            "dav-2201",
+            "dav-3510"
+          ],
+          "workloads": [
+            "all"
+          ]
+        },
+        "seed_reason": "审读五个固定开源修订中的直接来源，以中文提炼实现契约；保留旧 ID 含义，不承诺目标 SDK 编译结果或 NPU 性能收益。",
+        "source_hash": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1",
+        "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+        "sources": [
+          {
+            "excerpt_sha256": "sha256:ac8379ef50685c20af258928e6805097ddf1cedbfacf2adb1fca65fc6d8bf915",
+            "lines": [
+              1,
+              84
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/memory_vector_compute/SIMD_compute/high_dim_split.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/SIMD_compute/high_dim_split.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:ac8379ef50685c20af258928e6805097ddf1cedbfacf2adb1fca65fc6d8bf915"
+          },
+          {
+            "excerpt_sha256": "sha256:d0fe0a42a4720850442a3745e2ac9551654a1fd26c3debecd42f8755d0af461b",
+            "lines": [
+              1,
+              190
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/memory_vector_compute/basic_arithmetic/Add.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/basic_arithmetic/Add.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:d0fe0a42a4720850442a3745e2ac9551654a1fd26c3debecd42f8755d0af461b"
+          },
+          {
+            "excerpt_sha256": "sha256:0de631e061a2e005d01aaf2efe0076a9e2adb3287edf1d1e96dd515ab919a256",
+            "lines": [
+              1,
+              149
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/memory_vector_compute/mask_operations/SetVectorMask.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/mask_operations/SetVectorMask.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:0de631e061a2e005d01aaf2efe0076a9e2adb3287edf1d1e96dd515ab919a256"
+          },
+          {
+            "excerpt_sha256": "sha256:a41d8e8b10d541452de9c4542158d0bba6bc53f15e68c3d1d929712856a11f12",
+            "lines": [
+              1,
+              643
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/memory_vector_compute/type_conversion/Cast.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/type_conversion/Cast.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:a41d8e8b10d541452de9c4542158d0bba6bc53f15e68c3d1d929712856a11f12"
+          },
+          {
+            "excerpt_sha256": "sha256:103bb67af7b9bc8316403167dbfd6e57da2a757dd0bfbc8af03336378051b13e",
+            "lines": [
+              1,
+              211
+            ],
+            "original_path": "ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:103bb67af7b9bc8316403167dbfd6e57da2a757dd0bfbc8af03336378051b13e"
+          },
+          {
+            "excerpt_sha256": "sha256:353264a38c342ca8b668d0400e48750461820fa743be89ba59d6824eb4764262",
+            "lines": [
+              1,
+              357
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Compare.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Compare.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:353264a38c342ca8b668d0400e48750461820fa743be89ba59d6824eb4764262"
+          },
+          {
+            "excerpt_sha256": "sha256:615845595e9b6ca5d150548eb27e9e6fd9d0bb972ee1533f933ad6bea8d940b5",
+            "lines": [
+              1,
+              345
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Select.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Select.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:615845595e9b6ca5d150548eb27e9e6fd9d0bb972ee1533f933ad6bea8d940b5"
+          }
+        ],
+        "status": "active",
+        "tags": [
+          "count-overload",
+          "mask",
+          "repeat",
+          "stride"
+        ],
+        "title": "Repeat / mask / stride 与批量 Vector API",
+        "version": "1.2.0"
+      }
+    },
+    {
+      "id": "implementation.memory-transfer.cache-hint",
+      "version": "1.0.0",
+      "path": [
+        "implementation.root",
+        "implementation.memory-transfer",
+        "implementation.memory-transfer.cache-hint"
+      ],
+      "score": 5,
+      "missing": [
+        "constraint.capacity",
+        "constraint.plan_freedom",
+        "constraint.semantic_equivalence",
+        "constraint.target_api"
+      ],
+      "status": "needs_evidence",
+      "snapshot": {
+        "body": "# 按实际复用关系设置 L2 Cache hint\n\n## 原理、适用域与默认路径\n\nL2 默认启用。对一次性流式输入，写入和置换 cache 可能增加开销并挤出真正复用的数据；对多核或跨 tile 反复读取的权重、公共向量和中间结果，保留 cache 可能减少 HBM 流量。策略按每个 GlobalTensor 的实际访问轨迹决定，不能只看“本核读一次”，也不能把单次 kernel 内无复用等同于整个执行序列无复用。\n\n来源 API 明确支持 Atlas A2/A3，本文只提供 arch22 路径的 NORMAL/DISABLE 候选。目标 SoC/SDK 仍需独立核验；不使用文档标为尚未支持的 PERSISTENT，也不把 hint 当作跨核同步或一致性保证。C2 未授权 cache 策略改动时先保留当前方案，记录需要重规划的输入。\n\n## 操作方法\n\n列出每个 tensor 的读核集合、访问轮数、复用距离、相邻算子消费者和同时竞争的工作集。无证据时保留 NORMAL。对确认每段仅读一次且其他核/近邻消费者不复用的大流式输入，单独测试 DISABLE；对共享输入继续 NORMAL，避免“整个算子统一 bypass”。输入输出若是同一 GM 区间的不同视图，列清所有视图 hint 与生命周期，不能以换视图规避访问分析。\n\n下面是 Add 的 CopyIn 初始化片段，`x/y` 是本任务的有效 `__gm__ half*`，`n` 为 half 元素数；Host 已验证两段 GM 地址和 count。`xGm/yGm` 为类成员 `AscendC::GlobalTensor<half>`，`onePassX/Y` 是 C2 冻结且有访问证据的元数据策略位，不在 kernel 内根据 benchmark 名或计时结果改变。\n\n```cpp\nxGm.SetGlobalBuffer(x, n); // n 单位：half 元素，逻辑字节=2*n\nyGm.SetGlobalBuffer(y, n);\nxGm.SetL2CacheHint(onePassX ? AscendC::CacheMode::CACHE_MODE_DISABLE\n                          : AscendC::CacheMode::CACHE_MODE_NORMAL);\nyGm.SetL2CacheHint(onePassY ? AscendC::CacheMode::CACHE_MODE_DISABLE\n                          : AscendC::CacheMode::CACHE_MODE_NORMAL);\n// 随后沿用原来已验证的 DataCopy/DataCopyPad、计算、事件和写回路径。\n```\n\n两候选的 shape、核数、tile、双缓冲、数学操作与输出地址完全相同，只变某 tensor 的 hint。每次执行显式设定需要的模式，避免复用对象时上一条路径的 hint 泄漏。hint 不申请额外 UB，不允许删除等待事件；被禁用 cache 的输入仍须保持 GM 有效直到 DMA 读取完成。\n\n## 成本与比较方法\n\n设一个共享片段大小 `W` 字节，访问 `q` 轮。逻辑 load 总量两版均为 `qW`；理想可复用 cache 时 HBM 读接近 `W`，全 miss/bypass 则接近 `qW`，最多相差 `(q-1)W`，这只是说明风险的上界。流式 `q=1` 时无上述复用节约，才有可能受益于 bypass；系统中其他工作集和 cache 行浪费会使实际结果偏离估算。NORMAL 不能保证命中，DISABLE 不能保证端到端加速。\n\n在固定输入和同一测量协议下比较 Task、MTE2、HBM 读量和 L2 hit/miss；A2/A3 来源样例需要汇总 r0/r1 通道，不能把单通道命中率当总命中率。保留原有冷/热态协议，避免 baseline 冷 cache、候选热 cache。一次只改一类 tensor；cache hit 降低但 Task 更快可能是流式候选的合理现象，Task 变慢即使某引擎指标更好也不接受。\n\n## 失败边界与来源\n\n共享权重被误判一次性、多个核读同一输入、后继算子很快消费刚写出的结果、重复调用工作集可驻留时，bypass 容易回退。恢复 NORMAL 是最小退路。若复用存在但工作集大于可用 L2，应评估 `implementation.memory-transfer.l2-reuse-order` 的分片内复用；这需要 C2 已允许相应遍历顺序，不能在本条偷偷变算法。\n\n来源事实：asc-devkit Add case5 在双缓冲 Add 中对两个一次性输入设置 DISABLE；官方 SetL2CacheHint 文档说明默认 NORMAL、产品支持和 PERSISTENT 尚未支持。本文的访问表、qW 模型与隔离实验是提炼，原 case 的耗时和收益没有迁入任何 910C 默认结论。",
+        "evidence_status": "source_reviewed_not_benchmarked",
+        "id": "implementation.memory-transfer.cache-hint",
+        "kind": "recipe",
+        "learning": {},
+        "parent": "implementation.memory-transfer",
+        "references": [
+          "implementation.memory-transfer.l2-reuse-order",
+          "implementation.memory-transfer.coalesce"
+        ],
+        "schema_version": "aprof.knowledge-record/v1",
+        "scope": {
+          "dtypes": [
+            "all"
+          ],
+          "platforms": [
+            "dav-2201"
+          ],
+          "workloads": [
+            "all"
+          ]
+        },
+        "seed_reason": "审读固定开源修订并提炼中文实现配方，保留既有 ID 语义；API 单位以实际 API 文档为准；未做目标 SDK 编译或 NPU 性能验证。",
+        "source_hash": "sha256:917ba83e82ae17f958af90e99f4aee304575f7f6687d7863a7d24a2a0467b0d4",
+        "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/cache-hint.md",
+        "sources": [
+          {
+            "excerpt_sha256": "sha256:8b3a062e7527c371f256ed15a82ae19d75e97d7d618d7381aa07605d627ce6ee",
+            "lines": [
+              3,
+              112
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/data_structures/GlobalTensor/SetL2CacheHint.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/data_structures/GlobalTensor/SetL2CacheHint.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:62807570650c1a69ab2bf0ba2bce606a4a3141d5d9d976fdbf3bdaf1d4df1092"
+          },
+          {
+            "excerpt_sha256": "sha256:d2b85d269202c81ba81366f010df36bf3c512f17f84bd0b145c0dd1425e49cda",
+            "lines": [
+              27,
+              345
+            ],
+            "original_path": "examples/01_simd_cpp_api/05_best_practices/00_vector_compute/add_high_performance/add.asc",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/00_vector_compute/add_high_performance/add.asc",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:f7d075958365a8fc1af9879e90ab6494573f8869d3a538832c537d8e0f905042"
+          },
+          {
+            "excerpt_sha256": "sha256:5c6d2994aaf79df1876377bb814db5f8bee465813e3dbac2fbe8cf3ad7a959cc",
+            "lines": [
+              357,
+              485
+            ],
+            "original_path": "examples/01_simd_cpp_api/05_best_practices/00_vector_compute/add_high_performance/README.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/00_vector_compute/add_high_performance/README.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:b5b6a86283fe52b79c7990bb8ccf5072ead5a50fbd46ae5aaa7a3e056aab1580"
+          },
+          {
+            "excerpt_sha256": "sha256:9f27996a1bd449d385a01b00b0a11a0562c3e17bf8762c3e55e33dd241596031",
+            "lines": [
+              82,
+              394
+            ],
+            "original_path": "examples/01_simd_cpp_api/05_best_practices/04_memory_access/data_copy/README.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/04_memory_access/data_copy/README.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:7126d511236c3539b2710934c468c56500e39ac336531597a3360d6c74282cff"
+          }
+        ],
+        "status": "active",
+        "tags": [
+          "l2-cache",
+          "streaming",
+          "arch22"
+        ],
+        "title": "一次性流式输入与复用输入的 L2 hint 区分",
+        "version": "1.0.0"
+      }
+    },
+    {
+      "id": "implementation.memory-transfer.input-tile-residency",
+      "version": "1.0.0",
+      "path": [
+        "implementation.root",
+        "implementation.memory-transfer",
+        "implementation.memory-transfer.input-tile-residency"
+      ],
+      "score": 5,
+      "missing": [
+        "constraint.capacity",
+        "constraint.dependency_lifetime",
+        "constraint.input_value_preserved",
+        "constraint.output_ownership",
+        "constraint.plan_freedom",
+        "constraint.reuse_domain",
+        "constraint.same_input_region",
+        "constraint.semantic_equivalence"
+      ],
+      "status": "needs_evidence",
+      "snapshot": {
+        "body": "# 同一 owner 保留输入 tile，删除重复 GM 读取\n\n## 方法与相邻知识的区别\n\n同一个 kernel 的同一 task/owner，若多个实际计算消费者需要**同一逻辑版本、同一有效区域的输入原值**，可让首次搬入的 UB tile 一直存活到最后消费者完成，把后续消费者的 GM→UB 重读改成读这个本地 tile。保留原算法、计算次序、dtype/Cast、舍入及每个输出的所有者；不把原本不同版本的数据当成重复输入。典型形态是残差/多分支计算 `tmp=scale*x; y=tmp+x`，或原输入同时供多个冻结计算阶段使用。两处都确实读原 x；单纯 `y=scale*x+bias` 的第二份 x 从未被使用时，应先登记并分析无用搬运，不能据此冒充“两消费者输入复用”的正例。\n\n| 候选 | 实际变换 | 逻辑 GM 读请求 |\n| --- | --- | --- |\n| 本条输入驻留 | 同一原值在本 owner 的 UB 中保留，后续消费重定向到该值 | 可以删除经证明冗余的重读 |\n| `buffer-lifetime.reuse` | 不同时存活的**不同值**共享物理 UB 区 | 单独应用不保证少读输入；可辅助安排本条容量 |\n| `l2-reuse-order` / `cache-hint` | 保持所需读取，调整顺序、工作集或 cache 策略 | 有效逻辑读量保持；HBM 命中情况可能改变 |\n| `vector_chain_residency` | 合并允许的 Vector 链，让中间结果片上交接 | 省去允许消除的中间 GM 物化；涉及融合边界 |\n\n已经在同一 kernel、同一 owner 中的两处重复载入，不需要仅为应用本条创造新融合 region。反之，原先两个独立 dispatch 的 UB 不连续存在，也不能用本条跨 dispatch“保留输入”；先返回 C2 确定是否允许融合。Cube 的 L1/L0 复用走 `planning.matmul.resident`，这里不替代其层级、Matmul API 或累加生命周期。\n\n## Action 实例、方法门禁与证据\n\n`action.reuse_input_tiles` 仍使用原有四个硬前提：`symptom.source.insufficient_input_reuse=true`、`constraint.reuse_domain=true`、`constraint.semantic_equivalence=true`、`constraint.capacity=true`。实例还需明确目标输入/地址视图、当前实现 hash、workload、stage、实际消费者、重复载入位置、参数与计划身份。带宽饱和、MTE 占比或 Action 名称均不能代替源程序的重复原值证据。\n\n本方法的 router 还核对以下条件；证据必须绑定当前实例、目标、参数和已确认计划，不能沿用其他 tile/目标的 ready 结论。`true` 表示材料已明确证明；缺材料保留 unknown，不能执行 C3。C2 可以在 unknown 下列条件化方案并请求补证。\n\n| 门禁 | 应有证据 |\n| --- | --- |\n| `constraint.same_input_region` | 各拟合并读取的 GM 地址集合、dtype、layout/物理 stride、有效元素域一致；记录每个消费者读取的 UB 映射。不能仅凭两个变量同名，或两次 byte count 相等判断 |\n| `constraint.input_value_preserved` | 从首次载入到最后消费者，原值的 UB 区不被计算/API/scratch/DMA 覆盖；输入 GM 的别名写入、可变 producer、原子或其它 task 的更新不使原算法本该读取更新版本。逐个检查原地重载和隐式 source-reuse API |\n| `constraint.reuse_domain` | 所有消费者在同一 task/owner、同一 dispatch、同一输入逻辑版本的允许窗口中；窗口终止条件已声明 |\n| `constraint.dependency_lifetime` | 首次 MTE2 完成→每个读者、每个最后读完成→下一写者的合法队列/事件；含异步读者、预取、回卷和结束排空 |\n| `constraint.output_ownership` | 输出地址和每个输出唯一写者不变；别名写回不会破坏未来输入读取，也不改变跨任务协议 |\n| `constraint.capacity` | 以实际物理槽、独立 TBuf、padding、API 临时区和其它驻留状态形成完整字节账；按本次 tile/精度/深度满足 C2 预算及目标可用容量 |\n| `constraint.plan_freedom` | 由 hash 绑定的完整有效计划确认可以调整本次输入存活期/读者映射，且 tile、owner、通路、融合边界和资源在允许范围 |\n| `constraint.semantic_equivalence` | 每步运算和 Cast 边界、顺序、别名、异常值与副作用保持；重复读取确为同一原值而非有意观察更新 |\n\n`same_input_region` 是本条直接消除整段重读的保守条件。两个消费者只部分重叠时，需要先逐段证明公共区与各自独有区、尾部和地址映射，不能把整次第二搬运删除；本条代码只覆盖完全一致的连续 tile。广播小输入跨多个本核输出 tile 的驻留也需明确广播映射、失效代次及窗口内预算，P 的 `planning.elementwise.broadcast` 可供规划，不能直接将输出 tile 的 offset 套在广播源上。\n\n## 实施顺序、所有权与失效\n\n1. 在当前 Host 分派/tiling/kernel 路径中列出每次输入读取：`(dispatch, owner, input_version, GM区间/stride, valid域, UB位置, 消费者)`。确认两个读取都被当前实际分支消费；不把未执行的替代分支相加。\n2. 画原值 x 的全部读写链。把首次载入后的 x 标为只读；第一个消费者的结果写到独立 tmp/y 或已证合法的其它区。不能继续先在 x 上原地做 Muls，再把这个已经改写的 x 给需要原值的 Add。\n3. 只把内容相同、原值仍有效的后续读者改为该驻留视图；保留其它必需搬运、输出、Cast 和顺序。删除对应重复 DMA 及其专用依赖前，确认事件没有同时为别的 producer/consumer 服务。\n4. 输入队列的 x 直到**最后一个消费者实际完成**后才 FreeTensor/允许下一 DMA 覆盖。DeQue、C++ 局部变量离开作用域、发出 Vector 指令都不代表完成。输出槽直到 MTE3 最后读取完成后才可覆盖。\n5. 跨 tile 驻留的参数区使用明确 key，例如 `(输入地址,版本,布局,shape,参数代次)`；任何 key 改变立即结束旧窗口并重新搬入。不能仅凭地址没变，跨请求、循环状态更新、专家组切换或下一 dispatch 继续使用旧值。\n6. 记录实际删掉的读请求及使用该输入的文档选择。不同方法同时作用于同一物理读取时，只记一次删读量；“reuse_input_tiles + reduce_memory_traffic”不是两份独立流量收益。\n\n输入原值无法保留时，合法替代是继续重读，或在容量和原 API 合同允许时显式保存原值副本，再接消费者。副本的载入/UB 拷贝成本、物理区和同步要重新记账；发生容量或数据流变更时形成新的计划/证据后继，不能把旧 capacity=true 直接当作新实现资格。需要观察新 GM 版本的第二次读取必须保留。\n\n## 容量与流量：分别计算三笔账\n\n所有容量用**字节**，形状/count 用**元素**。令 T 为一个输入 tile 的最大有效元素数，s 为该 UB 表示每元素字节，a 为 API/布局要求的对齐，`A(B)=ceil(B/a)*a`；若物理 stride、padding 或转换扩大区域，使用实际跨度替代 T*s。`d_r` 是同时分配的驻留物理槽数，`B_r=A(T*s)`；`B_other` 含流式输入、各输出槽、独立中间区、workspace、API 预留和 bank padding。\n\n```text\n实际静态分配 U_alloc = d_r * B_r + B_other <= C2预算 <= 当前目标可用 UB\n活跃字节下界 U_live = max_t Σalive alignedSpan(value)\n```\n\n`U_live` 不自动等于 `U_alloc`。删除 x2 的 DMA、甚至不再用 x2 的 C++ 变量，仍不使已独立 InitBuffer 的 x2 区自动消失；必须实际删除该分配或实现合法共享布局，才能扣掉物理字节。双缓冲要按真正分配的两份 x 计账；不能把保留更久的 x 视为“第一消费者结束即释放”。API 若破坏源，保存原值还要加一份独立区。扩大驻留窗口也可能迫使减少预取深度、缩 tile 或增加任务开销。\n\n下面的有界 FP32 代码使用 x、tmp、y 各一份，`U_data=3*AlignUp(4*T,32)`。T=16384 时仅三块数据为196608 B；这只是字节演算，**不表示目标可用 UB 足够**，其它分配和预留仍须加入。若直接父本已分别静态分配 x1、x2、tmp、y 四块，即使 x2 不再读，也仍是四块，直到代码实际移除 x2 分配。不能因阶段顺序就把全部独立分配取 max。\n\n令 W 为该窗口有效输入字节，R 为**确实消费同一原值**的次数，B_fixed 为其它必须读写流量。已核验原实现每个消费者重读一遍、候选只搬入一遍时：\n\n```text\n逻辑 GM 读请求：R*W -> W；理论删去 (R-1)*W\n总有效 GM 读写：R*W+B_fixed -> W+B_fixed\n```\n\n`tmp=scale*x; y=tmp+x` 且 tmp 已留在 UB、仅 x 读/最终 y 写时，R=2、输入/输出同宽，总流量从3W到2W。这里没有删除数学上的第二个 x 消费，也没有删掉 Vector 的本地读；只删后一次 GM→UB。\n\n**逻辑 GM 请求、HBM 字节、耗时分别记录。** 原重读若已命中 L2，HBM 读未必下降 W；UB 复用仍可减少 GM→UB 请求与发射，但是否缩短关键路径未知。`CACHE_MODE_DISABLE` 不使合法 UB 驻留失效，也不是本条的必改项；NORMAL 不能替代 UB 原值保留证明。不要由逻辑删读量直接计算 HBM 收益或加速比。\n\n## 有界 Ascend C 实现：真实两消费者，含短尾\n\n本例仅实现既定 `tmp=float(scale*x); y=float(tmp+x)` 两步 FP32 语义；**不改成 `(scale+1)*x` 或 FMA**。`scale` 是本 workload 冻结的只读标量。xGm/yGm 绑定 C2 已分配给本核的连续、互不重叠区间，输入与输出无别名，输出唯一归本核，C2 分核起点和非末核终点均为32B边界，最后一个有效 owner 才可写非32B尾部，已核验目标搬出物理粒度不会与邻核冲突；外层任务分配由 P 的 `planning.elementwise.continuous` 给出。该例不覆盖广播、非连续输入、跨核或原地输出。\n\n包含 `kernel_operator.h`，在当前 kernel 的类中增加以下成员与方法；Host 已确认 `ownerLength`、`T` 为 uint32 范围元素数，`T>0`、`4*T<2^21`、`slotBytes=AlignUp(4*T,32)` 且全部分配容量足够。`xBase/yBase` 是已经加上本核起点的合法 GM 指针。空输入由 Host 分支直接返回。Init 在本 kernel 初始化阶段只调用一次，不能放进热循环；使用一个 TPipe 管理这些 buffer，不与工程另一套同址手工分配叠加。\n\n```cpp\nAscendC::TPipe pipe;\nAscendC::TQue<AscendC::TPosition::VECIN, 1> inQ;\nAscendC::TQue<AscendC::TPosition::VECOUT, 1> outQ;\nAscendC::TBuf<AscendC::TPosition::VECCALC> tempBuf;\nAscendC::GlobalTensor<float> xGm, yGm;\nuint32_t ownerLength, tileElements;\nfloat scaleValue;\n\n__aicore__ inline void InitReuse(\n    __gm__ float* xBase, __gm__ float* yBase,\n    uint32_t length, uint32_t T, uint32_t slotBytes, float scale) {\n    ownerLength = length; tileElements = T; scaleValue = scale;\n    xGm.SetGlobalBuffer(xBase, length);\n    yGm.SetGlobalBuffer(yBase, length);\n    pipe.InitBuffer(inQ, 1, slotBytes);      // 每槽字节；一物理槽\n    pipe.InitBuffer(outQ, 1, slotBytes);\n    pipe.InitBuffer(tempBuf, slotBytes);\n}\n\n__aicore__ inline void ProcessReuse() {\n    auto tmp = tempBuf.Get<float>(tileElements); // 元素，不是字节\n    uint32_t pos = 0;\n    while (pos < ownerLength) {\n        const uint32_t remain = ownerLength - pos;\n        const uint32_t n = remain < tileElements ? remain : tileElements;\n        AscendC::DataCopyExtParams cp{};\n        cp.blockCount = 1;\n        cp.blockLen = n * sizeof(float); // 有效字节；不向上读/写 GM\n        cp.srcStride = 0; cp.dstStride = 0; cp.rsv = 0;\n        AscendC::DataCopyPadExtParams<float> pad{false, 0, 0, 0.0f};\n\n        auto x = inQ.AllocTensor<float>();\n        AscendC::DataCopyPad(x, xGm[pos], cp, pad); // GM -> VECIN\n        inQ.EnQue(x);\n        x = inQ.DeQue<float>();                    // 输入就绪\n        auto y = outQ.AllocTensor<float>();\n        AscendC::Muls(tmp, x, scaleValue, n);       // 第一个真实读者；不改 x\n        AscendC::PipeBarrier<PIPE_V>();\n        AscendC::Add(y, tmp, x, n);                // 第二个真实读者仍用原 x\n        AscendC::PipeBarrier<PIPE_ALL>();          // 保守等待最后 Vector 读完成\n        inQ.FreeTensor(x);                        // 此后才允许覆盖输入槽\n        outQ.EnQue(y);\n        y = outQ.DeQue<float>();\n        AscendC::DataCopyPad(yGm[pos], y, cp);      // VECOUT -> GM，写 n 个元素\n        AscendC::PipeBarrier<PIPE_ALL>();          // 保守等 MTE3 读完 y\n        outQ.FreeTensor(y);\n        pos += n;\n    }\n}\n```\n\n代码使用 A2/A3 API 文档明确支持的无 mode DataCopyPad，输入位置为 VECIN，输出位置为 VECOUT；没有使用 950 Compact、NDDMA、RegBase/VF 或 GM→VECCALC 扩展。`blockCount=1`，无行间 stride，尾块 `cp.blockLen` 仍为有效 n*4，UB 槽按最大 T 对齐分配。`isPad=false` 不保证 dummy 是0；这里只对 n 个有效元素计算，不能让其它算子把 dummy 当作归约单位元。\n\n这是与既有 kernel 接口拼接的实现片段，未提供 Host 注册/tiling/启动框架，也未在目标 SDK 编译。S8 的第56/66行明确 PIPE_ALL 阻塞全部流水，等待本核所有先前提交的接口完成；不是只插一个 PIPE_V 顺序点，也不是核间栅栏。两处 PIPE_ALL 故意给出保守完成顺序，不展示双缓冲或流水重叠，不证明最终性能；实际工程可沿用已有合法队列/事件协议缩小同步范围，但必须保留“输入最后读完成→下次 MTE2 写输入槽”和“MTE3 读输出完成→下次 Vector 写输出槽”两条依赖。不能直接删 barrier 就声称有 overlap。实际 API 重载/目标 SoC/SDK 不匹配则保留原实现并补证。\n\n## P_KEEP、重规划和组合边界\n\nP_KEEP 只在已有完整计划许可本次 owner 内输入原值存活期、tile、现有通路和资源内的实现选择时成立；必须引用原计划身份和自由度。它不表示“P 没有可用文档”。同 owner 两消费者可在已有 continuous 计划下保留 x；原计划没有输入延长驻留许可或容量未知时，先由 C2 条件化分析，不能自己构造 KEEP。\n\n以下任一超出原自由度就返回 C2：把分离消费者迁到一个 owner、改任务/dispatch 域、改变归并或同步拓扑、扩大融合 region、跨核/跨 C/V 通路、增加 workspace 所有者、改变 tile/常驻额度或预取槽数。C2 可重选 continuous/broadcast/under-fusion 等现有模板；需要 Cube 小侧驻留则选 matmul resident，C3 不拿本 UB recipe 改其存储层。\n\n可与 buffer-lifetime 配合：先保证 x 仍活，再让已经结束的其它临时值共享空间，不能把 x 本身提前覆写以凑容量。与连续合并配合时，先保留访问几何边界，合并相邻请求只减少发射，删重复原值才减少逻辑读；分别记账。L2 策略可以用于仍然必须读取的其它输入/跨 owner 的共享副本，本 owner 消除的那次重读不能再计一份 L2 命中收益。Vector 链组合先由 C2 确认数学边界；本条既不自动授权融合，也不自动改变 Cast。\n\n## 无硬件审阅与未来验证点\n\n纸面回放应覆盖以下不同结论，不能只验证一条成功路径：\n\n- 两消费者同区间、同原值、同 owner 且容量闭合：可给出本条及计划/代码范围；记录删哪一次搬运、保留哪两个计算消费者。\n- 只有两个 DataCopy、第二份从未被计算消费：登记无用搬运；不能把它当成输入多消费者驻留的实现证据。\n- 第一消费者原地破坏 x、API 隐式 source-reuse、别名 DMA 或并发写改 GM：当前 `input_value_preserved` 不成立或 unknown，保留重读/请求新计划和保存方案。\n- 地址相同但第二阶段本应看新版本；地址相异但计数字节相同；一边读尾有效 n、另一边读补齐长度：不能直接删除第二读。\n- 复用跨 owner、不同 dispatch、不同 expert/shape/布局代次：本地 UB 不共享或旧值失效；先由 C2 明确边界。\n- 容量未知/不足、输入保留使原 ping-pong 被覆盖、静态 x2 分配未删除：不能授权实施；C2 分析缩窗口、保留重读或其它合法计划。\n- 原读量已是必要最小值、R=1：本方法没有删读依据；带宽高也不生成重复输入事实。\n- `CACHE_MODE_DISABLE`、NORMAL 高命中、未知 HBM 数据：只说明相应缓存条件；不能阻止合法 UB 原值复用，也不能凭逻辑 GM 删读断言 HBM 和时延变化。\n- 长度为0、1、T−1、T、T+1、多 tile、最大偏移，保留每个输出唯一写者；数值按当前 oracle 的 NaN/Inf/±0、舍入和溢出合同检查。\n\n后续若做硬件验证，观察实际走到的分派分支、输出正确性、GM 请求字节与次数、HBM/L2、UB 静态分配及 Task/timeline；本条不提供未经测量的性能收益、通用阈值或瓶颈定论。Action 可实施性与 Problem 成立与否分开记录，容量不合法不反证“原输入重复载入”机制。\n\n## 固定来源与知识声明\n\n以上操作方法、八项门禁、容量/流量推导和两消费者残差片段是**本次工程归纳**；其合法性仍需当前实现和目标 SDK 证明。来源只支撑下列有界事实：\n\n- S1（sources 第1项）Add 的 Host 固定核数/整除输入及 kernel 队列代码，证明 VECIN/VECOUT 的初始化、搬入→计算→搬出编程形态；本条的核内 tile/短尾和双消费者是新增归纳，不把该样例全载/8核当作当前规划。\n- S2/S3（第2/3项）InitBuffer/Get 明确每槽分配长度单位为字节、队列物理 num、Get 长度为元素且不得超分配；它们不证明当前 UB 容量足够。\n- S4/S5（第4/5项）DataCopyPad 的 A2/A3 产品表、无 mode 原型、GM→VECIN/VECOUT 和 VECIN/VECOUT→GM 通路、有效字节与对齐/stride 约定，是本条短尾搬运依据。GM→VECCALC 文档仅对950列支持，本条不采用。\n- S6（第6项）GELU kernel 的2201分支在246–274行多次只读 xLocal，并将原值保留到最后 Div；562–613行展示搬入、V读者及反向完成边；691–746行 Host 的 NPU_ARCH 分派说明其实际 shape/核数。它只直接确认“源数据多消费者和最后读者”的实现事实，不把其 GELU 近似改成当前业务公式，不迁入3510路径。该样例手工 VECCALC 视图与 DataCopyPad 通路标注存在差异；本文遵从 S4/S5 的明确通路，不能以样例替代 API 核验。\n- S7（第7项）SetL2CacheHint 说明 NORMAL/DISABLE 和产品边界；不支持把 cache hint 解释为 UB 驻留或保证命中。\n- S8（第8项）PipeBarrier 文档的 A2/A3 支持表及第56/66行，明确 PIPE_ALL 阻塞所有流水并等待已提交接口完成。本文仅将其用作本核保守完成边，不作为跨核同步或可重叠发射的证据。\n\n所有 source 的固定修订、完整文件 hash、行区间及摘录 hash 见 frontmatter；源码与原许可已随包保留，无需读取上游仓库或外部目录才能使用本条正文。当前状态为来源审读，未进行目标 SDK 编译或 NPU 实测。",
+        "evidence_status": "source_reviewed_not_benchmarked",
+        "id": "implementation.memory-transfer.input-tile-residency",
+        "kind": "recipe",
+        "learning": {},
+        "parent": "implementation.memory-transfer",
+        "references": [
+          "implementation.buffer-lifetime.reuse",
+          "implementation.memory-transfer.l2-reuse-order",
+          "implementation.memory-transfer.cache-hint",
+          "implementation.memory-transfer.strided-pad",
+          "implementation.fusion-composition.vector_chain_residency"
+        ],
+        "schema_version": "aprof.knowledge-record/v1",
+        "scope": {
+          "dtypes": [
+            "all"
+          ],
+          "platforms": [
+            "dav-2201"
+          ],
+          "workloads": [
+            "all"
+          ]
+        },
+        "seed_reason": "审读固定修订的 API、Host 分派和 kernel；输入原值保留与删重读方法为工程提炼。未做目标 SDK 编译、NPU 正确性或性能验证。",
+        "source_hash": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8",
+        "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+        "sources": [
+          {
+            "excerpt_sha256": "sha256:2e8f3388725eee71af0c28ccc76c2e01fc7ba01c7b3ca06cf7f89c473efec085",
+            "lines": [
+              20,
+              98
+            ],
+            "original_path": "examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/add_tpipe_tque.asc",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/add_tpipe_tque.asc",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:3fd854a223214eec19b03eebf4be3397c81358ebd526d07b17202a5fd522b654"
+          },
+          {
+            "excerpt_sha256": "sha256:70619eed307e130c5d64b3936d3c609e096c608ba0b6bba136e773385fe5bd2d",
+            "lines": [
+              34,
+              220
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/resource_management/TPipe/InitBuffer.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/resource_management/TPipe/InitBuffer.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:36da88132f7d5f62484bc98896bd99577bcce25d71a84e21220731a557aea34d"
+          },
+          {
+            "excerpt_sha256": "sha256:7ddd61b3e98c4e594924b5e620a362b82b9ad4fe81310f3956d9afcacd73dded",
+            "lines": [
+              34,
+              98
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/resource_management/TBuf/Get.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/resource_management/TBuf/Get.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:23ef70d79cf63af9b179082dc436f6fc80c6441a050e3a7600838af3cd94617a"
+          },
+          {
+            "excerpt_sha256": "sha256:1de0688ad7d6af2b7498f280b3138e462c600af310d93a8008a703dec31ebc55",
+            "lines": [
+              3,
+              325
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:8fd9166a39e7ab163695f1d965ad633725afa1c60cff08708b439f58f2a646ee"
+          },
+          {
+            "excerpt_sha256": "sha256:03dfe694e7045a7cfe836089d6448b60f7811fded4d4f6a8d6fad6021b119fc8",
+            "lines": [
+              3,
+              194
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_UBToGM.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_UBToGM.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:23e9b37e62ff5c2fed4b142ad65b346f8987aa6be527e291dae63466dc88f315"
+          },
+          {
+            "excerpt_sha256": "sha256:a430742ce4ff9786a78aaf637c1c34b666d95bbe612208a901710fca16e894f7",
+            "lines": [
+              21,
+              746
+            ],
+            "original_path": "examples/01_simd_cpp_api/05_best_practices/03_fusion_compute/matmul_gelu_high_performance/mmad_gelu.asc",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/03_fusion_compute/matmul_gelu_high_performance/mmad_gelu.asc",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:2fb232c81805420c88755d9bc41ea3561c3f4107946306425d1a43b48c31dd1d"
+          },
+          {
+            "excerpt_sha256": "sha256:8b3a062e7527c371f256ed15a82ae19d75e97d7d618d7381aa07605d627ce6ee",
+            "lines": [
+              3,
+              112
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/data_structures/GlobalTensor/SetL2CacheHint.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/data_structures/GlobalTensor/SetL2CacheHint.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:62807570650c1a69ab2bf0ba2bce606a4a3141d5d9d976fdbf3bdaf1d4df1092"
+          },
+          {
+            "excerpt_sha256": "sha256:a81403695033181d574bb850bc5da90c4c1099460919737daea43003df73a38b",
+            "lines": [
+              3,
+              97
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/sync_control/intra_core_sync/PipeBarrier_ISASI.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/sync_control/intra_core_sync/PipeBarrier_ISASI.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:730571f5039906830624ccba76cff76d318305831f96538d7821be7c7c737773"
+          }
+        ],
+        "status": "active",
+        "tags": [
+          "input-reuse",
+          "ub-residency",
+          "redundant-load",
+          "last-consumer",
+          "arch22"
+        ],
+        "title": "同一 owner 保留输入 tile，删除重复 GM 读取",
+        "version": "1.0.0"
+      }
+    },
+    {
+      "id": "implementation.memory-transfer.l2-reuse-order",
+      "version": "1.1.0",
+      "path": [
+        "implementation.root",
+        "implementation.memory-transfer",
+        "implementation.memory-transfer.l2-reuse-order"
+      ],
+      "score": 5,
+      "missing": [
+        "constraint.capacity",
+        "constraint.dependency_lifetime",
+        "constraint.l2_cache_enabled",
+        "constraint.output_ownership",
+        "constraint.plan_freedom",
+        "constraint.semantic_equivalence"
+      ],
+      "status": "needs_evidence",
+      "snapshot": {
+        "body": "# 分片内完成重复访问，缩短 L2 复用距离\n\n## 原理与适用条件\n\n同一大矩阵被依次遍历多轮时，下一轮读回之前可能已经被后续片段逐出 L2。若数学上允许把“轮次在外、分片在内”变为“分片在外、轮次在内”，可缩短复用距离，减少 HBM miss。它与 cache bypass 是不同候选：这里保留 NORMAL 并调整已被 C2 允许的访问顺序，不通过删掉必需读取制造收益。\n\n适用前提是分片之间无时序依赖、每片输出所有者固定、重复阶段的输入不被前一阶段更新、没有必须保持的随机数/副作用顺序。对于在线递推、跨片归约、in-place 更新后再读取、原子写入或要求固定浮点归约顺序的算法，循环交换可能改变语义，必须保留 C2 原轨迹或请求重规划。本文只采用 arch22/A2/A3 数据搬运证据，不迁入 3510 的缓存大小或阈值。\n\n## 与缓存策略的组合门禁\n\n本文依赖该输入允许经过 L2 的读取路径。对当前 Action 实例的同一 tensor、有效地址域、实现、workload 和阶段范围，必须从真实源码/API 配置或已核验的当前计划构造 `constraint.l2_cache_enabled`：已确认 NORMAL 为 true，已确认 DISABLE 为 false；配置、视图别名或条件分派不清楚时保持 unknown，不能因为 API 有默认值就补成 NORMAL。事实绑定原始文件的 hash 和 locator，不可借另一输入或另一 Action 实例的检查结果。Action hint 只缩小文档范围，没有填入该事实的权力。\n\n若当前模式为 DISABLE，本方案不能标为就绪或进入 C3 实施；条件未知时可以继续做方案分析、读正文补证据。现有路由统一用 `needs_evidence` 表达 false 和 unknown，需查看事实本身区分“已知不兼容”和“尚未确认”，不要把 false 改为 unknown 消除反例。已确认 NORMAL 只证明路径允许 L2，不证明命中、驻留容量或性能收益；仍须满足依赖、所有权和预算要求。\n\n在已确认 C2 自由度内改变该输入 hint，可先形成有依据的计划/证据后继，再检查新组合；若超出自由度返回 C2，不能让即将采用的 L2 配方倒过来证明缓存已开启。同 owner 的 UB 输入驻留可以在 DISABLE 下成立，因为它保留已读原值而不依赖第二次 GM 读取命中 L2；这应使用 `implementation.memory-transfer.input-tile-residency` 的原值、地址域、容量和生命周期门禁，不能把本文当成该方法的主配方。\n\n## 访问轨迹与落地方法\n\n原轨迹为 `(repeat=0, shard=0..K-1), (repeat=1, shard=0..K-1), ...`。候选为 `(shard=0, repeat=0..q-1), (shard=1, repeat=0..q-1), ...`。两者访问集合、有效读总量和各输出的最后生成阶段必须一致。对每片建立任务 ID、有效范围、依赖和写回表；每个 repeat 生成不同输出时仍写入原 repeat 的独立输出位置，不能覆盖后续消费者需要的中间结果。\n\n以下为 Host/设计层完整索引骨架，不是可直接调用的上游私有函数。`N` 是每个独立矩阵的逻辑列数，`C` 为 C2 允许的分片列数，`q` 为算法必需的重复阶段数；均为元素/计数且 `C>0,q>0`。输出每条记录是 `(stage, firstCol, validCols)`，用现有的搬运/计算实现消费记录；实际 DataCopyPad 地址和 stride 依 `implementation.memory-transfer.strided-pad`。\n\n```text\nK = N / C + (N % C != 0)\nfor shard in [0, K):\n    firstCol = shard * C\n    validCols = min(C, N - firstCol)\n    for stage in [0, q):\n        execute exactly the frozen operation(stage, firstCol, validCols)\n        preserve original output address(stage, firstCol)\n```\n\n真实片段 `execute` 是实现需求而非库函数；必须接回本项目已存在、已审查的 kernel 阶段，不能复制来源样例里的 `RepeatCopy` 私有方法名当作新 API。实际工程若只能沿用外层阶段顺序，就不要应用本条。\n\n## 工作集、UB 与同步预算\n\n单片有效输入工作集 `Ws=rows×validCols×s`；cache 层需要同时容纳所有参与复用的输入、输出、跨核数据和行粒度放大，粗筛为 `Wconcurrent≈Σactive tensors Ws + competingBytes`。不得用全芯片 L2 物理容量直接作为每核可用预算，更不能在 910C 写死来源的 192MB。全矩阵 `W` 字节、q轮的逻辑读为 `qW`；理想 HBM 读从 `qW` 降至 `W`，实际仍取决于命中、争用和协议。此为推导上界，不是承诺。\n\nUB 只需当前 tile/队列槽，并不把整片 `Ws` 都放入 UB。先按最后消费者计算活跃字节下界 `liveLowerBound=max_t Σalive alignedBytes`，寻找可以共享物理区的值；实际静态 UB 仍按各 queue 的物理槽数乘每槽字节、独立 TBuf 分配，以及共享 arena 的高水位求和。多个阶段分别 InitBuffer 时，即使串行执行也不能把实际分配量写成活跃下界；只有实施合法共享布局后才能扣减。每一 stage 仍遵守 MTE2→Vector→MTE3 的完成边；阶段轮换时释放/重用 UB 要等待最后异步读写完成。输入输出别名会延长活跃期并可能禁止循环交换。\n\n## 验证、失败回退和证据\n\n用同一输入比较每个输出、每片首末有效地址与访问记录总数 `K×q`，覆盖 N 不整除 C、单片、空输入的既有处理、q=1和多核。性能比较 Task、总 GM load、cache hit/miss 与 competing 工作集；只减少 MTE2 时间但增加阶段启动/写回开销时仍拒绝。若无实测复用收益，恢复原遍历顺序和 NORMAL；若证据只支持一次性输入，回到 cache-hint 的逐 tensor 候选。\n\n来源事实：asc-devkit `data_copy` 的整块4轮与分成4片各4轮实验访问同一数据，来源在 A2/A3 展示了局部复用。本文将4/4换为 C2 给定的 C/q，并补上依赖、输出位置、并发工作集与收益上界，是工程提炼；来源实验本身不含计算，不能证明任意业务循环均可交换。本条尚无目标硬件验证。",
+        "evidence_status": "source_reviewed_not_benchmarked",
+        "id": "implementation.memory-transfer.l2-reuse-order",
+        "kind": "recipe",
+        "learning": {},
+        "parent": "implementation.memory-transfer",
+        "references": [
+          "implementation.memory-transfer.strided-pad",
+          "implementation.memory-transfer.cache-hint",
+          "implementation.buffer-lifetime.reuse"
+        ],
+        "schema_version": "aprof.knowledge-record/v1",
+        "scope": {
+          "dtypes": [
+            "all"
+          ],
+          "platforms": [
+            "dav-2201"
+          ],
+          "workloads": [
+            "all"
+          ]
+        },
+        "seed_reason": "审读固定开源修订并提炼中文实现配方，保留既有 ID 语义；API 单位以实际 API 文档为准；未做目标 SDK 编译或 NPU 性能验证。",
+        "source_hash": "sha256:f209f9e9de6c109ef33ba93838dca30253df43cb02c50fdde5412eb8367c4483",
+        "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/l2-reuse-order.md",
+        "sources": [
+          {
+            "excerpt_sha256": "sha256:848f0dfa47facbfcddf126f931b9a62f125a0aced77b4f9229eb7eb23768b8f0",
+            "lines": [
+              21,
+              145
+            ],
+            "original_path": "examples/01_simd_cpp_api/05_best_practices/04_memory_access/data_copy/data_copy_ub.h",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/04_memory_access/data_copy/data_copy_ub.h",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:f5ca47ce371eb60e16d3fac8bb0a5f8921c62de8515d22de92b900e3c7733911"
+          },
+          {
+            "excerpt_sha256": "sha256:9f27996a1bd449d385a01b00b0a11a0562c3e17bf8762c3e55e33dd241596031",
+            "lines": [
+              82,
+              394
+            ],
+            "original_path": "examples/01_simd_cpp_api/05_best_practices/04_memory_access/data_copy/README.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/04_memory_access/data_copy/README.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:7126d511236c3539b2710934c468c56500e39ac336531597a3360d6c74282cff"
+          },
+          {
+            "excerpt_sha256": "sha256:8b3a062e7527c371f256ed15a82ae19d75e97d7d618d7381aa07605d627ce6ee",
+            "lines": [
+              3,
+              112
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/data_structures/GlobalTensor/SetL2CacheHint.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/data_structures/GlobalTensor/SetL2CacheHint.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:62807570650c1a69ab2bf0ba2bce606a4a3141d5d9d976fdbf3bdaf1d4df1092"
+          }
+        ],
+        "status": "active",
+        "tags": [
+          "l2-cache",
+          "reuse-distance",
+          "loop-order",
+          "arch22"
+        ],
+        "title": "分片内复用与 L2 工作集约束",
+        "version": "1.1.0"
+      }
+    },
+    {
+      "id": "implementation.memory-transfer.strided-pad",
+      "version": "1.2.0",
+      "path": [
+        "implementation.root",
+        "implementation.memory-transfer",
+        "implementation.memory-transfer.strided-pad"
+      ],
+      "score": 5,
+      "missing": [
+        "constraint.capacity",
+        "constraint.output_ownership",
+        "constraint.plan_freedom",
+        "constraint.semantic_equivalence",
+        "constraint.target_api"
+      ],
+      "status": "needs_evidence",
+      "snapshot": {
+        "body": "# 用 DataCopyPad 一次搬运规则跨行有效片段\n\n## 解决的问题与平台边界\n\n二维 GM 中每行只需一段连续列时，逐行 copy 增加调用次数，整行载入再裁剪又浪费流量。GM→UB 的多块 DataCopyPad 可用 `blockCount` 描述行数，用 `blockLen/srcStride` 描述每行有效段及间隙，同时在 UB 内形成对齐行。适用于行宽、物理 pitch 和有效列段固定的规则矩形；任意索引 gather、负 pitch、跨页不规则列表不能靠同一组 stride 表达。\n\n本配方核验的是 Atlas A2/A3 的无 mode 模板参数重载。API 文档分别列出产品支持与参数范围：这里不使用 950 的 Compact、负 `srcStride` 或更宽字段语义；目标为 910C 时仍需按实际 SoC/SDK 对照其 A3 支持表。`scope=dav-2201` 表示 arch22 路径证据，不把架构名当作型号到版本的替代证明。\n\n## 参数的单位与地址公式\n\n设 `R` 行、每行有效 `C` 元素、GM 物理行跨度 `Sg` 元素、每元素 `s` 字节，`Sg>=C`。`base` 是第 0 行所需列段的 GM 元素偏移。源第 `r` 行起点 `base+r×Sg`，有效字节 `L=C×s`。无显式左右 padding 时，UB 第 `r` 行从 `r×U` 字节开始，`U=AlignUp(L,32)+32×dstStride`。\n\n| 字段/变量 | GM→UB 本重载的含义及单位 |\n|---|---|\n| `blockCount` | 行数，A2/A3 为 0…4095；实际分块取正数 |\n| `blockLen` | 每行有效字节 `L`，小于 `2^21` 且是 `sizeof(T)` 的倍数 |\n| `srcStride` | 前一有效段结束到下一行有效段起点的间隔，字节 `(Sg-C)×s` |\n| `dstStride` | UB 对齐行结束后的额外间隔，单位为 32B DataBlock，不是字节 |\n| `leftPadding/rightPadding` | 元素数；各自所占字节不能超过 32B |\n\n不能把 `srcStride` 填为完整 pitch，也不能将 UB 的 `dstStride` 填成 `U`。换成 UB→GM 时，单位随内存端改变：`srcStride` 为 32B DataBlock，`dstStride` 为 GM 字节间隙。常见性能笔记里的通用结构体伪代码不替代具体重载说明。\n\n## 实现步骤和可复用片段\n\nHost 先以 64 位整数验证最后一个 GM 元素、乘法溢出与 UB 上界，再窄化字段；超出 `blockCount/blockLen/stride` 范围时切更多组，不能先 `static_cast` 截断。UB 的目标首址必须32B对齐，源 GM 首址按文档只需1B对齐，但数据视图仍应保持 `T` 的有效对象边界。\n\n下例 `T=float`，`gm` 为已绑定整个输入的 `GlobalTensor<float>`；`tile` 为已分配、32B对齐且容量至少 `R×rowElems` 的 `LocalTensor<float>`。`R,C,Sg,base` 由 C2 tile 元数据提供，均为元素/行计数；已证明 `1<=R<=4095`、`C>0`、`Sg>=C`、`C*4<2^21`、`(Sg-C)*4<=UINT32_MAX` 及地址/UB 范围。不要复制样例的固定矩阵尺寸。\n\n```cpp\nconst uint64_t rowBytes = uint64_t(C) * sizeof(float); // 字节\nconst uint64_t alignedBytes = (rowBytes + 31) / 32 * 32;\nconst uint32_t rowElems = alignedBytes / sizeof(float); // UB 行跨度：元素\nAscendC::DataCopyExtParams cp{};\ncp.blockCount = static_cast<uint16_t>(R);\ncp.blockLen = static_cast<uint32_t>(rowBytes);\ncp.srcStride = static_cast<uint32_t>((uint64_t(Sg) - C) * sizeof(float));\ncp.dstStride = 0; // 额外 32B block 数；仍会逐行自动对齐\ncp.rsv = 0;\nAscendC::DataCopyPadExtParams<float> pad{false, 0, 0, 0.0f};\nAscendC::DataCopyPad(tile, gm[base], cp, pad);\n// 沿用队列或显式 MTE2 -> Vector 同步后：\n// 第 r 行 UB 视图 tile[r * rowElems]，数学 count=C，不能取 rowElems。\n```\n\n`isPad=false` 的 dummy 不保证是归约单位元，不能假设自动补零。只按 `C` 个有效元素计算最直接。若后续 API 必须处理整条对齐行，显式选择数学上正确的 padding 并满足字段上限，例如 Sum 的0、Max 的负无穷需与 dtype/NaN 语义一致。不能因为 pad 的结构体初始化为0，就认为所有 dummy 也是0。\n\n## 收益、存活期与失败回退\n\n逐行搬运 `R` 次可降为一组1次；组内有效 GM 流量仍为 `R×C×s`，对比整行加载的 `R×Sg×s`，理论少搬 `R×(Sg-C)×s`。UB 实占 `R×AlignUp(C×s,32)`（额外 stride 和显式 padding 另加）；double buffer 两槽再乘2。若非对齐行过短，UB padding 比例 `(AlignUp(L,32)-L)/L` 大，未必胜于更大连续块加本地重排。\n\nDMA 完成前 `tile` 被写占用，最后一个消费者完成前整组对齐行仍存活；下一次 DataCopyPad 覆盖同槽必须等待这些消费者。输入输出可能别名时，先证明本组写回不会破坏未来行的读入。测试 `C*s` 为31/32/33字节附近的可表示 dtype 长度、单行/多行、非零列起点、尾行和不同 pitch。出现行错位首先核验单位/UB 行跨度；容量不足缩小 R，跨行不规则保留逐段路径。\n\n来源事实：asc-devkit `data_copy_ub.h` 用 `curCols` 与 `(n-curCols)*sizeof(half)` 搬运矩形尾列，API 文档给出本表单位、dummy 和范围。代码改用 Ext 参数、float 和显式变量定义，是避免字段截断的提炼版本；未引用上游私有 Kernel 类，也未做目标 SDK 编译或性能验证。\n\n## 短行组合、初始化和输出边界的比较\n\n源码里每行 DataCopyPad 不必都改成多行 copy。先比较三种可表达方案：保留逐行、一次 R 行规则 stride、将允许连续的多行视作一段。若GM行pitch恰等于有效行字节且数学上无行间边界，连续段可免去每行UB padding；若存在广播或每行独立计算，必须保留边界或显式布局变换。`R*AlignUp(C*s,32)` 与 `AlignUp(R*C*s,32)` 的差只是UB布局开销，不自动等于GM节省。跨行打包影响owner或C2布局时返回规划。\n\n初始化只针对消费者实际会读取、却没有被producer定义的区域。有效 `[0,C)` 被搬入覆盖时，不需为“安全”反复先清零；padding若会进入归约/整repeat，应定义相应值并预算其工作。多个API执行域不同，取实际读取集合的并集，不统一把整tile清零。A2/A3 Compare可能读到256B边界，不能由DataCopyPad的32B自动补齐推定全域已初始化。\n\n输出分开审查：逻辑元素owner、所用写入API的地址/长度、涉及Scalar cache或多引擎共享时的物理覆盖及完成协议。固定UB→GM文档明确非32B尾部在GM丢弃dummy；不能据此声称每个尾写必然覆盖相邻32B，更不能从单个混写失败推出所有输出都必须64B对齐。反过来，若混合Scalar与DMA或不同核共享物理粒度，需要具体目标API/架构依据，不能只凭逻辑元素不重叠判安全。优先同owner统一写回；若需重新分核或调整边界，交回C2。",
+        "evidence_status": "source_reviewed_not_benchmarked",
+        "id": "implementation.memory-transfer.strided-pad",
+        "kind": "recipe",
+        "learning": {},
+        "parent": "implementation.memory-transfer",
+        "references": [
+          "implementation.tiling-tail.valid-length",
+          "implementation.buffer-lifetime.reuse"
+        ],
+        "schema_version": "aprof.knowledge-record/v1",
+        "scope": {
+          "dtypes": [
+            "all"
+          ],
+          "platforms": [
+            "dav-2201"
+          ],
+          "workloads": [
+            "all"
+          ]
+        },
+        "seed_reason": "审读固定开源修订并提炼中文实现配方，保留既有 ID 语义；API 单位以实际 API 文档为准；未做目标 SDK 编译或 NPU 性能验证。",
+        "source_hash": "sha256:dbd61eaa8bb85b89b10ae445f1cff983baaaf8aa7a707b07900c18ac60262403",
+        "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/strided-pad.md",
+        "sources": [
+          {
+            "excerpt_sha256": "sha256:848f0dfa47facbfcddf126f931b9a62f125a0aced77b4f9229eb7eb23768b8f0",
+            "lines": [
+              21,
+              145
+            ],
+            "original_path": "examples/01_simd_cpp_api/05_best_practices/04_memory_access/data_copy/data_copy_ub.h",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/04_memory_access/data_copy/data_copy_ub.h",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:f5ca47ce371eb60e16d3fac8bb0a5f8921c62de8515d22de92b900e3c7733911"
+          },
+          {
+            "excerpt_sha256": "sha256:643aefa2bdb90c4fa26a228d9f36b5d487f11b9ebbcc80c4d7d3f52273abf98c",
+            "lines": [
+              3,
+              320
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:8fd9166a39e7ab163695f1d965ad633725afa1c60cff08708b439f58f2a646ee"
+          },
+          {
+            "excerpt_sha256": "sha256:e4fc628736c5c7870254ce95b9ef24afb65e80df4762615190a2b173e22cb01d",
+            "lines": [
+              58,
+              148
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_UBToGM.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_UBToGM.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:23e9b37e62ff5c2fed4b142ad65b346f8987aa6be527e291dae63466dc88f315"
+          },
+          {
+            "excerpt_sha256": "sha256:10621504e99f08b702f2b096bf353ab282bc4da997e2d7e8b96df1a9f60c4c45",
+            "lines": [
+              1,
+              55
+            ],
+            "original_path": "ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/arch22/datacopy_optimization_design.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:dbb672d9f6f872d02ba5a255ac9b1949595d8fa869efb174c27895da04560a38"
+          },
+          {
+            "excerpt_sha256": "sha256:8fd9166a39e7ab163695f1d965ad633725afa1c60cff08708b439f58f2a646ee",
+            "lines": [
+              1,
+              449
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:8fd9166a39e7ab163695f1d965ad633725afa1c60cff08708b439f58f2a646ee"
+          },
+          {
+            "excerpt_sha256": "sha256:23e9b37e62ff5c2fed4b142ad65b346f8987aa6be527e291dae63466dc88f315",
+            "lines": [
+              1,
+              261
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_UBToGM.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_UBToGM.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:23e9b37e62ff5c2fed4b142ad65b346f8987aa6be527e291dae63466dc88f315"
+          }
+        ],
+        "status": "active",
+        "tags": [
+          "strided-copy",
+          "datacopypad",
+          "arch22",
+          "padding-units"
+        ],
+        "title": "规则跨行 DataCopyPad 与双端 stride 单位",
+        "version": "1.2.0"
+      }
+    },
+    {
+      "id": "implementation.scalar-control.constant_lifetime",
+      "version": "1.2.0",
+      "path": [
+        "implementation.root",
+        "implementation.scalar-control",
+        "implementation.scalar-control.constant_lifetime"
+      ],
+      "score": 5,
+      "missing": [
+        "constraint.capacity",
+        "constraint.invariant_scope",
+        "constraint.plan_freedom",
+        "constraint.semantic_equivalence",
+        "constraint.static_layout_lifetime",
+        "constraint.target_api"
+      ],
+      "status": "needs_evidence",
+      "snapshot": {
+        "body": "# 编译期常量、对象别名与标量存活期\n\n## 原理与边界\n\n给编译器明确的常量和值生命周期，可减少参数 load、对象初始化、地址逃逸和 spill。`const` 只说明不能经该名称修改，并不必然把运行时 tiling 变成编译期常量；可在编译期确定的有限配置才适合 `constexpr` 或模板参数。反过来，编译器有时也能传播普通 `const`，因此必须看最终汇编，而非只根据 C++ 写法认定收益。\n\nC2 已确定实际 tile 与功能分支，本条只优化其参数表达与对象作用域。未知动态 shape、运行时 stride、动态 TQue 或可变 feature 的 buffer 不允许硬编码。需要修改 tiling ABI、删掉 queue/event、跨核重新分工时回到对应规划，不借“常量化”越界。\n\n## 改写顺序与资源公式\n\n1. 按值分类：编译期固定值、launch 固定值、tile 变化值。第一类可进入小规模模板或 `constexpr`；第二类用局部 `const`；第三类在最短使用范围内定义。不要把一个 case 测到的 shape 当所有输入的编译常量。\n2. 将仅当前函数频繁使用的成员转局部值；避免把这些值的地址交给可修改它们的函数。不能通过错误 `restrict`、强制 const 或删掉真实别名制造“无别名”假设；必须传地址的合法 API 保留其契约。\n3. 对象在热循环中反复构造且其 buffer 身份不变时，可外提 tensor 视图；若每轮 `AllocTensor/FreeTensor` 管理不同队列槽，不能把循环外视图绑定到某个旧槽。复用对象时仍按每轮更新其真实偏移和有效 size。\n4. 临时值在首次需要时定义，在最后使用后结束作用域。缓存热点与缩短存活期共同权衡：把所有字段都外提到入口可能增加 spill。对象含动态索引数组时，可局部分离不变参数与事件/索引状态，保持索引语义；不必为了编译器假设重写公开 ABI 或全部类层次。\n5. 模板特化只保留 C2 已允许且常用的有限组合，动态路径保留通用实现。若有 `a` 个 tile、`b` 个 dtype、`c` 个 feature 选择，最坏编译体数量为 `a×b×c`，并可能增加 binary/ICache 和编译时间；减少 Scalar 指令不保证 Task 时间下降。\n\n定义 `live(t)` 为时刻 t 仍可能再用的标量/对象集合，峰值寄存器压力约随 `max_t sum(registerNeed(x), x∈live(t))` 增长，这只是估算，真实分配以报告为准。一次外提省去 `(L−1)` 次构造，但延长对象整个循环的活跃范围；一组临时变量若本来不跨阶段使用，就不应为省几条初始化强行驻留。\n\n## 编译期值与运行时值的上下文\n\n```cpp\ntemplate<uint32_t TileElements>\n__aicore__ inline uint64_t TileOffset(uint64_t tileIndex,\n                                    uint64_t baseElements) {\n    static_assert(TileElements > 0, \"nonempty tile\");\n    constexpr uint32_t tileElements = TileElements;\n    // Host 已证明乘加与最终访问不溢出；结果单位为输入元素。\n    return baseElements + tileIndex * static_cast<uint64_t>(tileElements);\n}\n```\n\n`TileElements` 是调用处已选特化的编译常量；`tileIndex/baseElements` 仍为运行时 `uint64_t`，没有因为模板而冻结它们。上面的函数没有 tensor 分配、副作用或别名承诺，可以独立对比生成代码；在 kernel 中调用时仍保留原 count、tail 和数据依赖。\n\n固定 LocalTensor 是另一条更严格的选择：仅当位置、偏移、容量和所有 feature/dtype/layout 分支都编译期确定，并已证明静态地址区间，才可用 SDK 公共构造形式 `LocalTensor<T>(TPosition::A1, offsetBytes, sizeElements)`。这里 `offsetBytes` 为该物理存储位置内字节偏移，`sizeElements` 为 T 元素数；用 `[offsetBytes, offsetBytes+sizeElements*sizeof(T))` 列全量区间表，包含对齐、padding、ping/pong 与同时存活关系。交叠区间必须在先前读写完成后才能复用，且现有硬件事件覆盖其生命周期。动态队列、运行时 tile 或未覆盖 feature 分支保留 TPipe 管理，不能只按单一路径“地址看着不同”删管理器。\n\n## 数值与验证\n\n常量化与作用域变化应保持全部数学操作、Cast 舍入和特殊值模式；浮点表达式的折叠、FMA 合并或运算重排可能改变数值，必须按原精度标准审查，不能把“都是常量”当作等价证明。验证所有特化命中/未命中、空输入、尾部、别名允许/禁止与固定布局的全部分支。检查 binary 大小、栈、spill、对象初始化指令和 Task 时间；spill 增长、ICache 恶化、tensor 绑定旧槽、事件被错误常量化时回退到原动态实现。\n\n来源事实：通用 scalar 文档给出动态数组别名、局部值、贴近使用、避免多级指针、constexpr 和对象构造/地址逃逸的机制；arch22 FA 文档把静态 LocalTensor 限定为固定布局并要求区间证明。上述有限特化乘积、活跃集合模型与区间核验为工程提炼。通用改写可用于 910B/910C 与 950，具体构造与架构 guard 由目标 SDK 确认；没有引入 3510 的 VF/SIMT，也没有任何跨代阈值或速度保证。\n\n## 缓存派生状态之前，比较重算与活跃范围\n\n首先辨认值依赖哪些轴以及跨哪层循环不变。字段缓存/地址外提与数学派生状态复用不是同一意图：后者涉及浮点顺序、边界模式、索引范围和更多状态，必须按C2/Action许可审查。共同成本模型见 [buffer生命周期中的值与存储复用](../../buffer-lifetime/recipes/reuse.md)，不把任意预计算归入本条自动授权。\n\n候选可比较“即用即算”“每小段构造后消费”“整个复用域常驻”三种实际可行范围，分别计构造次数、状态个数、读取次数及循环次序变化。来自固定scalar文档的活跃区间/spill说明支持检查风险，不提供通用的寄存器数或结构体大小门槛。源码可确认依赖和生命周期；编译器是否已CSE、是否spill及其耗时未测时保留预测，不因此否决有依据的试验，也不认定缓存必然有效。",
+        "evidence_status": "source_reviewed_not_benchmarked",
+        "id": "implementation.scalar-control.constant_lifetime",
+        "kind": "recipe",
+        "learning": {},
+        "parent": "implementation.scalar-control",
+        "references": [
+          "implementation.buffer-lifetime.reuse",
+          "implementation.precision-boundaries.bounds",
+          "implementation.scalar-control.hot_loop_address",
+          "implementation.scalar-control.tilingdata_access"
+        ],
+        "schema_version": "aprof.knowledge-record/v1",
+        "scope": {
+          "dtypes": [
+            "all"
+          ],
+          "platforms": [
+            "Ascend 910B",
+            "Ascend 910C",
+            "Ascend 950",
+            "dav-2201",
+            "dav-3510"
+          ],
+          "workloads": [
+            "all"
+          ]
+        },
+        "seed_reason": "审读五个固定开源修订中的直接来源，以中文提炼实现契约；保留旧 ID 含义，不承诺目标 SDK 编译结果或 NPU 性能收益。",
+        "source_hash": "sha256:f45d5bd6b5018cb94bb7f8173ccbe2bbda94555a608c96a076e4028194ef8a3b",
+        "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/constant-lifetime.md",
+        "sources": [
+          {
+            "excerpt_sha256": "sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c",
+            "lines": [
+              1,
+              478
+            ],
+            "original_path": "ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c"
+          },
+          {
+            "excerpt_sha256": "sha256:5980d08caaca929c00df820df4ef855e52d8574db112d97f57078e9131ed09a1",
+            "lines": [
+              1,
+              119
+            ],
+            "original_path": "ops/ascendc-performance-best-practices/references/flash_attention/arch22/scalar_overhead_design.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/flash_attention/arch22/scalar_overhead_design.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:5980d08caaca929c00df820df4ef855e52d8574db112d97f57078e9131ed09a1"
+          },
+          {
+            "excerpt_sha256": "sha256:103ec2d4324f59620a49df8b4ddaec36c81552c1a5a850233177ecec77a34946",
+            "lines": [
+              1,
+              296
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/data_structures/LocalTensor/LocalTensor_constructor.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/data_structures/LocalTensor/LocalTensor_constructor.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:103ec2d4324f59620a49df8b4ddaec36c81552c1a5a850233177ecec77a34946"
+          },
+          {
+            "excerpt_sha256": "sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c",
+            "lines": [
+              1,
+              478
+            ],
+            "original_path": "ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c"
+          },
+          {
+            "excerpt_sha256": "sha256:92e2365907ffbd499d113d173a67bd2ade41d1a92d82f3d20b3965eaad17b001",
+            "lines": [
+              1,
+              299
+            ],
+            "original_path": "posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bs.h",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bs.h",
+            "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+            "sha256": "sha256:92e2365907ffbd499d113d173a67bd2ade41d1a92d82f3d20b3965eaad17b001"
+          }
+        ],
+        "status": "active",
+        "tags": [
+          "alias-analysis",
+          "constexpr",
+          "liveness",
+          "static-layout"
+        ],
+        "title": "编译期常量、对象别名与标量存活期",
+        "version": "1.2.0"
+      }
+    },
+    {
+      "id": "implementation.scalar-control.hot_loop_address",
+      "version": "1.1.0",
+      "path": [
+        "implementation.root",
+        "implementation.scalar-control",
+        "implementation.scalar-control.hot_loop_address"
+      ],
+      "score": 5,
+      "missing": [
+        "constraint.capacity",
+        "constraint.invariant_scope",
+        "constraint.plan_freedom",
+        "constraint.semantic_equivalence"
+      ],
+      "status": "needs_evidence",
+      "snapshot": {
+        "body": "# 标量热循环的地址外提与首主尾分离\n\n## 原理与进入条件\n\n地址乘除法、成员重复读取、首尾判断和隐式多维迭代状态机可能消耗 Scalar 发射预算；若编译后仍存在重复工作且延迟了 MTE/Cube/Vector 发射，才可能成为关键路径。包内来源与当前源码中的重复结构可以支持提出优化候选，无需先完成严格性能实验；但源码次数不等于编译指令次数，也不等于实测热点。目标 trace/反汇编用于区分等待其他流水、真实Scalar指令工作、CSE已消除及spill等竞争解释；缺这些资料时写清具体未知与决策影响，不能统一否决候选，也不能将其直接标成已确认瓶颈。Scalar占比高不证明spill，更不授权删除事件。\n\n实施硬条件是原地址/有效域、溢出、数值顺序、控制副作用及buffer/事件生命周期合法。C2必须已确认遍历顺序、每核输出所有权、tile大小和同步关系，本条仅在该计划许可自由度内等价实现同一任务序列。热点证据用于判断试验价值和检验性能预测，不替代上述安全证明。\n\n适合连续 tile、规则 KV 页内段或固定 K 主循环；循环次数很少、路径本来已常量折叠、地址依赖动态 page table/稀疏索引时收益不确定。`head/group/blockSize/stride` 只有在当前循环域内不变才外提；跨 head、跨 batch、prefix 切换或跨页时须重新计算，不能把局部不变量提升到 kernel 全局。\n\n## 实施步骤与代价\n\n1. 写出原地址：例如元素偏移 `base + tileIndex*step`，逐项标注单位、更新维度和所有权。Host 以足够宽整数证明乘加不溢出、最后访问元素小于分配长度，再把不变乘积和公共基址放到最小共同外层。\n2. 主循环用地址递增代替每轮重新乘法；输入和输出的 dtype/物理 stride 不同就分别递增，不能共用一个字节偏移。paged KV 应按每页合法片段重启递增，绝不能跨页按物理连续推导。\n3. 对 `tileCount=0/1/2` 单独推演，再拆首块、常规块、尾块。首块初始化一次，尾块的有效长度和 final flag 只执行一次；既是首块又是尾块的单块必须同时满足两种语义。\n4. 周期搬运可以外层按段循环、内层处理纯常规块。段边界的 `WaitFlag/SetFlag` 仍按原 producer/consumer 关系执行；不能用“零分支热循环”作为改变同步或 K 累加顺序的理由。\n5. 若将 `while(Next())` 改成显式多重 `for`，先列完整的旧 tile 序列与新序列做相等检查，包含各维 tail、空任务和跳过的 tile。编译器对显式循环可能更易优化，但专用循环硬件、展开方式和收益由目标编译结果确认。\n\n假设迭代 `L` 次、每次可外提 `p` 个乘/除与 `q` 个成员 load，理想减少约 `(L−1)×(p+q)` 个标量操作；实际还增加若干递增、首尾代码和额外活跃标量。首尾分离把判断数量由 `O(L)` 缩至边界数量，却可能扩大指令体积。比较反汇编中的乘除/分支/load、栈与 spill，以及 Task 时间；循环短或展开过多导致 ICache 压力时保留原循环。\n\n选择前将该估算与当前case的必要Vector/搬运工作、逐元素地址解码、tile数和其他机会比较。少量字段缓存不能因为容易证明等价就自动优先；若重复load已被编译器消除，相关预测已被削弱，应降低优先级或转向尚未解释的成本。缺反汇编时，可在结构明显、代价有界且比较理由充分的情况下试验，并把“编译后指令是否减少”列为待验证预测。R2应对照R1实际patch与有效结果解释继续本机制能学到什么；单次总时间无收益可能否定优先级，也可能因计时无效而无法判断，均不能直接宣布机制已证伪。\n\n## 地址递增的上下文片段\n\n下例是纯地址调度骨架，`tileCount` 为本核有效 tile 数，`stepElements` 为每 tile 的输入元素跨度，`beginElements` 为输入首元素偏移；三者为 Host 检查过的 `uint64_t`。`body` 是调用处提供的原 tile 操作，签名为 `(tile索引, 元素偏移, 是否首块, 是否尾块)`，内部保留原搬运、计算、事件及有效长度逻辑，不依赖捐赠仓库的私有 helper。\n\n```cpp\ntemplate<class Body>\n__aicore__ inline void VisitTiles(uint64_t tileCount, uint64_t beginElements,\n                                uint64_t stepElements, Body body) {\n    if (tileCount == 0) return;\n    uint64_t offset = beginElements;\n    body(0, offset, true, tileCount == 1);\n    if (tileCount == 1) return;\n    offset += stepElements;\n    for (uint64_t i = 1; i + 1 < tileCount; ++i) {\n        body(i, offset, false, false);\n        offset += stepElements;\n    }\n    body(tileCount - 1, offset, false, true);\n}\n```\n\n这里 offset 单位是输入元素，若原路径接收 byte 地址，应在外层按输入 `sizeof(T)` 转换，检查后再使用；此骨架不授权扩大 GM 搬运、改变尾部 count 或提前释放 buffer。K 循环的首块 `cmatrixInitVal`、尾块 unitFlag 与 Fixpipe 仍依各自 API 契约配置。\n\n## 数值、失败与平台边界\n\n遍历次序保持不变时，本条应保持运算序列和可见舍入；若重排 tile 导致 reduction/atomic 顺序改变，已越过本条范围，回到 C2 与精度边界评审。验证零 tile、单 tile、两 tile、整除/非整除尾、最大地址、跨页和全部 feature 分支；输出区间与访问序列必须一致。第一块重复初始化、最后一块漏发 event、空循环产生 `tileCount−1` 下溢、循环内 `const` 实际随 head 变化都是撤回信号。\n\n来源事实：通用 scalar 编码原则给出主尾分离、显式循环和局部变量的机制；arch22 FA 文档明确允许公共 workspace 前缀、stride 预乘、热点字段和首主尾分离，同时排除 A5 百分比阈值及性能数字。上面的访问序列守恒、操作数估算及安全/性能分层是本次工程提炼；来源没有证明当前任务的Scalar主导或优化收益。适用范围为 arch22/A2/A3 与 arch35/950 上的通用 C++ 等价改写，目标分别编译验证；本条不向 A3 引入 VF、RegBase、SIMT 或 arch35 专属指令。",
+        "evidence_status": "source_reviewed_not_benchmarked",
+        "id": "implementation.scalar-control.hot_loop_address",
+        "kind": "recipe",
+        "learning": {},
+        "parent": "implementation.scalar-control",
+        "references": [
+          "implementation.precision-boundaries.bounds",
+          "implementation.scalar-control.constant_lifetime",
+          "implementation.scalar-control.tilingdata_access"
+        ],
+        "schema_version": "aprof.knowledge-record/v1",
+        "scope": {
+          "dtypes": [
+            "all"
+          ],
+          "platforms": [
+            "Ascend 910B",
+            "Ascend 910C",
+            "Ascend 950",
+            "dav-2201",
+            "dav-3510"
+          ],
+          "workloads": [
+            "all"
+          ]
+        },
+        "seed_reason": "审读五个固定开源修订中的直接来源，以中文提炼实现契约；保留旧 ID 含义，不承诺目标 SDK 编译结果或 NPU 性能收益。",
+        "source_hash": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576",
+        "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+        "sources": [
+          {
+            "excerpt_sha256": "sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c",
+            "lines": [
+              1,
+              478
+            ],
+            "original_path": "ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c"
+          },
+          {
+            "excerpt_sha256": "sha256:1f9161d4bdd0ed256130213ce0e61598369c869b00ce28d54db38f5860536fdc",
+            "lines": [
+              1,
+              33
+            ],
+            "original_path": "ops/ascendc-performance-best-practices/references/common/scalar/guide.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/guide.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:1f9161d4bdd0ed256130213ce0e61598369c869b00ce28d54db38f5860536fdc"
+          },
+          {
+            "excerpt_sha256": "sha256:5980d08caaca929c00df820df4ef855e52d8574db112d97f57078e9131ed09a1",
+            "lines": [
+              1,
+              119
+            ],
+            "original_path": "ops/ascendc-performance-best-practices/references/flash_attention/arch22/scalar_overhead_design.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/flash_attention/arch22/scalar_overhead_design.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:5980d08caaca929c00df820df4ef855e52d8574db112d97f57078e9131ed09a1"
+          }
+        ],
+        "status": "active",
+        "tags": [
+          "address-arithmetic",
+          "loop-invariant",
+          "scalar"
+        ],
+        "title": "标量热循环地址外提与首主尾分离",
+        "version": "1.1.0"
+      }
+    },
+    {
+      "id": "implementation.scalar-control.tilingdata_access",
+      "version": "1.1.0",
+      "path": [
+        "implementation.root",
+        "implementation.scalar-control",
+        "implementation.scalar-control.tilingdata_access"
+      ],
+      "score": 5,
+      "missing": [
+        "constraint.capacity",
+        "constraint.invariant_scope",
+        "constraint.plan_freedom",
+        "constraint.read_only_lifetime",
+        "constraint.semantic_equivalence",
+        "constraint.target_api",
+        "constraint.tiling_abi"
+      ],
+      "status": "needs_evidence",
+      "snapshot": {
+        "body": "# TilingData 的 GM 直读与热点字段局部缓存\n\n## 解决的问题与适用条件\n\n若大TilingData的整块栈复制或通过对象成员的重复字段读取在编译后仍保留，可能产生额外读写、依赖load或别名分析限制；编译器也可能已经消除这些工作。包内来源及当前源码形态足以支持提出“入口局部GM指针＋少量重复使用字段缓存”的优化候选，不要求先完成严格性能实验。结构体字节数、实际读取字段、每字段使用次数可由源码确认；栈大小、重复load、CSE和spill则由编译产物帮助判别。两类证据不能相互冒充。\n\n实施安全条件是Host/Kernel ABI、字段类型/解释、地址空间/对齐、输入生命周期、数值顺序和C2分支保持合法；缓存字段所需活跃资源也要计入预算。编译热点证据属于试验价值与预测检验，缺失时准确记录其影响；安全不能从“减少load可能更快”推出，性能也不能从“字段只读、改写等价”推出。\n\n适用于 launch 期间只读、布局已由同一版本 Host 和 Kernel 共同定义的 tiling；运行中会被更新的工作队列、跨核信号或动态状态不能缓存为常量。本条也不把所有 `GET_TILING_DATA_WITH_STRUCT` 都判为问题：小结构体、只访问一次或编译器已消除拷贝时，保留原方式通常更简单。\n\n## 具体步骤与取舍\n\n1. 固定原结构定义，记录 `sizeof`、各读取字段的 offset/类型/对齐，核对版本与 tiling key。缓存只使用原字段，不删字段、不重排、不修改 pack、不改变 Host 序列化长度和调用 ABI。\n2. 入口取得局部 `const __gm__ TilingData*`；只读一次的冷字段可在分支内按需读取，热循环反复使用的 `stride/loopCount/tileSize` 读入未取地址的局部值。确保 tiling 在 launch 到最后读完期间不可被释放或写入。\n3. 缓存时使用与原字段相同的整数/浮点类型。地址乘积需要拓宽就在乘之前转换；不能先以 32 位相乘后转成 64 位。浮点 scale 原样读取，不经过额外 float→half，也不移动 epsilon/correction 的计算次序。\n4. 将局部标量或小的按值聚合体传给热函数，避免再次把 tiling 指针存到大对象。冷路径才需要的字段在相应路径内读取，减少寄存器活跃范围。\n5. 用编译结果比较整块拷贝是否消失、重复 load 是否减少，检查栈/spill。缓存太多字段使寄存器压力增加时缩小缓存集合；不以减少 GM 访问数为理由强制复制整个结构到 UB 或改变同步。\n\n设结构体 `S` 字节、热点字段总大小 `H`、循环 `L` 次、每次重复读取热点次数合计 `r`，整块拷栈需要处理约 `S` 的初始数据并可能读写栈；直接读取热点可把逻辑字段读取从约 `L×r` 次降为入口 `r` 次。实际 cache、编译器 CSE 和别名分析会改变 load 数，不能把 `S−H` 直接当作 DRAM 节省量。局部缓存的代价是同时活跃的字段寄存器和可能的 spill；优先缓存有明确重复规模且影响预测的字段；已有热点证据时按其范围收窄，没有热点证据时按源码工作量与资源代价比较，并保持性能假设身份。\n\n## 选择与后继反馈\n\n先比较字段读取/控制的工作规模与当前实现的主要数据路径。例如逐元素Scalar解码或大量分散搬运仍占据源码主循环时，缓存几个每tile字段未必是最值得试的一项。将读取的相关P/O知识实际用于排除不适用方案、计算容量或形成不同成本预测，不能以找到本配方就停止机会比较。若编译报告已确认原字段读取被CSE消除，应降低或放弃该缓存预测，而不是继续以源码多次出现同一字段作为独立支持。\n\nR1没有有效收益时，R2可继续同Action，但需要新的可检验对象、参数或证据，并说明为何仍优于其他主要成本机会；再缓存相似字段本身不是新依据。计时无效仅表示无法判断，不允许把无效结果当支持；实际patch、字段/循环范围与解释必须一致。\n\n## 保持 ABI 的最小上下文\n\n以下 `TilingData` 必须是工程已有的 ABI 类型。为了说明读法，示例假定它已定义 `uint64_t inputStrideElements`、`uint32_t fullTiles`、`uint32_t tileElements`；这些名称只是本例字段，迁移时使用实际已有字段，不向 ABI 增加同名成员。`tilingGm` 是 Host 传入、正确对齐且至少 `sizeof(TilingData)` 字节的只读 GM 地址。\n\n```cpp\nconst __gm__ TilingData* const tilingPtr =\n    reinterpret_cast<const __gm__ TilingData*>(tilingGm);\nconst uint64_t strideElements = tilingPtr->inputStrideElements;\nconst uint32_t fullTiles = tilingPtr->fullTiles;\nconst uint32_t tileElements = tilingPtr->tileElements;\nfor (uint32_t i = 0; i < fullTiles; ++i) {\n    const uint64_t inputOffset = static_cast<uint64_t>(i) * strideElements;\n    // 原 tile 路径使用 inputOffset（输入元素）、tileElements（有效元素上限）。\n    // 原事件/队列/尾块约束继续生效，不从 tilingPtr 重读相同字段。\n}\n```\n\n示例没有 `auto local = *tilingPtr` 的整结构体拷贝；也没有把 pointer 强制去除 `__gm__` 后按本地内存访问。若 SDK/结构体封装要求 getter 或宏读取，保留合法地址空间接口，不能为了套用片段破坏编译契约。`fullTiles` 不含尾块时，原尾块仍在独立路径读取其有效长度。\n\n## 验证、失败与证据边界\n\n核验所有 tiling key、版本、dtype/layout、paged/non-paged、prefix 和 mask 分支，至少包含无任务、单 tile、动态尾和最大 stride。ABI 的原始字段字节和读出的值应逐项一致，oracle 全 case 通过后再计时。单一 feature 错误常来自缓存漏初始化、错误拓宽或冷字段遗漏；随机错须检查 tiling 生命周期和 Host 覆写。保留正确的宏/整结构读取作为 fallback，不通过缩减 case 或调整字段布局绕过失败。\n\n来源事实：arch22 FA scalar 文档报告 regular FA 使用 GM TilingData 指针直读与局部热点缓存，另一 FIA v3 分支使用宏读取，明确不能全局机械替换；通用 scalar 原则提供局部变量、多级解引用和结构体大小的优化动机。正文缓存选择、`S/H/L` 代价模型、ABI检查及安全/性能分层为本次工程提炼，不是当前任务收益证明。arch22/A2/A3 与 arch35 的普通 GM 字段访问按各 SDK 支持编译；不迁移 arch35 `__ssbuf__` 转发或固定 cacheline batch 参数到 A3，没有目标硬件收益数据。",
+        "evidence_status": "source_reviewed_not_benchmarked",
+        "id": "implementation.scalar-control.tilingdata_access",
+        "kind": "recipe",
+        "learning": {},
+        "parent": "implementation.scalar-control",
+        "references": [
+          "implementation.precision-boundaries.bounds",
+          "implementation.scalar-control.constant_lifetime",
+          "implementation.scalar-control.hot_loop_address"
+        ],
+        "schema_version": "aprof.knowledge-record/v1",
+        "scope": {
+          "dtypes": [
+            "all"
+          ],
+          "platforms": [
+            "Ascend 910B",
+            "Ascend 910C",
+            "Ascend 950",
+            "dav-2201",
+            "dav-3510"
+          ],
+          "workloads": [
+            "all"
+          ]
+        },
+        "seed_reason": "审读五个固定开源修订中的直接来源，以中文提炼实现契约；保留旧 ID 含义，不承诺目标 SDK 编译结果或 NPU 性能收益。",
+        "source_hash": "sha256:d969a6a6684145bc43ba9b2fcb669308e28907c0640e5a7ef14488e183f89f67",
+        "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/tilingdata-access.md",
+        "sources": [
+          {
+            "excerpt_sha256": "sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c",
+            "lines": [
+              1,
+              478
+            ],
+            "original_path": "ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c"
+          },
+          {
+            "excerpt_sha256": "sha256:5980d08caaca929c00df820df4ef855e52d8574db112d97f57078e9131ed09a1",
+            "lines": [
+              1,
+              119
+            ],
+            "original_path": "ops/ascendc-performance-best-practices/references/flash_attention/arch22/scalar_overhead_design.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/flash_attention/arch22/scalar_overhead_design.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:5980d08caaca929c00df820df4ef855e52d8574db112d97f57078e9131ed09a1"
+          }
+        ],
+        "status": "active",
+        "tags": [
+          "abi-preservation",
+          "scalar-load",
+          "tilingdata"
+        ],
+        "title": "TilingData GM 直读与热点字段局部缓存",
+        "version": "1.1.0"
+      }
+    },
+    {
+      "id": "implementation.vector-api.cast",
+      "version": "1.0.0",
+      "path": [
+        "implementation.root",
+        "implementation.vector-api",
+        "implementation.vector-api.cast"
+      ],
+      "score": 5,
+      "missing": [
+        "constraint.capacity",
+        "constraint.plan_freedom",
+        "constraint.precision",
+        "constraint.semantic_equivalence",
+        "constraint.target_api"
+      ],
+      "status": "needs_evidence",
+      "snapshot": {
+        "body": "# Cast 转换链合并与舍入边界保持\n\n## 原理与适用条件\n\nCast 在 UB 中读入一种 dtype、写出另一种 dtype，除了发射与读写成本，还引入可见的舍入、饱和和特殊值行为。优化目标是合并重复的同语义转换，或让同一转换结果被多个消费者复用；不是消除算法要求的中间舍入。本条只适用于 C2 允许的转换实现自由度，不改变输入/输出、累加 dtype 或量化算法。\n\n先画出实际链 `源 dtype → 中间 dtype → 目标 dtype`，在每条边标注 RoundMode、有效 count、scale、饱和模式、下游使用者与最后使用点。可以考虑：一个输入被重复以同一模式转换后分别消费，计算一次并保持结果到最后消费者完成；或已证明值域内完全精确的往返。`float→half→float` 通常不能删，半精度舍入已改变值；即便源目标同为 float，`CAST_RINT` 等仍可表示数值取整，不能用“同 dtype”判冗余。\n\n## 实施步骤与 API 单位\n\n1. 以目标产品对应的 Cast 支持表核对 `(src,dst,RoundMode)` 三元组。支持某类型不等于支持所有模式，`CAST_NONE` 在有精度损失时按 RINT 解释，不代表无条件截断；RINT 为 ties-to-even，ROUND 与 TRUNC/FLOOR/CEIL 各自不同。低位整数截取、量化 scale 和特殊浮点路径单独核验。\n2. 选正确重载：`count` 是有效元素数，容量按实际源/目标字节算；高维重载 `mask` 按两 dtype 中较大字节宽度定义 lane 数，repeat 与 stride 用对应数据块单位。不能把 count 数值塞入 mask 当整个 tensor 长度。\n3. 不同位宽的连续转换，令 `s=max(sizeof(src),sizeof(dst))`、一 repeat 的有效元素 `E=256/s`。每路连续 repeat 跨度为 `E*sizeof(该路dtype)/32` 个 32B DataBlock。只在这套普通固定字节 dtype 模式下使用公式；int4 pack 等必须用其独立限制。\n4. 合并后为转换结果保留完整存活期，不能在另一个消费者尚未读完前复用其 UB。输入输出分离最易证明；特别是窄类型扩宽时，部分原地重叠可能覆盖尚未读到的输入。仅使用具体 API 明确允许的 overlap，不用“memmove 式前后遍历”猜测硬件行为。\n5. 混合宽度、非连续 stride 或不支持直接转换时保留合法中间 dtype 路径，按原边分别设置舍入。不要添加无来源的新近似、多项式或“误差更小”的替代算法。\n\n设有效元素 N、源中间目标每元素字节 a/b/c，一条两段转换的逻辑 UB 流量约 `N×(a+2b+c)`，直接转换约 `N×(a+c)`；只有转换数学等价且 API 支持时才可能省 `2Nb` 字节。复用一个转换结果可减少重复工作，但使 `AlignUp(Nb,32)` 字节中间 buffer 活到最后消费者，需连同原输入、输出、队列槽、API tmp 计算峰值 UB。增加活跃 buffer、缩小 tile 或丢失双缓冲可能抵消收益。\n\n## 有上下文的混合宽度片段\n\n示例固定为 half→int32、CEIL 向正无穷取整。`srcLocal` 与 `dstLocal` 是已分配且不重叠的 32B 对齐 UB tensor，各至少 512 元素；源含有限可转换值，工程已有 producer→Cast 以及 Cast→consumer 的同步。下例只展示计算，源字节数 1024B、目的 2048B。\n\n```cpp\nconst uint64_t mask = 256 / sizeof(int32_t); // 64 个逻辑元素/repeat\nconst uint8_t repeats = 8;                  // 512 个元素，总量合法\nAscendC::Cast(dstLocal, srcLocal, AscendC::RoundMode::CAST_CEIL,\n              mask, repeats, {1, 1, 8, 4});\n// dst/src block stride 均为 1 个 32B 块。\n// dst repeat stride=8 个块(256B)，src=4 个块(128B)。\n```\n\n同一连续转换也可使用 `AscendC::Cast(dstLocal,srcLocal,RoundMode::CAST_CEIL,512)` 的 count 重载，避免手工 repeat；两者必须用相同有效元素和舍入才能比较。int4 的 count/连续 mask 必须为偶数，bit mask 的同字节两 bit 一致，并按半字节 pack 容量分配；不把本例步长套用 int4。\n\n## 精度、失败与平台 guard\n\n验证恰在舍入中点及相邻浮点数、正负非整数、整数目标上下界、大/小有限值、次正规数、±0、NaN/Inf；具体超界和特殊值输出以原 oracle 与目标 API 为准，不凭主机 C++ cast 推断。源值域受限时写出可证明界，而不是只凭随机样本删转换。逐级核对第一个变化的中间结果，既检查误差标准，也检查 mask 外区域未被写坏。\n\nA2/A3 的 count/repeat=0 在本固定文档中为 NOP；3510 兼容层经 VF 实现，不保证零参数 NOP，跨代代码应在调用前显式跳过空转换。Reg Cast、fp8/hifloat/complex/double 支持不能从 3510 表迁移到 A3；本条示例仅 memory vector Cast，适用 910B/910C，950 使用其兼容接口时另按 3510 文档编译。错位每 64 元素重复、尾部污染、只在某 RoundMode 错、扩大转换后随机错是典型撤回信号；回退原 Cast 链，不改 tolerance。来源事实为固定 Cast API 的模式、混合宽度和 overlap 约束；流量/生命周期模型及合并判据为工程提炼，未上板测量。",
+        "evidence_status": "source_reviewed_not_benchmarked",
+        "id": "implementation.vector-api.cast",
+        "kind": "recipe",
+        "learning": {},
+        "parent": "implementation.vector-api",
+        "references": [
+          "implementation.buffer-lifetime.reuse",
+          "implementation.precision-boundaries.bounds",
+          "implementation.precision-boundaries.numeric",
+          "implementation.vector-api.batch"
+        ],
+        "schema_version": "aprof.knowledge-record/v1",
+        "scope": {
+          "dtypes": [
+            "all"
+          ],
+          "platforms": [
+            "Ascend 910B",
+            "Ascend 910C",
+            "Ascend 950",
+            "dav-2201",
+            "dav-3510"
+          ],
+          "workloads": [
+            "all"
+          ]
+        },
+        "seed_reason": "审读五个固定开源修订中的直接来源，以中文提炼实现契约；保留旧 ID 含义，不承诺目标 SDK 编译结果或 NPU 性能收益。",
+        "source_hash": "sha256:61a09c55c6f9139ee767c6dde221cacfbadca53cbbb483d4ced76d0421c7f464",
+        "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/cast.md",
+        "sources": [
+          {
+            "excerpt_sha256": "sha256:a41d8e8b10d541452de9c4542158d0bba6bc53f15e68c3d1d929712856a11f12",
+            "lines": [
+              1,
+              643
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/memory_vector_compute/type_conversion/Cast.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/type_conversion/Cast.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:a41d8e8b10d541452de9c4542158d0bba6bc53f15e68c3d1d929712856a11f12"
+          },
+          {
+            "excerpt_sha256": "sha256:ac8379ef50685c20af258928e6805097ddf1cedbfacf2adb1fca65fc6d8bf915",
+            "lines": [
+              1,
+              84
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/memory_vector_compute/SIMD_compute/high_dim_split.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/SIMD_compute/high_dim_split.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:ac8379ef50685c20af258928e6805097ddf1cedbfacf2adb1fca65fc6d8bf915"
+          },
+          {
+            "excerpt_sha256": "sha256:3ea2f2b1805ea780d7a3b675bea3288878477fcb8a8fb3b94817f5cc004d91ea",
+            "lines": [
+              1,
+              83
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/memory_vector_compute/Vector_logical_arch/Vector_logical_arch.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/Vector_logical_arch/Vector_logical_arch.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:3ea2f2b1805ea780d7a3b675bea3288878477fcb8a8fb3b94817f5cc004d91ea"
+          }
+        ],
+        "status": "active",
+        "tags": [
+          "cast",
+          "mixed-width",
+          "rounding",
+          "ub-lifetime"
+        ],
+        "title": "Cast 转换链合并与舍入边界保持",
+        "version": "1.0.0"
+      }
+    },
+    {
+      "id": "implementation.vector-api.compare_select_tail",
+      "version": "1.0.0",
+      "path": [
+        "implementation.root",
+        "implementation.vector-api",
+        "implementation.vector-api.compare_select_tail"
+      ],
+      "score": 5,
+      "missing": [
+        "constraint.capacity",
+        "constraint.plan_freedom",
+        "constraint.precision",
+        "constraint.semantic_equivalence",
+        "constraint.target_api"
+      ],
+      "status": "needs_evidence",
+      "snapshot": {
+        "body": "# Compare/Select：把有效元素、执行粒度和 predicate 分开\n\n## 适用范围与来源事实\n\n适用于已由 C2 授权的逐元素条件选择、掩码过滤、广播比较、分段选择等实现；不是只在某个算子出错后才查的修复条目。条件表达式及两个分支已有明确数值语义，输入已在合法 UB 区间，不能借此更改算法、转换精度或跨核 owner。\n\n固定 asc-devkit `d378849...` 的 Compare 文档明确：**Atlas A2/A3 的 count 重载只计算完整 256B 块，未对齐尾部不参与；该产品的高维 Compare mask 参数设置无效。** dav_c220 `CompareCompute` 实现用 `count*sizeof(T)/256` 向下取整得到 repeat 数，直接确认此实现事实。这是固定源码/文档结论，不是从一次硬件失败泛化。A2/A3 Compare 的 T 为 half/float（全部模式）或 int32（仅 EQ）；Select 的 T 为 half/float。不能把 int32 的任意大小比较、BF16 或 int64 选择硬塞入该组合。\n\n950 文档给出的 mask、类型与内部实现不同，不能继承 A2/A3 的截尾规则，也不能把 950 的支持反推到 910C。以下 padding 骨架专用于已核对的 A2/A3 memory-vector half/float 路径；目标 SDK 仍需核对相同重载和 API 临时区。\n\n## 合法构造与预算\n\n设 `n>0` 为本段有效元素数，`s=sizeof(T)` 字节，`E=256/s` 元素，`c=ceil(n/E)*E` 元素。Compare 输入区必须各容纳 `c*s` 字节；输出 predicate 每元素占一 bit，至少容纳 `ceil(c/8)` 字节并按 32B 分配对齐，记 `M=AlignUp(ceil(c/8),32)`。Select 模式2连续消费每个 repeat 对应的不同 predicate；模式0反复使用第一组 `E` 个 bit，不能替代逐元素不同条件。\n\n1. 把原有效数据装入输入 UB 的 `[0,n)`，只初始化额外会被 Compare 读取的 `[n,c)`；若 DMA 自带的 padding 已充分初始化此区且数值合法，可以避免重复初始化。DataCopyPad 的 32B 行对齐不自动补足 Compare 的 256B 执行域。\n2. padding 的值必须是该 dtype 的已定义值且不产生无效地址；它不进入数学输出。输出有效区域只取 `[0,n)`。不用整 tile 清零来掩盖没有证明的访问范围。\n3. 先完成 MTE2→V，再按 `c` 比较；Compare→Select 的 predicate 依赖完成后，以模式2按 `n` 选择；V→MTE3 完成后只搬 `n*s` 有效字节。\n4. A2/A3 Select 模式1、2文档要求预留 **8KB UB API 临时区**，不能只计可见 tensor。950 的 count/显式 mask 重载不占该 8KB，而不传 mask 的高维重载占用，分别核验。\n\n三个独立数据区且输出分配到 c 的简单预算为 `3*c*s + M + 8192` 字节，另加队列物理槽、对齐、其他 scratch。若 output 只分配到合法的 n 对齐范围则按实际缩小；不能未经 API alias 证明原地复用。输入、输出、predicate 槽数分别乘其物理份数，API 临时区按真实生命周期计，不能默认每片重复分配也不能漏计。\n\n## 代码上下文\n\n下例 `a,b,out` 为独立、32B对齐的 `LocalTensor<float>`；a/b/out容量各至少 `c` 元素，predicate为32B对齐的 `LocalTensor<uint8_t>`、容量至少M字节。调用前 a/b 的 `[0,n)` 已搬入，`[n,c)` 已合法初始化，MTE2→V 依赖已闭合；Host 证明整数计算不溢出且总 UB 含 8KB 预留。使用 `kernel_operator.h`，示意为原语义 `a_i>b_i ? a_i : b_i`：\n\n```cpp\nconst uint32_t c = ((n + 63U) / 64U) * 64U; // FP32，元素；n>0且无溢出\nAscendC::Compare(predicate, a, b, AscendC::CMPMODE::GT, c);\nAscendC::PipeBarrier<PIPE_V>(); // 同一Vector管线的predicate写→读\nAscendC::Select(out, predicate, a, b,\n               AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, n);\n// 沿工程已有的 V→MTE3 完成协议，搬出 n*sizeof(float) 字节。\n```\n\n这段不是完整可直接启动 kernel。padding 初始化的尾址可能不满足相应 API 对齐，不能无条件写 `Duplicate(a[n],...,c-n)`；可用合法的对齐尾片重建、具体 API 的合法 mask 或逐元素初始化，再核对 Scalar→Vector/搬运依赖。选择成本更小的合法方式；不把保守初始化整片和 PIPE_ALL 永久固化为优化方案。\n\n## 工作量、覆盖和代价怎样影响选择\n\n原逐元素实现可能有 n 次标量比较、分支和地址处理；新方案是 `c/E` 个比较 repeat、有效 n 元素选择，以及至多 `2*(c-n)` 个输入 padding 写入、predicate 读写和必要依赖。逻辑量可用于比较，但不能相加为时间分数。短段 n 远小于 E 时补齐和准备代价可能显著；可与合法 Scalar 尾部、较大段组合或保持原路径比较，不能预设固定长度阈值。\n\n若组合短行，需要保持每行有效长度、predicate位偏移、UB行pitch和输出owner。简单把带padding的多行扁平成有效 `R*n` 个元素会错读行尾；先由 C2 确定连续段/压紧布局。C3若为此改变任务所有权、搬运通路或超出tile自由度，返回C2。\n\n此方法保留的是原条件选择语义，不自动等价于 Max/Min。重点检查 `a=NaN`、`b=NaN`、相等值、±0、±Inf及原oracle的比较规定。固定Max文档的数学名字不足以证明NaN/符号零选择与三元表达式完全一致。浮点比较语义未明确时补查原实现/API定义；不以放宽oracle解决。\n\n## 无硬件审读与后续验证\n\n静态检查 n=0（跳过调用）、1、E−1、E、E+1、多repeat和predicate跨32B边界的地址/容量；核验 Compare 生成的每个有效 bit 都被模式2正确消费，最后 padding 不进入输出。CPU模型可查索引和位映射，不能代替设备语义验证。来源支持合法试验方向，不提供收益保证；硬件尚未测时性能假设保持未测试，不否决已确认的 API 事实。",
+        "evidence_status": "source_reviewed_not_benchmarked",
+        "id": "implementation.vector-api.compare_select_tail",
+        "kind": "recipe",
+        "learning": {},
+        "parent": "implementation.vector-api",
+        "references": [
+          "implementation.vector-api.batch",
+          "implementation.precision-boundaries.numeric",
+          "implementation.memory-transfer.strided-pad",
+          "implementation.tiling-tail.valid-length"
+        ],
+        "schema_version": "aprof.knowledge-record/v1",
+        "scope": {
+          "dtypes": [
+            "all"
+          ],
+          "platforms": [
+            "Ascend 910B",
+            "Ascend 910C",
+            "Ascend 950",
+            "dav-2201",
+            "dav-3510"
+          ],
+          "workloads": [
+            "all"
+          ]
+        },
+        "seed_reason": "固定修订明确的 API 约束与源码审读；性能收益未测。",
+        "source_hash": "sha256:e0cf231e0bd3c6f821342c3d96c262230f009a68e19fc86e0136bf75e2885d62",
+        "source_path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/compare-select-tail.md",
+        "sources": [
+          {
+            "excerpt_sha256": "sha256:353264a38c342ca8b668d0400e48750461820fa743be89ba59d6824eb4764262",
+            "lines": [
+              1,
+              357
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Compare.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Compare.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:353264a38c342ca8b668d0400e48750461820fa743be89ba59d6824eb4764262"
+          },
+          {
+            "excerpt_sha256": "sha256:615845595e9b6ca5d150548eb27e9e6fd9d0bb972ee1533f933ad6bea8d940b5",
+            "lines": [
+              1,
+              345
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Select.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Select.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:615845595e9b6ca5d150548eb27e9e6fd9d0bb972ee1533f933ad6bea8d940b5"
+          },
+          {
+            "excerpt_sha256": "sha256:cf6f865a3350eeca13b0dd1355c0275f0085d9e10beaaa8f6e71d1f894d2ac9f",
+            "lines": [
+              1,
+              444
+            ],
+            "original_path": "impl/basic_api/dav_c220/kernel_operator_vec_cmp_impl.h",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/impl/basic_api/dav_c220/kernel_operator_vec_cmp_impl.h",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:cf6f865a3350eeca13b0dd1355c0275f0085d9e10beaaa8f6e71d1f894d2ac9f"
+          },
+          {
+            "excerpt_sha256": "sha256:3ef8936b5fe5025072d33fa4b79380cd04c73ffbc33786605cadd5dee8b49329",
+            "lines": [
+              1,
+              177
+            ],
+            "original_path": "docs/zh/api/SIMD-API/basic_api/memory_vector_compute/basic_arithmetic/Max.md",
+            "path": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/basic_arithmetic/Max.md",
+            "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+            "sha256": "sha256:3ef8936b5fe5025072d33fa4b79380cd04c73ffbc33786605cadd5dee8b49329"
+          }
+        ],
+        "status": "active",
+        "tags": [
+          "compare",
+          "select",
+          "predicate",
+          "tail",
+          "api-overload"
+        ],
+        "title": "Compare/Select 的整块比较、predicate 与有效尾部",
+        "version": "1.0.0"
+      }
+    }
+  ],
+  "considered": [
+    {
+      "router": "implementation.root",
+      "target": "implementation.tiling-tail",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.root",
+      "target": "implementation.memory-transfer",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.root",
+      "target": "implementation.buffer-lifetime",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.root",
+      "target": "implementation.pipeline-sync",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.root",
+      "target": "implementation.vector-api",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.root",
+      "target": "implementation.precision-boundaries",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.root",
+      "target": "implementation.cube-api",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.root",
+      "target": "implementation.fusion-composition",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.root",
+      "target": "implementation.scalar-control",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.memory-transfer",
+      "target": "implementation.memory-transfer.input-tile-residency",
+      "matched": true,
+      "prior_score": 2
+    },
+    {
+      "router": "implementation.memory-transfer",
+      "target": "implementation.memory-transfer.coalesce",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.memory-transfer",
+      "target": "implementation.memory-transfer.example.tile-amortization",
+      "matched": false,
+      "prior_score": 1
+    },
+    {
+      "router": "implementation.memory-transfer",
+      "target": "implementation.memory-transfer.cache-hint",
+      "matched": true,
+      "prior_score": 2
+    },
+    {
+      "router": "implementation.memory-transfer",
+      "target": "implementation.memory-transfer.l2-reuse-order",
+      "matched": true,
+      "prior_score": 2
+    },
+    {
+      "router": "implementation.memory-transfer",
+      "target": "implementation.memory-transfer.strided-pad",
+      "matched": true,
+      "prior_score": 2
+    },
+    {
+      "router": "implementation.scalar-control",
+      "target": "implementation.scalar-control.constant_lifetime",
+      "matched": true,
+      "prior_score": 2
+    },
+    {
+      "router": "implementation.scalar-control",
+      "target": "implementation.scalar-control.hot_loop_address",
+      "matched": true,
+      "prior_score": 2
+    },
+    {
+      "router": "implementation.scalar-control",
+      "target": "implementation.scalar-control.tilingdata_access",
+      "matched": true,
+      "prior_score": 2
+    },
+    {
+      "router": "implementation.vector-api",
+      "target": "implementation.vector-api.batch",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.vector-api",
+      "target": "implementation.vector-api.cast-control",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "implementation.vector-api",
+      "target": "implementation.vector-api.cast",
+      "matched": true,
+      "prior_score": 2
+    },
+    {
+      "router": "implementation.vector-api",
+      "target": "implementation.vector-api.compare_select_tail",
+      "matched": true,
+      "prior_score": 2
+    }
+  ]
+}

@@ -1,0 +1,1496 @@
+{
+  "schema_version": "aprof.diagnosis-problem-expansion/v1",
+  "task_id": "raw-case-11",
+  "context_hash": "sha256:2e0ae2c4c6a1a244b4e673cbc90da58b36655c7473e092a47301c186dd21b9c9",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "graph_version": "v0005",
+  "source_context_ref": {
+    "path": "C0-source-only.json",
+    "sha256": "sha256:f3e35e6294c182c04519a000135684df86f2e310857553f6aaa9bf0a4a55b03a"
+  },
+  "retrieval_hash": "sha256:d0c5aa8c72cf844531f958b215779bf90785683aa17a5a73617f7b085b218e46",
+  "request_hash": "sha256:fd01429f5f43406274a1ca2022021a0931f0241d9e409af59290146164d4051f",
+  "request": {
+    "task_id": "raw-case-11",
+    "context_hash": "sha256:2e0ae2c4c6a1a244b4e673cbc90da58b36655c7473e092a47301c186dd21b9c9",
+    "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+    "graph_version": "v0005",
+    "source_context_ref": {
+      "path": "C0-source-only.json",
+      "sha256": "sha256:f3e35e6294c182c04519a000135684df86f2e310857553f6aaa9bf0a4a55b03a"
+    },
+    "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+    "retrieval_hash": "sha256:d0c5aa8c72cf844531f958b215779bf90785683aa17a5a73617f7b085b218e46",
+    "selections": [
+      {
+        "problem_id": "problem.pipeline_serialization",
+        "reason": "Process每个2048tile依序CopyIn/Compute/CopyOut，判断是否有合法跨tile窗口",
+        "trigger": "observation_match",
+        "related_problem_ids": [],
+        "unexplained_observations": []
+      },
+      {
+        "problem_id": "problem.redundant_cast",
+        "reason": "低精度三入一出四Cast，判断是否存在可消除中间dtype边界",
+        "trigger": "observation_match",
+        "related_problem_ids": [],
+        "unexplained_observations": []
+      },
+      {
+        "problem_id": "problem.onchip_capacity_pressure",
+        "reason": "四FP32暂存与四raw队列，区分容量公式与已证压力",
+        "trigger": "observation_match",
+        "related_problem_ids": [],
+        "unexplained_observations": []
+      }
+    ]
+  },
+  "entries": [
+    {
+      "problem_id": "problem.pipeline_serialization",
+      "reason": "Process每个2048tile依序CopyIn/Compute/CopyOut，判断是否有合法跨tile窗口",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [],
+      "title": "搬运与计算串行",
+      "mechanism": "不同tile本可独立的搬运与计算使用同buffer或被过早等待阻断 → 生产消费依赖闭环没有留出下一tile预取窗口 → MTE、Vector或Cube顺次忙而其他流水等待",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "多个tile的CopyIn/Compute/CopyOut及其buffer事件链",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "kernel预取序言；稳态tile循环；排空尾声",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "analysis": {
+        "actions": [
+          {
+            "action_id": "action.software_pipeline_stages",
+            "costs": [
+              "更多物理buffer和事件ID",
+              "增加序言/尾声与尾块分支复杂度，短任务可能付不起成本"
+            ],
+            "intervention": "为合法独立tile建立预取/计算/写回软件流水并配齐事件闭环",
+            "requirements": [
+              "symptom.profile.overlap_low=true",
+              "symptom.source.serial_queue_or_event_order=true",
+              "constraint.semantic_equivalence=true",
+              "constraint.capacity=true",
+              "constraint.dependency_lifetime=true"
+            ]
+          }
+        ],
+        "alternatives": [
+          {
+            "check": "列出等待覆盖的生产消费边和本可独立的部分",
+            "distinction": "等待过宽可导致串行，但不重叠也可能来自真数据依赖",
+            "problem_id": "problem.excessive_sync_scope"
+          },
+          {
+            "check": "先重算峰值，再改事件或预取次序",
+            "distinction": "容量限制与事件安排是不同阻碍",
+            "problem_id": "problem.onchip_capacity_pressure"
+          }
+        ],
+        "counter_checks": [
+          "稳定同对象窗口已持续重叠，反证完全串行解释",
+          "单轮、容量不允许或算法真依赖禁止重叠时，不能建议强行加buffer"
+        ],
+        "limits": [
+          "num=2不等于实际重叠成立",
+          "不复制来源80%等重叠率或收益为目标承诺",
+          "本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。"
+        ],
+        "mechanism_chain": [
+          "不同tile本可独立的搬运与计算使用同buffer或被过早等待阻断",
+          "生产消费依赖闭环没有留出下一tile预取窗口",
+          "MTE、Vector或Cube顺次忙而其他流水等待"
+        ],
+        "objects_and_stages": [
+          "多个tile的CopyIn/Compute/CopyOut及其buffer事件链",
+          "kernel预取序言",
+          "稳态tile循环",
+          "排空尾声"
+        ],
+        "predictions": [
+          "合法软件流水应增加稳态重叠，但总时长仍取决于最慢阶段；这是prediction"
+        ],
+        "supporting_checks": [
+          "把timeline按tile而非聚合比例展开，检查首轮预置和末轮释放",
+          "核对双buffer是否物理独立及容量能同时容纳"
+        ]
+      },
+      "claims": [
+        {
+          "basis": "legacy_seed",
+          "id": "legacy_seed",
+          "limitations": [
+            "旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            0
+          ],
+          "text": "原种子：搬运与计算串行；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_mm_pipe",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3
+          ],
+          "text": "arch22 MatMul文档把同buffer逐K搬入装载计算与流水串行联系，要求事件、容量、循环数和高阶API内部流水一并核对。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_double",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            4,
+            5
+          ],
+          "text": "双缓冲文档要求可重叠预取结构、容量和事件闭合；全载单轮或过度同步时增缓冲可能无收益。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_init",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            6
+          ],
+          "text": "InitBuffer文档定义num为物理内存块数、len以字节计且内部按32字节向上对齐。"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_1",
+          "limitations": [
+            "num=2不等于实际重叠成立",
+            "不复制来源80%等重叠率或收益为目标承诺"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "不同tile本可独立的搬运与计算使用同buffer或被过早等待阻断"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_2",
+          "limitations": [
+            "num=2不等于实际重叠成立",
+            "不复制来源80%等重叠率或收益为目标承诺"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "生产消费依赖闭环没有留出下一tile预取窗口"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_3",
+          "limitations": [
+            "num=2不等于实际重叠成立",
+            "不复制来源80%等重叠率或收益为目标承诺"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "MTE、Vector或Cube顺次忙而其他流水等待"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "prediction_1",
+          "limitations": [
+            "尚无同scope profiling验证，不标为observed或case_support"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "合法软件流水应增加稳态重叠，但总时长仍取决于最慢阶段；这是prediction"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_1",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "把timeline按tile而非聚合比例展开，检查首轮预置和末轮释放"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_2",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "核对双buffer是否物理独立及容量能同时容纳"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_3",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "稳定同对象窗口已持续重叠，反证完全串行解释"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_4",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "单轮、容量不允许或算法真依赖禁止重叠时，不能建议强行加buffer"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_1",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "problem.excessive_sync_scope：等待过宽可导致串行，但不重叠也可能来自真数据依赖；检查：列出等待覆盖的生产消费边和本可独立的部分"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_2",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "problem.onchip_capacity_pressure：容量限制与事件安排是不同阻碍；检查：先重算峰值，再改事件或预取次序"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "intervention",
+          "limitations": [
+            "所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "text": "为合法独立tile建立预取/计算/写回软件流水并配齐事件闭环。代价：更多物理buffer和事件ID；增加序言/尾声与尾块分支复杂度，短任务可能付不起成本"
+        }
+      ],
+      "review": {
+        "discriminating_power": "把timeline按tile而非聚合比例展开，检查首轮预置和末轮释放；核对双buffer是否物理独立及容量能同时容纳；稳定同对象窗口已持续重叠，反证完全串行解释",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "num=2不等于实际重叠成立",
+          "不复制来源80%等重叠率或收益为目标承诺"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      },
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:592927cdbe10444156ea848793b8012a9def81eafd5c36dd4daf3e7a6e8bd5d5",
+          "lines": [
+            6,
+            15
+          ],
+          "original_path": "skills/aprof/optimization/references/pipeline-parallel-optimization-strategies.md",
+          "path": "skills/ascendc-aprof-diagnosis/graph/history/provenance/skills/aprof/optimization/references/pipeline-parallel-optimization-strategies.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:106abe2ae5d0fde1eebe08e995949c674b633584eb1277b828382a132863c50c",
+          "sha256": "sha256:106abe2ae5d0fde1eebe08e995949c674b633584eb1277b828382a132863c50c"
+        },
+        {
+          "excerpt_sha256": "sha256:28ffa9d76883d46d4c3115e15e7b37b63974e9d8ce9469a003250d37dd2eb8e3",
+          "lines": [
+            5,
+            7
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/matmul/arch22/pipeline_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/matmul/arch22/pipeline_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:411edebe99b43b0bb05bac2754c1d4ffd4abe46c726df718c0c1b4a7131eb0ed"
+        },
+        {
+          "excerpt_sha256": "sha256:45711f60b851ff9d3c3805e3a92d835cdee2c5465c506208beffbd197569abb9",
+          "lines": [
+            52,
+            80
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/matmul/arch22/pipeline_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/matmul/arch22/pipeline_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:411edebe99b43b0bb05bac2754c1d4ffd4abe46c726df718c0c1b4a7131eb0ed"
+        },
+        {
+          "excerpt_sha256": "sha256:e10bdb71a109baa5e1f6383282f76aaa1b3077058647107df56c2939a6389526",
+          "lines": [
+            121,
+            134
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/matmul/arch22/pipeline_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/matmul/arch22/pipeline_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:411edebe99b43b0bb05bac2754c1d4ffd4abe46c726df718c0c1b4a7131eb0ed"
+        },
+        {
+          "excerpt_sha256": "sha256:1d79f96e97f30651aaacf0bb67f2d3361b29c71e0ff8897ef5293dff65b215cc",
+          "lines": [
+            80,
+            88
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/elementwise/double_buffer_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/elementwise/double_buffer_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:142cc0055136ff3bc203672f4c4365cf4f09b41a175a7bfa1d89f3df3b2500ae"
+        },
+        {
+          "excerpt_sha256": "sha256:a9c18f7d1d57332297fa98ce0e4e675e13ee85a21a9ea765bf14882859ad7941",
+          "lines": [
+            230,
+            259
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/elementwise/double_buffer_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/elementwise/double_buffer_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:142cc0055136ff3bc203672f4c4365cf4f09b41a175a7bfa1d89f3df3b2500ae"
+        },
+        {
+          "excerpt_sha256": "sha256:e2ee07f2f75d3a3f11d1ba56e11c5cad9974e2e78bb6ce215cd610ef9d8c985d",
+          "lines": [
+            97,
+            108
+          ],
+          "original_path": "docs/zh/api/SIMD-API/basic_api/resource_management/TPipe/InitBuffer.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/resource_management/TPipe/InitBuffer.md",
+          "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+          "sha256": "sha256:36da88132f7d5f62484bc98896bd99577bcce25d71a84e21220731a557aea34d"
+        }
+      ],
+      "body": "# 搬运与计算串行\n\n## 对象、阶段与适用域\n\n- 多个tile的CopyIn/Compute/CopyOut及其buffer事件链\n- kernel预取序言\n- 稳态tile循环\n- 排空尾声\n\n旧scope=all保留作检索范围，机制成立仍须核对目标架构、dtype、shape和API支持。\n\n## 机制链\n\n- 不同tile本可独立的搬运与计算使用同buffer或被过早等待阻断\n- 生产消费依赖闭环没有留出下一tile预取窗口\n- MTE、Vector或Cube顺次忙而其他流水等待\n\n## 预测、支持检查与反证\n\n- 合法软件流水应增加稳态重叠，但总时长仍取决于最慢阶段；这是prediction\n- 把timeline按tile而非聚合比例展开，检查首轮预置和末轮释放\n- 核对双buffer是否物理独立及容量能同时容纳\n- 稳定同对象窗口已持续重叠，反证完全串行解释\n- 单轮、容量不允许或算法真依赖禁止重叠时，不能建议强行加buffer\n\n## 具体替代解释\n\n- problem.excessive_sync_scope：等待过宽可导致串行，但不重叠也可能来自真数据依赖；检查：列出等待覆盖的生产消费边和本可独立的部分\n- problem.onchip_capacity_pressure：容量限制与事件安排是不同阻碍；检查：先重算峰值，再改事件或预取次序\n\n## 候选动作与成本\n\naction.software_pipeline_stages：为合法独立tile建立预取/计算/写回软件流水并配齐事件闭环。\n\n原硬前提：symptom.profile.overlap_low=true；symptom.source.serial_queue_or_event_order=true；constraint.semantic_equivalence=true；constraint.capacity=true；constraint.dependency_lifetime=true。\n\n- 更多物理buffer和事件ID\n- 增加序言/尾声与尾块分支复杂度，短任务可能付不起成本\n\n## 限制与缺口\n\n- num=2不等于实际重叠成立\n- 不复制来源80%等重叠率或收益为目标承诺\n- 本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。\n\n## 逐项主张与依据\n\n### legacy_seed [legacy_seed]\n\n原种子：搬运与计算串行；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。\n\n来源索引：0。限制：旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定\n\n### source_mm_pipe [source_statement]\n\narch22 MatMul文档把同buffer逐K搬入装载计算与流水串行联系，要求事件、容量、循环数和高阶API内部流水一并核对。\n\n来源索引：1, 2, 3。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_double [source_statement]\n\n双缓冲文档要求可重叠预取结构、容量和事件闭合；全载单轮或过度同步时增缓冲可能无收益。\n\n来源索引：4, 5。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_init [source_statement]\n\nInitBuffer文档定义num为物理内存块数、len以字节计且内部按32字节向上对齐。\n\n来源索引：6。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### mechanism_1 [mechanism_inference]\n\n不同tile本可独立的搬运与计算使用同buffer或被过早等待阻断\n\n来源索引：1, 2, 3, 4, 5, 6。限制：num=2不等于实际重叠成立；不复制来源80%等重叠率或收益为目标承诺\n\n### mechanism_2 [mechanism_inference]\n\n生产消费依赖闭环没有留出下一tile预取窗口\n\n来源索引：1, 2, 3, 4, 5, 6。限制：num=2不等于实际重叠成立；不复制来源80%等重叠率或收益为目标承诺\n\n### mechanism_3 [mechanism_inference]\n\nMTE、Vector或Cube顺次忙而其他流水等待\n\n来源索引：1, 2, 3, 4, 5, 6。限制：num=2不等于实际重叠成立；不复制来源80%等重叠率或收益为目标承诺\n\n### prediction_1 [mechanism_inference]\n\n合法软件流水应增加稳态重叠，但总时长仍取决于最慢阶段；这是prediction\n\n来源索引：1, 2, 3, 4, 5, 6。限制：尚无同scope profiling验证，不标为observed或case_support\n\n### check_1 [mechanism_inference]\n\n把timeline按tile而非聚合比例展开，检查首轮预置和末轮释放\n\n来源索引：1, 2, 3, 4, 5, 6。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_2 [mechanism_inference]\n\n核对双buffer是否物理独立及容量能同时容纳\n\n来源索引：1, 2, 3, 4, 5, 6。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_3 [mechanism_inference]\n\n稳定同对象窗口已持续重叠，反证完全串行解释\n\n来源索引：1, 2, 3, 4, 5, 6。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_4 [mechanism_inference]\n\n单轮、容量不允许或算法真依赖禁止重叠时，不能建议强行加buffer\n\n来源索引：1, 2, 3, 4, 5, 6。限制：这是判别程序定义，执行结果由任务证据填充\n\n### alternative_1 [mechanism_inference]\n\nproblem.excessive_sync_scope：等待过宽可导致串行，但不重叠也可能来自真数据依赖；检查：列出等待覆盖的生产消费边和本可独立的部分\n\n来源索引：1, 2, 3, 4, 5, 6。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### alternative_2 [mechanism_inference]\n\nproblem.onchip_capacity_pressure：容量限制与事件安排是不同阻碍；检查：先重算峰值，再改事件或预取次序\n\n来源索引：1, 2, 3, 4, 5, 6。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### intervention [mechanism_inference]\n\n为合法独立tile建立预取/计算/写回软件流水并配齐事件闭环。代价：更多物理buffer和事件ID；增加序言/尾声与尾块分支复杂度，短任务可能付不起成本\n\n来源索引：1, 2, 3, 4, 5, 6。限制：所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+      "source_hash": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74",
+      "template_hash": "sha256:43c6fa4d772489bc988d3d6be8410d59316d4bf81c386e51762683c83c0e83c8",
+      "body_sha256": "sha256:f6563dd272a663892ce80f224863580e1af0bf53a794c5065bfba33e9aa1f450",
+      "scope_status": "match"
+    },
+    {
+      "problem_id": "problem.redundant_cast",
+      "reason": "低精度三入一出四Cast，判断是否存在可消除中间dtype边界",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [],
+      "title": "重复类型转换",
+      "mechanism": "局部链在相邻阶段反复宽窄往返转换 → 部分转换不承担必须的数值边界或消费者dtype契约 → 额外Cast指令、临时buffer与控制增加成本",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "局部计算链中有明确dtype、舍入模式和精度边界的转换",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "kernel载入扩位；中间计算与缩位；最终输出转换",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "analysis": {
+        "actions": [
+          {
+            "action_id": "action.coalesce_cast",
+            "costs": [
+              "扩大中间dtype会增加容量/寄存器压力",
+              "更少转换可能改变舍入、饱和和异常值行为"
+            ],
+            "intervention": "在保留完整数值契约下合并转换或将扩位/缩位移到合法链边界",
+            "requirements": [
+              "symptom.source.redundant_cast=true",
+              "constraint.precision=true",
+              "constraint.semantic_equivalence=true",
+              "constraint.capacity=true"
+            ]
+          }
+        ],
+        "alternatives": [
+          {
+            "check": "按PC拆Cast和Scalar设置",
+            "distinction": "转换指令成本与其参数/控制成本可共存",
+            "problem_id": "problem.control_metadata_overhead"
+          },
+          {
+            "check": "按实际dtype逐阶段核算",
+            "distinction": "宽dtype延长生存期可增容量，删Cast未必省峰值",
+            "problem_id": "problem.onchip_capacity_pressure"
+          }
+        ],
+        "counter_checks": [
+          "中间缩位是算法定义或外部消费者要求时不能删除",
+          "双向Cast通常不互为恒等，缺数值等价证明时维持needs_evidence"
+        ],
+        "limits": [
+          "Cast产品及dtype支持按固定API文档核对",
+          "必须保持原A的精度与语义前提，不能以时延替代精度",
+          "本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。"
+        ],
+        "mechanism_chain": [
+          "局部链在相邻阶段反复宽窄往返转换",
+          "部分转换不承担必须的数值边界或消费者dtype契约",
+          "额外Cast指令、临时buffer与控制增加成本"
+        ],
+        "objects_and_stages": [
+          "局部计算链中有明确dtype、舍入模式和精度边界的转换",
+          "kernel载入扩位",
+          "中间计算与缩位",
+          "最终输出转换"
+        ],
+        "predictions": [
+          "去掉经证明冗余的Cast或调整扩缩位位置可减少指令/临时区；这是prediction"
+        ],
+        "supporting_checks": [
+          "测试/分析正常数、极值、NaN/Inf、舍入与溢出契约，禁止只比较普通随机值",
+          "看源API支持和实际生成指令，语法Cast不必然对应相同成本"
+        ]
+      },
+      "claims": [
+        {
+          "basis": "legacy_seed",
+          "id": "legacy_seed",
+          "limitations": [
+            "旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            0,
+            1
+          ],
+          "text": "原种子：重复类型转换；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_cast",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2
+          ],
+          "text": "Cast文档给出产品支持和转换接口，转换路径必须结合目标dtype和舍入要求核验。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_liveness",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            3,
+            4,
+            5
+          ],
+          "text": "存活分析文档要求沿计算链核算物理峰值，融合可能增加同时活着的输入和多消费者输出，必要时主动拆链。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_vector",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            6,
+            7,
+            8
+          ],
+          "text": "Vector效率文档区分repeat/mask控制、归约指令路径和中间GM往返，count接口与尾处理必须符合API约束。"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_1",
+          "limitations": [
+            "Cast产品及dtype支持按固定API文档核对",
+            "必须保持原A的精度与语义前提，不能以时延替代精度"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "text": "局部链在相邻阶段反复宽窄往返转换"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_2",
+          "limitations": [
+            "Cast产品及dtype支持按固定API文档核对",
+            "必须保持原A的精度与语义前提，不能以时延替代精度"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "text": "部分转换不承担必须的数值边界或消费者dtype契约"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_3",
+          "limitations": [
+            "Cast产品及dtype支持按固定API文档核对",
+            "必须保持原A的精度与语义前提，不能以时延替代精度"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "text": "额外Cast指令、临时buffer与控制增加成本"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "prediction_1",
+          "limitations": [
+            "尚无同scope profiling验证，不标为observed或case_support"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "text": "去掉经证明冗余的Cast或调整扩缩位位置可减少指令/临时区；这是prediction"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_1",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "text": "测试/分析正常数、极值、NaN/Inf、舍入与溢出契约，禁止只比较普通随机值"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_2",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "text": "看源API支持和实际生成指令，语法Cast不必然对应相同成本"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_3",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "text": "中间缩位是算法定义或外部消费者要求时不能删除"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_4",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "text": "双向Cast通常不互为恒等，缺数值等价证明时维持needs_evidence"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_1",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "text": "problem.control_metadata_overhead：转换指令成本与其参数/控制成本可共存；检查：按PC拆Cast和Scalar设置"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_2",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "text": "problem.onchip_capacity_pressure：宽dtype延长生存期可增容量，删Cast未必省峰值；检查：按实际dtype逐阶段核算"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "intervention",
+          "limitations": [
+            "所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "text": "在保留完整数值契约下合并转换或将扩位/缩位移到合法链边界。代价：扩大中间dtype会增加容量/寄存器压力；更少转换可能改变舍入、饱和和异常值行为"
+        }
+      ],
+      "review": {
+        "discriminating_power": "测试/分析正常数、极值、NaN/Inf、舍入与溢出契约，禁止只比较普通随机值；看源API支持和实际生成指令，语法Cast不必然对应相同成本；中间缩位是算法定义或外部消费者要求时不能删除",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "Cast产品及dtype支持按固定API文档核对",
+          "必须保持原A的精度与语义前提，不能以时延替代精度"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      },
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:fc6046ab557edc2427920fd72df3a792b7640585fc670416312cc9c0948147c9",
+          "lines": [
+            65,
+            65
+          ],
+          "original_path": "skills/ascendc-aprof-diagnosis/references/api-algorithm-diagnosis-metrics.md",
+          "path": "workflows/migration/archive/skills/ascendc-aprof-diagnosis/references/api-algorithm-diagnosis-metrics.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:9c1fc5b3c90ba93734ca1e2ff7e074b3091bd506ffdd457165e46f80fdb9a214",
+          "sha256": "sha256:9c1fc5b3c90ba93734ca1e2ff7e074b3091bd506ffdd457165e46f80fdb9a214"
+        },
+        {
+          "excerpt_sha256": "sha256:7a330c74b26bff1596853d8e04a44dfeaf9e8a9fa3e8ff1249e143fb7f406b37",
+          "lines": [
+            61,
+            61
+          ],
+          "original_path": "skills/ascendc-aprof-diagnosis/references/bound-deep-routing.md",
+          "path": "workflows/migration/archive/skills/ascendc-aprof-diagnosis/references/bound-deep-routing.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:620c25b91946e0523ffc99aaddae20b8b6989d8b6a1474d7c15c49cb43bfbbbe",
+          "sha256": "sha256:620c25b91946e0523ffc99aaddae20b8b6989d8b6a1474d7c15c49cb43bfbbbe"
+        },
+        {
+          "excerpt_sha256": "sha256:85aa20463c85a25f635449f07437ced5ba884752304c723589b35f5de2cbd8a4",
+          "lines": [
+            1,
+            40
+          ],
+          "original_path": "docs/zh/api/SIMD-API/basic_api/memory_vector_compute/type_conversion/Cast.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/type_conversion/Cast.md",
+          "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+          "sha256": "sha256:a41d8e8b10d541452de9c4542158d0bba6bc53f15e68c3d1d929712856a11f12"
+        },
+        {
+          "excerpt_sha256": "sha256:4ab728639a7253d7c18577a2d3cce67a90a28d160fcc90be30e4f24501cf37b2",
+          "lines": [
+            7,
+            31
+          ],
+          "original_path": "ops/ops-design-paradigms/references/paradigms/reduction/generic/liveness-fusion.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ops-design-paradigms/references/paradigms/reduction/generic/liveness-fusion.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:08f91ab6c5846b60435aa9e70fed185f0947718604320544a99dbd8132ba8477"
+        },
+        {
+          "excerpt_sha256": "sha256:67d6c06531f1ce7e2dd5f726b793b88708cb6760b7e0039bcfb9e68c7ce31dd3",
+          "lines": [
+            43,
+            50
+          ],
+          "original_path": "ops/ops-design-paradigms/references/paradigms/reduction/generic/liveness-fusion.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ops-design-paradigms/references/paradigms/reduction/generic/liveness-fusion.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:08f91ab6c5846b60435aa9e70fed185f0947718604320544a99dbd8132ba8477"
+        },
+        {
+          "excerpt_sha256": "sha256:9a78768af62323a9c9e8b54b261df2e1b8db85985a1b970261b8f068a19cda46",
+          "lines": [
+            53,
+            92
+          ],
+          "original_path": "ops/ops-design-paradigms/references/paradigms/reduction/generic/liveness-fusion.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ops-design-paradigms/references/paradigms/reduction/generic/liveness-fusion.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:08f91ab6c5846b60435aa9e70fed185f0947718604320544a99dbd8132ba8477"
+        },
+        {
+          "excerpt_sha256": "sha256:9fdf79fde327ec40103f1244c9c79ee4afac5860645886bc8ca27129f5ded562",
+          "lines": [
+            5,
+            7
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:103bb67af7b9bc8316403167dbfd6e57da2a757dd0bfbc8af03336378051b13e"
+        },
+        {
+          "excerpt_sha256": "sha256:8348896087faf9bd588de56b5e1df00baa68d475f1afab6f8e8276e1f9cc60be",
+          "lines": [
+            64,
+            112
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:103bb67af7b9bc8316403167dbfd6e57da2a757dd0bfbc8af03336378051b13e"
+        },
+        {
+          "excerpt_sha256": "sha256:e5e66d6dfee5187142cfec46bffa5d0f200431651a54f2df298a34412ae93434",
+          "lines": [
+            150,
+            172
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:103bb67af7b9bc8316403167dbfd6e57da2a757dd0bfbc8af03336378051b13e"
+        }
+      ],
+      "body": "# 重复类型转换\n\n## 对象、阶段与适用域\n\n- 局部计算链中有明确dtype、舍入模式和精度边界的转换\n- kernel载入扩位\n- 中间计算与缩位\n- 最终输出转换\n\n旧scope=all保留作检索范围，机制成立仍须核对目标架构、dtype、shape和API支持。\n\n## 机制链\n\n- 局部链在相邻阶段反复宽窄往返转换\n- 部分转换不承担必须的数值边界或消费者dtype契约\n- 额外Cast指令、临时buffer与控制增加成本\n\n## 预测、支持检查与反证\n\n- 去掉经证明冗余的Cast或调整扩缩位位置可减少指令/临时区；这是prediction\n- 测试/分析正常数、极值、NaN/Inf、舍入与溢出契约，禁止只比较普通随机值\n- 看源API支持和实际生成指令，语法Cast不必然对应相同成本\n- 中间缩位是算法定义或外部消费者要求时不能删除\n- 双向Cast通常不互为恒等，缺数值等价证明时维持needs_evidence\n\n## 具体替代解释\n\n- problem.control_metadata_overhead：转换指令成本与其参数/控制成本可共存；检查：按PC拆Cast和Scalar设置\n- problem.onchip_capacity_pressure：宽dtype延长生存期可增容量，删Cast未必省峰值；检查：按实际dtype逐阶段核算\n\n## 候选动作与成本\n\naction.coalesce_cast：在保留完整数值契约下合并转换或将扩位/缩位移到合法链边界。\n\n原硬前提：symptom.source.redundant_cast=true；constraint.precision=true；constraint.semantic_equivalence=true；constraint.capacity=true。\n\n- 扩大中间dtype会增加容量/寄存器压力\n- 更少转换可能改变舍入、饱和和异常值行为\n\n## 限制与缺口\n\n- Cast产品及dtype支持按固定API文档核对\n- 必须保持原A的精度与语义前提，不能以时延替代精度\n- 本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。\n\n## 逐项主张与依据\n\n### legacy_seed [legacy_seed]\n\n原种子：重复类型转换；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。\n\n来源索引：0, 1。限制：旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定\n\n### source_cast [source_statement]\n\nCast文档给出产品支持和转换接口，转换路径必须结合目标dtype和舍入要求核验。\n\n来源索引：2。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_liveness [source_statement]\n\n存活分析文档要求沿计算链核算物理峰值，融合可能增加同时活着的输入和多消费者输出，必要时主动拆链。\n\n来源索引：3, 4, 5。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_vector [source_statement]\n\nVector效率文档区分repeat/mask控制、归约指令路径和中间GM往返，count接口与尾处理必须符合API约束。\n\n来源索引：6, 7, 8。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### mechanism_1 [mechanism_inference]\n\n局部链在相邻阶段反复宽窄往返转换\n\n来源索引：2, 3, 4, 5, 6, 7, 8。限制：Cast产品及dtype支持按固定API文档核对；必须保持原A的精度与语义前提，不能以时延替代精度\n\n### mechanism_2 [mechanism_inference]\n\n部分转换不承担必须的数值边界或消费者dtype契约\n\n来源索引：2, 3, 4, 5, 6, 7, 8。限制：Cast产品及dtype支持按固定API文档核对；必须保持原A的精度与语义前提，不能以时延替代精度\n\n### mechanism_3 [mechanism_inference]\n\n额外Cast指令、临时buffer与控制增加成本\n\n来源索引：2, 3, 4, 5, 6, 7, 8。限制：Cast产品及dtype支持按固定API文档核对；必须保持原A的精度与语义前提，不能以时延替代精度\n\n### prediction_1 [mechanism_inference]\n\n去掉经证明冗余的Cast或调整扩缩位位置可减少指令/临时区；这是prediction\n\n来源索引：2, 3, 4, 5, 6, 7, 8。限制：尚无同scope profiling验证，不标为observed或case_support\n\n### check_1 [mechanism_inference]\n\n测试/分析正常数、极值、NaN/Inf、舍入与溢出契约，禁止只比较普通随机值\n\n来源索引：2, 3, 4, 5, 6, 7, 8。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_2 [mechanism_inference]\n\n看源API支持和实际生成指令，语法Cast不必然对应相同成本\n\n来源索引：2, 3, 4, 5, 6, 7, 8。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_3 [mechanism_inference]\n\n中间缩位是算法定义或外部消费者要求时不能删除\n\n来源索引：2, 3, 4, 5, 6, 7, 8。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_4 [mechanism_inference]\n\n双向Cast通常不互为恒等，缺数值等价证明时维持needs_evidence\n\n来源索引：2, 3, 4, 5, 6, 7, 8。限制：这是判别程序定义，执行结果由任务证据填充\n\n### alternative_1 [mechanism_inference]\n\nproblem.control_metadata_overhead：转换指令成本与其参数/控制成本可共存；检查：按PC拆Cast和Scalar设置\n\n来源索引：2, 3, 4, 5, 6, 7, 8。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### alternative_2 [mechanism_inference]\n\nproblem.onchip_capacity_pressure：宽dtype延长生存期可增容量，删Cast未必省峰值；检查：按实际dtype逐阶段核算\n\n来源索引：2, 3, 4, 5, 6, 7, 8。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### intervention [mechanism_inference]\n\n在保留完整数值契约下合并转换或将扩位/缩位移到合法链边界。代价：扩大中间dtype会增加容量/寄存器压力；更少转换可能改变舍入、饱和和异常值行为\n\n来源索引：2, 3, 4, 5, 6, 7, 8。限制：所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.redundant_cast.md",
+      "source_hash": "sha256:c7f8ace396cc0a0f53f4bc0a5b9f0883cbd8b439d45dce74edc1e4f50b1b326d",
+      "template_hash": "sha256:fe97bd9dc8b22c52a371c67881d6826c757827241636b630df7976fae2525a94",
+      "body_sha256": "sha256:3e0cedf7984e00de3b12b5db3601a1803e2c2d9646f20330be58594f088039c2",
+      "scope_status": "match"
+    },
+    {
+      "problem_id": "problem.onchip_capacity_pressure",
+      "reason": "四FP32暂存与四raw队列，区分容量公式与已证压力",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [],
+      "title": "同时存活区间限制片上容量",
+      "mechanism": "按dtype、对齐和深度求出的同时存活物理字节接近合法可用容量 → 余量不足迫使tile/流水深度收缩或中间结果外溢 → 更短tile、额外搬运或无法建立重叠会增加执行成本",
+      "scope": {
+        "dtypes": [
+          "all"
+        ],
+        "platforms": [
+          "all"
+        ],
+        "workloads": [
+          "all"
+        ]
+      },
+      "slots": [
+        {
+          "description": "同时存活的UB/L1/L0 buffer集合及其分配阶段",
+          "kind": "object",
+          "name": "target",
+          "required": true
+        },
+        {
+          "description": "host容量预算；kernel分配、重叠与释放",
+          "kind": "stage",
+          "name": "stage",
+          "required": true
+        },
+        {
+          "description": "绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据",
+          "kind": "workload",
+          "name": "workload",
+          "required": true
+        },
+        {
+          "description": "绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份",
+          "kind": "implementation",
+          "name": "implementation",
+          "required": true
+        }
+      ],
+      "analysis": {
+        "actions": [
+          {
+            "action_id": "action.reuse_disjoint_onchip_buffers",
+            "costs": [
+              "增加alias、阶段完成与所有权审计成本",
+              "将来增加跨阶段重叠会使原复用失效并需重规划"
+            ],
+            "intervention": "让生命周期确实不重叠的片上临时区共享物理空间",
+            "requirements": [
+              "symptom.source.ub_live_bytes_near_capacity=true",
+              "constraint.semantic_equivalence=true",
+              "constraint.capacity=true",
+              "constraint.dependency_lifetime=true"
+            ]
+          }
+        ],
+        "alternatives": [
+          {
+            "check": "分别检查InitBuffer/地址表与编译spill报告",
+            "distinction": "片上UB/L1/L0与Scalar寄存器/栈是不同资源",
+            "problem_id": "problem.register_spill"
+          },
+          {
+            "check": "先容量闭合，再检查可重叠依赖",
+            "distinction": "容量不足可能阻止双缓冲，也可能容量足够但事件串行",
+            "problem_id": "problem.pipeline_serialization"
+          }
+        ],
+        "counter_checks": [
+          "接近容量但没有造成额外成本，只是风险形态而非已证瓶颈",
+          "当前同时存活峰值明显低于可用预算或alias已正确复用则降低本项"
+        ],
+        "limits": [
+          "资源上限、保留区和对齐取目标平台查询值",
+          "不能把节省buffer直接等同于时延收益",
+          "本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。"
+        ],
+        "mechanism_chain": [
+          "按dtype、对齐和深度求出的同时存活物理字节接近合法可用容量",
+          "余量不足迫使tile/流水深度收缩或中间结果外溢",
+          "更短tile、额外搬运或无法建立重叠会增加执行成本"
+        ],
+        "objects_and_stages": [
+          "同时存活的UB/L1/L0 buffer集合及其分配阶段",
+          "host容量预算",
+          "kernel分配、重叠与释放"
+        ],
+        "predictions": [
+          "非重叠生命周期复用可降低物理峰值并放宽tile/流水可行域；这是prediction"
+        ],
+        "supporting_checks": [
+          "用max_t(sum(aligned_bytes_i*depth_i))计算峰值，不能把所有声明简单相加",
+          "复用审查覆盖异步消费者、跨stage事件和scratch，而非仅C++作用域"
+        ]
+      },
+      "claims": [
+        {
+          "basis": "legacy_seed",
+          "id": "legacy_seed",
+          "limitations": [
+            "旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            0
+          ],
+          "text": "原种子：同时存活区间限制片上容量；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_resources",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3
+          ],
+          "text": "FA资源设计按同时存活buffer、queue深度与对齐验算容量；workspace按真实并发槽位和运行时shape分配，host与kernel模型必须一致。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_resident",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            4,
+            5
+          ],
+          "text": "arch35文档区分跨迭代常驻与串行阶段分时复用，并要求重叠流水发生变化时重算生命周期。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_init",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            6
+          ],
+          "text": "InitBuffer文档定义num为物理内存块数、len以字节计且内部按32字节向上对齐。"
+        },
+        {
+          "basis": "source_statement",
+          "id": "source_liveness",
+          "limitations": [
+            "仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            7,
+            8,
+            9
+          ],
+          "text": "存活分析文档要求沿计算链核算物理峰值，融合可能增加同时活着的输入和多消费者输出，必要时主动拆链。"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_1",
+          "limitations": [
+            "资源上限、保留区和对齐取目标平台查询值",
+            "不能把节省buffer直接等同于时延收益"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "按dtype、对齐和深度求出的同时存活物理字节接近合法可用容量"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_2",
+          "limitations": [
+            "资源上限、保留区和对齐取目标平台查询值",
+            "不能把节省buffer直接等同于时延收益"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "余量不足迫使tile/流水深度收缩或中间结果外溢"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "mechanism_3",
+          "limitations": [
+            "资源上限、保留区和对齐取目标平台查询值",
+            "不能把节省buffer直接等同于时延收益"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "更短tile、额外搬运或无法建立重叠会增加执行成本"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "prediction_1",
+          "limitations": [
+            "尚无同scope profiling验证，不标为observed或case_support"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "非重叠生命周期复用可降低物理峰值并放宽tile/流水可行域；这是prediction"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_1",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "用max_t(sum(aligned_bytes_i*depth_i))计算峰值，不能把所有声明简单相加"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_2",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "复用审查覆盖异步消费者、跨stage事件和scratch，而非仅C++作用域"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_3",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "接近容量但没有造成额外成本，只是风险形态而非已证瓶颈"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "check_4",
+          "limitations": [
+            "这是判别程序定义，执行结果由任务证据填充"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "当前同时存活峰值明显低于可用预算或alias已正确复用则降低本项"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_1",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "problem.register_spill：片上UB/L1/L0与Scalar寄存器/栈是不同资源；检查：分别检查InitBuffer/地址表与编译spill报告"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "alternative_2",
+          "limitations": [
+            "替代机制可在不同对象或窗口并存，不是互斥分类"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "problem.pipeline_serialization：容量不足可能阻止双缓冲，也可能容量足够但事件串行；检查：先容量闭合，再检查可重叠依赖"
+        },
+        {
+          "basis": "mechanism_inference",
+          "id": "intervention",
+          "limitations": [
+            "所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划"
+          ],
+          "review_status": "reviewed",
+          "source_indexes": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "text": "让生命周期确实不重叠的片上临时区共享物理空间。代价：增加alias、阶段完成与所有权审计成本；将来增加跨阶段重叠会使原复用失效并需重规划"
+        }
+      ],
+      "review": {
+        "discriminating_power": "用max_t(sum(aligned_bytes_i*depth_i))计算峰值，不能把所有声明简单相加；复用审查覆盖异步消费者、跨stage事件和scratch，而非仅C++作用域；接近容量但没有造成额外成本，只是风险形态而非已证瓶颈",
+        "gaps": [
+          "尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。",
+          "资源上限、保留区和对齐取目标平台查询值",
+          "不能把节省buffer直接等同于时延收益"
+        ],
+        "observed_frequency": "unknown",
+        "source_credibility": "固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。",
+        "state": "reviewed_with_limits"
+      },
+      "sources": [
+        {
+          "excerpt_sha256": "sha256:9bfd9df5863281f66bf903b876b9e2aabd3faad27d9687f6230baba8f373537a",
+          "lines": [
+            8,
+            16
+          ],
+          "original_path": "skills/aprof/optimization/references/onchip-memory-optimization-strategies.md",
+          "path": "skills/ascendc-aprof-diagnosis/graph/history/provenance/skills/aprof/optimization/references/onchip-memory-optimization-strategies.md",
+          "revision": "aprof-1.1.0-pre-governance:sha256:e7f4c274e3b3dbf51286c3131d382225cec631480111322fc8beca9b0a6f5de0",
+          "sha256": "sha256:e7f4c274e3b3dbf51286c3131d382225cec631480111322fc8beca9b0a6f5de0"
+        },
+        {
+          "excerpt_sha256": "sha256:7a2aa6fa37ba962229cc64f5a0a1c228b646742815f1bfefacdbc3571d2a495e",
+          "lines": [
+            13,
+            63
+          ],
+          "original_path": "community/ops/ascendc-evolution-strategies/references/tiling-design/flashattention/design/resources.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/community/ops/ascendc-evolution-strategies/references/tiling-design/flashattention/design/resources.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:36c29cd0eb871d5357a461228ea4e7431caf25f889fb3ae5c1ac7753fcfe5f0e"
+        },
+        {
+          "excerpt_sha256": "sha256:ba293ef2818b5669f45a0ab821f951aa89de9e104fd994da8b4b75dc4e0e243a",
+          "lines": [
+            188,
+            243
+          ],
+          "original_path": "community/ops/ascendc-evolution-strategies/references/tiling-design/flashattention/design/resources.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/community/ops/ascendc-evolution-strategies/references/tiling-design/flashattention/design/resources.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:36c29cd0eb871d5357a461228ea4e7431caf25f889fb3ae5c1ac7753fcfe5f0e"
+        },
+        {
+          "excerpt_sha256": "sha256:31baa80c362cb00a6695a243ecf7134ebef90cc32fd8c6960f1e5868f374a16a",
+          "lines": [
+            285,
+            301
+          ],
+          "original_path": "community/ops/ascendc-evolution-strategies/references/tiling-design/flashattention/design/resources.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/community/ops/ascendc-evolution-strategies/references/tiling-design/flashattention/design/resources.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:36c29cd0eb871d5357a461228ea4e7431caf25f889fb3ae5c1ac7753fcfe5f0e"
+        },
+        {
+          "excerpt_sha256": "sha256:d3920eeb4b4de9e9825bed4b1e64aa0dd2873d63403e80f09d69a444c98339bd",
+          "lines": [
+            19,
+            46
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/arch35/ub_resident_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/arch35/ub_resident_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:d097c7e2d7cd4b5473dfe5fb52a6c9bd05e71df8d15389545f1c2ff7c68dde78"
+        },
+        {
+          "excerpt_sha256": "sha256:596ea95b9ccca168b15a818fc0954785262653b5e14f933b33829f2a978a00de",
+          "lines": [
+            158,
+            172
+          ],
+          "original_path": "ops/ascendc-performance-best-practices/references/common/arch35/ub_resident_design.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/arch35/ub_resident_design.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:d097c7e2d7cd4b5473dfe5fb52a6c9bd05e71df8d15389545f1c2ff7c68dde78"
+        },
+        {
+          "excerpt_sha256": "sha256:e2ee07f2f75d3a3f11d1ba56e11c5cad9974e2e78bb6ce215cd610ef9d8c985d",
+          "lines": [
+            97,
+            108
+          ],
+          "original_path": "docs/zh/api/SIMD-API/basic_api/resource_management/TPipe/InitBuffer.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/resource_management/TPipe/InitBuffer.md",
+          "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+          "sha256": "sha256:36da88132f7d5f62484bc98896bd99577bcce25d71a84e21220731a557aea34d"
+        },
+        {
+          "excerpt_sha256": "sha256:4ab728639a7253d7c18577a2d3cce67a90a28d160fcc90be30e4f24501cf37b2",
+          "lines": [
+            7,
+            31
+          ],
+          "original_path": "ops/ops-design-paradigms/references/paradigms/reduction/generic/liveness-fusion.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ops-design-paradigms/references/paradigms/reduction/generic/liveness-fusion.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:08f91ab6c5846b60435aa9e70fed185f0947718604320544a99dbd8132ba8477"
+        },
+        {
+          "excerpt_sha256": "sha256:67d6c06531f1ce7e2dd5f726b793b88708cb6760b7e0039bcfb9e68c7ce31dd3",
+          "lines": [
+            43,
+            50
+          ],
+          "original_path": "ops/ops-design-paradigms/references/paradigms/reduction/generic/liveness-fusion.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ops-design-paradigms/references/paradigms/reduction/generic/liveness-fusion.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:08f91ab6c5846b60435aa9e70fed185f0947718604320544a99dbd8132ba8477"
+        },
+        {
+          "excerpt_sha256": "sha256:9a78768af62323a9c9e8b54b261df2e1b8db85985a1b970261b8f068a19cda46",
+          "lines": [
+            53,
+            92
+          ],
+          "original_path": "ops/ops-design-paradigms/references/paradigms/reduction/generic/liveness-fusion.md",
+          "path": "skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ops-design-paradigms/references/paradigms/reduction/generic/liveness-fusion.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:08f91ab6c5846b60435aa9e70fed185f0947718604320544a99dbd8132ba8477"
+        }
+      ],
+      "body": "# 同时存活区间限制片上容量\n\n## 对象、阶段与适用域\n\n- 同时存活的UB/L1/L0 buffer集合及其分配阶段\n- host容量预算\n- kernel分配、重叠与释放\n\n旧scope=all保留作检索范围，机制成立仍须核对目标架构、dtype、shape和API支持。\n\n## 机制链\n\n- 按dtype、对齐和深度求出的同时存活物理字节接近合法可用容量\n- 余量不足迫使tile/流水深度收缩或中间结果外溢\n- 更短tile、额外搬运或无法建立重叠会增加执行成本\n\n## 预测、支持检查与反证\n\n- 非重叠生命周期复用可降低物理峰值并放宽tile/流水可行域；这是prediction\n- 用max_t(sum(aligned_bytes_i*depth_i))计算峰值，不能把所有声明简单相加\n- 复用审查覆盖异步消费者、跨stage事件和scratch，而非仅C++作用域\n- 接近容量但没有造成额外成本，只是风险形态而非已证瓶颈\n- 当前同时存活峰值明显低于可用预算或alias已正确复用则降低本项\n\n## 具体替代解释\n\n- problem.register_spill：片上UB/L1/L0与Scalar寄存器/栈是不同资源；检查：分别检查InitBuffer/地址表与编译spill报告\n- problem.pipeline_serialization：容量不足可能阻止双缓冲，也可能容量足够但事件串行；检查：先容量闭合，再检查可重叠依赖\n\n## 候选动作与成本\n\naction.reuse_disjoint_onchip_buffers：让生命周期确实不重叠的片上临时区共享物理空间。\n\n原硬前提：symptom.source.ub_live_bytes_near_capacity=true；constraint.semantic_equivalence=true；constraint.capacity=true；constraint.dependency_lifetime=true。\n\n- 增加alias、阶段完成与所有权审计成本\n- 将来增加跨阶段重叠会使原复用失效并需重规划\n\n## 限制与缺口\n\n- 资源上限、保留区和对齐取目标平台查询值\n- 不能把节省buffer直接等同于时延收益\n- 本轮无同任务profile、无case_support、无收益或发生频率声明；源码形态只支持待核验候选。\n\n## 逐项主张与依据\n\n### legacy_seed [legacy_seed]\n\n原种子：同时存活区间限制片上容量；原learning={\"bias\": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。\n\n来源索引：0。限制：旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定\n\n### source_resources [source_statement]\n\nFA资源设计按同时存活buffer、queue深度与对齐验算容量；workspace按真实并发槽位和运行时shape分配，host与kernel模型必须一致。\n\n来源索引：1, 2, 3。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_resident [source_statement]\n\narch35文档区分跨迭代常驻与串行阶段分时复用，并要求重叠流水发生变化时重算生命周期。\n\n来源索引：4, 5。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_init [source_statement]\n\nInitBuffer文档定义num为物理内存块数、len以字节计且内部按32字节向上对齐。\n\n来源索引：6。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### source_liveness [source_statement]\n\n存活分析文档要求沿计算链核算物理峰值，融合可能增加同时活着的输入和多消费者输出，必要时主动拆链。\n\n来源索引：7, 8, 9。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持\n\n### mechanism_1 [mechanism_inference]\n\n按dtype、对齐和深度求出的同时存活物理字节接近合法可用容量\n\n来源索引：1, 2, 3, 4, 5, 6, 7, 8, 9。限制：资源上限、保留区和对齐取目标平台查询值；不能把节省buffer直接等同于时延收益\n\n### mechanism_2 [mechanism_inference]\n\n余量不足迫使tile/流水深度收缩或中间结果外溢\n\n来源索引：1, 2, 3, 4, 5, 6, 7, 8, 9。限制：资源上限、保留区和对齐取目标平台查询值；不能把节省buffer直接等同于时延收益\n\n### mechanism_3 [mechanism_inference]\n\n更短tile、额外搬运或无法建立重叠会增加执行成本\n\n来源索引：1, 2, 3, 4, 5, 6, 7, 8, 9。限制：资源上限、保留区和对齐取目标平台查询值；不能把节省buffer直接等同于时延收益\n\n### prediction_1 [mechanism_inference]\n\n非重叠生命周期复用可降低物理峰值并放宽tile/流水可行域；这是prediction\n\n来源索引：1, 2, 3, 4, 5, 6, 7, 8, 9。限制：尚无同scope profiling验证，不标为observed或case_support\n\n### check_1 [mechanism_inference]\n\n用max_t(sum(aligned_bytes_i*depth_i))计算峰值，不能把所有声明简单相加\n\n来源索引：1, 2, 3, 4, 5, 6, 7, 8, 9。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_2 [mechanism_inference]\n\n复用审查覆盖异步消费者、跨stage事件和scratch，而非仅C++作用域\n\n来源索引：1, 2, 3, 4, 5, 6, 7, 8, 9。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_3 [mechanism_inference]\n\n接近容量但没有造成额外成本，只是风险形态而非已证瓶颈\n\n来源索引：1, 2, 3, 4, 5, 6, 7, 8, 9。限制：这是判别程序定义，执行结果由任务证据填充\n\n### check_4 [mechanism_inference]\n\n当前同时存活峰值明显低于可用预算或alias已正确复用则降低本项\n\n来源索引：1, 2, 3, 4, 5, 6, 7, 8, 9。限制：这是判别程序定义，执行结果由任务证据填充\n\n### alternative_1 [mechanism_inference]\n\nproblem.register_spill：片上UB/L1/L0与Scalar寄存器/栈是不同资源；检查：分别检查InitBuffer/地址表与编译spill报告\n\n来源索引：1, 2, 3, 4, 5, 6, 7, 8, 9。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### alternative_2 [mechanism_inference]\n\nproblem.pipeline_serialization：容量不足可能阻止双缓冲，也可能容量足够但事件串行；检查：先容量闭合，再检查可重叠依赖\n\n来源索引：1, 2, 3, 4, 5, 6, 7, 8, 9。限制：替代机制可在不同对象或窗口并存，不是互斥分类\n\n### intervention [mechanism_inference]\n\n让生命周期确实不重叠的片上临时区共享物理空间。代价：增加alias、阶段完成与所有权审计成本；将来增加跨阶段重叠会使原复用失效并需重规划\n\n来源索引：1, 2, 3, 4, 5, 6, 7, 8, 9。限制：所有原A硬前提与invariants保留；动作只在实例化与证据绑定后进入规划",
+      "source_path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+      "source_hash": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96",
+      "template_hash": "sha256:cec5e161af8361bca948389c30b1a68525a0177528274ead1fa69aac08a91374",
+      "body_sha256": "sha256:76325b5760efdfccc72653d8e96e7cc8718d6059de8ddf7c7fef1139a9bf044c",
+      "scope_status": "match"
+    }
+  ],
+  "limitations": [
+    "正文由调用者按阅读理由选择；展开不表示机制成立、被排除或 Action 已就绪。",
+    "scope match 仅用于检索，不授权平台能力；原始证据及未知项仍由任务推理核验。",
+    "正文 hash 证明交付内容可回放；不能据此证明 Agent 已理解或采用该内容。"
+  ]
+}

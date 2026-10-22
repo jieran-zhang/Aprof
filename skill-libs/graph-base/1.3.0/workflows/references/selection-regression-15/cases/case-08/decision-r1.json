@@ -1,0 +1,1590 @@
+{
+  "schema_version": "aprof.action-decision/v2",
+  "task_id": "case-08",
+  "context_hash": "sha256:e63e92468f4ef69f2b2d4aa1875068e5fd8d11135ecc0492ab287e18f3aba6d2",
+  "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+  "reasoning_ref": {
+    "path": "reasoning-r1.json",
+    "sha256": "sha256:683445a6c4033bfad769e194e260d3729f687b2bf47efd88417f27c476edbbce"
+  },
+  "reasoning_hash": "sha256:53bfa604d088537f46feefb7fae0d41912afa361af60626dd09fa40766391318",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/ec82d8f535262a6e43869d71bce0e77d91aa71040c5f7f87a8e56f5adfd6f1e8.json",
+    "sha256": "sha256:fde21372195004f2ae06c2a295edd3ca726b0f00da220aa64ef8f1c0bc6507e2"
+  },
+  "round": 1,
+  "current_parent_ref": {
+    "path": "source-identity.json",
+    "sha256": "sha256:6a5e650109b9038b520ed2d4be0e20d887c0c005141f7bae263eec48b3f9a6ef"
+  },
+  "opportunities": [
+    {
+      "id": "geometry",
+      "hypothesis_id": "h-geometry",
+      "action_id": null,
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "7",
+        "11",
+        "13",
+        "19",
+        "2",
+        "4",
+        "6",
+        "10",
+        "14",
+        "16",
+        "20",
+        "3",
+        "15",
+        "5",
+        "8",
+        "12",
+        "18",
+        "9",
+        "17"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "workload.matrix"
+      ],
+      "cost_mechanism": "跨通道块保存派生几何D=H(B(G(n,p)))，每owner独占[n,c0:c1,p0:p1]；先算一次坐标/有效邻点/分轴权重，逐c保留原8项乘法与累加顺序。",
+      "predictions": [
+        {
+          "id": "geometry-work",
+          "kind": "source_work",
+          "statement": "几何生成N*C*S降为N*S*ceil(C/Ct)，原grid读取同因子减少；仍有K*N*C*S体素读取上界",
+          "check_method": "逐域静态计数并核对原地址/运算次序；实施后再对照差异",
+          "on_support": "支持该工作减少预测，尚不证明时间收益",
+          "on_refute": "若工作已被编译消除或新增代价抵消，重开比较"
+        },
+        {
+          "id": "geometry-time",
+          "kind": "performance",
+          "statement": "在合法完整正确性后检验 跨通道块保存派生几何D=H(B(G(n,p)))，每owner独占[n,c0:c1,p0:p1]；先算一次坐标/有效邻点/分轴权重，逐c保留原8项乘法与累加顺序。 是否降低同协议Task时间",
+          "check_method": "本轮禁止硬件；将来完整matrix20按统一Task协议测量，分域观察",
+          "on_support": "工程收益证据仍与机制归因分开",
+          "on_refute": "C=1或NS小到task不足、D状态迫使St太小时，独立空间批量vector更优"
+        }
+      ],
+      "performance_hypotheses": [],
+      "unknowns": [],
+      "strongest_alternative_id": "vector",
+      "comparison": "几何生成N*C*S降为N*S*ceil(C/Ct)，原grid读取同因子减少；仍有K*N*C*S体素读取上界；付出 D存储A(St*(K*3*8+K*4+maskBytes))；按基坐标差分可缩小但需证明；owner矩形改变task数及输出跨C间隔，私有数组会有spill风险；替代敏感条件：C=1或NS小到task不足、D状态迫使St太小时，独立空间批量vector更优",
+      "disposition": "selected",
+      "reason": "跨通道块保存派生几何D=H(B(G(n,p)))，每owner独占[n,c0:c1,p0:p1]；先算一次坐标/有效邻点/分轴权重，逐c保留原8项乘法与累加顺序。；C=1或NS小到task不足、D状态迫使St太小时，独立空间批量vector更优",
+      "analysis": {
+        "intent_gap": "保存派生数值几何D，既不是原输入块驻留，也不是控制地址外提；当前注册Action没有该意图，需审阅提案。",
+        "work_delta": [
+          {
+            "id": "geometry-reduced",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "float16_bilinear_nonreflection",
+              "float32_bilinear_nonreflection",
+              "float16_nearest_nonreflection",
+              "float16_nearest_reflection",
+              "float32_nearest_nonreflection",
+              "float16_bilinear_reflection"
+            ],
+            "change": "reduced",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "N*S*(C-ceil(C/Ct))",
+              "unit": "removed geometry generation/invocation",
+              "symbols": [
+                {
+                  "name": "N",
+                  "meaning": "batch数量",
+                  "unit": "batch"
+                },
+                {
+                  "name": "S",
+                  "meaning": "grid输出空间点数",
+                  "unit": "point"
+                },
+                {
+                  "name": "C",
+                  "meaning": "grid输入通道数",
+                  "unit": "channel"
+                },
+                {
+                  "name": "Ct",
+                  "meaning": "同owner复用的通道数",
+                  "unit": "channel"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "跨通道块保存派生几何D=H(B(G(n,p)))，每owner独占[n,c0:c1,p0:p1]；先算一次坐标/有效邻点/分轴权重，逐c保留原8项乘法与累加顺序。"
+          },
+          {
+            "id": "geometry-retained",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "float16_bilinear_nonreflection",
+              "float32_bilinear_nonreflection",
+              "float16_nearest_nonreflection",
+              "float16_nearest_reflection",
+              "float32_nearest_nonreflection",
+              "float16_bilinear_reflection"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "qualitative",
+              "expression": "体素读取、插值累加、half转换仍逐输出；不把几何复用算成原X数据复用",
+              "unit": "separate logical operations/bytes",
+              "symbols": [],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "保留项不能消失在整体覆盖声明中"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "geometry-coverage-float16_bilinear_nonreflection",
+            "domain_id": "float16_bilinear_nonreflection",
+            "status": "partial",
+            "region": "跨通道块保存派生几何D=H(B(G(n,p)))，每owner独占[n,c0:c1,p0:p1]；先算一次坐标/有效邻点/分轴权重，逐c保留原8项乘法与累加顺序。；域=float16_bilinear_nonreflection",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "geometry-coverage-float32_bilinear_nonreflection",
+            "domain_id": "float32_bilinear_nonreflection",
+            "status": "partial",
+            "region": "跨通道块保存派生几何D=H(B(G(n,p)))，每owner独占[n,c0:c1,p0:p1]；先算一次坐标/有效邻点/分轴权重，逐c保留原8项乘法与累加顺序。；域=float32_bilinear_nonreflection",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "geometry-coverage-float16_nearest_nonreflection",
+            "domain_id": "float16_nearest_nonreflection",
+            "status": "partial",
+            "region": "跨通道块保存派生几何D=H(B(G(n,p)))，每owner独占[n,c0:c1,p0:p1]；先算一次坐标/有效邻点/分轴权重，逐c保留原8项乘法与累加顺序。；域=float16_nearest_nonreflection",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "geometry-coverage-float16_nearest_reflection",
+            "domain_id": "float16_nearest_reflection",
+            "status": "partial",
+            "region": "跨通道块保存派生几何D=H(B(G(n,p)))，每owner独占[n,c0:c1,p0:p1]；先算一次坐标/有效邻点/分轴权重，逐c保留原8项乘法与累加顺序。；域=float16_nearest_reflection",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "geometry-coverage-float32_nearest_nonreflection",
+            "domain_id": "float32_nearest_nonreflection",
+            "status": "partial",
+            "region": "跨通道块保存派生几何D=H(B(G(n,p)))，每owner独占[n,c0:c1,p0:p1]；先算一次坐标/有效邻点/分轴权重，逐c保留原8项乘法与累加顺序。；域=float32_nearest_nonreflection",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "geometry-coverage-float16_bilinear_reflection",
+            "domain_id": "float16_bilinear_reflection",
+            "status": "partial",
+            "region": "跨通道块保存派生几何D=H(B(G(n,p)))，每owner独占[n,c0:c1,p0:p1]；先算一次坐标/有效邻点/分轴权重，逐c保留原8项乘法与累加顺序。；域=float16_bilinear_reflection",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "geometry-cost",
+            "domain_ids": [
+              "float16_bilinear_nonreflection",
+              "float32_bilinear_nonreflection",
+              "float16_nearest_nonreflection",
+              "float16_nearest_reflection",
+              "float32_nearest_nonreflection",
+              "float16_bilinear_reflection"
+            ],
+            "dimension": "resource_access_sync",
+            "change": {
+              "mode": "symbolic",
+              "expression": "A(St*(K*3*8+K*4+bm))+Tmp+F",
+              "unit": "geometry plus scratch byte; outputs counted separately",
+              "symbols": [
+                {
+                  "name": "A",
+                  "meaning": "按已核验API字节对齐的向上取整函数",
+                  "unit": "byte->byte"
+                },
+                {
+                  "name": "St",
+                  "meaning": "空间片点数",
+                  "unit": "point"
+                },
+                {
+                  "name": "K",
+                  "meaning": "nearest=1或bilinear=8邻点数",
+                  "unit": "neighbor"
+                },
+                {
+                  "name": "bm",
+                  "meaning": "每点有效标记的完整分配",
+                  "unit": "byte/point"
+                },
+                {
+                  "name": "Tmp",
+                  "meaning": "目标SDK/API要求的临时区",
+                  "unit": "byte"
+                },
+                {
+                  "name": "F",
+                  "meaning": "对齐外固定保留区",
+                  "unit": "byte"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "consequence": "C=1或NS小到task不足、D状态迫使St太小时，独立空间批量vector更优"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "geometry-residual",
+            "domain_ids": [
+              "float16_bilinear_nonreflection",
+              "float32_bilinear_nonreflection",
+              "float16_nearest_nonreflection",
+              "float16_nearest_reflection",
+              "float32_nearest_nonreflection",
+              "float16_bilinear_reflection"
+            ],
+            "remaining_work": "体素读取、插值累加、half转换仍逐输出；不把几何复用算成原X数据复用",
+            "next_step": "C=1或NS小到task不足、D状态迫使St太小时，独立空间批量vector更优",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling"
+            ]
+          }
+        ],
+        "no_alternative_reason": null
+      }
+    },
+    {
+      "id": "vector",
+      "hypothesis_id": "h-vector",
+      "action_id": "action.vectorize_scalar_loop",
+      "action_instance_id": "vector-r1",
+      "case_ids": [
+        "1",
+        "7",
+        "11",
+        "13",
+        "19",
+        "2",
+        "4",
+        "6",
+        "10",
+        "14",
+        "16",
+        "20",
+        "3",
+        "15",
+        "5",
+        "8",
+        "12",
+        "18",
+        "9",
+        "17"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "workload.matrix"
+      ],
+      "cost_mechanism": "固定n/c的连续p片批量处理grid转换、坐标与padding，源体素仍按合法地址scalar加载到UB，三线性计算使用FP32向量序列并保持原顺序。",
+      "predictions": [
+        {
+          "id": "vector-work",
+          "kind": "source_work",
+          "statement": "N*C*S次scalar坐标/算术改为片级API，体素间接读取仍最多K*N*C*S；不声称GM vector Gather存在",
+          "check_method": "逐域静态计数并核对原地址/运算次序；实施后再对照差异",
+          "on_support": "支持该工作减少预测，尚不证明时间收益",
+          "on_refute": "若工作已被编译消除或新增代价抵消，重开比较"
+        },
+        {
+          "id": "vector-time",
+          "kind": "performance",
+          "statement": "在合法完整正确性后检验 固定n/c的连续p片批量处理grid转换、坐标与padding，源体素仍按合法地址scalar加载到UB，三线性计算使用FP32向量序列并保持原顺序。 是否降低同协议Task时间",
+          "check_method": "本轮禁止硬件；将来完整matrix20按统一Task协议测量，分域观察",
+          "on_support": "工程收益证据仍与机制归因分开",
+          "on_refute": "C较大且几何支配时geometry更少重复计算；C=1且St大时vector更优"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_scalar_hot",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "vector-time",
+          "unknown_id": "vector-perf-legacy_symptom_profile_scalar_hot",
+          "reason": "源码支持结构假设，编译器/关键路径和实际时间未测；不作为实施门禁"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "vector-time",
+          "unknown_id": "vector-perf-cost_reduction",
+          "reason": "源码支持结构假设，编译器/关键路径和实际时间未测；不作为实施门禁"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "vector-constraint.semantic_equivalence",
+          "kind": "implementation_safety",
+          "fact": "constraint.semantic_equivalence",
+          "expected_state": true,
+          "statement": "核验坐标floor/round-even/reflection及每元素FP32累加顺序、NaN/Inf和最终Cast，不能借Vector名称证明等价。",
+          "affects": "implementation_legality",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "vector-constraint.capacity",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "多份FP32坐标/权重/neighbor区与mask、padding/API tmp；reflection/floor/round-even及NaN需逐API核验；实际可用UB、API tmp及保留区尚未查询，只有公式不授权容量。",
+          "affects": "implementation_legality",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "vector-perf-legacy_symptom_profile_scalar_hot",
+          "kind": "performance",
+          "fact": "symptom.profile.scalar_hot",
+          "expected_state": null,
+          "statement": "尚未测量 固定n/c的连续p片批量处理grid转换、坐标与padding，源体素仍按合法地址scalar加载到UB，三线性计算使用FP32向量序列并保持原顺序。 的实际指令/等待减少是否超过 多份FP32坐标/权重/neighbor区与mask、padding/API tmp；reflection/floor/round-even及NaN需逐API核验",
+          "affects": "benefit_magnitude and priority",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "vector-perf-cost_reduction",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "尚未测量 固定n/c的连续p片批量处理grid转换、坐标与padding，源体素仍按合法地址scalar加载到UB，三线性计算使用FP32向量序列并保持原顺序。 的实际指令/等待减少是否超过 多份FP32坐标/权重/neighbor区与mask、padding/API tmp；reflection/floor/round-even及NaN需逐API核验",
+          "affects": "benefit_magnitude and priority",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "vector-api",
+          "kind": "implementation_safety",
+          "fact": "constraint.api_legality",
+          "expected_state": true,
+          "statement": "目标910C/A3 SDK的具体同宽UB Gather、offset范围及dtype支持尚未核验；不使用950 GM Gather。",
+          "affects": "implementation_legality",
+          "resolution": "check_before_implementation"
+        }
+      ],
+      "strongest_alternative_id": "geometry",
+      "comparison": "N*C*S次scalar坐标/算术改为片级API，体素间接读取仍最多K*N*C*S；不声称GM vector Gather存在；付出 多份FP32坐标/权重/neighbor区与mask、padding/API tmp；reflection/floor/round-even及NaN需逐API核验；替代敏感条件：C较大且几何支配时geometry更少重复计算；C=1且St大时vector更优",
+      "disposition": "deferred",
+      "reason": "固定n/c的连续p片批量处理grid转换、坐标与padding，源体素仍按合法地址scalar加载到UB，三线性计算使用FP32向量序列并保持原顺序。；C较大且几何支配时geometry更少重复计算；C=1且St大时vector更优",
+      "analysis": {
+        "intent_gap": null,
+        "work_delta": [
+          {
+            "id": "vector-reduced",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "float16_bilinear_nonreflection",
+              "float32_bilinear_nonreflection",
+              "float16_nearest_nonreflection",
+              "float16_nearest_reflection",
+              "float32_nearest_nonreflection",
+              "float16_bilinear_reflection"
+            ],
+            "change": "reduced",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "N*C*S",
+              "unit": "scalar geometry iteration eligible for vector replacement/invocation",
+              "symbols": [
+                {
+                  "name": "N",
+                  "meaning": "batch数量",
+                  "unit": "batch"
+                },
+                {
+                  "name": "C",
+                  "meaning": "grid输入通道数",
+                  "unit": "channel"
+                },
+                {
+                  "name": "S",
+                  "meaning": "grid输出空间点数",
+                  "unit": "point"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "固定n/c的连续p片批量处理grid转换、坐标与padding，源体素仍按合法地址scalar加载到UB，三线性计算使用FP32向量序列并保持原顺序。"
+          },
+          {
+            "id": "vector-retained",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "float16_bilinear_nonreflection",
+              "float32_bilinear_nonreflection",
+              "float16_nearest_nonreflection",
+              "float16_nearest_reflection",
+              "float32_nearest_nonreflection",
+              "float16_bilinear_reflection"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "qualitative",
+              "expression": "跨channel重复几何不消除，随机体素读仍在；nearest算术少，收益未知",
+              "unit": "separate logical operations/bytes",
+              "symbols": [],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "保留项不能消失在整体覆盖声明中"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "vector-coverage-float16_bilinear_nonreflection",
+            "domain_id": "float16_bilinear_nonreflection",
+            "status": "partial",
+            "region": "固定n/c的连续p片批量处理grid转换、坐标与padding，源体素仍按合法地址scalar加载到UB，三线性计算使用FP32向量序列并保持原顺序。；域=float16_bilinear_nonreflection",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "vector-coverage-float32_bilinear_nonreflection",
+            "domain_id": "float32_bilinear_nonreflection",
+            "status": "partial",
+            "region": "固定n/c的连续p片批量处理grid转换、坐标与padding，源体素仍按合法地址scalar加载到UB，三线性计算使用FP32向量序列并保持原顺序。；域=float32_bilinear_nonreflection",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "vector-coverage-float16_nearest_nonreflection",
+            "domain_id": "float16_nearest_nonreflection",
+            "status": "partial",
+            "region": "固定n/c的连续p片批量处理grid转换、坐标与padding，源体素仍按合法地址scalar加载到UB，三线性计算使用FP32向量序列并保持原顺序。；域=float16_nearest_nonreflection",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "vector-coverage-float16_nearest_reflection",
+            "domain_id": "float16_nearest_reflection",
+            "status": "partial",
+            "region": "固定n/c的连续p片批量处理grid转换、坐标与padding，源体素仍按合法地址scalar加载到UB，三线性计算使用FP32向量序列并保持原顺序。；域=float16_nearest_reflection",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "vector-coverage-float32_nearest_nonreflection",
+            "domain_id": "float32_nearest_nonreflection",
+            "status": "partial",
+            "region": "固定n/c的连续p片批量处理grid转换、坐标与padding，源体素仍按合法地址scalar加载到UB，三线性计算使用FP32向量序列并保持原顺序。；域=float32_nearest_nonreflection",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "vector-coverage-float16_bilinear_reflection",
+            "domain_id": "float16_bilinear_reflection",
+            "status": "partial",
+            "region": "固定n/c的连续p片批量处理grid转换、坐标与padding，源体素仍按合法地址scalar加载到UB，三线性计算使用FP32向量序列并保持原顺序。；域=float16_bilinear_reflection",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "vector-cost",
+            "domain_ids": [
+              "float16_bilinear_nonreflection",
+              "float32_bilinear_nonreflection",
+              "float16_nearest_nonreflection",
+              "float16_nearest_reflection",
+              "float32_nearest_nonreflection",
+              "float16_bilinear_reflection"
+            ],
+            "dimension": "resource_access_sync",
+            "change": {
+              "mode": "symbolic",
+              "expression": "A(3*St*4)+A(K*St*4)+Tmp+F",
+              "unit": "lower-bound visible coordinate and neighbor UB byte; masks/output extra",
+              "symbols": [
+                {
+                  "name": "A",
+                  "meaning": "按已核验API字节对齐的向上取整函数",
+                  "unit": "byte->byte"
+                },
+                {
+                  "name": "St",
+                  "meaning": "空间片点数",
+                  "unit": "point"
+                },
+                {
+                  "name": "K",
+                  "meaning": "nearest=1或bilinear=8邻点数",
+                  "unit": "neighbor"
+                },
+                {
+                  "name": "Tmp",
+                  "meaning": "目标SDK/API要求的临时区",
+                  "unit": "byte"
+                },
+                {
+                  "name": "F",
+                  "meaning": "对齐外固定保留区",
+                  "unit": "byte"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "consequence": "C较大且几何支配时geometry更少重复计算；C=1且St大时vector更优"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "vector-residual",
+            "domain_ids": [
+              "float16_bilinear_nonreflection",
+              "float32_bilinear_nonreflection",
+              "float16_nearest_nonreflection",
+              "float16_nearest_reflection",
+              "float32_nearest_nonreflection",
+              "float16_bilinear_reflection"
+            ],
+            "remaining_work": "跨channel重复几何不消除，随机体素读仍在；nearest算术少，收益未知",
+            "next_step": "C较大且几何支配时geometry更少重复计算；C=1且St大时vector更优",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling"
+            ]
+          }
+        ],
+        "no_alternative_reason": null
+      }
+    },
+    {
+      "id": "rawgrid",
+      "hypothesis_id": "h-rawgrid",
+      "action_id": "action.reuse_input_tiles",
+      "action_instance_id": "rawgrid-r1",
+      "case_ids": [
+        "1",
+        "7",
+        "11",
+        "13",
+        "19",
+        "2",
+        "4",
+        "6",
+        "10",
+        "14",
+        "16",
+        "20",
+        "3",
+        "15",
+        "5",
+        "8",
+        "12",
+        "18",
+        "9",
+        "17"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "workload.matrix"
+      ],
+      "cost_mechanism": "同owner通道块仅保留原始grid[St,3]，每个channel重新执行当前数值几何，原grid位模式不变。",
+      "predictions": [
+        {
+          "id": "rawgrid-work",
+          "kind": "source_work",
+          "statement": "grid元素读3*N*C*S降至3*N*S*ceil(C/Ct)，几何次数仍N*C*S",
+          "check_method": "逐域静态计数并核对原地址/运算次序；实施后再对照差异",
+          "on_support": "支持该工作减少预测，尚不证明时间收益",
+          "on_refute": "若工作已被编译消除或新增代价抵消，重开比较"
+        },
+        {
+          "id": "rawgrid-time",
+          "kind": "performance",
+          "statement": "在合法完整正确性后检验 同owner通道块仅保留原始grid[St,3]，每个channel重新执行当前数值几何，原grid位模式不变。 是否降低同协议Task时间",
+          "check_method": "本轮禁止硬件；将来完整matrix20按统一Task协议测量，分域观察",
+          "on_support": "工程收益证据仍与机制归因分开",
+          "on_refute": "若派生D存储远大于原grid且几何成本很低，rawgrid可能优于geometry"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "rawgrid-time",
+          "unknown_id": "rawgrid-perf-cost_reduction",
+          "reason": "源码支持结构假设，编译器/关键路径和实际时间未测；不作为实施门禁"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "rawgrid-constraint.reuse_domain",
+          "kind": "implementation_safety",
+          "fact": "constraint.reuse_domain",
+          "expected_state": true,
+          "statement": "C2需建立同owner的Ct×St窗口；原线性owner不能自动继承跨channel驻留。",
+          "affects": "implementation_legality",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "rawgrid-constraint.semantic_equivalence",
+          "kind": "implementation_safety",
+          "fact": "constraint.semantic_equivalence",
+          "expected_state": true,
+          "statement": "核验坐标floor/round-even/reflection及每元素FP32累加顺序、NaN/Inf和最终Cast，不能借Vector名称证明等价。",
+          "affects": "implementation_legality",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "rawgrid-constraint.capacity",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "原grid驻留3*St*b加输出/FP32/API区；必须改变owner分区、延长原值存活期，不能P_KEEP；实际可用UB、API tmp及保留区尚未查询，只有公式不授权容量。",
+          "affects": "implementation_legality",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "rawgrid-perf-cost_reduction",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "尚未测量 同owner通道块仅保留原始grid[St,3]，每个channel重新执行当前数值几何，原grid位模式不变。 的实际指令/等待减少是否超过 原grid驻留3*St*b加输出/FP32/API区；必须改变owner分区、延长原值存活期，不能P_KEEP",
+          "affects": "benefit_magnitude and priority",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "geometry",
+      "comparison": "grid元素读3*N*C*S降至3*N*S*ceil(C/Ct)，几何次数仍N*C*S；付出 原grid驻留3*St*b加输出/FP32/API区；必须改变owner分区、延长原值存活期，不能P_KEEP；替代敏感条件：若派生D存储远大于原grid且几何成本很低，rawgrid可能优于geometry",
+      "disposition": "deferred",
+      "reason": "同owner通道块仅保留原始grid[St,3]，每个channel重新执行当前数值几何，原grid位模式不变。；若派生D存储远大于原grid且几何成本很低，rawgrid可能优于geometry",
+      "analysis": {
+        "intent_gap": null,
+        "work_delta": [
+          {
+            "id": "rawgrid-reduced",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "float16_bilinear_nonreflection",
+              "float32_bilinear_nonreflection",
+              "float16_nearest_nonreflection",
+              "float16_nearest_reflection",
+              "float32_nearest_nonreflection",
+              "float16_bilinear_reflection"
+            ],
+            "change": "reduced",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "3*N*S*(C-ceil(C/Ct))",
+              "unit": "removed grid element read request/invocation",
+              "symbols": [
+                {
+                  "name": "N",
+                  "meaning": "batch数量",
+                  "unit": "batch"
+                },
+                {
+                  "name": "S",
+                  "meaning": "grid输出空间点数",
+                  "unit": "point"
+                },
+                {
+                  "name": "C",
+                  "meaning": "grid输入通道数",
+                  "unit": "channel"
+                },
+                {
+                  "name": "Ct",
+                  "meaning": "同owner复用的通道数",
+                  "unit": "channel"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "同owner通道块仅保留原始grid[St,3]，每个channel重新执行当前数值几何，原grid位模式不变。"
+          },
+          {
+            "id": "rawgrid-retained",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "float16_bilinear_nonreflection",
+              "float32_bilinear_nonreflection",
+              "float16_nearest_nonreflection",
+              "float16_nearest_reflection",
+              "float32_nearest_nonreflection",
+              "float16_bilinear_reflection"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "qualitative",
+              "expression": "原坐标/padding/邻域计算全部保留；L2已有命中则HBM降幅可能很小",
+              "unit": "separate logical operations/bytes",
+              "symbols": [],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "保留项不能消失在整体覆盖声明中"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "rawgrid-coverage-float16_bilinear_nonreflection",
+            "domain_id": "float16_bilinear_nonreflection",
+            "status": "partial",
+            "region": "同owner通道块仅保留原始grid[St,3]，每个channel重新执行当前数值几何，原grid位模式不变。；域=float16_bilinear_nonreflection",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "rawgrid-coverage-float32_bilinear_nonreflection",
+            "domain_id": "float32_bilinear_nonreflection",
+            "status": "partial",
+            "region": "同owner通道块仅保留原始grid[St,3]，每个channel重新执行当前数值几何，原grid位模式不变。；域=float32_bilinear_nonreflection",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "rawgrid-coverage-float16_nearest_nonreflection",
+            "domain_id": "float16_nearest_nonreflection",
+            "status": "partial",
+            "region": "同owner通道块仅保留原始grid[St,3]，每个channel重新执行当前数值几何，原grid位模式不变。；域=float16_nearest_nonreflection",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "rawgrid-coverage-float16_nearest_reflection",
+            "domain_id": "float16_nearest_reflection",
+            "status": "partial",
+            "region": "同owner通道块仅保留原始grid[St,3]，每个channel重新执行当前数值几何，原grid位模式不变。；域=float16_nearest_reflection",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "rawgrid-coverage-float32_nearest_nonreflection",
+            "domain_id": "float32_nearest_nonreflection",
+            "status": "partial",
+            "region": "同owner通道块仅保留原始grid[St,3]，每个channel重新执行当前数值几何，原grid位模式不变。；域=float32_nearest_nonreflection",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "rawgrid-coverage-float16_bilinear_reflection",
+            "domain_id": "float16_bilinear_reflection",
+            "status": "partial",
+            "region": "同owner通道块仅保留原始grid[St,3]，每个channel重新执行当前数值几何，原grid位模式不变。；域=float16_bilinear_reflection",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "rawgrid-cost",
+            "domain_ids": [
+              "float16_bilinear_nonreflection",
+              "float32_bilinear_nonreflection",
+              "float16_nearest_nonreflection",
+              "float16_nearest_reflection",
+              "float32_nearest_nonreflection",
+              "float16_bilinear_reflection"
+            ],
+            "dimension": "resource_access_sync",
+            "change": {
+              "mode": "symbolic",
+              "expression": "A(3*St*b)",
+              "unit": "resident original-grid byte; all other buffers extra",
+              "symbols": [
+                {
+                  "name": "A",
+                  "meaning": "按已核验API字节对齐的向上取整函数",
+                  "unit": "byte->byte"
+                },
+                {
+                  "name": "St",
+                  "meaning": "空间片点数",
+                  "unit": "point"
+                },
+                {
+                  "name": "b",
+                  "meaning": "输入输出存储宽",
+                  "unit": "byte/element"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "consequence": "若派生D存储远大于原grid且几何成本很低，rawgrid可能优于geometry"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "rawgrid-residual",
+            "domain_ids": [
+              "float16_bilinear_nonreflection",
+              "float32_bilinear_nonreflection",
+              "float16_nearest_nonreflection",
+              "float16_nearest_reflection",
+              "float32_nearest_nonreflection",
+              "float16_bilinear_reflection"
+            ],
+            "remaining_work": "原坐标/padding/邻域计算全部保留；L2已有命中则HBM降幅可能很小",
+            "next_step": "若派生D存储远大于原grid且几何成本很低，rawgrid可能优于geometry",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling"
+            ]
+          }
+        ],
+        "no_alternative_reason": null
+      }
+    }
+  ],
+  "evidence_requests": [
+    {
+      "id": "request-vector-constraint.semantic_equivalence",
+      "opportunity_ids": [
+        "vector"
+      ],
+      "unknown_ids": [
+        "vector-constraint.semantic_equivalence"
+      ],
+      "method": "核验坐标floor/round-even/reflection及每元素FP32累加顺序、NaN/Inf和最终Cast，不能借Vector名称证明等价。",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "C较大且几何支配时geometry更少重复计算；C=1且St大时vector更优"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-vector-constraint.capacity",
+      "opportunity_ids": [
+        "vector"
+      ],
+      "unknown_ids": [
+        "vector-constraint.capacity"
+      ],
+      "method": "多份FP32坐标/权重/neighbor区与mask、padding/API tmp；reflection/floor/round-even及NaN需逐API核验；实际可用UB、API tmp及保留区尚未查询，只有公式不授权容量。",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "C较大且几何支配时geometry更少重复计算；C=1且St大时vector更优"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-vector-perf-legacy_symptom_profile_scalar_hot",
+      "opportunity_ids": [
+        "vector"
+      ],
+      "unknown_ids": [
+        "vector-perf-legacy_symptom_profile_scalar_hot"
+      ],
+      "method": "尚未测量 固定n/c的连续p片批量处理grid转换、坐标与padding，源体素仍按合法地址scalar加载到UB，三线性计算使用FP32向量序列并保持原顺序。 的实际指令/等待减少是否超过 多份FP32坐标/权重/neighbor区与mask、padding/API tmp；reflection/floor/round-even及NaN需逐API核验",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "C较大且几何支配时geometry更少重复计算；C=1且St大时vector更优"
+        }
+      ],
+      "required_before_implementation": false,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-vector-perf-cost_reduction",
+      "opportunity_ids": [
+        "vector"
+      ],
+      "unknown_ids": [
+        "vector-perf-cost_reduction"
+      ],
+      "method": "尚未测量 固定n/c的连续p片批量处理grid转换、坐标与padding，源体素仍按合法地址scalar加载到UB，三线性计算使用FP32向量序列并保持原顺序。 的实际指令/等待减少是否超过 多份FP32坐标/权重/neighbor区与mask、padding/API tmp；reflection/floor/round-even及NaN需逐API核验",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "C较大且几何支配时geometry更少重复计算；C=1且St大时vector更优"
+        }
+      ],
+      "required_before_implementation": false,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-vector-api",
+      "opportunity_ids": [
+        "vector"
+      ],
+      "unknown_ids": [
+        "vector-api"
+      ],
+      "method": "目标910C/A3 SDK的具体同宽UB Gather、offset范围及dtype支持尚未核验；不使用950 GM Gather。",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "C较大且几何支配时geometry更少重复计算；C=1且St大时vector更优"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-rawgrid-constraint.reuse_domain",
+      "opportunity_ids": [
+        "rawgrid"
+      ],
+      "unknown_ids": [
+        "rawgrid-constraint.reuse_domain"
+      ],
+      "method": "C2需建立同owner的Ct×St窗口；原线性owner不能自动继承跨channel驻留。",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "若派生D存储远大于原grid且几何成本很低，rawgrid可能优于geometry"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-rawgrid-constraint.semantic_equivalence",
+      "opportunity_ids": [
+        "rawgrid"
+      ],
+      "unknown_ids": [
+        "rawgrid-constraint.semantic_equivalence"
+      ],
+      "method": "核验坐标floor/round-even/reflection及每元素FP32累加顺序、NaN/Inf和最终Cast，不能借Vector名称证明等价。",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "若派生D存储远大于原grid且几何成本很低，rawgrid可能优于geometry"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-rawgrid-constraint.capacity",
+      "opportunity_ids": [
+        "rawgrid"
+      ],
+      "unknown_ids": [
+        "rawgrid-constraint.capacity"
+      ],
+      "method": "原grid驻留3*St*b加输出/FP32/API区；必须改变owner分区、延长原值存活期，不能P_KEEP；实际可用UB、API tmp及保留区尚未查询，只有公式不授权容量。",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "若派生D存储远大于原grid且几何成本很低，rawgrid可能优于geometry"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-rawgrid-perf-cost_reduction",
+      "opportunity_ids": [
+        "rawgrid"
+      ],
+      "unknown_ids": [
+        "rawgrid-perf-cost_reduction"
+      ],
+      "method": "尚未测量 同owner通道块仅保留原始grid[St,3]，每个channel重新执行当前数值几何，原grid位模式不变。 的实际指令/等待减少是否超过 原grid驻留3*St*b加输出/FP32/API区；必须改变owner分区、延长原值存活期，不能P_KEEP",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "若派生D存储远大于原grid且几何成本很低，rawgrid可能优于geometry"
+        }
+      ],
+      "required_before_implementation": false,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "geometry",
+        "vector",
+        "rawgrid"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/coordinate_neighborhood.md",
+        "sha256": "sha256:5e4f96af8fde45ec3d5ea785c96c2243f211dbeeb93cd28c1f4d7e63bdf036fb"
+      },
+      "locator": "lines:110-183",
+      "effect_kind": "plan",
+      "before": "从原源码识别 Host NCDHW/grid[N,S,3]，owner为连续输出；每个输出从grid三元组算坐标/padding/邻域后取1或8个体素，FP32累加；half仅最终Cast与DataCopyPad批量，内层仍Scalar。",
+      "after": "绑定G/B/H/F后比较Ct×St矩形；几何D独立于c但X依赖c；派生复用确有Action意图缺口",
+      "applicability": "partial：任务骨架可采用，具体数值/API/容量尚未闭合"
+    },
+    {
+      "opportunity_ids": [
+        "rawgrid"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+        "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+      },
+      "locator": "lines:97-264",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host NCDHW/grid[N,S,3]，owner为连续输出；每个输出从grid三元组算坐标/padding/邻域后取1或8个体素，FP32累加；half仅最终Cast与DataCopyPad批量，内层仍Scalar。",
+      "after": "只把原grid值纳入reuse_input_tiles；保存权重/坐标不是本配方",
+      "applicability": "partial：原grid保留原则可用，需重新确认owner和生命周期"
+    },
+    {
+      "opportunity_ids": [
+        "vector"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+        "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+      },
+      "locator": "lines:90-131",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host NCDHW/grid[N,S,3]，owner为连续输出；每个输出从grid三元组算坐标/padding/邻域后取1或8个体素，FP32累加；half仅最终Cast与DataCopyPad批量，内层仍Scalar。",
+      "after": "独立空间片数值批量化仍保持FP32顺序和有效域，不使用950 GM Gather",
+      "applicability": "partial：合法API/舍入路径未验证"
+    },
+    {
+      "opportunity_ids": [
+        "rawgrid"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.insufficient_input_reuse.md",
+        "sha256": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4"
+      },
+      "locator": "lines:252-381",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host NCDHW/grid[N,S,3]，owner为连续输出；每个输出从grid三元组算坐标/padding/邻域后取1或8个体素，FP32累加；half仅最终Cast与DataCopyPad批量，内层仍Scalar。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；同一地址和内容在复用窗口被重复从GM读入",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    },
+    {
+      "opportunity_ids": [
+        "vector"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+        "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+      },
+      "locator": "lines:279-414",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host NCDHW/grid[N,S,3]，owner为连续输出；每个输出从grid三元组算坐标/padding/邻域后取1或8个体素，FP32累加；half仅最终Cast与DataCopyPad批量，内层仍Scalar。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；本可按向量表达的元素处理使用逐元素Scalar访存或算术",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    },
+    {
+      "opportunity_ids": [
+        "geometry"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+        "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+      },
+      "locator": "lines:297-432",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host NCDHW/grid[N,S,3]，owner为连续输出；每个输出从grid三元组算坐标/padding/邻域后取1或8个体素，FP32累加；half仅最终Cast与DataCopyPad批量，内层仍Scalar。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；循环不变字段或公共地址前缀在每轮重复加载/计算",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    }
+  ],
+  "selection": {
+    "mode": "collect_evidence",
+    "opportunity_id": "geometry",
+    "action_instance_id": null,
+    "reason": "几何生成N*C*S降为N*S*ceil(C/Ct)，原grid读取同因子减少；仍有K*N*C*S体素读取上界；付出 D存储A(St*(K*3*8+K*4+maskBytes))；按基坐标差分可缩小但需证明；owner矩形改变task数及输出跨C间隔，私有数组会有spill风险；替代敏感条件：C=1或NS小到task不足、D状态迫使St太小时，独立空间批量vector更优",
+    "concrete_plan": "优先研究Ct×St矩形几何复用；G=原GridUnnormalize，B=原padding/reflection，H=原floor/nearest与分轴权重，F=原邻点顺序及FP32累加/最终Cast。C2知识骨架可咨询，但现有注册Action没有派生数值复用意图，提出意图缺口，不把它冒充hoist或reuse_input_tiles；备选是独立空间片vectorize。",
+    "stop_reason": null,
+    "comparison_basis": [
+      {
+        "opportunity_id": "geometry",
+        "item_ids": [
+          "geometry-reduced"
+        ],
+        "role": "benefit",
+        "decision_effect": "几何生成N*C*S降为N*S*ceil(C/Ct)，原grid读取同因子减少；仍有K*N*C*S体素读取上界",
+        "reversal_condition": "C=1或NS小到task不足、D状态迫使St太小时，独立空间批量vector更优"
+      },
+      {
+        "opportunity_id": "geometry",
+        "item_ids": [
+          "geometry-cost"
+        ],
+        "role": "cost",
+        "decision_effect": "D存储A(St*(K*3*8+K*4+maskBytes))；按基坐标差分可缩小但需证明；owner矩形改变task数及输出跨C间隔，私有数组会有spill风险",
+        "reversal_condition": "C=1或NS小到task不足、D状态迫使St太小时，独立空间批量vector更优"
+      },
+      {
+        "opportunity_id": "geometry",
+        "item_ids": [
+          "geometry-coverage-float16_bilinear_nonreflection",
+          "geometry-coverage-float32_bilinear_nonreflection",
+          "geometry-coverage-float16_nearest_nonreflection",
+          "geometry-coverage-float16_nearest_reflection",
+          "geometry-coverage-float32_nearest_nonreflection",
+          "geometry-coverage-float16_bilinear_reflection"
+        ],
+        "role": "coverage",
+        "decision_effect": "按上述语义域部分覆盖，未改变的主要工作明确保留；不以case数自动胜出",
+        "reversal_condition": "C=1或NS小到task不足、D状态迫使St太小时，独立空间批量vector更优"
+      },
+      {
+        "opportunity_id": "geometry",
+        "item_ids": [
+          "geometry-residual"
+        ],
+        "role": "residual",
+        "decision_effect": "体素读取、插值累加、half转换仍逐输出；不把几何复用算成原X数据复用",
+        "reversal_condition": "C=1或NS小到task不足、D状态迫使St太小时，独立空间批量vector更优"
+      },
+      {
+        "opportunity_id": "vector",
+        "item_ids": [
+          "vector-reduced",
+          "vector-cost"
+        ],
+        "role": "alternative",
+        "decision_effect": "最强替代：N*C*S次scalar坐标/算术改为片级API，体素间接读取仍最多K*N*C*S；不声称GM vector Gather存在；付出 多份FP32坐标/权重/neighbor区与mask、padding/API tmp；reflection/floor/round-even及NaN需逐API核验；替代敏感条件：C较大且几何支配时geometry更少重复计算；C=1且St大时vector更优",
+        "reversal_condition": "C较大且几何支配时geometry更少重复计算；C=1且St大时vector更优"
+      }
+    ]
+  },
+  "previous_feedback": null,
+  "path_overview": {
+    "workload_ref": {
+      "path": "source/matrix-20.json",
+      "sha256": "sha256:59d4a4678284053205a7723b7b7110ae66fdd140f5438bbdfb280ed7bb7da50e"
+    },
+    "case_ids": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20"
+    ],
+    "domains": [
+      {
+        "id": "float16_bilinear_nonreflection",
+        "case_ids": [
+          "1",
+          "7",
+          "11",
+          "13",
+          "19"
+        ],
+        "predicate": "float16_bilinear_nonreflection（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      },
+      {
+        "id": "float32_bilinear_nonreflection",
+        "case_ids": [
+          "2",
+          "4",
+          "6",
+          "10",
+          "14",
+          "16",
+          "20"
+        ],
+        "predicate": "float32_bilinear_nonreflection（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      },
+      {
+        "id": "float16_nearest_nonreflection",
+        "case_ids": [
+          "3",
+          "15"
+        ],
+        "predicate": "float16_nearest_nonreflection（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      },
+      {
+        "id": "float16_nearest_reflection",
+        "case_ids": [
+          "5"
+        ],
+        "predicate": "float16_nearest_reflection（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      },
+      {
+        "id": "float32_nearest_nonreflection",
+        "case_ids": [
+          "8",
+          "12",
+          "18"
+        ],
+        "predicate": "float32_nearest_nonreflection（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      },
+      {
+        "id": "float16_bilinear_reflection",
+        "case_ids": [
+          "9",
+          "17"
+        ],
+        "predicate": "float16_bilinear_reflection（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      }
+    ],
+    "stages": [
+      {
+        "id": "host",
+        "domain_ids": [
+          "float16_bilinear_nonreflection",
+          "float32_bilinear_nonreflection",
+          "float16_nearest_nonreflection",
+          "float16_nearest_reflection",
+          "float32_nearest_nonreflection",
+          "float16_bilinear_reflection"
+        ],
+        "fact_ids": [
+          "source.host",
+          "source.tiling"
+        ],
+        "behavior": "参数验证、shape/stride/分核与tiling；分配/H2D和输出D2H在kernel外"
+      },
+      {
+        "id": "kernel",
+        "domain_ids": [
+          "float16_bilinear_nonreflection",
+          "float32_bilinear_nonreflection",
+          "float16_nearest_nonreflection",
+          "float16_nearest_reflection",
+          "float32_nearest_nonreflection",
+          "float16_bilinear_reflection"
+        ],
+        "fact_ids": [
+          "source.kernel"
+        ],
+        "behavior": "Host NCDHW/grid[N,S,3]，owner为连续输出；每个输出从grid三元组算坐标/padding/邻域后取1或8个体素，FP32累加；half仅最终Cast与DataCopyPad批量，内层仍Scalar。"
+      },
+      {
+        "id": "oracle",
+        "domain_ids": [
+          "float16_bilinear_nonreflection",
+          "float32_bilinear_nonreflection",
+          "float16_nearest_nonreflection",
+          "float16_nearest_reflection",
+          "float32_nearest_nonreflection",
+          "float16_bilinear_reflection"
+        ],
+        "fact_ids": [
+          "source.oracle"
+        ],
+        "behavior": "读取全输出，保留原精度/特殊值/按位契约，本轮不运行"
+      }
+    ],
+    "baseline_work": [
+      {
+        "id": "base-host",
+        "stage_id": "host",
+        "domain_ids": [
+          "float16_bilinear_nonreflection",
+          "float32_bilinear_nonreflection",
+          "float16_nearest_nonreflection",
+          "float16_nearest_reflection",
+          "float32_nearest_nonreflection",
+          "float16_bilinear_reflection"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "qualitative",
+          "expression": "每次调用一次host tiling与kernel launch；设备核心数动态查询但本轮未查询",
+          "unit": "separate logical operations/bytes",
+          "symbols": [],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.kernel",
+            "source.tiling",
+            "workload.matrix"
+          ]
+        },
+        "explanation": "不把host墙钟当kernel热点"
+      },
+      {
+        "id": "base-kernel",
+        "stage_id": "kernel",
+        "domain_ids": [
+          "float16_bilinear_nonreflection",
+          "float32_bilinear_nonreflection",
+          "float16_nearest_nonreflection",
+          "float16_nearest_reflection",
+          "float32_nearest_nonreflection",
+          "float16_bilinear_reflection"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "symbolic",
+          "expression": "N*C*S",
+          "unit": "geometry generation/invocation",
+          "symbols": [
+            {
+              "name": "N",
+              "meaning": "batch数量",
+              "unit": "batch"
+            },
+            {
+              "name": "C",
+              "meaning": "grid输入通道数",
+              "unit": "channel"
+            },
+            {
+              "name": "S",
+              "meaning": "grid输出空间点数",
+              "unit": "point"
+            }
+          ],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.kernel",
+            "source.tiling",
+            "workload.matrix"
+          ]
+        },
+        "explanation": "各域具体N/d/stride/C/K与已分配字节由metrics列出，逻辑工作非时间占比"
+      },
+      {
+        "id": "base-oracle",
+        "stage_id": "oracle",
+        "domain_ids": [
+          "float16_bilinear_nonreflection",
+          "float32_bilinear_nonreflection",
+          "float16_nearest_nonreflection",
+          "float16_nearest_reflection",
+          "float32_nearest_nonreflection",
+          "float16_bilinear_reflection"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "qualitative",
+          "expression": "完整输出元素比对；不参与目标Task时间",
+          "unit": "separate logical operations/bytes",
+          "symbols": [],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.kernel",
+            "source.tiling",
+            "workload.matrix"
+          ]
+        },
+        "explanation": "未实施未测试，不伪造passed"
+      }
+    ]
+  }
+}

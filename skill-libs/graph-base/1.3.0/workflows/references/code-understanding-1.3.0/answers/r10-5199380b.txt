@@ -1,0 +1,31 @@
+两个入口彼此独立。source/DELTA.json 记录的只是测试包标识符更名，常量和 API 调用未变。以下依据 workload 指定的 910C/Atlas A3、__NPU_ARCH__=2201 解释实际路径；3510 仅作静态契约对照，未进行构建或运行。
+
+入口 V 的输入、输出均为连续一维 ND，含25019个 bfloat16 元素，各50038字节。vector/op_host/nacre.asc:38–60 解析参数、查询 Vector 核数，将输入与 NacrePlan 拷至 GM，再按 laneCount 启动 nacre_entry；完成后同步 stream、回传并写出文件。输入文件按原始字节读取，没有生成数据或校验数值结果。
+
+算法由 nacre_plan.h:18–28 与 nacre_stage.asc:45–64 共同确定：正 base 时计算 exp(x·scale·ln(base)+shift·ln(base))，数学上为 base^(scale·x+shift)；base≤0 时改用自然指数。本题 gain≈0.34657359、bias≈−0.69314718，目标为2^(0.5x−1)。实际先把 bfloat16 转成 float，依次执行 Muls、Adds、Exp，再以 CAST_RINT 转回 bfloat16；因此结果包含 float 运算、指数实现及最终舍入的影响，不能视为实数表达式的精确值。float32 分支直接计算，float16 分支也使用 float 中间缓冲，但回转指定 CAST_NONE；本题走 bfloat16 分支。
+
+分工公式为 useful=ceil(25019/4096)=7，laneCount=min(3,7)=3，laneExtent=ceil(25019/3)=8340。核0、1、2的起点分别是0、8340、16680个元素，即相对输入或输出基址0、16680、33360字节；有效长度分别为8340、8340、8339。每核依次处理4096、4096、148/147个元素，共9个窗口；最后窗口的全局元素起点为8192、16532、24872。各核区间相接，恰好覆盖25019个元素，没有跨核归约或输出重叠。
+
+nacre_stage.asc:16–23 为每核分配单槽输入、输出队列，各8192字节，以及两个各16384字节的 float TBuf，所列 UB 分配共49152字节，即48 KiB。VECIN、VECOUT、VECCALC 都是 UB 的逻辑用途，不是三个物理存储层。每轮通过 MTE2 将 GM 输入搬到 UB，V 流水完成转换和计算，再由 MTE3 写回 GM。DataCopyExtParams 的 blockCount=1、blockLen=count×2字节，两个 stride 均为0；完整窗口搬8192字节，尾窗搬296或294字节。按 A3 普通 DataCopyPad 契约，尾窗在 UB 占用向32字节对齐的320字节，但计算 count 和写回长度仍只包含有效元素。isPad=false 不能解释为补零，也不会因此把对齐区写进 GM。
+
+输入经过 Alloc→搬入→EnQue→DeQue→计算→Free，输出经过 Alloc→计算→EnQue→DeQue→搬出→Free。TQue/TPipe 管理生产消费和槽位复用所需的同步；源码没有手写核间事件，各核也不需要交换数据。这里队列深度和物理槽数均为1，不能据此推断双缓冲或已经实现搬运计算重叠。同流水计算依赖的最终指令安排还属于编译器生成代码的范围。
+
+入口 C 的 host、参数与 kernel 都在 cube/mica.asc。main:199–243 固定 A=[512,128]、B=[128,128]，输入均为 half 连续 ND，输出 C=[512,128]、half；对应大小为131072、32768、131072字节。数学目标是逐点 LeakyReLU(A×B)：非负值保留，负值乘0.001。数值路径更具体：half 输入经 Mmad 得到 float 累加结果，Fixpipe 先以 F322F16、CAST_RINT 转成 half 写入 GM，Vector 再用 half 表示的0.001进行 half 激活。因此它包含激活前的 half 舍入，并非全程 float 激活后才转 half。
+
+numBlocks=(512/256)×(128/128)=2；mica_entry 的 __mix__(1,2) 组织2个 AIC 和4个 AIV。每个 AIC 处理256行输出，读取相应256×128的 A 和完整 B。AIC j 的 A、C 起点都是 j×32768个 half，即 j×65536字节；B 不偏移。baseM/K/N 恰为256/128/128，等于每核工作量，Process 没有分块循环或 K 分段循环：每个 AIC 一次 Mmad 就完成整个 K=128 的求和。singleCoreK/N 等模板参数没有额外产生循环，不能把模板名当成一般形状覆盖能力。
+
+Process:52–68 每个 AIC 在 L1 分配 A的65536字节和B的32768字节，共96 KiB；L0A、L0B 分别为64、32 KiB，float L0C 为128 KiB。每个 AIV 另有32 KiB UB。它们是所列张量分配量，不包含编译器或框架预留。GM→L1 的两次 Nd2Nz 搬运分别覆盖256×128和128×128；源行跨度分别为 K=128、N=128个元素。输入从 ND 转为 NZ，half 的16×16分形为512字节，本题维度均整除16，不需要形状补齐。
+
+2201 分支（75–91行）用 MTE1 重排 L1 数据。A 循环16次，每次搬8个分形：源切片偏移 i×256个 half，分形起点间隔16×512字节；目的切片偏移 i×2048个 half，dstGap=0使分形连续。因此源分形 i+16r 被放到目的8i+r，形成 L0A 的 ZZ。B 循环8次，每次8个分形，源切片偏移 i×256个 half、源间隔8×512字节，目的偏移 i×2048个 half，并开启分形内部转置，形成 L0B 的 ZN。A共搬128个、B共搬64个分形；B的转置用于物理格式适配，数学运算仍是 A×B。
+
+Mmad 参数为{256,128,128,0,false,true}：清零初始化 L0C、不使用 BT 偏置，并关闭 unitFlag。随后 Fixpipe 将256×128的 float NZ 结果转为 half ND 写回对应 C 区域，reluEn=false，负值会保留给后续激活。其 srcStride=256的单位为16×sizeof(float)=64字节，故相邻 N 分形组起点相距16384字节；ND 输出 dstStride=128的单位是元素，即行跨度256字节，不能按32字节单位解释。
+
+AIV v 先用 floor(v/2) 定位所属 AIC 输出，再用 v%2 选择上下半块（41–44、143–176行）。合并偏移为 v×16384个 half，所以4个 AIV 分别从0、32768、65536、98304字节处处理128×128元素。每次 DataCopyPad 有128个块，每块256有效字节；因 N=baseN，GM 行间间隔为0，UB 间隔也为0，各核连续搬32768字节。激活原位进行，再写回原区域；GM 中的 C 同时承担 Cube→Vector 中间结果和最终输出，无另设 workspace。
+
+同步链明确保护了各级数据依赖：MTE2_MTE1 保证 L1 输入就绪，MTE1_M 保证 L0A/B 就绪，M_FIX 保证矩阵乘完成；随后 CrossCoreSetFlag<2,PIPE_FIX>(0) 在 FIX 前序写回完成后通知同组两个 AIV。AIV 的 CrossCoreWaitFlag<2>(0) 通过后才读 GM，再以 MTE2_V、V_MTE3 分别保护激活读入和写出。mode 2 是组内 AIC 与两个 AIV 的同步，不是所有核的全局屏障。末尾还有 PIPE_ALL 屏障，host 则等待整个 stream 完成。没有下一 tile 的地址复用，因此也没有循环反向握手。
+
+3510 条件下，host 常量、分核地址、分配表达式、ND→NZ、Mmad、Fixpipe、GM 中转、激活及事件调用均保持相同；不同的源码路径仅在 L1→L0：A改为一次 LoadData2DParamsV2{0,0,16,8,16,16,false,0}，保持 L0A 的 NZ；B改为{0,0,8,8,8,8,true,0}，得到 ZN。V2 的 mStep 单位为16元素，kStep 单位为32字节，half 下也是16元素；src/dstStride 单位均为512字节。两次调用分别覆盖原来的128和64个分形。V2 文档明确 A3 不支持该接口，不能把此分支套到910C。
+
+相同调用也可能有不同硬件契约。固定 rawdocs 的 CrossCoreWaitFlag 文档规定：A3 的 modeId、pipe 不作为硬件输入，等待阻塞全部流水；3510 对应平台的 pipe 生效，本调用省略后为 PIPE_S，不能解释成同样阻塞全部流水。mode 2 的角色关系和 PIPE_FIX 发送侧含义相同。Fixpipe 文档则明确两平台均支持本例使用的 V220 参数接口，不能因3510另有专用结构体就判定这里必须改接口；两处 unitFlag 都为0，也没有启用分形级 Mmad/Fixpipe 协作。
+
+上述布局、单位和同步解释依据 shared/rawdocs 中 LoadData_2D、LoadData_2D_V2、Mmad、Fixpipe_L0CToGM、DataCopyPad 及 CrossCoreSet/WaitFlag 的对应平台分区。静态材料支持这些地址覆盖、数据流和依赖关系；不提供实际编译成功、浮点逐值误差、流水重叠率、等待时长或性能瓶颈的证据。3510分支的存在尤其不能充当设备编译或运行结果。

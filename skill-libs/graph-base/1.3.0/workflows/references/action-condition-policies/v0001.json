@@ -1,0 +1,2650 @@
+{
+  "schema_version": "aprof.action-condition-policy/v1",
+  "version": "v0001",
+  "applies_from_graph_version": "v0005",
+  "legacy_graph_ref": {
+    "path": "skills/ascendc-aprof-diagnosis/graph/versions/v0004/graph.json",
+    "file_sha256": "sha256:bc59f40c43da0272e55970f9b434a7eefcc2354c32dd4bacacd24a49060052e8",
+    "graph_sha256": "sha256:1e87eb1a38a1925049cfcf43ce7e1dfbe02609304dfc5ded171090857bac25c6",
+    "version": "v0004"
+  },
+  "policy": [
+    "实施安全与结构适用性必须满足：同scope有效来源、源码、API契约和资源公式均可证明；不是所有条件都需要硬件实测。",
+    "性能假设决定预测、比较和验证，不要求先有严格性能实验才提出有来源且适用的优化；unknown仅记录具体缺失及其对决策的影响。",
+    "源码中存在重复、串行、片上压力或策略形态不代表已测到热点；source/profile/constraint前缀均不替代逐项语义审查。",
+    "性能假设unknown不自动阻断试验；安全未知或不满足不能由收益猜测、路由hint或KEEP绕过。",
+    "Action合法可做不等于优先做。进入实施前比较主要成本机会、适用文档、预期改变与代价；按决策影响决定是否补证据，不为消除全部unknown无限分析。",
+    "R2须根据R1的变更、预测和有效反馈更新；可以继续同一Action，但应说明新信息或不同可检验参数，不强制制造Action多样性。",
+    "本次分层为机制归纳和维护规则，没有新增目标硬件收益或因果正确性声明；v0004及其原前提冻结回放。"
+  ],
+  "actions": [
+    {
+      "action_id": "action.align_cache_policy",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.source.cache_policy_mismatch",
+          "state": true
+        },
+        {
+          "fact": "constraint.cache_api",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.cache_policy_mismatch",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "同一策略用于不同复用模式是结构线索；不表示任何模式必然被缓存拖慢。"
+        },
+        {
+          "fact": "constraint.cache_api",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "当前平台、SDK、读写方向与目标hint必须在API支持域内；枚举存在不等于可用。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "符合复用窗口的缓存策略可能减少目标访问实际等待或替换干扰；也可能降低其他对象命中。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "列出目标同地址重复次数、复用距离、一次性流字节及当前hint，按工作集/缓存容量来源筛掉无适用性的路径。",
+            "有编译/访问trace时核对实际设置；后续按对象观察读字节与等待，不以整体低hit自动判定策略错误。"
+          ]
+        }
+      ],
+      "applicability": "目标GlobalTensor的实际访问方向、合法hint与当前平台API支持明确；一次性流和复用流均可比较合法策略，不以名字中的“mismatch”认定错误。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.source.cache_policy_mismatch",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "同一策略用于不同复用模式是结构线索；不表示任何模式必然被缓存拖慢。"
+        },
+        {
+          "fact": "constraint.cache_api",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "当前平台、SDK、读写方向与目标hint必须在API支持域内；枚举存在不等于可用。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.amortize_partial_merge",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.source.chunk_merge_overhead",
+          "state": true
+        },
+        {
+          "fact": "constraint.merge_semantics",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.chunk_merge_overhead",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "多chunk、partial格式及归并拓扑是结构事实，“overhead”并非实测时延结论。"
+        },
+        {
+          "fact": "constraint.merge_semantics",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "部分结果表示、合并算子和精度顺序须合法，并保持最终输出唯一所有权。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "减少chunk或分层归并可减少partial读写、发射与等待，但也可能降低并行度并拉长最长核。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "按shape列出chunk数、每段有效量、partial字节和合并工作量，比较至少有竞争性的可行粒度。",
+            "判别最长核计算与归并关键路径；没有分阶段timing时保留二者为预测，用静态工作量确定值得试的范围。"
+          ]
+        }
+      ],
+      "applicability": "存在可归并partial，归约顺序、精度、workspace owner和参与核完整已知；合法chunk数或归并层次由C2确认。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.source.chunk_merge_overhead",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "多chunk、partial格式及归并拓扑是结构事实，“overhead”并非实测时延结论。"
+        },
+        {
+          "fact": "constraint.merge_semantics",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "部分结果表示、合并算子和精度顺序须合法，并保持最终输出唯一所有权。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.balance_tail_assignment",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.profile.per_core_time_imbalanced",
+          "state": true
+        },
+        {
+          "fact": "symptom.source.tail_concentrated",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.tail_concentrated",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "尾任务集中在少量核是任务映射事实，不自动等于核时长不均。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "legacy_symptom_profile_per_core_time_imbalanced",
+          "legacy_condition": {
+            "fact": "symptom.profile.per_core_time_imbalanced",
+            "state": true
+          },
+          "statement": "旧条件 symptom.profile.per_core_time_imbalanced 的期望状态为 true。每核时间差说明试验可能有价值，不是重分合法任务的实施安全条件；须与尾部映射共同解释。",
+          "reason": "每核时间差说明试验可能有价值，不是重分合法任务的实施安全条件；须与尾部映射共同解释。",
+          "next_checks": [
+            "从host分配式和kernel索引推导每核主/尾有效量、任务成本类别和空核，避免按元素数假定所有任务等价。",
+            "若实际不均来自数据依赖、非尾任务或cache，选择对应替代机制；无per-core时间不妨碍基于明确尾负载差提出试验。"
+          ]
+        },
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "均摊尾任务可能缩短最长核，但额外调度、较差局部性或主任务不均可抵消。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "从host分配式和kernel索引推导每核主/尾有效量、任务成本类别和空核，避免按元素数假定所有任务等价。",
+            "若实际不均来自数据依赖、非尾任务或cache，选择对应替代机制；无per-core时间不妨碍基于明确尾负载差提出试验。"
+          ]
+        }
+      ],
+      "applicability": "存在可重新归属的尾部任务；重分后完整覆盖、唯一写回、所有权和依赖不变或已由C2重新确认。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.profile.per_core_time_imbalanced",
+          "state": true,
+          "destination": "performance_hypotheses",
+          "reason": "每核时间差说明试验可能有价值，不是重分合法任务的实施安全条件；须与尾部映射共同解释。"
+        },
+        {
+          "fact": "symptom.source.tail_concentrated",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "尾任务集中在少量核是任务映射事实，不自动等于核时长不均。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.batch_vector_api_calls",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.profile.vector_granularity_low",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        },
+        {
+          "fact": "constraint.vector_batch_compatibility",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "移除性能粒度门槛后，补上原Action缺少的明确结构/API准入，不能因存在多个Vector调用就视为可合批。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "legacy_symptom_profile_vector_granularity_low",
+          "legacy_condition": {
+            "fact": "symptom.profile.vector_granularity_low",
+            "state": true
+          },
+          "statement": "旧条件 symptom.profile.vector_granularity_low 的期望状态为 true。低Vector粒度是性能判别证据，合法合批可由调用结构和API契约独立证明。",
+          "reason": "低Vector粒度是性能判别证据，合法合批可由调用结构和API契约独立证明。",
+          "next_checks": [
+            "从调用点列出单次有效元素、总调用次数、依赖/stride和API上限，推导可合并次数与新UB峰值。",
+            "若已是大count或后端已合并，收益依据减弱；把减少的调用数作为可验证预测，不要求先测到低粒度。"
+          ]
+        },
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "合法合批可能减少Vector/Scalar发射与循环控制，未必减少必要算术或内存量。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "从调用点列出单次有效元素、总调用次数、依赖/stride和API上限，推导可合并次数与新UB峰值。",
+            "若已是大count或后端已合并，收益依据减弱；把减少的调用数作为可验证预测，不要求先测到低粒度。"
+          ]
+        }
+      ],
+      "applicability": "存在可按同一合法Vector API的count/repeat等参数合并表达的调用域；依赖、mask、dtype、stride和目标支持均已验证。",
+      "added_safety_predicates": [
+        {
+          "fact": "constraint.vector_batch_compatibility",
+          "state": true,
+          "definition": "针对已绑定实现、对象/阶段、workload和目标SDK，拟合并的Vector调用能用该API允许的count/repeat/stride/mask表示，并保持调用间数据依赖和数值语义。",
+          "reason": "移除性能粒度门槛后，补上原Action缺少的明确结构/API准入，不能因存在多个Vector调用就视为可合批。",
+          "proof_requirements": [
+            "引用各调用点、操作种类、dtype、地址空间与每次有效元素域，列出拟合并前后元素映射。",
+            "核对当前平台/SDK支持、count/repeat上限、blk/repeat stride单位、mask和对齐。",
+            "逐项检查跨调用读写依赖、alias、舍入和异常值；若需要中间结果或改变数值顺序，不属于直接合批。",
+            "由新活跃区和深度计算容量；其余semantic_equivalence与capacity仍独立核验。"
+          ],
+          "unknown_when": [
+            "具体API/目标SDK支持或有效域无法定位。",
+            "调用间别名/依赖、数值路径或参数上限仍未确认。"
+          ]
+        }
+      ],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.profile.vector_granularity_low",
+          "state": true,
+          "destination": "performance_hypotheses",
+          "reason": "低Vector粒度是性能判别证据，合法合批可由调用结构和API契约独立证明。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.batch_writeback",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.source.fragmented_writeback",
+          "state": true
+        },
+        {
+          "fact": "constraint.output_ownership",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.fragmented_writeback",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "多个小写回的区间和生产完成边界可由源码确认；fragmented不直接说明主瓶颈。"
+        },
+        {
+          "fact": "constraint.output_ownership",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "全部有效输出由合法owner恰好写回，合并不覆盖其他owner或padding外域。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "合并写回可减少发射数，实际有效输出字节不变；缓冲滞留可能反而延长关键路径。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "列出每次输出地址/有效长度/完成点，并计算合并窗口需要额外存活的字节。",
+            "比较写回发射节省与buffer释放/消费者延迟；没有MTE计数时仍可据明显碎片结构提出试验。"
+          ]
+        }
+      ],
+      "applicability": "同一owner的相邻有效输出可在合法时机同时写回；合并不越过其他核输出、padding或消费者可见性边界。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.source.fragmented_writeback",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "多个小写回的区间和生产完成边界可由源码确认；fragmented不直接说明主瓶颈。"
+        },
+        {
+          "fact": "constraint.output_ownership",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "全部有效输出由合法owner恰好写回，合并不覆盖其他owner或padding外域。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.coalesce_cast",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.source.redundant_cast",
+          "state": true
+        },
+        {
+          "fact": "constraint.precision",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.redundant_cast",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "宽窄往返Cast是结构事实，不说明Cast冗余或可以直接删除。"
+        },
+        {
+          "fact": "constraint.precision",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "Cast/中间dtype变化须保持已授权数值与异常值契约，不以可能加速放宽精度。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "合法减少转换可能减少指令与临时区，但更宽中间值、不同指令路径或寄存器压力可抵消。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "逐段展开表达式的dtype与round mode，用原oracle范围证明可删除边界，不把精度容忍当任意重排许可。",
+            "比较转换调用次数、临时区峰值及预计新增宽类型工作；数值安全不明时只做分析，不实施。"
+          ]
+        }
+      ],
+      "applicability": "完整数值契约、每步dtype/舍入/饱和/异常值语义和消费者明确；仅消除可证明等价的转换或移动合法边界。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.source.redundant_cast",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "宽窄往返Cast是结构事实，不说明Cast冗余或可以直接删除。"
+        },
+        {
+          "fact": "constraint.precision",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "Cast/中间dtype变化须保持已授权数值与异常值契约，不以可能加速放宽精度。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.coalesce_contiguous_transfers",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.profile.mte_setup_dominated",
+          "state": true
+        },
+        {
+          "fact": "symptom.source.inner_loop_copy",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.inner_loop_copy",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "循环内多次Copy是结构线索，必须另外检查相邻性，不能把任何内循环搬运都合并。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "legacy_symptom_profile_mte_setup_dominated",
+          "legacy_condition": {
+            "fact": "symptom.profile.mte_setup_dominated",
+            "state": true
+          },
+          "statement": "旧条件 symptom.profile.mte_setup_dominated 的期望状态为 true。发射成本主导是待验证机制；相邻搬运是否可合并由地址、依赖和API范围证明。",
+          "reason": "发射成本主导是待验证机制；相邻搬运是否可合并由地址、依赖和API范围证明。",
+          "next_checks": [
+            "由地址式求每次有效字节和调用次数，证明合并后读写映射等价；结合固定来源API限制决定count/stride方案。",
+            "区分“小搬运发射成本”与“总必要字节”预测；缺MTE setup计数不禁止已有合法连续段的实验。"
+          ]
+        },
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "合并可减少发射数；若原路径已充分流水或带宽占主导，时间收益可能小，UB峰值可能增加。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "由地址式求每次有效字节和调用次数，证明合并后读写映射等价；结合固定来源API限制决定count/stride方案。",
+            "区分“小搬运发射成本”与“总必要字节”预测；缺MTE setup计数不禁止已有合法连续段的实验。"
+          ]
+        }
+      ],
+      "applicability": "源/目标区间、stride单位、对齐、有效尾长和依赖完成点可证明可用目标API合并；容量与唯一输出保持合法。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.profile.mte_setup_dominated",
+          "state": true,
+          "destination": "performance_hypotheses",
+          "reason": "发射成本主导是待验证机制；相邻搬运是否可合并由地址、依赖和API范围证明。"
+        },
+        {
+          "fact": "symptom.source.inner_loop_copy",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "循环内多次Copy是结构线索，必须另外检查相邻性，不能把任何内循环搬运都合并。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.decompose_tasks_dynamically",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.profile.tasks_below_available_cores",
+          "state": true
+        },
+        {
+          "fact": "symptom.source.fixed_or_undersubscribed_tasking",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        },
+        {
+          "fact": "symptom.workload.tiny_or_overhead_limited",
+          "state": false
+        },
+        {
+          "fact": "constraint.task_ownership",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.fixed_or_undersubscribed_tasking",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "固定或未充分扩展任务是host/kernel映射事实；可用核数多不代表多核一定有收益。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        },
+        {
+          "fact": "constraint.task_ownership",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "重分后的任务、输出和partial归并owner完整、无重叠遗漏且同步可证明。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "legacy_symptom_profile_tasks_below_available_cores",
+          "legacy_condition": {
+            "fact": "symptom.profile.tasks_below_available_cores",
+            "state": true
+          },
+          "statement": "旧条件 symptom.profile.tasks_below_available_cores 的期望状态为 true。任务/可用核关系帮助判断并行机会，不能代替任务所有权或证明增加核数的收益。",
+          "reason": "任务/可用核关系帮助判断并行机会，不能代替任务所有权或证明增加核数的收益。",
+          "next_checks": [
+            "按合法任务域算每核工作、空核、partial字节和merge量，优先排除明显由额外调度吞噬工作量的方案。",
+            "原tiny_or_overhead_limited期望false保留为性能选择假设；状态未知时用工作量模型比较，不能伪填false。"
+          ]
+        },
+        {
+          "id": "legacy_symptom_workload_tiny_or_overhead_limited",
+          "legacy_condition": {
+            "fact": "symptom.workload.tiny_or_overhead_limited",
+            "state": false
+          },
+          "statement": "旧条件 symptom.workload.tiny_or_overhead_limited 的期望状态为 false。原期望false完整保留；这是多核调度成本的选择假设，不是任务重分的语义安全条件。",
+          "reason": "原期望false完整保留；这是多核调度成本的选择假设，不是任务重分的语义安全条件。",
+          "next_checks": [
+            "按合法任务域算每核工作、空核、partial字节和merge量，优先排除明显由额外调度吞噬工作量的方案。",
+            "原tiny_or_overhead_limited期望false保留为性能选择假设；状态未知时用工作量模型比较，不能伪填false。"
+          ]
+        },
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "增加合法任务可能减少最长核工作；tiny/overhead-limited为true时也可能更差，必须比较调度/归并成本而非禁止安全试验。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "按合法任务域算每核工作、空核、partial字节和merge量，优先排除明显由额外调度吞噬工作量的方案。",
+            "原tiny_or_overhead_limited期望false保留为性能选择假设；状态未知时用工作量模型比较，不能伪填false。"
+          ]
+        }
+      ],
+      "applicability": "已识别独立任务域或合法partial归并，任务/输出所有权、workspace、精度与同步完整；改变计划的任务数量和核数由C2确认。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.profile.tasks_below_available_cores",
+          "state": true,
+          "destination": "performance_hypotheses",
+          "reason": "任务/可用核关系帮助判断并行机会，不能代替任务所有权或证明增加核数的收益。"
+        },
+        {
+          "fact": "symptom.source.fixed_or_undersubscribed_tasking",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "固定或未充分扩展任务是host/kernel映射事实；可用核数多不代表多核一定有收益。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        },
+        {
+          "fact": "symptom.workload.tiny_or_overhead_limited",
+          "state": false,
+          "destination": "performance_hypotheses",
+          "reason": "原期望false完整保留；这是多核调度成本的选择假设，不是任务重分的语义安全条件。"
+        },
+        {
+          "fact": "constraint.task_ownership",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "重分后的任务、输出和partial归并owner完整、无重叠遗漏且同步可证明。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.dispatch_by_workload",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.source.dynamic_shape_mismatch",
+          "state": true
+        },
+        {
+          "fact": "constraint.dispatch_coverage",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.dynamic_shape_mismatch",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "相同核数/tile跨shape使用是结构事实，不推出必须特化；分段依据应绑定实际成本模型。"
+        },
+        {
+          "fact": "constraint.dispatch_coverage",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "每个支持的shape/dtype/feature都命中唯一合法路径或明确fallback；边界不可漏测漏实现。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "若不同区间受不同工作量/容量/调度成本控制，分组策略可改善相应case；额外分支也可能无益。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "按case形态比较每核任务、tile数、尾比例、UB峰值及算法工作量，说明划分阈值来源与单位。",
+            "区间边界和fallback必须覆盖全域；用已有知识与源码差异选择值得试的分支，未测阈值标成参数候选而非通用常数。"
+          ]
+        }
+      ],
+      "applicability": "已支持的shape/dtype/features域及fallback完整，host判别与kernel分支一致，每一新分支分别满足合法性。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.source.dynamic_shape_mismatch",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "相同核数/tile跨shape使用是结构事实，不推出必须特化；分段依据应绑定实际成本模型。"
+        },
+        {
+          "fact": "constraint.dispatch_coverage",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "每个支持的shape/dtype/feature都命中唯一合法路径或明确fallback；边界不可漏测漏实现。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.fuse_kernel_chain",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.source.missing_kernel_fusion",
+          "state": true
+        },
+        {
+          "fact": "constraint.fusion_boundary",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.missing_kernel_fusion",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "独立launch和GM中间连接是结构事实，不说明融合后一定消除GM或更快。"
+        },
+        {
+          "fact": "constraint.fusion_boundary",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "融合不跨越必须保持的可见性、核角色、外部消费者或同步契约；改变边界须回C2。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "合法组合可能减少launch或部分中间读写；如果融合仍经workspace交接，不能宣称消除GM流量。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "画当前与拟议阶段DAG、owner和交接层级，分别计launch数、必要中间字节及活跃峰值。",
+            "比较组合、数据驻留、流水重叠三种效应；跨平台专用通路以包内对应资料和当前SDK为准。"
+          ]
+        }
+      ],
+      "applicability": "生产消费链、所有消费者和完整数学/执行契约已知，融合边界由C2确认；核角色、owner、可见性和容量满足。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.source.missing_kernel_fusion",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "独立launch和GM中间连接是结构事实，不说明融合后一定消除GM或更快。"
+        },
+        {
+          "fact": "constraint.fusion_boundary",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "融合不跨越必须保持的可见性、核角色、外部消费者或同步契约；改变边界须回C2。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.hoist_invariant_control",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.source.control_metadata_overhead",
+          "state": true
+        },
+        {
+          "fact": "constraint.control_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.control_metadata_overhead",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "重复字段/索引/分支是源码层次数事实，不能证明编译后仍重复，更不能据“overhead”认定热点。"
+        },
+        {
+          "fact": "constraint.control_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "不变量/地址递推/首主尾拆分保持原访问与事件序列，处理零/单tile、整数溢出、分支副作用和精度。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "只有编译后仍保留的重复load/控制被减少且作用于关键路径时才可能加速；增加活跃寄存器、代码体积或CSE已完成时可能无益。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "先数实际循环次数、重复表达式依赖、相对必要Vector/搬运工作；小固定字段缓存与主要字节/逐元素工作量比较后再排优先级。",
+            "反汇编/编译报告可判别CSE、重复load和spill；不可得时明确预测与反例，不以源码容易等价就优先，也不因未证明热点一律否决。"
+          ]
+        }
+      ],
+      "applicability": "当前循环域内的表达式确为不变量或可等价递推；ABI、溢出、地址单位、精度、主尾序列和事件关系均保持。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.source.control_metadata_overhead",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "重复字段/索引/分支是源码层次数事实，不能证明编译后仍重复，更不能据“overhead”认定热点。"
+        },
+        {
+          "fact": "constraint.control_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "不变量/地址递推/首主尾拆分保持原访问与事件序列，处理零/单tile、整数溢出、分支副作用和精度。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.keep_intermediate_onchip",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.source.gm_intermediate_roundtrip",
+          "state": true
+        },
+        {
+          "fact": "symptom.profile.gm_traffic_amplified",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.gm_intermediate_roundtrip",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "GM中间写读是地址和生命周期事实；必须核验外部消费者，不能把总GM放大归因到该tensor。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "legacy_symptom_profile_gm_traffic_amplified",
+          "legacy_condition": {
+            "fact": "symptom.profile.gm_traffic_amplified",
+            "state": true
+          },
+          "statement": "旧条件 symptom.profile.gm_traffic_amplified 的期望状态为 true。GM流量放大用于机制归因；是否可删除特定中间读写取决于消费者可见性、生命周期和容量。",
+          "reason": "GM流量放大用于机制归因；是否可删除特定中间读写取决于消费者可见性、生命周期和容量。",
+          "next_checks": [
+            "按目标tensor逐次列写读地址、唯一/重复字节和消费者，算驻留峰值与可能挤掉的buffer/tile容量。",
+            "比较保留、重算与GM交接方案；无GM放大计数时可凭精确冗余往返与容量模型提出试验。"
+          ]
+        },
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "合法驻留可去掉对应中间写读，但UB/L1占用、tile缩小或spill可抵消；实际外部流量减少需后续确认。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "按目标tensor逐次列写读地址、唯一/重复字节和消费者，算驻留峰值与可能挤掉的buffer/tile容量。",
+            "比较保留、重算与GM交接方案；无GM放大计数时可凭精确冗余往返与容量模型提出试验。"
+          ]
+        }
+      ],
+      "applicability": "中间值的生产者、全部消费者、owner、外部可见性及生命周期已知；只有已获C2许可的合法片上边界内可以删除对应GM往返。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.source.gm_intermediate_roundtrip",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "GM中间写读是地址和生命周期事实；必须核验外部消费者，不能把总GM放大归因到该tensor。"
+        },
+        {
+          "fact": "symptom.profile.gm_traffic_amplified",
+          "state": true,
+          "destination": "performance_hypotheses",
+          "reason": "GM流量放大用于机制归因；是否可删除特定中间读写取决于消费者可见性、生命周期和容量。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.narrow_sync_scope",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.source.sync_inside_tile_loop",
+          "state": true
+        },
+        {
+          "fact": "symptom.profile.overlap_low",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        },
+        {
+          "fact": "constraint.dependency_lifetime",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.sync_inside_tile_loop",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "tile循环内大范围同步是静态调用事实；该等待可能完全必要或本就不在关键路径。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        },
+        {
+          "fact": "constraint.dependency_lifetime",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "所有producer/consumer、异步完成、释放/覆盖/复用边界真实合法；不能把等待可能慢当成可删依赖。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "legacy_symptom_profile_overlap_low",
+          "legacy_condition": {
+            "fact": "symptom.profile.overlap_low",
+            "state": true
+          },
+          "statement": "旧条件 symptom.profile.overlap_low 的期望状态为 true。低重叠是性能假设/判别依据，依赖及生命周期正确才是重排的实施安全条件。",
+          "reason": "低重叠是性能假设/判别依据，依赖及生命周期正确才是重排的实施安全条件。",
+          "next_checks": [
+            "从Set/Wait或队列绘制逐buffer依赖图和参与者，逐条指出原同步保护的边及拟保留边。",
+            "有trace再验证减少的等待是否暴露关键路径；无trace时用依赖图证明安全并提出等待预测，不能凭overlap低删除依赖。"
+          ]
+        },
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "精确收窄同步可能去掉无关等待并增加合法重叠；事件管理增加或原等待不关键时不一定有收益。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "从Set/Wait或队列绘制逐buffer依赖图和参与者，逐条指出原同步保护的边及拟保留边。",
+            "有trace再验证减少的等待是否暴露关键路径；无trace时用依赖图证明安全并提出等待预测，不能凭overlap低删除依赖。"
+          ]
+        }
+      ],
+      "applicability": "真实生产消费依赖、可见性、buffer寿命、参与核及事件拓扑完整；收窄后不存在提前复用、漏等待或死锁。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.source.sync_inside_tile_loop",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "tile循环内大范围同步是静态调用事实；该等待可能完全必要或本就不在关键路径。"
+        },
+        {
+          "fact": "symptom.profile.overlap_low",
+          "state": true,
+          "destination": "performance_hypotheses",
+          "reason": "低重叠是性能假设/判别依据，依赖及生命周期正确才是重排的实施安全条件。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        },
+        {
+          "fact": "constraint.dependency_lifetime",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "所有producer/consumer、异步完成、释放/覆盖/复用边界真实合法；不能把等待可能慢当成可删依赖。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.pad_ub_layout",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.profile.ub_conflict_high",
+          "state": true
+        },
+        {
+          "fact": "symptom.source.ub_stride_conflict_risk",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.ub_stride_conflict_risk",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "UB地址映射落入潜在冲突集合是目标相关结构事实，不等于已发生高冲突。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "legacy_symptom_profile_ub_conflict_high",
+          "legacy_condition": {
+            "fact": "symptom.profile.ub_conflict_high",
+            "state": true
+          },
+          "statement": "旧条件 symptom.profile.ub_conflict_high 的期望状态为 true。实测UB冲突用于验证目标映射假设；布局合法与容量边界可以源码及API资料证明。",
+          "reason": "实测UB冲突用于验证目标映射假设；布局合法与容量边界可以源码及API资料证明。",
+          "next_checks": [
+            "按真实src/dst起址、dtype、blk/repeat stride求映射并核对目标资料；几何未知时不能借其他架构常数定padding。",
+            "比较候选最小padding字节及UB峰值；冲突计数只用于验证假设，不作为合法布局改动的统一前置门槛。"
+          ]
+        },
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "在真实并发及目标映射匹配时padding可能减少资源冲突；额外字节/转置和缩小tile可能抵消。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "按真实src/dst起址、dtype、blk/repeat stride求映射并核对目标资料；几何未知时不能借其他架构常数定padding。",
+            "比较候选最小padding字节及UB峰值；冲突计数只用于验证假设，不作为合法布局改动的统一前置门槛。"
+          ]
+        }
+      ],
+      "applicability": "目标API的地址/stride/count及容量合法，布局变换保持数据映射；用于选择padding的bank/group映射必须有当前目标依据。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.profile.ub_conflict_high",
+          "state": true,
+          "destination": "performance_hypotheses",
+          "reason": "实测UB冲突用于验证目标映射假设；布局合法与容量边界可以源码及API资料证明。"
+        },
+        {
+          "fact": "symptom.source.ub_stride_conflict_risk",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "UB地址映射落入潜在冲突集合是目标相关结构事实，不等于已发生高冲突。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.rebalance_mixed_stages",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.source.mixed_pipeline_imbalance",
+          "state": true
+        },
+        {
+          "fact": "constraint.cross_engine_dependencies",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.mixed_pipeline_imbalance",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "阶段粒度或工作比例不同是结构观察，不代表阶段时间应相等或已出现不均衡。"
+        },
+        {
+          "fact": "constraint.cross_engine_dependencies",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "AIC/AIV角色、跨引擎数据可见性、事件和消费者生命周期必须符合目标支持。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "联合调整tile和后处理粒度可能缩短阶段DAG关键路径；占用、交接与同步开销可能增加。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "建立每阶段工作量、交接字节、buffer峰值和先后关系，找实际可以重分或改变粒度的范围。",
+            "比较目标是最长依赖链而非AIC/AIV总时间相等；缺阶段timing仍可按不同比例workload提出有界试验。"
+          ]
+        }
+      ],
+      "applicability": "同tile的AIC/AIV任务、交接tensor、依赖和owner已知；重分工作/粒度必须满足算术语义及目标核角色。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.source.mixed_pipeline_imbalance",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "阶段粒度或工作比例不同是结构观察，不代表阶段时间应相等或已出现不均衡。"
+        },
+        {
+          "fact": "constraint.cross_engine_dependencies",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "AIC/AIV角色、跨引擎数据可见性、事件和消费者生命周期必须符合目标支持。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.reduce_memory_traffic",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.source.memory_bandwidth_saturation",
+          "state": true
+        },
+        {
+          "fact": "constraint.traffic_reducible",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "constraint.traffic_reducible",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "能指出具体可消除读写及等价值/消费者关系；仅观察带宽或字节大不能证明可删。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "legacy_symptom_source_memory_bandwidth_saturation",
+          "legacy_condition": {
+            "fact": "symptom.source.memory_bandwidth_saturation",
+            "state": true
+          },
+          "statement": "旧条件 symptom.source.memory_bandwidth_saturation 的期望状态为 true。该S现有定义仅确认大块连续搬运，并不确认饱和；消除冗余流量还适用于短块/复用路径，不应把此形态硬绑到Action。",
+          "reason": "该S现有定义仅确认大块连续搬运，并不确认饱和；消除冗余流量还适用于短块/复用路径，不应把此形态硬绑到Action。",
+          "next_checks": [
+            "明确原始唯一字节、逻辑重复次数、实际通路和可消除区间，避免把逻辑GM字节等同HBM流量。",
+            "比较驻留/重算/融合新增容量、同步和算术；无饱和证据仍可选择来源支持且当前实现确有可消冗余的方案。"
+          ]
+        },
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "减少真实必要通路上的冗余字节可能降低传输成本；若只减少逻辑读、cache本已复用或新增计算成为关键路径，收益不确定。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "明确原始唯一字节、逻辑重复次数、实际通路和可消除区间，避免把逻辑GM字节等同HBM流量。",
+            "比较驻留/重算/融合新增容量、同步和算术；无饱和证据仍可选择来源支持且当前实现确有可消冗余的方案。"
+          ]
+        }
+      ],
+      "applicability": "已用地址/值依赖证明可消除的输入读取或中间读写，完整语义、必要外部输出与容量合法；无需先满足“大块连续”形态。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.source.memory_bandwidth_saturation",
+          "state": true,
+          "destination": "performance_hypotheses",
+          "reason": "该S现有定义仅确认大块连续搬运，并不确认饱和；消除冗余流量还适用于短块/复用路径，不应把此形态硬绑到Action。"
+        },
+        {
+          "fact": "constraint.traffic_reducible",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "能指出具体可消除读写及等价值/消费者关系；仅观察带宽或字节大不能证明可删。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.reorder_contiguous_access",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.source.noncontiguous_access",
+          "state": true
+        },
+        {
+          "fact": "constraint.layout_semantics",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.noncontiguous_access",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "离散地址序列是结构事实；不能仅用stride数值推断吞吐或默认必须转置。"
+        },
+        {
+          "fact": "constraint.layout_semantics",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "遍历/布局改变保持逻辑元素与物理地址一一对应、合法边界和输出owner。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "按连续段组织访问可能减少短搬运或Scalar解码，但额外格式转换、失去复用或任务失衡可抵消。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "从shape/stride推导最大连续段、段数和输出所有权，比较直搬、strided API或块转置的成本。",
+            "把不规则Gather索引与规则仿射布局区分；不能以源有连续后缀就覆盖重复目标写入或非法跨界。"
+          ]
+        }
+      ],
+      "applicability": "当前物理stride与切分轴已知；重排后每个输入/输出逻辑映射、unique owner和API访问域合法。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.source.noncontiguous_access",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "离散地址序列是结构事实；不能仅用stride数值推断吞吐或默认必须转置。"
+        },
+        {
+          "fact": "constraint.layout_semantics",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "遍历/布局改变保持逻辑元素与物理地址一一对应、合法边界和输出owner。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.restructure_broadcast",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.source.broadcast_strategy_mismatch",
+          "state": true
+        },
+        {
+          "fact": "constraint.broadcast_semantics",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.broadcast_strategy_mismatch",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "现有路径未区分连续轴/重复输入是结构线索，mismatch不是已验证的错误策略。"
+        },
+        {
+          "fact": "constraint.broadcast_semantics",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "shape对齐、广播轴、零stride及输入值不变范围明确，输出映射与数值合法。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "重组广播轴或小输入复用可能减少重复读取/展开工作；新索引或UB展开也可能更贵。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "按每个输入的广播掩码/stride、唯一字节和重复次数计算成本，先选择来源匹配的广播形态。",
+            "对比GM到UB与UB内部广播位置及API支持；缺PMU不阻止基于明确广播结构的方案分析。"
+          ]
+        }
+      ],
+      "applicability": "已明确对齐shape、广播flag、零stride、输入值复用域及输出映射；目标API和临时区满足数值与容量。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.source.broadcast_strategy_mismatch",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "现有路径未区分连续轴/重复输入是结构线索，mismatch不是已验证的错误策略。"
+        },
+        {
+          "fact": "constraint.broadcast_semantics",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "shape对齐、广播轴、零stride及输入值不变范围明确，输出映射与数值合法。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.restructure_reduction",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.source.reduction_strategy_mismatch",
+          "state": true
+        },
+        {
+          "fact": "constraint.reduction_semantics",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.reduction_strategy_mismatch",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "当前归约形态与策略是结构事实；mismatch名称不证明某种方案必优。"
+        },
+        {
+          "fact": "constraint.reduction_semantics",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "归约算子、初值、有效域及允许的结合/舍入顺序不被未经授权改变。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "按A/R、AR/ARA和容量选择分解可能减少重复读取或最长核，但merge、临时区和精度路径会改变成本。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "列出A/R及连续性、全载容量、并行任务数和partial字节，对合法候选做工作量比较。",
+            "数值结合性不许可时直接保留顺序；缺具体阶段时间只影响预测强度，不把合法结构探索判为blocked。"
+          ]
+        }
+      ],
+      "applicability": "归约轴、归约算子、精度/结合次序许可和owner明确；全载/切分/partial合并分别满足容量和同步。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.source.reduction_strategy_mismatch",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "当前归约形态与策略是结构事实；mismatch名称不证明某种方案必优。"
+        },
+        {
+          "fact": "constraint.reduction_semantics",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "归约算子、初值、有效域及允许的结合/舍入顺序不被未经授权改变。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.retain_matrix_tiles",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.source.l1_l0_reuse_deficit",
+          "state": true
+        },
+        {
+          "fact": "constraint.l1_l0_budget",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.l1_l0_reuse_deficit",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "多对侧tile中重复装入同块是源码事实，不直接证明额外HBM流量或关键路径。"
+        },
+        {
+          "fact": "constraint.l1_l0_budget",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "L1/L0的真实分配、对齐、布局、深度和同时存活峰值分别符合当前目标预算。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "保留复用侧可减少相应层次装载，可能挤压双缓冲、缩小tile或导致更复杂tail。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "按M/N/K顺序标出每层加载次数、驻留字节、更新与释放点；计算驻留与双缓冲并存峰值。",
+            "区分GM→L1与L1→L0节省，不把某层次数减少泛化为HBM收益；两种驻留侧均按具体shape比较。"
+          ]
+        }
+      ],
+      "applicability": "A/B块在复用窗口内地址和值不变，目标L1/L0布局、对齐、容量和事件生命周期合法；流式一侧仍按需更新。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.source.l1_l0_reuse_deficit",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "多对侧tile中重复装入同块是源码事实，不直接证明额外HBM流量或关键路径。"
+        },
+        {
+          "fact": "constraint.l1_l0_budget",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "L1/L0的真实分配、对齐、布局、深度和同时存活峰值分别符合当前目标预算。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.reuse_disjoint_onchip_buffers",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.source.ub_live_bytes_near_capacity",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        },
+        {
+          "fact": "constraint.dependency_lifetime",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        },
+        {
+          "fact": "constraint.dependency_lifetime",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "所有producer/consumer、异步完成、释放/覆盖/复用边界真实合法；不能把等待可能慢当成可删依赖。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "legacy_symptom_source_ub_live_bytes_near_capacity",
+          "legacy_condition": {
+            "fact": "symptom.source.ub_live_bytes_near_capacity",
+            "state": true
+          },
+          "statement": "旧条件 symptom.source.ub_live_bytes_near_capacity 的期望状态为 true。接近容量上限影响收益与选择，不决定不重叠buffer复用是否合法；安全由生命周期、容量和语义约束负责。",
+          "reason": "接近容量上限影响收益与选择，不决定不重叠buffer复用是否合法；安全由生命周期、容量和语义约束负责。",
+          "next_checks": [
+            "画每个buffer的定义、异步消费完成和最后释放区间，按实际深度/对齐计算旧新峰值。",
+            "明确释放字节将支持哪项计划或减少哪项成本；仅减少分配大小不能自动声称加速。"
+          ]
+        },
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "复用可降低物理峰值，并可能使更合适tile或流水深度可行；若释放容量无用途，时延可能不变。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "画每个buffer的定义、异步消费完成和最后释放区间，按实际深度/对齐计算旧新峰值。",
+            "明确释放字节将支持哪项计划或减少哪项成本；仅减少分配大小不能自动声称加速。"
+          ]
+        }
+      ],
+      "applicability": "候选buffer的完整生产消费/异步完成生命周期经证明不重叠，alias对齐、地址空间、有效长度及容量合法；并不要求原峰值已接近上限。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.source.ub_live_bytes_near_capacity",
+          "state": true,
+          "destination": "performance_hypotheses",
+          "reason": "接近容量上限影响收益与选择，不决定不重叠buffer复用是否合法；安全由生命周期、容量和语义约束负责。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        },
+        {
+          "fact": "constraint.dependency_lifetime",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "所有producer/consumer、异步完成、释放/覆盖/复用边界真实合法；不能把等待可能慢当成可删依赖。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.reuse_input_tiles",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.source.insufficient_input_reuse",
+          "state": true
+        },
+        {
+          "fact": "constraint.reuse_domain",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.insufficient_input_reuse",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "重复读取同一切片是结构事实；insufficient名称不自动说明未命中cache或驻留可行。"
+        },
+        {
+          "fact": "constraint.reuse_domain",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "同地址同值的复用窗口、owner和覆盖/更新边界可证明，驻留不能越过输入变化或外部写入。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "驻留或改变tile顺序可减少重复装入；代价是更长存活、较小tile/较少流水buffer，L2提示不保证实际驻留。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "计算唯一切片字节、重复次数、复用距离、当前缓冲释放点和驻留后峰值，区分UB/L1保留与L2策略。",
+            "具体选择重复输入、矩阵块或坐标/trig表适用文档；无读流量计数仍可据明确复用结构提出方案，不能把假设当测量。"
+          ]
+        }
+      ],
+      "applicability": "输入在明确窗口内地址和值不变，消费者、owner、生命周期及目标驻留/缓存路径由C2许可；容量与通路支持有依据。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.source.insufficient_input_reuse",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "重复读取同一切片是结构事实；insufficient名称不自动说明未命中cache或驻留可行。"
+        },
+        {
+          "fact": "constraint.reuse_domain",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "同地址同值的复用窗口、owner和覆盖/更新边界可证明，驻留不能越过输入变化或外部写入。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.shorten_scalar_lifetimes",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.source.register_spill",
+          "state": true
+        },
+        {
+          "fact": "constraint.compiler_report",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        },
+        {
+          "fact": "constraint.scalar_lifetime_legality",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "报告存在不是生命周期安全证明；新增可由源码、调用契约和必要编译语义证明的具体条件。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "legacy_symptom_source_register_spill",
+          "legacy_condition": {
+            "fact": "symptom.source.register_spill",
+            "state": true
+          },
+          "statement": "旧条件 symptom.source.register_spill 的期望状态为 true。该S实际定义是大对象/长生存期等源码风险，非实际spill；安全生命周期改写不以已出现风险或spill为必要条件。",
+          "reason": "该S实际定义是大对象/长生存期等源码风险，非实际spill；安全生命周期改写不以已出现风险或spill为必要条件。",
+          "next_checks": [
+            "由源码画定义-最后使用和alias/escape关系，识别可缩短且不改变副作用的窗口并估算活跃量变化。",
+            "优先用现有编译报告/反汇编判别spill、stack和CSE；不可得时保留可证结构与具体预测，不禁止合法试验，也不认定spill已存在。"
+          ]
+        },
+        {
+          "id": "legacy_constraint_compiler_report",
+          "legacy_condition": {
+            "fact": "constraint.compiler_report",
+            "state": true
+          },
+          "statement": "旧条件 constraint.compiler_report 的期望状态为 true。编译报告用于判别spill、栈和活跃量，属于性能/资源归因证据；实施安全改由具体源码生命周期合法性证明，报告存在不能替代该证明。",
+          "reason": "编译报告用于判别spill、栈和活跃量，属于性能/资源归因证据；实施安全改由具体源码生命周期合法性证明，报告存在不能替代该证明。",
+          "next_checks": [
+            "由源码画定义-最后使用和alias/escape关系，识别可缩短且不改变副作用的窗口并估算活跃量变化。",
+            "优先用现有编译报告/反汇编判别spill、stack和CSE；不可得时保留可证结构与具体预测，不禁止合法试验，也不认定spill已存在。"
+          ]
+        },
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "缩短活跃范围可能减少寄存器压力或spill，也可能增加重算和指令体积；编译器原本已处理时可能无收益。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "由源码画定义-最后使用和alias/escape关系，识别可缩短且不改变副作用的窗口并估算活跃量变化。",
+            "优先用现有编译报告/反汇编判别spill、stack和CSE；不可得时保留可证结构与具体预测，不禁止合法试验，也不认定spill已存在。"
+          ]
+        }
+      ],
+      "applicability": "变量定义/全部使用、别名/取地址/逃逸、编译地址空间和副作用已知；改写后值、可见性及执行依赖保持；不要求先观测到spill。",
+      "added_safety_predicates": [
+        {
+          "fact": "constraint.scalar_lifetime_legality",
+          "state": true,
+          "definition": "针对已绑定实现、目标对象和变换窗口，缩短标量/对象存活期后所有使用仍由正确值支配，别名/取地址/逃逸/异步访问及副作用可见性不变。",
+          "reason": "报告存在不是生命周期安全证明；新增可由源码、调用契约和必要编译语义证明的具体条件。",
+          "proof_requirements": [
+            "列出定义、全部读写使用、最后使用和控制流分支；重计算使用同一数值语义且不遗漏副作用。",
+            "检查取地址、引用、指针逃逸、对象成员与调用参数，不把仍被引用或异步消费的对象提前销毁/覆盖。",
+            "核对存储地址空间、对齐、构造析构或宏展开要求，保持ABI及跨函数执行契约。",
+            "标出新旧作用域及alias关系，对零/单循环和条件分支的初始化覆盖逐项证明。"
+          ],
+          "unknown_when": [
+            "使用/别名/逃逸边界不完整或被不可见调用访问。",
+            "重计算副作用、数值顺序或对象生命周期契约尚未确认。"
+          ]
+        }
+      ],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.source.register_spill",
+          "state": true,
+          "destination": "performance_hypotheses",
+          "reason": "该S实际定义是大对象/长生存期等源码风险，非实际spill；安全生命周期改写不以已出现风险或spill为必要条件。"
+        },
+        {
+          "fact": "constraint.compiler_report",
+          "state": true,
+          "destination": "performance_hypotheses",
+          "reason": "编译报告用于判别spill、栈和活跃量，属于性能/资源归因证据；实施安全改由具体源码生命周期合法性证明，报告存在不能替代该证明。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.size_workspace_by_shape",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.source.workspace_overallocation",
+          "state": true
+        },
+        {
+          "fact": "constraint.workspace_ownership",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.workspace_overallocation",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "按最大shape或过量槽位分配是字节公式观察；不说明设备实际读写了这些额外字节。"
+        },
+        {
+          "fact": "constraint.workspace_ownership",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按shape和并发slot完整覆盖kernel索引上界、owner、异步生命周期与框架保留区。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "缩减workspace可降低占用；只有触及多余区域或影响资源可用性时才可能改善时延。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "根据全shape域、异步并发槽和各段owner重算上界，核对边界/零任务及调用间生命周期。",
+            "区分容量收益和时延收益；若只分配未访问，多轮追求加速时其试验价值应低于直接主要计算/流量机会。"
+          ]
+        }
+      ],
+      "applicability": "所有runtime shape、并发slot、kernel索引上界、对齐和框架保留区可证明覆盖；host分配与kernel偏移必须一致。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.source.workspace_overallocation",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按最大shape或过量槽位分配是字节公式观察；不说明设备实际读写了这些额外字节。"
+        },
+        {
+          "fact": "constraint.workspace_ownership",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按shape和并发slot完整覆盖kernel索引上界、owner、异步生命周期与框架保留区。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.software_pipeline_stages",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.profile.overlap_low",
+          "state": true
+        },
+        {
+          "fact": "symptom.source.serial_queue_or_event_order",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        },
+        {
+          "fact": "constraint.dependency_lifetime",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.serial_queue_or_event_order",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "当前队列或事件的顺序是结构事实，不说明真实硬件上完全无重叠；高阶API内部流水需单独考虑。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        },
+        {
+          "fact": "constraint.dependency_lifetime",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "所有producer/consumer、异步完成、释放/覆盖/复用边界真实合法；不能把等待可能慢当成可删依赖。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "legacy_symptom_profile_overlap_low",
+          "legacy_condition": {
+            "fact": "symptom.profile.overlap_low",
+            "state": true
+          },
+          "statement": "旧条件 symptom.profile.overlap_low 的期望状态为 true。低重叠是性能假设/判别依据，依赖及生命周期正确才是重排的实施安全条件。",
+          "reason": "低重叠是性能假设/判别依据，依赖及生命周期正确才是重排的实施安全条件。",
+          "next_checks": [
+            "画原事件DAG并统计tile数、每阶段工作量与buffer峰值，推导至少一个合法重叠窗口和序言/尾声成本。",
+            "已有trace可验证空洞；无trace时可据明确串行依赖提出试验，不能把double buffer声明等同重叠已发生。"
+          ]
+        },
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "合法预取/计算/写回重排可能缩短稳态关键路径；短任务、单tile、最慢阶段不变或额外buffer成本会限制收益。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "画原事件DAG并统计tile数、每阶段工作量与buffer峰值，推导至少一个合法重叠窗口和序言/尾声成本。",
+            "已有trace可验证空洞；无trace时可据明确串行依赖提出试验，不能把double buffer声明等同重叠已发生。"
+          ]
+        }
+      ],
+      "applicability": "多个tile/阶段之间存在可重叠的独立工作，producer/consumer事件与buffer生命周期已完整证明；新增深度/序言尾声与容量合法。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.profile.overlap_low",
+          "state": true,
+          "destination": "performance_hypotheses",
+          "reason": "低重叠是性能假设/判别依据，依赖及生命周期正确才是重排的实施安全条件。"
+        },
+        {
+          "fact": "symptom.source.serial_queue_or_event_order",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "当前队列或事件的顺序是结构事实，不说明真实硬件上完全无重叠；高阶API内部流水需单独考虑。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        },
+        {
+          "fact": "constraint.dependency_lifetime",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "所有producer/consumer、异步完成、释放/覆盖/复用边界真实合法；不能把等待可能慢当成可删依赖。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.stagger_resource_access",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.source.transfer_compute_contention",
+          "state": true
+        },
+        {
+          "fact": "constraint.dependency_lifetime",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.transfer_compute_contention",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "同资源访问并存在重叠机会只是潜在竞争结构，不证明已发生资源争用。"
+        },
+        {
+          "fact": "constraint.dependency_lifetime",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "所有producer/consumer、异步完成、释放/覆盖/复用边界真实合法；不能把等待可能慢当成可删依赖。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "错开访问可能降低冲突，也可能损失原有重叠并使总时间增加。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "根据目标资源映射与实际地址/依赖检查是否真共享资源，比较可调相位窗口及额外等待。",
+            "没有争用计数时只记录资源竞争预测；资源映射未知先读对应平台文档，不能用其他代际映射补值。"
+          ]
+        }
+      ],
+      "applicability": "候选发射可在依赖许可的窗口内改相位，资源映射有当前目标依据；改变调度仍满足所有buffer寿命和事件。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.source.transfer_compute_contention",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "同资源访问并存在重叠机会只是潜在竞争结构，不证明已发生资源争用。"
+        },
+        {
+          "fact": "constraint.dependency_lifetime",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "所有producer/consumer、异步完成、释放/覆盖/复用边界真实合法；不能把等待可能慢当成可删依赖。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.vectorize_scalar_loop",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.profile.scalar_hot",
+          "state": true
+        },
+        {
+          "fact": "symptom.source.scalar_element_loop",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.scalar_element_loop",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "逐元素Scalar循环是源码事实，不要求先测到scalar_hot；索引控制与实际数据运算需区分。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "legacy_symptom_profile_scalar_hot",
+          "legacy_condition": {
+            "fact": "symptom.profile.scalar_hot",
+            "state": true
+          },
+          "statement": "旧条件 symptom.profile.scalar_hot 的期望状态为 true。Scalar热点证据提高试验优先级，但不是等价逐元素向量化的安全前提。",
+          "reason": "Scalar热点证据提高试验优先级，但不是等价逐元素向量化的安全前提。",
+          "next_checks": [
+            "统计每输出标量运算/地址解码及数据复用，读取匹配dtype和形态的Vector/API文档，证明批量路径的精度和mask合法。",
+            "已有Vector数据运算而仅Scalar控制时不要机械替换；无PMU可从逐元素工作规模提出有来源的试验。"
+          ]
+        },
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "合法向量化可能减少逐元素Scalar处理与发射，但Gather/转换、UB暂存和精度路径可成为新成本。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "统计每输出标量运算/地址解码及数据复用，读取匹配dtype和形态的Vector/API文档，证明批量路径的精度和mask合法。",
+            "已有Vector数据运算而仅Scalar控制时不要机械替换；无PMU可从逐元素工作规模提出有来源的试验。"
+          ]
+        }
+      ],
+      "applicability": "当前逐元素数据计算可用目标支持的Vector路径等价表达；数学/异常值/舍入、索引依赖、mask、别名和有效范围合法。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.profile.scalar_hot",
+          "state": true,
+          "destination": "performance_hypotheses",
+          "reason": "Scalar热点证据提高试验优先级，但不是等价逐元素向量化的安全前提。"
+        },
+        {
+          "fact": "symptom.source.scalar_element_loop",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "逐元素Scalar循环是源码事实，不要求先测到scalar_hot；索引控制与实际数据运算需区分。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    },
+    {
+      "action_id": "action.vectorize_tail",
+      "legacy_preconditions": [
+        {
+          "fact": "symptom.source.tail_slow_path",
+          "state": true
+        },
+        {
+          "fact": "constraint.valid_lengths",
+          "state": true
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true
+        }
+      ],
+      "safety_conditions": [
+        {
+          "fact": "symptom.source.tail_slow_path",
+          "state": true,
+          "kind": "structural_applicability",
+          "reason": "Scalar或多小API尾处理是结构事实，slow_path名字不表示尾段确为热点。"
+        },
+        {
+          "fact": "constraint.valid_lengths",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "每个主体/尾路径的有效count、mask、对齐及GM写回长度均不越界且完整覆盖。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "kind": "implementation_safety",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "id": "cost_reduction",
+          "legacy_condition": null,
+          "statement": "有界Vector尾路径可能减少Scalar/API工作，但尾比例小、额外padding或复杂初始化会限制收益。",
+          "reason": "本次机制归纳：适用来源和当前结构支持可检验预测，安全合法性与性能优先级分开；没有目标收益承诺。",
+          "next_checks": [
+            "计算各case尾长/主体比例、每核尾次数和原路径调用数，比较count、mask与padding的合法实现。",
+            "尾形态覆盖零尾、单元素、近整tile与小shape；缺tail timing只影响效益估计，不阻止源码可证明合法的尾方案。"
+          ]
+        }
+      ],
+      "applicability": "尾部有效元素域、mask/count或padding规则及唯一写回明确，目标dtype/API支持有依据；不得越界读取或覆盖其他owner。",
+      "added_safety_predicates": [],
+      "legacy_dispositions": [
+        {
+          "fact": "symptom.source.tail_slow_path",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "Scalar或多小API尾处理是结构事实，slow_path名字不表示尾段确为热点。"
+        },
+        {
+          "fact": "constraint.valid_lengths",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "每个主体/尾路径的有效count、mask、对齐及GM写回长度均不越界且完整覆盖。"
+        },
+        {
+          "fact": "constraint.semantic_equivalence",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。"
+        },
+        {
+          "fact": "constraint.capacity",
+          "state": true,
+          "destination": "safety_conditions",
+          "reason": "按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。"
+        }
+      ]
+    }
+  ]
+}

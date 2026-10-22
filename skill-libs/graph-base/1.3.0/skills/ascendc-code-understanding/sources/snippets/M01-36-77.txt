@@ -1,0 +1,42 @@
+
+### 核心原则
+
+1. **理解优先** — 先读懂代码整体设计，再按模板填空，禁止机械填表
+2. **证据驱动** — 每个结论必须有 Read/Grep 证据支撑，禁止推测
+3. **侧别必识别** — Kernel/Host 侧别判定是后续条例过滤的关键输入
+
+---
+
+## 关键知识
+
+### Kernel/Host 分层
+
+| 侧别 | 文件位置 | 代码特征 | 职责 |
+|------|---------|---------|------|
+| **Kernel 侧** | `op_kernel/**/*.cpp/.h` | `__aicore__`、`AscendC::`、`pipe.InitBuffer` | 在 AI Core 上执行计算，不做参数校验 |
+| **Host 侧** | `op_host/**/*.cpp/.h`、`op_graph/**/*.cpp/.h`、`op_api/**/*.cpp` | `gert::TilingContext`、`TilingData`、`gert::InferShapeContext`、`gert::InferDataTypeContext`、`IMPL_OP`、`REG_OP`、`aclnn` | tiling 参数校验与多核切分、图推断（InferShape/InferDataType）、aclnn 适配 |
+
+### 变量来源判定
+
+| 来源 | 特征 | 校验状态 |
+|------|------|----------|
+| Tiling 传递 | `tilingData.GetXXX()` | 已校验，无需重复 |
+| 硬件配置 | `GetCoreNumAic()`、`GetCoreNumAiv()` 等平台 API | 硬件保证，构造阶段已校验 |
+| 常量定义 | `constexpr` / `const` | 编译期固定 |
+| 架构常量 | `FP32_*` / `UB_*` / `BLOCK_*` | 硬件固定 |
+
+### 代码关联追踪
+
+| 追踪方向 | 关键线索 | 方法 |
+|----------|----------|------|
+| **上游** | `#include` 语句 | 从 include 定位 TilingData 结构定义 |
+| **上游** | 函数调用者 | 从入口函数名 Grep 反推调用位置 |
+| **下游** | 函数调用 | 从 Compute/Process 等函数看调用链 |
+| **下游** | AscendC API | DataCopy/Reduce 等 API 定位计算模块 |
+
+---
+
+## 执行流程
+
+```
+Step 1: 读取代码     — Read 源码全部内容

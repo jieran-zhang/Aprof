@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+APROF_RELEASE_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+APROF_PYTHON="${APROF_PYTHON:-$APROF_RELEASE_ROOT/.runtime-env/bin/python}"
+if [[ ! -x "$APROF_PYTHON" ]]; then
+    APROF_PYTHON="$(command -v python3)"
+fi
+export PYTHONPATH="$APROF_RELEASE_ROOT/runtime/src${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONDONTWRITEBYTECODE=1
+exec "$APROF_PYTHON" -m aprof_runtime "$@"

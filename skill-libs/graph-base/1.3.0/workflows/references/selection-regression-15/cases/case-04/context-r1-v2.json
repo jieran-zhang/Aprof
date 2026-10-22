@@ -1,0 +1,184 @@
+{
+  "schema_version": "aprof.evidence/v1",
+  "task_id": "case-04",
+  "source_context_ref": {
+    "path": "authority-v2.json",
+    "sha256": "sha256:485b97e07df5543820a5cfdae10b8c65d713db9b44a4760b37da3625044f1e5f"
+  },
+  "attributes": {
+    "family": "elementwise",
+    "dtype": [
+      "bfloat16",
+      "float16",
+      "float32"
+    ],
+    "platform": "dav-2201",
+    "features": [
+      "continuous",
+      "tiling-tail",
+      "memory-transfer",
+      "pipeline-sync",
+      "vector-api",
+      "buffer-lifetime"
+    ]
+  },
+  "facts": {
+    "source.path": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.path",
+      "ref": {
+        "path": "source/op_kernel/swi_glu_kernel.asc",
+        "sha256": "sha256:af2a5487dc0de5d4603a8fa40fcae21bc053cf2e1c87d8e2bd6f33123afabf2e",
+        "locator": "lines:1-115"
+      },
+      "view": "source"
+    },
+    "source.host": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.host",
+      "ref": {
+        "path": "source/op_host/swi_glu.asc",
+        "sha256": "sha256:60b5c5abd8d90341dc6d582708e4ae0863ab0c1b49c55a8fdabf020880f57ec6",
+        "locator": "lines:1-98"
+      },
+      "view": "source"
+    },
+    "source.matrix": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.matrix",
+      "ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:089035867297c067ce37314d4d6e8fe5f0252d2cd572a3f8f3a967a8b9559d50",
+        "locator": "lines:1-290"
+      },
+      "view": "workload"
+    },
+    "source.analysis": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.analysis",
+      "ref": {
+        "path": "analysis-r1.md",
+        "sha256": "sha256:deade72c888db60b9ce351649ccc9dc5dbc48404dba1fa70b51ec7a35664a6e0",
+        "locator": "lines:1-13"
+      },
+      "view": "source"
+    },
+    "constraint.semantic_equivalence": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "semantic-plan",
+      "ref": {
+        "path": "analysis-r1.md",
+        "sha256": "sha256:deade72c888db60b9ce351649ccc9dc5dbc48404dba1fa70b51ec7a35664a6e0",
+        "locator": "lines:1-13"
+      },
+      "view": "constraint"
+    },
+    "constraint.capacity": {
+      "state": "unknown",
+      "kind": "raw",
+      "evidence_id": null,
+      "ref": null,
+      "view": "constraint"
+    },
+    "constraint.dependency_lifetime": {
+      "state": "unknown",
+      "kind": "raw",
+      "evidence_id": null,
+      "ref": null,
+      "view": "constraint"
+    },
+    "symptom.source.serial_queue_or_event_order.component_1": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.serial_queue_or_event_order.component_1",
+      "ref": {
+        "path": "source/op_kernel/swi_glu_kernel.asc",
+        "sha256": "sha256:af2a5487dc0de5d4603a8fa40fcae21bc053cf2e1c87d8e2bd6f33123afabf2e",
+        "locator": "lines:1-115"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order.component_2": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.serial_queue_or_event_order.component_2",
+      "ref": {
+        "path": "source/op_kernel/swi_glu_kernel.asc",
+        "sha256": "sha256:af2a5487dc0de5d4603a8fa40fcae21bc053cf2e1c87d8e2bd6f33123afabf2e",
+        "locator": "lines:1-115"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order.component_3": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.serial_queue_or_event_order.component_3",
+      "ref": {
+        "path": "analysis-r1.md",
+        "sha256": "sha256:deade72c888db60b9ce351649ccc9dc5dbc48404dba1fa70b51ec7a35664a6e0",
+        "locator": "lines:1-13"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": "symptom.source.serial_queue_or_event_order",
+      "ref": {
+        "path": "source/op_kernel/swi_glu_kernel.asc",
+        "sha256": "sha256:af2a5487dc0de5d4603a8fa40fcae21bc053cf2e1c87d8e2bd6f33123afabf2e",
+        "locator": "lines:1-115"
+      },
+      "view": "source"
+    },
+    "symptom.source.inner_loop_copy.component_1": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.inner_loop_copy.component_1",
+      "ref": {
+        "path": "source/op_kernel/swi_glu_kernel.asc",
+        "sha256": "sha256:af2a5487dc0de5d4603a8fa40fcae21bc053cf2e1c87d8e2bd6f33123afabf2e",
+        "locator": "lines:1-115"
+      },
+      "view": "source"
+    },
+    "symptom.source.inner_loop_copy.component_2": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.inner_loop_copy.component_2",
+      "ref": {
+        "path": "source/op_kernel/swi_glu_kernel.asc",
+        "sha256": "sha256:af2a5487dc0de5d4603a8fa40fcae21bc053cf2e1c87d8e2bd6f33123afabf2e",
+        "locator": "lines:1-115"
+      },
+      "view": "source"
+    },
+    "symptom.source.inner_loop_copy.component_3": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.inner_loop_copy.component_3",
+      "ref": {
+        "path": "analysis-r1.md",
+        "sha256": "sha256:deade72c888db60b9ce351649ccc9dc5dbc48404dba1fa70b51ec7a35664a6e0",
+        "locator": "lines:1-13"
+      },
+      "view": "source"
+    },
+    "symptom.source.inner_loop_copy": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": "symptom.source.inner_loop_copy",
+      "ref": {
+        "path": "source/op_kernel/swi_glu_kernel.asc",
+        "sha256": "sha256:af2a5487dc0de5d4603a8fa40fcae21bc053cf2e1c87d8e2bd6f33123afabf2e",
+        "locator": "lines:1-115"
+      },
+      "view": "source"
+    }
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "task_id": "autonomy-c-11",
+  "kind": "preselection/internal-router-feasibility-consultation",
+  "round": 1,
+  "parallel_route_ref": {
+    "path": "parallel-planning-consult-route.json",
+    "sha256": "sha256:6b8e63258a18c3a2ccf654bcea301b98970e3b9833945ea95741d5ffc9834095"
+  },
+  "optimization_route_ref": {
+    "path": "optimization-consult-route.json",
+    "sha256": "sha256:3a2158c37e12c0e00613e647e13ee02bc89695ded092a840e51f28ac973836a6"
+  },
+  "actual_body_readings": [
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+      },
+      "locator": "lines:83-188",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "确认按连续输出owner分区和valid长度，tile容量必须计所有实际分配；单槽/双槽只是假设。foreach完整结构适用；Maximum只覆盖同形；RoPE伴随partner读不满足逐元素同下标前提，仅采用owner/容量原则。",
+      "applicability": "full structural：当前三输入同shape独立元素和连续owner匹配完整骨架；SDK与容量仍条件化。"
+    },
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+        "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+      },
+      "locator": "lines:69-108",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "选择保持原owner、有效尾长和同dtype连续邻段，只增tile T减少4L接口数；原数值顺序和queue完成边保留，跨tensor/chunk不能合并。容量上升与失去双槽机会共同进入R2。",
+      "applicability": "partial：仅采用容量、有效域、所有权/数值边界原则；未声称整套模板API已验证。"
+    },
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+        "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+      },
+      "locator": "lines:89-207",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "确认num=2不是重叠证明、物理槽数与queue depth不同；替代方案需要输入ready/free与输出ready/free四类完成边和0/1/2 tile排空。因保持scratch单份，不能擅自并发写FP32临时。",
+      "applicability": "partial：仅采用容量、有效域、所有权/数值边界原则；未声称整套模板API已验证。"
+    }
+  ],
+  "confirmed_C2": false,
+  "P_KEEP": false,
+  "O_KEEP": false,
+  "implementation_authorized": false,
+  "reason": "采用条件骨架和方法咨询，当前未有完整已确认计划，不生成虚构C2/C3。",
+  "action_bound_route_refs": [
+    {
+      "path": "parallel-planning-action-consult-r1.json",
+      "sha256": "sha256:aa44e63e3642105090e76e9de6c72ba9eedb5096d025c4922c68c0a8e41c5100"
+    },
+    {
+      "path": "optimization-action-consult-r1.json",
+      "sha256": "sha256:97720e85687ed9721cc53b9969dcc59994918c66e997b0d2730d5b02618989bc"
+    }
+  ]
+}

@@ -1,0 +1,2945 @@
+{
+  "artifacts": [],
+  "candidate_id": null,
+  "parent_hash": "sha256:77ba901b81a79cd9ed76b183361e7e52ea2d77e7fb1c022487e13895dfc2cc02",
+  "schema_version": "aprof.handoff/v4",
+  "selection": {
+    "confirmed_plan": {
+      "architecture_profile": {
+        "architecture_id": "910c",
+        "capabilities": {},
+        "core_counts": {
+          "aic": 1,
+          "aiv": 1
+        },
+        "device_id": null,
+        "hardware_fingerprint": "paper-only",
+        "limitations": [
+          "CPU声明验证，不声称硬件支持或收益"
+        ],
+        "memory_bytes": {
+          "BT": 65536,
+          "L0_A": 65536,
+          "L0_B": 65536,
+          "L0_C": 65536,
+          "L1": 65536,
+          "L2": 65536,
+          "UB": 65536
+        },
+        "npu_arch": 2201,
+        "probe_kind": "sdk_soc",
+        "provenance": {
+          "probe_source_ref": "sha256:f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d",
+          "raw_probe_ref": "sha256:f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d",
+          "sdk_header_ref": null
+        },
+        "schema_version": "1.0.0",
+        "sdk_version": "paper-only",
+        "soc_name": "Ascend910C"
+      },
+      "contracts": {
+        "algorithm": "paper-current",
+        "data_path": "unchanged",
+        "dispatch_domain": "unchanged",
+        "fusion_boundary": "unchanged",
+        "ownership": "unchanged",
+        "reduction": "unchanged",
+        "synchronization": "unchanged",
+        "task_partition": "unchanged",
+        "workspace_ownership": "unchanged"
+      },
+      "dispatch_plan": {
+        "architecture_profile_ref": "sha256:87082e55668791c6e1ece6f0924d46940af2f57870fc1390d9c39ea6d8e4377c",
+        "dispatch_id": "paper-dispatch",
+        "entries": [],
+        "fallback": {
+          "conditions": [],
+          "group_id": "all",
+          "kernel_entry": "paper_kernel",
+          "required_capabilities": [],
+          "tiling_key": 0
+        },
+        "operator": "paper",
+        "parallel_plan_ref": "sha256:232a17844234be865b7fae7a60ec489a0a13f7e25bd74601a8e2e5492958bd5c",
+        "schema_version": "1.0.0",
+        "source_hash": "sha256:701f8d79965f522624573312de80b6eaa677216d562ed2f60f59bd31bdae80b5"
+      },
+      "implementation_freedom": {
+        "dimensions": [
+          "local_transfer"
+        ],
+        "parameter_domains": [
+          {
+            "maximum": 1024,
+            "minimum": 32,
+            "name": "tile"
+          }
+        ],
+        "reason": "仅允许本地搬运参数"
+      },
+      "parallel_plan": {
+        "architecture_profile_ref": "sha256:87082e55668791c6e1ece6f0924d46940af2f57870fc1390d9c39ea6d8e4377c",
+        "groups": [
+          {
+            "algorithm": "paper-current",
+            "alternatives": [],
+            "group_id": "all",
+            "memory_requirements": {
+              "UB": 4096
+            },
+            "ownership": "disjoint output",
+            "reduction": "none",
+            "required_capabilities": [],
+            "selection_evidence": [
+              "sha256:f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d"
+            ],
+            "synchronization": "same dependencies",
+            "task_partition": "one paper task",
+            "workspace_bytes": 0,
+            "workspace_formula": "0"
+          }
+        ],
+        "operator": "paper",
+        "plan_id": "paper-plan",
+        "precision_invariants": [
+          "same visible rounding"
+        ],
+        "schema_version": "1.0.0",
+        "semantic_invariants": [
+          "output identity"
+        ],
+        "source_hash": "sha256:701f8d79965f522624573312de80b6eaa677216d562ed2f60f59bd31bdae80b5"
+      },
+      "scope": {
+        "parent_implementation_hash": "sha256:701f8d79965f522624573312de80b6eaa677216d562ed2f60f59bd31bdae80b5",
+        "stage": "kernel.main",
+        "target_ids": [
+          "tensor.x"
+        ],
+        "task_id": "paper-task",
+        "workload_hash": "sha256:a908794893b8f714892612ef3973908d8a5b12a76e5ff9298dba2d7f4c0cf9ad"
+      }
+    },
+    "confirmed_plan_ref": {
+      "path": "confirmed-plan.json",
+      "sha256": "sha256:cee02a493d2850b69975452f2223b1fc1f80c8c05006b948a16c5f83569ce7d9"
+    },
+    "joint_compatibility": [
+      {
+        "configuration_hash": "sha256:a0ec5901d453f4e2efdcff7fe4a0b18761d820a3c1190d27ff9f2ef3db1e1f37",
+        "dimension": "data_path",
+        "fact_bindings": [
+          "joint.review"
+        ],
+        "member_instance_ids": [
+          "action-instance.one",
+          "action-instance.one.second"
+        ],
+        "plan_hash": "sha256:b68798fe96589a2e40771e735131d15fcd74cb6dfa1374d05c6dd3ad68782209",
+        "rationale": "明确核对共同计划中本轮完整方案兼容性"
+      },
+      {
+        "configuration_hash": "sha256:a0ec5901d453f4e2efdcff7fe4a0b18761d820a3c1190d27ff9f2ef3db1e1f37",
+        "dimension": "layout",
+        "fact_bindings": [
+          "joint.review"
+        ],
+        "member_instance_ids": [
+          "action-instance.one",
+          "action-instance.one.second"
+        ],
+        "plan_hash": "sha256:b68798fe96589a2e40771e735131d15fcd74cb6dfa1374d05c6dd3ad68782209",
+        "rationale": "明确核对共同计划中本轮完整方案兼容性"
+      },
+      {
+        "configuration_hash": "sha256:a0ec5901d453f4e2efdcff7fe4a0b18761d820a3c1190d27ff9f2ef3db1e1f37",
+        "dimension": "numeric_semantics",
+        "fact_bindings": [
+          "joint.review"
+        ],
+        "member_instance_ids": [
+          "action-instance.one",
+          "action-instance.one.second"
+        ],
+        "plan_hash": "sha256:b68798fe96589a2e40771e735131d15fcd74cb6dfa1374d05c6dd3ad68782209",
+        "rationale": "明确核对共同计划中本轮完整方案兼容性"
+      },
+      {
+        "configuration_hash": "sha256:a0ec5901d453f4e2efdcff7fe4a0b18761d820a3c1190d27ff9f2ef3db1e1f37",
+        "dimension": "ownership",
+        "fact_bindings": [
+          "joint.review"
+        ],
+        "member_instance_ids": [
+          "action-instance.one",
+          "action-instance.one.second"
+        ],
+        "plan_hash": "sha256:b68798fe96589a2e40771e735131d15fcd74cb6dfa1374d05c6dd3ad68782209",
+        "rationale": "明确核对共同计划中本轮完整方案兼容性"
+      },
+      {
+        "configuration_hash": "sha256:a0ec5901d453f4e2efdcff7fe4a0b18761d820a3c1190d27ff9f2ef3db1e1f37",
+        "dimension": "resource_lifetimes",
+        "fact_bindings": [
+          "joint.review"
+        ],
+        "member_instance_ids": [
+          "action-instance.one",
+          "action-instance.one.second"
+        ],
+        "plan_hash": "sha256:b68798fe96589a2e40771e735131d15fcd74cb6dfa1374d05c6dd3ad68782209",
+        "rationale": "明确核对共同计划中本轮完整方案兼容性"
+      },
+      {
+        "configuration_hash": "sha256:a0ec5901d453f4e2efdcff7fe4a0b18761d820a3c1190d27ff9f2ef3db1e1f37",
+        "dimension": "synchronization",
+        "fact_bindings": [
+          "joint.review"
+        ],
+        "member_instance_ids": [
+          "action-instance.one",
+          "action-instance.one.second"
+        ],
+        "plan_hash": "sha256:b68798fe96589a2e40771e735131d15fcd74cb6dfa1374d05c6dd3ad68782209",
+        "rationale": "明确核对共同计划中本轮完整方案兼容性"
+      },
+      {
+        "configuration_hash": "sha256:a0ec5901d453f4e2efdcff7fe4a0b18761d820a3c1190d27ff9f2ef3db1e1f37",
+        "dimension": "workspace_ownership",
+        "fact_bindings": [
+          "joint.review"
+        ],
+        "member_instance_ids": [
+          "action-instance.one",
+          "action-instance.one.second"
+        ],
+        "plan_hash": "sha256:b68798fe96589a2e40771e735131d15fcd74cb6dfa1374d05c6dd3ad68782209",
+        "rationale": "明确核对共同计划中本轮完整方案兼容性"
+      }
+    ],
+    "members": [
+      {
+        "compatibility": {
+          "fact_bindings": [
+            "constraint.paper_combination_review"
+          ],
+          "implementation_hash": "sha256:701f8d79965f522624573312de80b6eaa677216d562ed2f60f59bd31bdae80b5",
+          "instance_hash": "sha256:ee4b51c25a1ad9099ce77c655337bae89a42790450127780244d6a24e508eb1b",
+          "parameters_hash": "sha256:59d02e2db004ece6b5648c32ceb75963776a6c47f86dd52a5e34ba65a9b8c167",
+          "plan_hash": "sha256:b68798fe96589a2e40771e735131d15fcd74cb6dfa1374d05c6dd3ad68782209",
+          "rationale": "同一owner、逻辑依赖、数值和有效访问域"
+        },
+        "instance": {
+          "action_id": "action.coalesce_contiguous_transfers",
+          "evidence_bindings": {
+            "constraint.broadcast_semantics": "constraint.broadcast_semantics",
+            "constraint.capacity": "constraint.capacity",
+            "constraint.coordinate_mapping": "constraint.coordinate_mapping",
+            "constraint.cross_engine_dependencies": "constraint.cross_engine_dependencies",
+            "constraint.dependency_lifetime": "constraint.dependency_lifetime",
+            "constraint.duplicate_index_semantics": "constraint.duplicate_index_semantics",
+            "constraint.full_load": "constraint.full_load",
+            "constraint.fusion_boundary": "constraint.fusion_boundary",
+            "constraint.group_address_map": "constraint.group_address_map",
+            "constraint.index_mapping": "constraint.index_mapping",
+            "constraint.input_value_preserved": "constraint.input_value_preserved",
+            "constraint.invariant_scope": "constraint.invariant_scope",
+            "constraint.l1_l0_budget": "constraint.l1_l0_budget",
+            "constraint.l2_cache_enabled": "constraint.l2_cache_enabled",
+            "constraint.layout_semantics": "constraint.layout_semantics",
+            "constraint.local_accumulation_lifetime": "constraint.local_accumulation_lifetime",
+            "constraint.merge_semantics": "constraint.merge_semantics",
+            "constraint.neighborhood_bounds": "constraint.neighborhood_bounds",
+            "constraint.output_layout_stride": "constraint.output_layout_stride",
+            "constraint.output_ownership": "constraint.output_ownership",
+            "constraint.paper_combination_review": "constraint.paper_combination_review",
+            "constraint.plan_freedom": "constraint.plan_freedom",
+            "constraint.precision": "constraint.precision",
+            "constraint.read_only_lifetime": "constraint.read_only_lifetime",
+            "constraint.reduction_semantics": "constraint.reduction_semantics",
+            "constraint.reuse_domain": "constraint.reuse_domain",
+            "constraint.same_input_region": "constraint.same_input_region",
+            "constraint.semantic_equivalence": "constraint.semantic_equivalence",
+            "constraint.softmax_semantics": "constraint.softmax_semantics",
+            "constraint.sort_semantics": "constraint.sort_semantics",
+            "constraint.static_dynamic_tiling": "constraint.static_dynamic_tiling",
+            "constraint.static_layout_lifetime": "constraint.static_layout_lifetime",
+            "constraint.streamk_target_implementation": "constraint.streamk_target_implementation",
+            "constraint.target_api": "constraint.target_api",
+            "constraint.task_ownership": "constraint.task_ownership",
+            "constraint.tiling_abi": "constraint.tiling_abi",
+            "constraint.unitflag_pairing": "constraint.unitflag_pairing",
+            "constraint.valid_lengths": "constraint.valid_lengths",
+            "constraint.workspace_ownership": "constraint.workspace_ownership",
+            "symptom.source.inner_loop_copy": "symptom.source.inner_loop_copy",
+            "symptom.source.inner_loop_copy.component_1": "symptom.source.inner_loop_copy.component_1",
+            "symptom.source.inner_loop_copy.component_2": "symptom.source.inner_loop_copy.component_2",
+            "symptom.source.inner_loop_copy.component_3": "symptom.source.inner_loop_copy.component_3"
+          },
+          "hypothesis_id": "temporary.problem",
+          "instance_id": "action-instance.one",
+          "parameters": {
+            "tile": 64
+          },
+          "parent_plan_hash": "sha256:b68798fe96589a2e40771e735131d15fcd74cb6dfa1374d05c6dd3ad68782209",
+          "reason": "纸面来源声明",
+          "scope": {
+            "parent_implementation_hash": "sha256:701f8d79965f522624573312de80b6eaa677216d562ed2f60f59bd31bdae80b5",
+            "stage": "kernel.main",
+            "target_ids": [
+              "tensor.x"
+            ],
+            "task_id": "paper-task",
+            "workload_hash": "sha256:a908794893b8f714892612ef3973908d8a5b12a76e5ff9298dba2d7f4c0cf9ad"
+          },
+          "status": "ready",
+          "targets": {
+            "implementation": "implementation.implementation",
+            "stage": "kernel.main",
+            "target": "tensor.x",
+            "workload": "workload.workload"
+          },
+          "template_hash": "sha256:eec8e2e49fa90290685f24038881b474a6a2e5e3747656e05f8269f19789f64a",
+          "unknowns": []
+        },
+        "instance_hash": "sha256:ee4b51c25a1ad9099ce77c655337bae89a42790450127780244d6a24e508eb1b",
+        "parallel": {
+          "entry_id": null,
+          "mode": "KEEP"
+        },
+        "parallel_route": {
+          "considered": [
+            {
+              "matched": true,
+              "prior_score": 3,
+              "router": "planning.root",
+              "target": "planning.elementwise"
+            },
+            {
+              "matched": false,
+              "prior_score": 3,
+              "router": "planning.root",
+              "target": "planning.reduction"
+            },
+            {
+              "matched": false,
+              "prior_score": 3,
+              "router": "planning.root",
+              "target": "planning.matmul"
+            },
+            {
+              "matched": false,
+              "prior_score": 3,
+              "router": "planning.root",
+              "target": "planning.under-fusion"
+            },
+            {
+              "matched": false,
+              "prior_score": 3,
+              "router": "planning.root",
+              "target": "planning.flash-attention"
+            },
+            {
+              "matched": false,
+              "prior_score": 3,
+              "router": "planning.root",
+              "target": "planning.sort-topk"
+            },
+            {
+              "matched": false,
+              "prior_score": 3,
+              "router": "planning.root",
+              "target": "planning.layout"
+            },
+            {
+              "matched": false,
+              "prior_score": 3,
+              "router": "planning.root",
+              "target": "planning.indexing"
+            },
+            {
+              "matched": false,
+              "prior_score": 3,
+              "router": "planning.root",
+              "target": "planning.moe-routing"
+            },
+            {
+              "matched": true,
+              "prior_score": 3,
+              "router": "planning.elementwise",
+              "target": "planning.elementwise.continuous"
+            },
+            {
+              "matched": false,
+              "prior_score": 2,
+              "router": "planning.elementwise",
+              "target": "planning.elementwise.broadcast"
+            }
+          ],
+          "context_hash": "sha256:ac90002fad138bc791a1d530519acff92ecfb5999023d4af923df6d6995c1d62",
+          "context_snapshot": {
+            "attributes": {
+              "dtype": "float32",
+              "family": [
+                "elementwise"
+              ],
+              "features": [
+                "memory-transfer",
+                "tiling-tail"
+              ],
+              "platform": "dav-2201"
+            },
+            "facts": {
+              "constraint.broadcast_semantics": {
+                "evidence_id": "constraint.broadcast_semantics",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.broadcast_semantics",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.capacity": {
+                "evidence_id": "constraint.capacity",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.capacity",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.coordinate_mapping": {
+                "evidence_id": "constraint.coordinate_mapping",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.coordinate_mapping",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.cross_engine_dependencies": {
+                "evidence_id": "constraint.cross_engine_dependencies",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.cross_engine_dependencies",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.dependency_lifetime": {
+                "evidence_id": "constraint.dependency_lifetime",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.dependency_lifetime",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.duplicate_index_semantics": {
+                "evidence_id": "constraint.duplicate_index_semantics",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.duplicate_index_semantics",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.full_load": {
+                "evidence_id": "constraint.full_load",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.full_load",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.fusion_boundary": {
+                "evidence_id": "constraint.fusion_boundary",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.fusion_boundary",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.group_address_map": {
+                "evidence_id": "constraint.group_address_map",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.group_address_map",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.index_mapping": {
+                "evidence_id": "constraint.index_mapping",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.index_mapping",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.input_value_preserved": {
+                "evidence_id": "constraint.input_value_preserved",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.input_value_preserved",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.invariant_scope": {
+                "evidence_id": "constraint.invariant_scope",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.invariant_scope",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.l1_l0_budget": {
+                "evidence_id": "constraint.l1_l0_budget",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.l1_l0_budget",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.l2_cache_enabled": {
+                "evidence_id": "constraint.l2_cache_enabled",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.l2_cache_enabled",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.layout_semantics": {
+                "evidence_id": "constraint.layout_semantics",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.layout_semantics",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.local_accumulation_lifetime": {
+                "evidence_id": "constraint.local_accumulation_lifetime",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.local_accumulation_lifetime",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.merge_semantics": {
+                "evidence_id": "constraint.merge_semantics",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.merge_semantics",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.neighborhood_bounds": {
+                "evidence_id": "constraint.neighborhood_bounds",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.neighborhood_bounds",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.output_layout_stride": {
+                "evidence_id": "constraint.output_layout_stride",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.output_layout_stride",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.output_ownership": {
+                "evidence_id": "constraint.output_ownership",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.output_ownership",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.paper_combination_review": {
+                "evidence_id": "constraint.paper_combination_review",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.paper_combination_review",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.plan_freedom": {
+                "evidence_id": "constraint.plan_freedom",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.plan_freedom",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.precision": {
+                "evidence_id": "constraint.precision",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.precision",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.read_only_lifetime": {
+                "evidence_id": "constraint.read_only_lifetime",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.read_only_lifetime",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.reduction_semantics": {
+                "evidence_id": "constraint.reduction_semantics",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.reduction_semantics",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.reuse_domain": {
+                "evidence_id": "constraint.reuse_domain",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.reuse_domain",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.same_input_region": {
+                "evidence_id": "constraint.same_input_region",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.same_input_region",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.semantic_equivalence": {
+                "evidence_id": "constraint.semantic_equivalence",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.semantic_equivalence",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.softmax_semantics": {
+                "evidence_id": "constraint.softmax_semantics",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.softmax_semantics",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.sort_semantics": {
+                "evidence_id": "constraint.sort_semantics",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.sort_semantics",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.static_dynamic_tiling": {
+                "evidence_id": "constraint.static_dynamic_tiling",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.static_dynamic_tiling",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.static_layout_lifetime": {
+                "evidence_id": "constraint.static_layout_lifetime",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.static_layout_lifetime",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.streamk_target_implementation": {
+                "evidence_id": "constraint.streamk_target_implementation",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.streamk_target_implementation",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.target_api": {
+                "evidence_id": "constraint.target_api",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.target_api",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.task_ownership": {
+                "evidence_id": "constraint.task_ownership",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.task_ownership",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.tiling_abi": {
+                "evidence_id": "constraint.tiling_abi",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.tiling_abi",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.unitflag_pairing": {
+                "evidence_id": "constraint.unitflag_pairing",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.unitflag_pairing",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.valid_lengths": {
+                "evidence_id": "constraint.valid_lengths",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.valid_lengths",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.workspace_ownership": {
+                "evidence_id": "constraint.workspace_ownership",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.workspace_ownership",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "joint.review": {
+                "evidence_id": "joint.review",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.paper_combination_review",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "symptom.source.fragmented_writeback": {
+                "evidence_id": "writeback.symptom.source.fragmented_writeback",
+                "kind": "derived",
+                "ref": {
+                  "locator": "symptom.source.fragmented_writeback.component_1",
+                  "path": "writeback-source.json",
+                  "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+                },
+                "state": true
+              },
+              "symptom.source.fragmented_writeback.component_1": {
+                "evidence_id": "writeback.symptom.source.fragmented_writeback.component_1",
+                "kind": "raw",
+                "ref": {
+                  "locator": "symptom.source.fragmented_writeback.component_1",
+                  "path": "writeback-source.json",
+                  "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+                },
+                "state": true
+              },
+              "symptom.source.fragmented_writeback.component_2": {
+                "evidence_id": "writeback.symptom.source.fragmented_writeback.component_2",
+                "kind": "raw",
+                "ref": {
+                  "locator": "symptom.source.fragmented_writeback.component_2",
+                  "path": "writeback-source.json",
+                  "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+                },
+                "state": true
+              },
+              "symptom.source.fragmented_writeback.component_3": {
+                "evidence_id": "writeback.symptom.source.fragmented_writeback.component_3",
+                "kind": "raw",
+                "ref": {
+                  "locator": "symptom.source.fragmented_writeback.component_3",
+                  "path": "writeback-source.json",
+                  "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+                },
+                "state": true
+              },
+              "symptom.source.inner_loop_copy": {
+                "evidence_id": "symptom.source.inner_loop_copy",
+                "kind": "derived",
+                "ref": {
+                  "locator": "symptom.source.inner_loop_copy.component_1",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "symptom.source.inner_loop_copy.component_1": {
+                "evidence_id": "symptom.source.inner_loop_copy.component_1",
+                "kind": "raw",
+                "ref": {
+                  "locator": "symptom.source.inner_loop_copy.component_1",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "symptom.source.inner_loop_copy.component_2": {
+                "evidence_id": "symptom.source.inner_loop_copy.component_2",
+                "kind": "raw",
+                "ref": {
+                  "locator": "symptom.source.inner_loop_copy.component_2",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "symptom.source.inner_loop_copy.component_3": {
+                "evidence_id": "symptom.source.inner_loop_copy.component_3",
+                "kind": "raw",
+                "ref": {
+                  "locator": "symptom.source.inner_loop_copy.component_3",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              }
+            },
+            "schema_version": "aprof.evidence/v1",
+            "source_context_ref": {
+              "path": "context.json",
+              "sha256": "sha256:6d9eb7305189181e04c2485879ec3b307f65cee267869aaf8a81dbe032a7a58d"
+            },
+            "task_id": "paper-task"
+          },
+          "evidence": {
+            "constraint.broadcast_semantics": {
+              "evidence_id": "constraint.broadcast_semantics",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.broadcast_semantics",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.capacity": {
+              "evidence_id": "constraint.capacity",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.capacity",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.coordinate_mapping": {
+              "evidence_id": "constraint.coordinate_mapping",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.coordinate_mapping",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.cross_engine_dependencies": {
+              "evidence_id": "constraint.cross_engine_dependencies",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.cross_engine_dependencies",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.dependency_lifetime": {
+              "evidence_id": "constraint.dependency_lifetime",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.dependency_lifetime",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.duplicate_index_semantics": {
+              "evidence_id": "constraint.duplicate_index_semantics",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.duplicate_index_semantics",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.full_load": {
+              "evidence_id": "constraint.full_load",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.full_load",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.fusion_boundary": {
+              "evidence_id": "constraint.fusion_boundary",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.fusion_boundary",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.group_address_map": {
+              "evidence_id": "constraint.group_address_map",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.group_address_map",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.index_mapping": {
+              "evidence_id": "constraint.index_mapping",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.index_mapping",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.input_value_preserved": {
+              "evidence_id": "constraint.input_value_preserved",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.input_value_preserved",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.invariant_scope": {
+              "evidence_id": "constraint.invariant_scope",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.invariant_scope",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.l1_l0_budget": {
+              "evidence_id": "constraint.l1_l0_budget",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.l1_l0_budget",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.l2_cache_enabled": {
+              "evidence_id": "constraint.l2_cache_enabled",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.l2_cache_enabled",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.layout_semantics": {
+              "evidence_id": "constraint.layout_semantics",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.layout_semantics",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.local_accumulation_lifetime": {
+              "evidence_id": "constraint.local_accumulation_lifetime",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.local_accumulation_lifetime",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.merge_semantics": {
+              "evidence_id": "constraint.merge_semantics",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.merge_semantics",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.neighborhood_bounds": {
+              "evidence_id": "constraint.neighborhood_bounds",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.neighborhood_bounds",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.output_layout_stride": {
+              "evidence_id": "constraint.output_layout_stride",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.output_layout_stride",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.output_ownership": {
+              "evidence_id": "constraint.output_ownership",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.output_ownership",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.paper_combination_review": {
+              "evidence_id": "constraint.paper_combination_review",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.paper_combination_review",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.plan_freedom": {
+              "evidence_id": "constraint.plan_freedom",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.plan_freedom",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.precision": {
+              "evidence_id": "constraint.precision",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.precision",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.read_only_lifetime": {
+              "evidence_id": "constraint.read_only_lifetime",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.read_only_lifetime",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.reduction_semantics": {
+              "evidence_id": "constraint.reduction_semantics",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.reduction_semantics",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.reuse_domain": {
+              "evidence_id": "constraint.reuse_domain",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.reuse_domain",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.same_input_region": {
+              "evidence_id": "constraint.same_input_region",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.same_input_region",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.semantic_equivalence": {
+              "evidence_id": "constraint.semantic_equivalence",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.semantic_equivalence",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.softmax_semantics": {
+              "evidence_id": "constraint.softmax_semantics",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.softmax_semantics",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.sort_semantics": {
+              "evidence_id": "constraint.sort_semantics",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.sort_semantics",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.static_dynamic_tiling": {
+              "evidence_id": "constraint.static_dynamic_tiling",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.static_dynamic_tiling",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.static_layout_lifetime": {
+              "evidence_id": "constraint.static_layout_lifetime",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.static_layout_lifetime",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.streamk_target_implementation": {
+              "evidence_id": "constraint.streamk_target_implementation",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.streamk_target_implementation",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.target_api": {
+              "evidence_id": "constraint.target_api",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.target_api",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.task_ownership": {
+              "evidence_id": "constraint.task_ownership",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.task_ownership",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.tiling_abi": {
+              "evidence_id": "constraint.tiling_abi",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.tiling_abi",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.unitflag_pairing": {
+              "evidence_id": "constraint.unitflag_pairing",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.unitflag_pairing",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.valid_lengths": {
+              "evidence_id": "constraint.valid_lengths",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.valid_lengths",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.workspace_ownership": {
+              "evidence_id": "constraint.workspace_ownership",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.workspace_ownership",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "joint.review": {
+              "evidence_id": "joint.review",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.paper_combination_review",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "symptom.source.fragmented_writeback": {
+              "evidence_id": "writeback.symptom.source.fragmented_writeback",
+              "kind": "derived",
+              "ref": {
+                "locator": "symptom.source.fragmented_writeback.component_1",
+                "path": "writeback-source.json",
+                "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+              },
+              "state": true
+            },
+            "symptom.source.fragmented_writeback.component_1": {
+              "evidence_id": "writeback.symptom.source.fragmented_writeback.component_1",
+              "kind": "raw",
+              "ref": {
+                "locator": "symptom.source.fragmented_writeback.component_1",
+                "path": "writeback-source.json",
+                "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+              },
+              "state": true
+            },
+            "symptom.source.fragmented_writeback.component_2": {
+              "evidence_id": "writeback.symptom.source.fragmented_writeback.component_2",
+              "kind": "raw",
+              "ref": {
+                "locator": "symptom.source.fragmented_writeback.component_2",
+                "path": "writeback-source.json",
+                "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+              },
+              "state": true
+            },
+            "symptom.source.fragmented_writeback.component_3": {
+              "evidence_id": "writeback.symptom.source.fragmented_writeback.component_3",
+              "kind": "raw",
+              "ref": {
+                "locator": "symptom.source.fragmented_writeback.component_3",
+                "path": "writeback-source.json",
+                "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+              },
+              "state": true
+            },
+            "symptom.source.inner_loop_copy": {
+              "evidence_id": "symptom.source.inner_loop_copy",
+              "kind": "derived",
+              "ref": {
+                "locator": "symptom.source.inner_loop_copy.component_1",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "symptom.source.inner_loop_copy.component_1": {
+              "evidence_id": "symptom.source.inner_loop_copy.component_1",
+              "kind": "raw",
+              "ref": {
+                "locator": "symptom.source.inner_loop_copy.component_1",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "symptom.source.inner_loop_copy.component_2": {
+              "evidence_id": "symptom.source.inner_loop_copy.component_2",
+              "kind": "raw",
+              "ref": {
+                "locator": "symptom.source.inner_loop_copy.component_2",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "symptom.source.inner_loop_copy.component_3": {
+              "evidence_id": "symptom.source.inner_loop_copy.component_3",
+              "kind": "raw",
+              "ref": {
+                "locator": "symptom.source.inner_loop_copy.component_3",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            }
+          },
+          "knowledge_hash": "sha256:f56937bc9c128b179f561d0b3d774fef393778f61de55277b7a8b8c83d59e037",
+          "matches": [
+            {
+              "id": "planning.elementwise.continuous",
+              "missing": [],
+              "path": [
+                "planning.root",
+                "planning.elementwise",
+                "planning.elementwise.continuous"
+              ],
+              "score": 6,
+              "snapshot": {
+                "body": "# 连续输出分区与均衡尾块\n\n## 适用域与先决语义\n\n输入、输出具有相同的逻辑 shape，且每个输出元素只依赖同一下标的输入或已冻结的只读标量。输入真实连续或已存在合法的连续视图，才可将 shape 的乘积展平为 N；带 stride 的 view 不能仅凭元素总数走本模板。N=0 在 host 空张量分支处理，不启动会执行零 count 或除以零的 kernel。\n\n一元函数、同形 Add/Mul、独立的算术链均可采用相同所有权。C2 先明确每步 dtype、Cast 舍入、溢出/饱和、NaN/Inf、输出别名和计算顺序。来源提出半精度加减链升 FP32 的候选；这是需要与 oracle 比较的数值实现选择，不是对所有 FP16/BF16 Add 的自动改写许可，更不能保证最后 Cast 后保留任意小增量。\n\n## 分区、任务数与核内循环\n\n令 g 为满足实际搬运接口及输出独占写要求的元素粒度，Q=ceil(N/g) 为逻辑块数。选择 1≤C≤min(Q,C_available)，定义 q=Q//C、r=Q%C。核 c 的起始块 b_c=cq+min(c,r)，块数 n_c=q+[c<r]，其有效元素区间为 `[b_c*g, min((b_c+n_c)*g,N))`。所有区间并集恰为 `[0,N)`，交集为空；尾部不足 g 的部分由唯一末核处理，绝不通过重叠搬出尾块补齐。\n\n核内再按 U 个元素分 tile，循环条件用当前位置小于核的有效结束位置，`valid=min(U,end-pos)`。只在 valid>0 时执行搬运与计算。U 是片上工作集粒度，g 是分核边界粒度，两者不必相同。若 C 很大而单核只有一个很短 tile，需与较少核数比较；增加 task 数、减少每核工作量、减少流水循环之间存在取舍。\n\n所有输入只读，每个输出片段只有一个写者，无跨核归约和全局同步。精确原址逐元素操作只有在 API 与算子别名合同均允许时才可使用；部分重叠 view 可能使一个核覆盖另一核尚未读取的输入，必须用已有安全基线。\n\n## 字节容量与成本模型\n\n定义 A_a(x)=ceil(x/a)*a，为按 a 字节向上对齐。s_j 是第 j 个存活张量的元素字节数，d_j 是它实际分配的 buffer 份数（含双缓冲），T_api 是按当前 API、dtype、形状查询的临时字节，B_res 是其他必须预留的字节。一般容量合同为：\n\n`B_UB = Σ_j d_j*A_aj(U*s_j) + B_fixed + T_api ≤ B_available`。\n\n这里计入所有已分配且未释放/未合法复用的区域；仅逻辑上不再使用但 TPipe 仍保留的独立分配不能从账上删除。若共享同一物理区，必须说明不同阶段的生命周期互斥以及跨流水依赖已完成。\n\n同 dtype 二输入 Add、两个输入队列与一个输出队列深度都为 d 时，数据区约 `3*d*A_a(U*s)` 字节；升 FP32 另有 K 个非别名中间区，则另加 `K*A_a(4U)`。K 由 API 的 dst/src 别名约束决定，不应把一个 Cast buffer 当三个运算都能安全原址复用。UB 余量不足一个合法 tile 时直接淘汰该候选，不能把 U 强制改成 1 掩盖超容。\n\n一次无复用扫描的必要 GM 数据量为 `B_GM=N*(Σ_inputs s_i+Σ_outputs s_o)`，不含额外 workspace、重读和隐式变换。设 F 为计算操作量、BW_eff/P_eff 为同一目标机测得的有效带宽/算力，则 `max(B_GM/BW_eff,F/P_eff)` 只是服务时间下界；实际还包括 launch、tile 循环、同步及尾块开销。该表达式用于解释候选，不能给出未经测量的微秒数。\n\n来源有 bits/bytes 混用的示意公式；本条全部以字节重推，若输入是 bit 宽度 b，先显式转换 s=b/8。上游 4KB 每核、512 元素、256B repeat 等是其示例选择，不能代替当前目标的合法对齐或性能阈值。\n\n## 参数选择与替代边界\n\n| 决策 | 优先检查的条件 | 不满足时的路径 |\n| --- | --- | --- |\n| 展平 | 同 shape、真实连续、逐元素无依赖 | 广播模板或保留 stride 的基线 |\n| 更多核 | 独立逻辑块够多，单核工作能摊销启动/调度成本 | 比较更少 C，并保持完整覆盖 |\n| 更大 U | 片上容量、API count 范围、足够 tile 循环 | 减 U 或降低队列深度 |\n| 双缓冲 | 两份数据区确实可容纳，存在可重叠阶段 | 单缓冲；双缓冲本身不证明速度更快 |\n| 半精度升 FP32 | 语义允许且精度需要，K 已确认 | 保持 oracle 认可的原 dtype 路径 |\n\nHost 用溢出安全的宽整数计算 shape 乘积、Q、偏移与 U*s；把 uint64 值转换为搬运接口的 uint32/int32 字段前验证范围。tile 的有效长度、存储长度、搬运字段单位要分别保存，不能共享一个含义不清的 length。\n\n## 可执行伪代码\n\n```python\n# host；checked_product 与 choose_tile 已证明不溢出、容量足够。\nN = checked_product(shape)\nif N == 0: return empty_result(shape)\nQ = (N + g - 1) // g\nC = choose_cores(1, min(Q, available_cores))\nq, r = divmod(Q, C)\nU = choose_tile(capacity_bytes, dtype_sizes, queue_depths, api_tmp)\n# kernel(c)\nbegin = (c*q + min(c, r))*g\nend = min(begin + (q + int(c < r))*g, N)\nfor pos in range(begin, end, U):\n    valid = min(U, end-pos)\n    xs = load_valid_inputs(pos, valid)  # queue producer -> consumer\n    ys = elementwise_with_frozen_casts(xs, valid)\n    store_valid_outputs(pos, ys, valid) # 不写 [valid,U) 的 padding\n```\n\n## 有界 Ascend C 片段与同步上下文\n\n下段采用来源 Add 样例的 TQue 生命周期，适用于一个合法对齐的 FP32 主 tile。xGm/yGm/zGm 已按本核 begin 绑定；队列已用字节容量初始化；pos 相对本核起点；n>0 且符合 DataCopy 主块约束。非对齐尾 tile 改用经核验的有效长度 DataCopyPad 封装，不能直接沿用主块搬出。\n\n```cpp\n// 包含 kernel_operator.h；inX/inY 为 VECIN，outZ 为 VECOUT。\nauto x = inX.AllocTensor<float>();\nauto y = inY.AllocTensor<float>();\nAscendC::DataCopy(x, xGm[pos], n);\nAscendC::DataCopy(y, yGm[pos], n);\ninX.EnQue(x); inY.EnQue(y);\nx = inX.DeQue<float>(); y = inY.DeQue<float>();\nauto z = outZ.AllocTensor<float>();\nAscendC::Add(z, x, y, n);\noutZ.EnQue(z);\ninX.FreeTensor(x); inY.FreeTensor(y);\nz = outZ.DeQue<float>();\nAscendC::DataCopy(zGm[pos], z, n);\noutZ.FreeTensor(z);\n```\n\nEnQue/DeQue 表达搬入→计算→搬出依赖；不得在同一物理区的异步消费者完成前覆盖或回收。原 Add 样例固定可整除的输入并将每核整段一次放进 UB，本条的 q/r 和核内 U 循环是为任意合法长度增加的规划推导，不能把样例直接改 totalLength 后视作通用 kernel。\n\n## 平台、验证与证据\n\n固定 asc-devkit 样例 README 给出的范围是 Atlas A2/A3（CANN≥9.0）和 950PR/950DT（CANN≥9.1）；这是该修订的样例范围。面向 910C/A3 应核对实际 SoC/编译目标，不能借用 950 的寄存器路径、NDDMA 或动态 Broadcast 能力。scope=all 仅表示可检索，未证明任意平台、dtype、API 组合可执行。\n\n至少验证 N∈{0,1,g−1,g,g+1,U−1,U,U+1}、Q 不能整除 C、多核最后一片、最大整数偏移、全分配容量和精确输出覆盖。数值用大/小量级混合、±0、NaN/Inf、溢出边界检查声明的合同。来源事实是均匀连续分区、UB 分块、队列数据流；均衡公式、字节模型与参数比较为本条工程推导。证据状态为 source_reviewed_not_benchmarked，无 NPU 时延或收益验证。\n\n## 选择前比较：连续段、短行与 tile 不能只看容量\n\n本节为依据 Add 队列样例与广播合轴规则作出的规划推导。样例只能直接确认“连续分区、按字节分配、队列传递”的事实，不能确认队列已经隐藏搬运延迟。\n\n先对每个 dtype/真实 stride 域保存 `(N,C,U,d)`，并按有效元素数分别计：输入读 `NΣs_i` 字节、输出写 `Ns_o` 字节、算术 `Nf` 次、核内 tile 数 `L=Σ_c ceil(N_c/U)`、尾片数及 padding 元素数。`f` 是每元素明确列出的逻辑算术次数；Cast、地址解码和同步单独列，不合并为“总成本”。采用新 U 只减少循环与接口调用，不会自动减少必要 GM 字节或逐元素算术。\n\n对于由 R 行、每行 H 个连续元素构成的路径，有两种不同机会：\n\n- **直接展平**：所有输入在行边界两侧都连续、标量/属性及数值路径不随行改变时，以 RH 元素连续段处理；跨行无需重新初始化。若输入每行有 padding 或广播位图变化，则不能如此展平。\n- **短行组合**：语义仍按行执行，但同一 owner 收集 h 行进入一个批次。保持每行有效 H 与物理行跨度 Ha 分离；容量与计算按 hHa，GM 有效搬出按 hH。规则行间 stride 可用已验证的多段搬运，任意间隔仍需逐段；批次不等于只发一次 DMA。初始化、mask、索引表等若按 Ha 执行，新增 `h(Ha−H)` 个无效 lane 工作必须计入比较。\n\n这两者的主要收益假设分别是去掉行级调度和摊销短接口发射；都不是扩大 UB 的同义词。更大 h/U 会减少核内批次或循环；固定核数 C 时不改变独立 owner/task 数，只有同时改变跨 owner 工作域或重新分核才可能减少 task，可能增加尾部浪费、临时存活量并挤掉第二个 buffer。若瓶颈仍可能是逐元素昂贵函数、转换或不连续输入，本次选择须保留它们作为残余机会。没有测得时间权重时，只比较工作类别及方向，不从调用次数给出确定收益。\n\nC2 输出完整适用域与未变路径；C3 若为了 API 尾部把所有主 tile 都清零、额外转换或加入全流水 barrier，应将新增工作反馈给选择阶段。不能以“已有 TQue”“已实现 Vector API”作为无需比较流水或计算粒度的依据。",
+                "evidence_status": "source_reviewed_not_benchmarked",
+                "id": "planning.elementwise.continuous",
+                "kind": "template",
+                "learning": {},
+                "parent": "planning.elementwise",
+                "references": [
+                  "planning.elementwise.broadcast",
+                  "planning.elementwise.fallback"
+                ],
+                "schema_version": "aprof.knowledge-record/v1",
+                "scope": {
+                  "dtypes": [
+                    "all"
+                  ],
+                  "platforms": [
+                    "all"
+                  ],
+                  "workloads": [
+                    "all"
+                  ]
+                },
+                "seed_reason": "固定开源修订审读并补全中文算法、所有权、字节容量与选择边界；保留原 ID/主归属/数值合同，未做 NPU 性能验证。",
+                "source_hash": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4",
+                "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+                "sources": [
+                  {
+                    "excerpt_sha256": "sha256:40fd7187bf84f9c454fc5a53b0c5adc1e9594e6054901f21c518cae1ee3ad0ad",
+                    "lines": [
+                      1,
+                      215
+                    ],
+                    "original_path": "ops/ascendc-tiling-design/references/elewise/tiling.md",
+                    "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/elewise/tiling.md",
+                    "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+                    "sha256": "sha256:40fd7187bf84f9c454fc5a53b0c5adc1e9594e6054901f21c518cae1ee3ad0ad"
+                  },
+                  {
+                    "excerpt_sha256": "sha256:40fd7187bf84f9c454fc5a53b0c5adc1e9594e6054901f21c518cae1ee3ad0ad",
+                    "lines": [
+                      1,
+                      215
+                    ],
+                    "original_path": "ops/ascendc-tiling-design/references/elewise/tiling.md",
+                    "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/elewise/tiling.md",
+                    "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+                    "sha256": "sha256:40fd7187bf84f9c454fc5a53b0c5adc1e9594e6054901f21c518cae1ee3ad0ad"
+                  },
+                  {
+                    "excerpt_sha256": "sha256:8a1351ff5295af67a53383682a4264aca6a19a113a2cdb47158938f73bae0cec",
+                    "lines": [
+                      1,
+                      46
+                    ],
+                    "original_path": "ops/ascendc-tiling-design/references/elewise/patterns.md",
+                    "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/elewise/patterns.md",
+                    "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+                    "sha256": "sha256:8a1351ff5295af67a53383682a4264aca6a19a113a2cdb47158938f73bae0cec"
+                  },
+                  {
+                    "excerpt_sha256": "sha256:5c62ddc8f95f62eca158343a50005bb51f6f08f057946a4d67ba030dbd26da6c",
+                    "lines": [
+                      24,
+                      65
+                    ],
+                    "original_path": "examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/add_tpipe_tque.asc",
+                    "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/add_tpipe_tque.asc",
+                    "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+                    "sha256": "sha256:3fd854a223214eec19b03eebf4be3397c81358ebd526d07b17202a5fd522b654"
+                  },
+                  {
+                    "excerpt_sha256": "sha256:accaf93a389515058582a1b86c73fddc763155871b2f09255a4a08212d7541de",
+                    "lines": [
+                      7,
+                      18
+                    ],
+                    "original_path": "examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/README.md",
+                    "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/README.md",
+                    "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+                    "sha256": "sha256:14f2219ba48fdf536ac5cf018c2f70b6fd4a0a074d2dede49c9a6ca187d8e9dd"
+                  },
+                  {
+                    "excerpt_sha256": "sha256:fb975d9faab55d910f8e4df0a9f2995d9cf26ed8c737bfb91a1e08504979c297",
+                    "lines": [
+                      20,
+                      75
+                    ],
+                    "original_path": "examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/add_tpipe_tque.asc",
+                    "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/add_tpipe_tque.asc",
+                    "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+                    "sha256": "sha256:3fd854a223214eec19b03eebf4be3397c81358ebd526d07b17202a5fd522b654"
+                  },
+                  {
+                    "excerpt_sha256": "sha256:accaf93a389515058582a1b86c73fddc763155871b2f09255a4a08212d7541de",
+                    "lines": [
+                      7,
+                      18
+                    ],
+                    "original_path": "examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/README.md",
+                    "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/README.md",
+                    "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+                    "sha256": "sha256:14f2219ba48fdf536ac5cf018c2f70b6fd4a0a074d2dede49c9a6ca187d8e9dd"
+                  }
+                ],
+                "status": "active",
+                "tags": [
+                  "broadcast",
+                  "elementwise"
+                ],
+                "title": "连续输出分区与均衡尾块",
+                "version": "1.2.0"
+              },
+              "status": "reference_ready",
+              "version": "1.2.0"
+            }
+          ],
+          "override_hash": null,
+          "owner": "parallel-planning",
+          "schema_version": "aprof.knowledge-route/v1",
+          "selection_mode": "deterministic",
+          "task_id": "paper-task",
+          "version": "v0003"
+        },
+        "routing_hint": {
+          "optimization": [
+            "implementation.memory-transfer.coalesce",
+            "implementation.memory-transfer.strided-pad"
+          ],
+          "parallel-planning": [
+            "planning.root"
+          ]
+        }
+      },
+      {
+        "compatibility": {
+          "fact_bindings": [
+            "constraint.paper_combination_review"
+          ],
+          "implementation_hash": "sha256:701f8d79965f522624573312de80b6eaa677216d562ed2f60f59bd31bdae80b5",
+          "instance_hash": "sha256:dd55215ed2e71c3a0036a0606abdab9f32d0b56becef7bed948c715ba52f42de",
+          "parameters_hash": "sha256:59d02e2db004ece6b5648c32ceb75963776a6c47f86dd52a5e34ba65a9b8c167",
+          "plan_hash": "sha256:b68798fe96589a2e40771e735131d15fcd74cb6dfa1374d05c6dd3ad68782209",
+          "rationale": "同一owner、逻辑依赖、数值和有效访问域"
+        },
+        "instance": {
+          "action_id": "action.batch_writeback",
+          "evidence_bindings": {
+            "constraint.broadcast_semantics": "constraint.broadcast_semantics",
+            "constraint.capacity": "writeback.constraint.capacity",
+            "constraint.coordinate_mapping": "constraint.coordinate_mapping",
+            "constraint.cross_engine_dependencies": "constraint.cross_engine_dependencies",
+            "constraint.dependency_lifetime": "constraint.dependency_lifetime",
+            "constraint.duplicate_index_semantics": "constraint.duplicate_index_semantics",
+            "constraint.full_load": "constraint.full_load",
+            "constraint.fusion_boundary": "constraint.fusion_boundary",
+            "constraint.group_address_map": "constraint.group_address_map",
+            "constraint.index_mapping": "constraint.index_mapping",
+            "constraint.input_value_preserved": "constraint.input_value_preserved",
+            "constraint.invariant_scope": "constraint.invariant_scope",
+            "constraint.l1_l0_budget": "constraint.l1_l0_budget",
+            "constraint.l2_cache_enabled": "constraint.l2_cache_enabled",
+            "constraint.layout_semantics": "constraint.layout_semantics",
+            "constraint.local_accumulation_lifetime": "constraint.local_accumulation_lifetime",
+            "constraint.merge_semantics": "constraint.merge_semantics",
+            "constraint.neighborhood_bounds": "constraint.neighborhood_bounds",
+            "constraint.output_layout_stride": "constraint.output_layout_stride",
+            "constraint.output_ownership": "writeback.constraint.output_ownership",
+            "constraint.paper_combination_review": "constraint.paper_combination_review",
+            "constraint.plan_freedom": "constraint.plan_freedom",
+            "constraint.precision": "constraint.precision",
+            "constraint.read_only_lifetime": "constraint.read_only_lifetime",
+            "constraint.reduction_semantics": "constraint.reduction_semantics",
+            "constraint.reuse_domain": "constraint.reuse_domain",
+            "constraint.same_input_region": "constraint.same_input_region",
+            "constraint.semantic_equivalence": "writeback.constraint.semantic_equivalence",
+            "constraint.softmax_semantics": "constraint.softmax_semantics",
+            "constraint.sort_semantics": "constraint.sort_semantics",
+            "constraint.static_dynamic_tiling": "constraint.static_dynamic_tiling",
+            "constraint.static_layout_lifetime": "constraint.static_layout_lifetime",
+            "constraint.streamk_target_implementation": "constraint.streamk_target_implementation",
+            "constraint.target_api": "constraint.target_api",
+            "constraint.task_ownership": "constraint.task_ownership",
+            "constraint.tiling_abi": "constraint.tiling_abi",
+            "constraint.unitflag_pairing": "constraint.unitflag_pairing",
+            "constraint.valid_lengths": "constraint.valid_lengths",
+            "constraint.workspace_ownership": "constraint.workspace_ownership",
+            "symptom.source.fragmented_writeback": "writeback.symptom.source.fragmented_writeback",
+            "symptom.source.fragmented_writeback.component_1": "writeback.symptom.source.fragmented_writeback.component_1",
+            "symptom.source.fragmented_writeback.component_2": "writeback.symptom.source.fragmented_writeback.component_2",
+            "symptom.source.fragmented_writeback.component_3": "writeback.symptom.source.fragmented_writeback.component_3",
+            "symptom.source.inner_loop_copy": "symptom.source.inner_loop_copy",
+            "symptom.source.inner_loop_copy.component_1": "symptom.source.inner_loop_copy.component_1",
+            "symptom.source.inner_loop_copy.component_2": "symptom.source.inner_loop_copy.component_2",
+            "symptom.source.inner_loop_copy.component_3": "symptom.source.inner_loop_copy.component_3"
+          },
+          "hypothesis_id": "temporary.problem",
+          "instance_id": "action-instance.one.second",
+          "parameters": {
+            "tile": 64
+          },
+          "parent_plan_hash": "sha256:b68798fe96589a2e40771e735131d15fcd74cb6dfa1374d05c6dd3ad68782209",
+          "reason": "纸面来源声明",
+          "scope": {
+            "parent_implementation_hash": "sha256:701f8d79965f522624573312de80b6eaa677216d562ed2f60f59bd31bdae80b5",
+            "stage": "kernel.main",
+            "target_ids": [
+              "tensor.x"
+            ],
+            "task_id": "paper-task",
+            "workload_hash": "sha256:a908794893b8f714892612ef3973908d8a5b12a76e5ff9298dba2d7f4c0cf9ad"
+          },
+          "status": "ready",
+          "targets": {
+            "implementation": "implementation.implementation",
+            "stage": "kernel.main",
+            "target": "tensor.x",
+            "workload": "workload.workload"
+          },
+          "template_hash": "sha256:e0734f055ff985c6558a6c0444e2e55a4f9183d5aeded1b7496132d34241bce9",
+          "unknowns": []
+        },
+        "instance_hash": "sha256:dd55215ed2e71c3a0036a0606abdab9f32d0b56becef7bed948c715ba52f42de",
+        "parallel": {
+          "entry_id": null,
+          "mode": "KEEP"
+        },
+        "parallel_route": {
+          "considered": [
+            {
+              "matched": true,
+              "prior_score": 3,
+              "router": "planning.root",
+              "target": "planning.elementwise"
+            },
+            {
+              "matched": false,
+              "prior_score": 3,
+              "router": "planning.root",
+              "target": "planning.reduction"
+            },
+            {
+              "matched": false,
+              "prior_score": 3,
+              "router": "planning.root",
+              "target": "planning.matmul"
+            },
+            {
+              "matched": false,
+              "prior_score": 3,
+              "router": "planning.root",
+              "target": "planning.under-fusion"
+            },
+            {
+              "matched": false,
+              "prior_score": 3,
+              "router": "planning.root",
+              "target": "planning.flash-attention"
+            },
+            {
+              "matched": false,
+              "prior_score": 3,
+              "router": "planning.root",
+              "target": "planning.sort-topk"
+            },
+            {
+              "matched": false,
+              "prior_score": 3,
+              "router": "planning.root",
+              "target": "planning.layout"
+            },
+            {
+              "matched": false,
+              "prior_score": 3,
+              "router": "planning.root",
+              "target": "planning.indexing"
+            },
+            {
+              "matched": false,
+              "prior_score": 3,
+              "router": "planning.root",
+              "target": "planning.moe-routing"
+            },
+            {
+              "matched": true,
+              "prior_score": 3,
+              "router": "planning.elementwise",
+              "target": "planning.elementwise.continuous"
+            },
+            {
+              "matched": false,
+              "prior_score": 2,
+              "router": "planning.elementwise",
+              "target": "planning.elementwise.broadcast"
+            }
+          ],
+          "context_hash": "sha256:764e26ddea01287a45e98f9635cf0e3eeb2baab0c6bb65491dc126b862a85a97",
+          "context_snapshot": {
+            "attributes": {
+              "dtype": "float32",
+              "family": [
+                "elementwise"
+              ],
+              "features": [
+                "memory-transfer",
+                "tiling-tail"
+              ],
+              "platform": "dav-2201"
+            },
+            "facts": {
+              "constraint.broadcast_semantics": {
+                "evidence_id": "constraint.broadcast_semantics",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.broadcast_semantics",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.capacity": {
+                "evidence_id": "writeback.constraint.capacity",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.capacity",
+                  "path": "writeback-source.json",
+                  "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+                },
+                "state": true
+              },
+              "constraint.coordinate_mapping": {
+                "evidence_id": "constraint.coordinate_mapping",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.coordinate_mapping",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.cross_engine_dependencies": {
+                "evidence_id": "constraint.cross_engine_dependencies",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.cross_engine_dependencies",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.dependency_lifetime": {
+                "evidence_id": "constraint.dependency_lifetime",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.dependency_lifetime",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.duplicate_index_semantics": {
+                "evidence_id": "constraint.duplicate_index_semantics",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.duplicate_index_semantics",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.full_load": {
+                "evidence_id": "constraint.full_load",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.full_load",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.fusion_boundary": {
+                "evidence_id": "constraint.fusion_boundary",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.fusion_boundary",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.group_address_map": {
+                "evidence_id": "constraint.group_address_map",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.group_address_map",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.index_mapping": {
+                "evidence_id": "constraint.index_mapping",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.index_mapping",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.input_value_preserved": {
+                "evidence_id": "constraint.input_value_preserved",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.input_value_preserved",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.invariant_scope": {
+                "evidence_id": "constraint.invariant_scope",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.invariant_scope",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.l1_l0_budget": {
+                "evidence_id": "constraint.l1_l0_budget",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.l1_l0_budget",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.l2_cache_enabled": {
+                "evidence_id": "constraint.l2_cache_enabled",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.l2_cache_enabled",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.layout_semantics": {
+                "evidence_id": "constraint.layout_semantics",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.layout_semantics",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.local_accumulation_lifetime": {
+                "evidence_id": "constraint.local_accumulation_lifetime",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.local_accumulation_lifetime",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.merge_semantics": {
+                "evidence_id": "constraint.merge_semantics",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.merge_semantics",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.neighborhood_bounds": {
+                "evidence_id": "constraint.neighborhood_bounds",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.neighborhood_bounds",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.output_layout_stride": {
+                "evidence_id": "constraint.output_layout_stride",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.output_layout_stride",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.output_ownership": {
+                "evidence_id": "writeback.constraint.output_ownership",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.output_ownership",
+                  "path": "writeback-source.json",
+                  "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+                },
+                "state": true
+              },
+              "constraint.paper_combination_review": {
+                "evidence_id": "constraint.paper_combination_review",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.paper_combination_review",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.plan_freedom": {
+                "evidence_id": "constraint.plan_freedom",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.plan_freedom",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.precision": {
+                "evidence_id": "constraint.precision",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.precision",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.read_only_lifetime": {
+                "evidence_id": "constraint.read_only_lifetime",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.read_only_lifetime",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.reduction_semantics": {
+                "evidence_id": "constraint.reduction_semantics",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.reduction_semantics",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.reuse_domain": {
+                "evidence_id": "constraint.reuse_domain",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.reuse_domain",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.same_input_region": {
+                "evidence_id": "constraint.same_input_region",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.same_input_region",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.semantic_equivalence": {
+                "evidence_id": "writeback.constraint.semantic_equivalence",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.semantic_equivalence",
+                  "path": "writeback-source.json",
+                  "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+                },
+                "state": true
+              },
+              "constraint.softmax_semantics": {
+                "evidence_id": "constraint.softmax_semantics",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.softmax_semantics",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.sort_semantics": {
+                "evidence_id": "constraint.sort_semantics",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.sort_semantics",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.static_dynamic_tiling": {
+                "evidence_id": "constraint.static_dynamic_tiling",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.static_dynamic_tiling",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.static_layout_lifetime": {
+                "evidence_id": "constraint.static_layout_lifetime",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.static_layout_lifetime",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.streamk_target_implementation": {
+                "evidence_id": "constraint.streamk_target_implementation",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.streamk_target_implementation",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.target_api": {
+                "evidence_id": "constraint.target_api",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.target_api",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.task_ownership": {
+                "evidence_id": "constraint.task_ownership",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.task_ownership",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.tiling_abi": {
+                "evidence_id": "constraint.tiling_abi",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.tiling_abi",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.unitflag_pairing": {
+                "evidence_id": "constraint.unitflag_pairing",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.unitflag_pairing",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.valid_lengths": {
+                "evidence_id": "constraint.valid_lengths",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.valid_lengths",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "constraint.workspace_ownership": {
+                "evidence_id": "constraint.workspace_ownership",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.workspace_ownership",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "joint.review": {
+                "evidence_id": "joint.review",
+                "kind": "raw",
+                "ref": {
+                  "locator": "constraint.paper_combination_review",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "symptom.source.fragmented_writeback": {
+                "evidence_id": "writeback.symptom.source.fragmented_writeback",
+                "kind": "derived",
+                "ref": {
+                  "locator": "symptom.source.fragmented_writeback.component_1",
+                  "path": "writeback-source.json",
+                  "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+                },
+                "state": true
+              },
+              "symptom.source.fragmented_writeback.component_1": {
+                "evidence_id": "writeback.symptom.source.fragmented_writeback.component_1",
+                "kind": "raw",
+                "ref": {
+                  "locator": "symptom.source.fragmented_writeback.component_1",
+                  "path": "writeback-source.json",
+                  "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+                },
+                "state": true
+              },
+              "symptom.source.fragmented_writeback.component_2": {
+                "evidence_id": "writeback.symptom.source.fragmented_writeback.component_2",
+                "kind": "raw",
+                "ref": {
+                  "locator": "symptom.source.fragmented_writeback.component_2",
+                  "path": "writeback-source.json",
+                  "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+                },
+                "state": true
+              },
+              "symptom.source.fragmented_writeback.component_3": {
+                "evidence_id": "writeback.symptom.source.fragmented_writeback.component_3",
+                "kind": "raw",
+                "ref": {
+                  "locator": "symptom.source.fragmented_writeback.component_3",
+                  "path": "writeback-source.json",
+                  "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+                },
+                "state": true
+              },
+              "symptom.source.inner_loop_copy": {
+                "evidence_id": "symptom.source.inner_loop_copy",
+                "kind": "derived",
+                "ref": {
+                  "locator": "symptom.source.inner_loop_copy.component_1",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "symptom.source.inner_loop_copy.component_1": {
+                "evidence_id": "symptom.source.inner_loop_copy.component_1",
+                "kind": "raw",
+                "ref": {
+                  "locator": "symptom.source.inner_loop_copy.component_1",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "symptom.source.inner_loop_copy.component_2": {
+                "evidence_id": "symptom.source.inner_loop_copy.component_2",
+                "kind": "raw",
+                "ref": {
+                  "locator": "symptom.source.inner_loop_copy.component_2",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              },
+              "symptom.source.inner_loop_copy.component_3": {
+                "evidence_id": "symptom.source.inner_loop_copy.component_3",
+                "kind": "raw",
+                "ref": {
+                  "locator": "symptom.source.inner_loop_copy.component_3",
+                  "path": "raw.json",
+                  "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+                },
+                "state": true
+              }
+            },
+            "schema_version": "aprof.evidence/v1",
+            "source_context_ref": {
+              "path": "context.json",
+              "sha256": "sha256:6d9eb7305189181e04c2485879ec3b307f65cee267869aaf8a81dbe032a7a58d"
+            },
+            "task_id": "paper-task"
+          },
+          "evidence": {
+            "constraint.broadcast_semantics": {
+              "evidence_id": "constraint.broadcast_semantics",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.broadcast_semantics",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.capacity": {
+              "evidence_id": "writeback.constraint.capacity",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.capacity",
+                "path": "writeback-source.json",
+                "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+              },
+              "state": true
+            },
+            "constraint.coordinate_mapping": {
+              "evidence_id": "constraint.coordinate_mapping",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.coordinate_mapping",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.cross_engine_dependencies": {
+              "evidence_id": "constraint.cross_engine_dependencies",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.cross_engine_dependencies",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.dependency_lifetime": {
+              "evidence_id": "constraint.dependency_lifetime",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.dependency_lifetime",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.duplicate_index_semantics": {
+              "evidence_id": "constraint.duplicate_index_semantics",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.duplicate_index_semantics",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.full_load": {
+              "evidence_id": "constraint.full_load",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.full_load",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.fusion_boundary": {
+              "evidence_id": "constraint.fusion_boundary",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.fusion_boundary",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.group_address_map": {
+              "evidence_id": "constraint.group_address_map",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.group_address_map",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.index_mapping": {
+              "evidence_id": "constraint.index_mapping",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.index_mapping",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.input_value_preserved": {
+              "evidence_id": "constraint.input_value_preserved",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.input_value_preserved",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.invariant_scope": {
+              "evidence_id": "constraint.invariant_scope",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.invariant_scope",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.l1_l0_budget": {
+              "evidence_id": "constraint.l1_l0_budget",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.l1_l0_budget",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.l2_cache_enabled": {
+              "evidence_id": "constraint.l2_cache_enabled",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.l2_cache_enabled",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.layout_semantics": {
+              "evidence_id": "constraint.layout_semantics",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.layout_semantics",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.local_accumulation_lifetime": {
+              "evidence_id": "constraint.local_accumulation_lifetime",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.local_accumulation_lifetime",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.merge_semantics": {
+              "evidence_id": "constraint.merge_semantics",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.merge_semantics",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.neighborhood_bounds": {
+              "evidence_id": "constraint.neighborhood_bounds",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.neighborhood_bounds",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.output_layout_stride": {
+              "evidence_id": "constraint.output_layout_stride",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.output_layout_stride",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.output_ownership": {
+              "evidence_id": "writeback.constraint.output_ownership",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.output_ownership",
+                "path": "writeback-source.json",
+                "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+              },
+              "state": true
+            },
+            "constraint.paper_combination_review": {
+              "evidence_id": "constraint.paper_combination_review",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.paper_combination_review",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.plan_freedom": {
+              "evidence_id": "constraint.plan_freedom",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.plan_freedom",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.precision": {
+              "evidence_id": "constraint.precision",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.precision",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.read_only_lifetime": {
+              "evidence_id": "constraint.read_only_lifetime",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.read_only_lifetime",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.reduction_semantics": {
+              "evidence_id": "constraint.reduction_semantics",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.reduction_semantics",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.reuse_domain": {
+              "evidence_id": "constraint.reuse_domain",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.reuse_domain",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.same_input_region": {
+              "evidence_id": "constraint.same_input_region",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.same_input_region",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.semantic_equivalence": {
+              "evidence_id": "writeback.constraint.semantic_equivalence",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.semantic_equivalence",
+                "path": "writeback-source.json",
+                "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+              },
+              "state": true
+            },
+            "constraint.softmax_semantics": {
+              "evidence_id": "constraint.softmax_semantics",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.softmax_semantics",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.sort_semantics": {
+              "evidence_id": "constraint.sort_semantics",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.sort_semantics",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.static_dynamic_tiling": {
+              "evidence_id": "constraint.static_dynamic_tiling",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.static_dynamic_tiling",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.static_layout_lifetime": {
+              "evidence_id": "constraint.static_layout_lifetime",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.static_layout_lifetime",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.streamk_target_implementation": {
+              "evidence_id": "constraint.streamk_target_implementation",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.streamk_target_implementation",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.target_api": {
+              "evidence_id": "constraint.target_api",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.target_api",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.task_ownership": {
+              "evidence_id": "constraint.task_ownership",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.task_ownership",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.tiling_abi": {
+              "evidence_id": "constraint.tiling_abi",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.tiling_abi",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.unitflag_pairing": {
+              "evidence_id": "constraint.unitflag_pairing",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.unitflag_pairing",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.valid_lengths": {
+              "evidence_id": "constraint.valid_lengths",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.valid_lengths",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "constraint.workspace_ownership": {
+              "evidence_id": "constraint.workspace_ownership",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.workspace_ownership",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "joint.review": {
+              "evidence_id": "joint.review",
+              "kind": "raw",
+              "ref": {
+                "locator": "constraint.paper_combination_review",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "symptom.source.fragmented_writeback": {
+              "evidence_id": "writeback.symptom.source.fragmented_writeback",
+              "kind": "derived",
+              "ref": {
+                "locator": "symptom.source.fragmented_writeback.component_1",
+                "path": "writeback-source.json",
+                "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+              },
+              "state": true
+            },
+            "symptom.source.fragmented_writeback.component_1": {
+              "evidence_id": "writeback.symptom.source.fragmented_writeback.component_1",
+              "kind": "raw",
+              "ref": {
+                "locator": "symptom.source.fragmented_writeback.component_1",
+                "path": "writeback-source.json",
+                "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+              },
+              "state": true
+            },
+            "symptom.source.fragmented_writeback.component_2": {
+              "evidence_id": "writeback.symptom.source.fragmented_writeback.component_2",
+              "kind": "raw",
+              "ref": {
+                "locator": "symptom.source.fragmented_writeback.component_2",
+                "path": "writeback-source.json",
+                "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+              },
+              "state": true
+            },
+            "symptom.source.fragmented_writeback.component_3": {
+              "evidence_id": "writeback.symptom.source.fragmented_writeback.component_3",
+              "kind": "raw",
+              "ref": {
+                "locator": "symptom.source.fragmented_writeback.component_3",
+                "path": "writeback-source.json",
+                "sha256": "sha256:c0c1299f7a47c855fbfae64829810ee7e247dceca56337df48bb07c643e25cf2"
+              },
+              "state": true
+            },
+            "symptom.source.inner_loop_copy": {
+              "evidence_id": "symptom.source.inner_loop_copy",
+              "kind": "derived",
+              "ref": {
+                "locator": "symptom.source.inner_loop_copy.component_1",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "symptom.source.inner_loop_copy.component_1": {
+              "evidence_id": "symptom.source.inner_loop_copy.component_1",
+              "kind": "raw",
+              "ref": {
+                "locator": "symptom.source.inner_loop_copy.component_1",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "symptom.source.inner_loop_copy.component_2": {
+              "evidence_id": "symptom.source.inner_loop_copy.component_2",
+              "kind": "raw",
+              "ref": {
+                "locator": "symptom.source.inner_loop_copy.component_2",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            },
+            "symptom.source.inner_loop_copy.component_3": {
+              "evidence_id": "symptom.source.inner_loop_copy.component_3",
+              "kind": "raw",
+              "ref": {
+                "locator": "symptom.source.inner_loop_copy.component_3",
+                "path": "raw.json",
+                "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+              },
+              "state": true
+            }
+          },
+          "knowledge_hash": "sha256:f56937bc9c128b179f561d0b3d774fef393778f61de55277b7a8b8c83d59e037",
+          "matches": [
+            {
+              "id": "planning.elementwise.continuous",
+              "missing": [],
+              "path": [
+                "planning.root",
+                "planning.elementwise",
+                "planning.elementwise.continuous"
+              ],
+              "score": 6,
+              "snapshot": {
+                "body": "# 连续输出分区与均衡尾块\n\n## 适用域与先决语义\n\n输入、输出具有相同的逻辑 shape，且每个输出元素只依赖同一下标的输入或已冻结的只读标量。输入真实连续或已存在合法的连续视图，才可将 shape 的乘积展平为 N；带 stride 的 view 不能仅凭元素总数走本模板。N=0 在 host 空张量分支处理，不启动会执行零 count 或除以零的 kernel。\n\n一元函数、同形 Add/Mul、独立的算术链均可采用相同所有权。C2 先明确每步 dtype、Cast 舍入、溢出/饱和、NaN/Inf、输出别名和计算顺序。来源提出半精度加减链升 FP32 的候选；这是需要与 oracle 比较的数值实现选择，不是对所有 FP16/BF16 Add 的自动改写许可，更不能保证最后 Cast 后保留任意小增量。\n\n## 分区、任务数与核内循环\n\n令 g 为满足实际搬运接口及输出独占写要求的元素粒度，Q=ceil(N/g) 为逻辑块数。选择 1≤C≤min(Q,C_available)，定义 q=Q//C、r=Q%C。核 c 的起始块 b_c=cq+min(c,r)，块数 n_c=q+[c<r]，其有效元素区间为 `[b_c*g, min((b_c+n_c)*g,N))`。所有区间并集恰为 `[0,N)`，交集为空；尾部不足 g 的部分由唯一末核处理，绝不通过重叠搬出尾块补齐。\n\n核内再按 U 个元素分 tile，循环条件用当前位置小于核的有效结束位置，`valid=min(U,end-pos)`。只在 valid>0 时执行搬运与计算。U 是片上工作集粒度，g 是分核边界粒度，两者不必相同。若 C 很大而单核只有一个很短 tile，需与较少核数比较；增加 task 数、减少每核工作量、减少流水循环之间存在取舍。\n\n所有输入只读，每个输出片段只有一个写者，无跨核归约和全局同步。精确原址逐元素操作只有在 API 与算子别名合同均允许时才可使用；部分重叠 view 可能使一个核覆盖另一核尚未读取的输入，必须用已有安全基线。\n\n## 字节容量与成本模型\n\n定义 A_a(x)=ceil(x/a)*a，为按 a 字节向上对齐。s_j 是第 j 个存活张量的元素字节数，d_j 是它实际分配的 buffer 份数（含双缓冲），T_api 是按当前 API、dtype、形状查询的临时字节，B_res 是其他必须预留的字节。一般容量合同为：\n\n`B_UB = Σ_j d_j*A_aj(U*s_j) + B_fixed + T_api ≤ B_available`。\n\n这里计入所有已分配且未释放/未合法复用的区域；仅逻辑上不再使用但 TPipe 仍保留的独立分配不能从账上删除。若共享同一物理区，必须说明不同阶段的生命周期互斥以及跨流水依赖已完成。\n\n同 dtype 二输入 Add、两个输入队列与一个输出队列深度都为 d 时，数据区约 `3*d*A_a(U*s)` 字节；升 FP32 另有 K 个非别名中间区，则另加 `K*A_a(4U)`。K 由 API 的 dst/src 别名约束决定，不应把一个 Cast buffer 当三个运算都能安全原址复用。UB 余量不足一个合法 tile 时直接淘汰该候选，不能把 U 强制改成 1 掩盖超容。\n\n一次无复用扫描的必要 GM 数据量为 `B_GM=N*(Σ_inputs s_i+Σ_outputs s_o)`，不含额外 workspace、重读和隐式变换。设 F 为计算操作量、BW_eff/P_eff 为同一目标机测得的有效带宽/算力，则 `max(B_GM/BW_eff,F/P_eff)` 只是服务时间下界；实际还包括 launch、tile 循环、同步及尾块开销。该表达式用于解释候选，不能给出未经测量的微秒数。\n\n来源有 bits/bytes 混用的示意公式；本条全部以字节重推，若输入是 bit 宽度 b，先显式转换 s=b/8。上游 4KB 每核、512 元素、256B repeat 等是其示例选择，不能代替当前目标的合法对齐或性能阈值。\n\n## 参数选择与替代边界\n\n| 决策 | 优先检查的条件 | 不满足时的路径 |\n| --- | --- | --- |\n| 展平 | 同 shape、真实连续、逐元素无依赖 | 广播模板或保留 stride 的基线 |\n| 更多核 | 独立逻辑块够多，单核工作能摊销启动/调度成本 | 比较更少 C，并保持完整覆盖 |\n| 更大 U | 片上容量、API count 范围、足够 tile 循环 | 减 U 或降低队列深度 |\n| 双缓冲 | 两份数据区确实可容纳，存在可重叠阶段 | 单缓冲；双缓冲本身不证明速度更快 |\n| 半精度升 FP32 | 语义允许且精度需要，K 已确认 | 保持 oracle 认可的原 dtype 路径 |\n\nHost 用溢出安全的宽整数计算 shape 乘积、Q、偏移与 U*s；把 uint64 值转换为搬运接口的 uint32/int32 字段前验证范围。tile 的有效长度、存储长度、搬运字段单位要分别保存，不能共享一个含义不清的 length。\n\n## 可执行伪代码\n\n```python\n# host；checked_product 与 choose_tile 已证明不溢出、容量足够。\nN = checked_product(shape)\nif N == 0: return empty_result(shape)\nQ = (N + g - 1) // g\nC = choose_cores(1, min(Q, available_cores))\nq, r = divmod(Q, C)\nU = choose_tile(capacity_bytes, dtype_sizes, queue_depths, api_tmp)\n# kernel(c)\nbegin = (c*q + min(c, r))*g\nend = min(begin + (q + int(c < r))*g, N)\nfor pos in range(begin, end, U):\n    valid = min(U, end-pos)\n    xs = load_valid_inputs(pos, valid)  # queue producer -> consumer\n    ys = elementwise_with_frozen_casts(xs, valid)\n    store_valid_outputs(pos, ys, valid) # 不写 [valid,U) 的 padding\n```\n\n## 有界 Ascend C 片段与同步上下文\n\n下段采用来源 Add 样例的 TQue 生命周期，适用于一个合法对齐的 FP32 主 tile。xGm/yGm/zGm 已按本核 begin 绑定；队列已用字节容量初始化；pos 相对本核起点；n>0 且符合 DataCopy 主块约束。非对齐尾 tile 改用经核验的有效长度 DataCopyPad 封装，不能直接沿用主块搬出。\n\n```cpp\n// 包含 kernel_operator.h；inX/inY 为 VECIN，outZ 为 VECOUT。\nauto x = inX.AllocTensor<float>();\nauto y = inY.AllocTensor<float>();\nAscendC::DataCopy(x, xGm[pos], n);\nAscendC::DataCopy(y, yGm[pos], n);\ninX.EnQue(x); inY.EnQue(y);\nx = inX.DeQue<float>(); y = inY.DeQue<float>();\nauto z = outZ.AllocTensor<float>();\nAscendC::Add(z, x, y, n);\noutZ.EnQue(z);\ninX.FreeTensor(x); inY.FreeTensor(y);\nz = outZ.DeQue<float>();\nAscendC::DataCopy(zGm[pos], z, n);\noutZ.FreeTensor(z);\n```\n\nEnQue/DeQue 表达搬入→计算→搬出依赖；不得在同一物理区的异步消费者完成前覆盖或回收。原 Add 样例固定可整除的输入并将每核整段一次放进 UB，本条的 q/r 和核内 U 循环是为任意合法长度增加的规划推导，不能把样例直接改 totalLength 后视作通用 kernel。\n\n## 平台、验证与证据\n\n固定 asc-devkit 样例 README 给出的范围是 Atlas A2/A3（CANN≥9.0）和 950PR/950DT（CANN≥9.1）；这是该修订的样例范围。面向 910C/A3 应核对实际 SoC/编译目标，不能借用 950 的寄存器路径、NDDMA 或动态 Broadcast 能力。scope=all 仅表示可检索，未证明任意平台、dtype、API 组合可执行。\n\n至少验证 N∈{0,1,g−1,g,g+1,U−1,U,U+1}、Q 不能整除 C、多核最后一片、最大整数偏移、全分配容量和精确输出覆盖。数值用大/小量级混合、±0、NaN/Inf、溢出边界检查声明的合同。来源事实是均匀连续分区、UB 分块、队列数据流；均衡公式、字节模型与参数比较为本条工程推导。证据状态为 source_reviewed_not_benchmarked，无 NPU 时延或收益验证。\n\n## 选择前比较：连续段、短行与 tile 不能只看容量\n\n本节为依据 Add 队列样例与广播合轴规则作出的规划推导。样例只能直接确认“连续分区、按字节分配、队列传递”的事实，不能确认队列已经隐藏搬运延迟。\n\n先对每个 dtype/真实 stride 域保存 `(N,C,U,d)`，并按有效元素数分别计：输入读 `NΣs_i` 字节、输出写 `Ns_o` 字节、算术 `Nf` 次、核内 tile 数 `L=Σ_c ceil(N_c/U)`、尾片数及 padding 元素数。`f` 是每元素明确列出的逻辑算术次数；Cast、地址解码和同步单独列，不合并为“总成本”。采用新 U 只减少循环与接口调用，不会自动减少必要 GM 字节或逐元素算术。\n\n对于由 R 行、每行 H 个连续元素构成的路径，有两种不同机会：\n\n- **直接展平**：所有输入在行边界两侧都连续、标量/属性及数值路径不随行改变时，以 RH 元素连续段处理；跨行无需重新初始化。若输入每行有 padding 或广播位图变化，则不能如此展平。\n- **短行组合**：语义仍按行执行，但同一 owner 收集 h 行进入一个批次。保持每行有效 H 与物理行跨度 Ha 分离；容量与计算按 hHa，GM 有效搬出按 hH。规则行间 stride 可用已验证的多段搬运，任意间隔仍需逐段；批次不等于只发一次 DMA。初始化、mask、索引表等若按 Ha 执行，新增 `h(Ha−H)` 个无效 lane 工作必须计入比较。\n\n这两者的主要收益假设分别是去掉行级调度和摊销短接口发射；都不是扩大 UB 的同义词。更大 h/U 会减少核内批次或循环；固定核数 C 时不改变独立 owner/task 数，只有同时改变跨 owner 工作域或重新分核才可能减少 task，可能增加尾部浪费、临时存活量并挤掉第二个 buffer。若瓶颈仍可能是逐元素昂贵函数、转换或不连续输入，本次选择须保留它们作为残余机会。没有测得时间权重时，只比较工作类别及方向，不从调用次数给出确定收益。\n\nC2 输出完整适用域与未变路径；C3 若为了 API 尾部把所有主 tile 都清零、额外转换或加入全流水 barrier，应将新增工作反馈给选择阶段。不能以“已有 TQue”“已实现 Vector API”作为无需比较流水或计算粒度的依据。",
+                "evidence_status": "source_reviewed_not_benchmarked",
+                "id": "planning.elementwise.continuous",
+                "kind": "template",
+                "learning": {},
+                "parent": "planning.elementwise",
+                "references": [
+                  "planning.elementwise.broadcast",
+                  "planning.elementwise.fallback"
+                ],
+                "schema_version": "aprof.knowledge-record/v1",
+                "scope": {
+                  "dtypes": [
+                    "all"
+                  ],
+                  "platforms": [
+                    "all"
+                  ],
+                  "workloads": [
+                    "all"
+                  ]
+                },
+                "seed_reason": "固定开源修订审读并补全中文算法、所有权、字节容量与选择边界；保留原 ID/主归属/数值合同，未做 NPU 性能验证。",
+                "source_hash": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4",
+                "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+                "sources": [
+                  {
+                    "excerpt_sha256": "sha256:40fd7187bf84f9c454fc5a53b0c5adc1e9594e6054901f21c518cae1ee3ad0ad",
+                    "lines": [
+                      1,
+                      215
+                    ],
+                    "original_path": "ops/ascendc-tiling-design/references/elewise/tiling.md",
+                    "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/elewise/tiling.md",
+                    "revision": "c60a48af8f0ff2374e1491a313d9f26b02620d1e",
+                    "sha256": "sha256:40fd7187bf84f9c454fc5a53b0c5adc1e9594e6054901f21c518cae1ee3ad0ad"
+                  },
+                  {
+                    "excerpt_sha256": "sha256:40fd7187bf84f9c454fc5a53b0c5adc1e9594e6054901f21c518cae1ee3ad0ad",
+                    "lines": [
+                      1,
+                      215
+                    ],
+                    "original_path": "ops/ascendc-tiling-design/references/elewise/tiling.md",
+                    "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/elewise/tiling.md",
+                    "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+                    "sha256": "sha256:40fd7187bf84f9c454fc5a53b0c5adc1e9594e6054901f21c518cae1ee3ad0ad"
+                  },
+                  {
+                    "excerpt_sha256": "sha256:8a1351ff5295af67a53383682a4264aca6a19a113a2cdb47158938f73bae0cec",
+                    "lines": [
+                      1,
+                      46
+                    ],
+                    "original_path": "ops/ascendc-tiling-design/references/elewise/patterns.md",
+                    "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/elewise/patterns.md",
+                    "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+                    "sha256": "sha256:8a1351ff5295af67a53383682a4264aca6a19a113a2cdb47158938f73bae0cec"
+                  },
+                  {
+                    "excerpt_sha256": "sha256:5c62ddc8f95f62eca158343a50005bb51f6f08f057946a4d67ba030dbd26da6c",
+                    "lines": [
+                      24,
+                      65
+                    ],
+                    "original_path": "examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/add_tpipe_tque.asc",
+                    "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/add_tpipe_tque.asc",
+                    "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+                    "sha256": "sha256:3fd854a223214eec19b03eebf4be3397c81358ebd526d07b17202a5fd522b654"
+                  },
+                  {
+                    "excerpt_sha256": "sha256:accaf93a389515058582a1b86c73fddc763155871b2f09255a4a08212d7541de",
+                    "lines": [
+                      7,
+                      18
+                    ],
+                    "original_path": "examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/README.md",
+                    "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/README.md",
+                    "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+                    "sha256": "sha256:14f2219ba48fdf536ac5cf018c2f70b6fd4a0a074d2dede49c9a6ca187d8e9dd"
+                  },
+                  {
+                    "excerpt_sha256": "sha256:fb975d9faab55d910f8e4df0a9f2995d9cf26ed8c737bfb91a1e08504979c297",
+                    "lines": [
+                      20,
+                      75
+                    ],
+                    "original_path": "examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/add_tpipe_tque.asc",
+                    "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/add_tpipe_tque.asc",
+                    "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+                    "sha256": "sha256:3fd854a223214eec19b03eebf4be3397c81358ebd526d07b17202a5fd522b654"
+                  },
+                  {
+                    "excerpt_sha256": "sha256:accaf93a389515058582a1b86c73fddc763155871b2f09255a4a08212d7541de",
+                    "lines": [
+                      7,
+                      18
+                    ],
+                    "original_path": "examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/README.md",
+                    "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/README.md",
+                    "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+                    "sha256": "sha256:14f2219ba48fdf536ac5cf018c2f70b6fd4a0a074d2dede49c9a6ca187d8e9dd"
+                  }
+                ],
+                "status": "active",
+                "tags": [
+                  "broadcast",
+                  "elementwise"
+                ],
+                "title": "连续输出分区与均衡尾块",
+                "version": "1.2.0"
+              },
+              "status": "reference_ready",
+              "version": "1.2.0"
+            }
+          ],
+          "override_hash": null,
+          "owner": "parallel-planning",
+          "schema_version": "aprof.knowledge-route/v1",
+          "selection_mode": "deterministic",
+          "task_id": "paper-task",
+          "version": "v0003"
+        },
+        "routing_hint": {
+          "optimization": [
+            "implementation.memory-transfer.coalesce"
+          ],
+          "parallel-planning": [
+            "planning.root"
+          ]
+        }
+      }
+    ],
+    "parallel": {
+      "mode": "KEEP"
+    },
+    "parent_plan": {
+      "architecture_profile": {
+        "architecture_id": "910c",
+        "capabilities": {},
+        "core_counts": {
+          "aic": 1,
+          "aiv": 1
+        },
+        "device_id": null,
+        "hardware_fingerprint": "paper-only",
+        "limitations": [
+          "CPU声明验证，不声称硬件支持或收益"
+        ],
+        "memory_bytes": {
+          "BT": 65536,
+          "L0_A": 65536,
+          "L0_B": 65536,
+          "L0_C": 65536,
+          "L1": 65536,
+          "L2": 65536,
+          "UB": 65536
+        },
+        "npu_arch": 2201,
+        "probe_kind": "sdk_soc",
+        "provenance": {
+          "probe_source_ref": "sha256:f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d",
+          "raw_probe_ref": "sha256:f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d",
+          "sdk_header_ref": null
+        },
+        "schema_version": "1.0.0",
+        "sdk_version": "paper-only",
+        "soc_name": "Ascend910C"
+      },
+      "contracts": {
+        "algorithm": "paper-current",
+        "data_path": "unchanged",
+        "dispatch_domain": "unchanged",
+        "fusion_boundary": "unchanged",
+        "ownership": "unchanged",
+        "reduction": "unchanged",
+        "synchronization": "unchanged",
+        "task_partition": "unchanged",
+        "workspace_ownership": "unchanged"
+      },
+      "dispatch_plan": {
+        "architecture_profile_ref": "sha256:87082e55668791c6e1ece6f0924d46940af2f57870fc1390d9c39ea6d8e4377c",
+        "dispatch_id": "paper-dispatch",
+        "entries": [],
+        "fallback": {
+          "conditions": [],
+          "group_id": "all",
+          "kernel_entry": "paper_kernel",
+          "required_capabilities": [],
+          "tiling_key": 0
+        },
+        "operator": "paper",
+        "parallel_plan_ref": "sha256:232a17844234be865b7fae7a60ec489a0a13f7e25bd74601a8e2e5492958bd5c",
+        "schema_version": "1.0.0",
+        "source_hash": "sha256:701f8d79965f522624573312de80b6eaa677216d562ed2f60f59bd31bdae80b5"
+      },
+      "implementation_freedom": {
+        "dimensions": [
+          "local_transfer"
+        ],
+        "parameter_domains": [
+          {
+            "maximum": 1024,
+            "minimum": 32,
+            "name": "tile"
+          }
+        ],
+        "reason": "仅允许本地搬运参数"
+      },
+      "parallel_plan": {
+        "architecture_profile_ref": "sha256:87082e55668791c6e1ece6f0924d46940af2f57870fc1390d9c39ea6d8e4377c",
+        "groups": [
+          {
+            "algorithm": "paper-current",
+            "alternatives": [],
+            "group_id": "all",
+            "memory_requirements": {
+              "UB": 4096
+            },
+            "ownership": "disjoint output",
+            "reduction": "none",
+            "required_capabilities": [],
+            "selection_evidence": [
+              "sha256:f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d"
+            ],
+            "synchronization": "same dependencies",
+            "task_partition": "one paper task",
+            "workspace_bytes": 0,
+            "workspace_formula": "0"
+          }
+        ],
+        "operator": "paper",
+        "plan_id": "paper-plan",
+        "precision_invariants": [
+          "same visible rounding"
+        ],
+        "schema_version": "1.0.0",
+        "semantic_invariants": [
+          "output identity"
+        ],
+        "source_hash": "sha256:701f8d79965f522624573312de80b6eaa677216d562ed2f60f59bd31bdae80b5"
+      },
+      "scope": {
+        "parent_implementation_hash": "sha256:701f8d79965f522624573312de80b6eaa677216d562ed2f60f59bd31bdae80b5",
+        "stage": "kernel.main",
+        "target_ids": [
+          "tensor.x"
+        ],
+        "task_id": "paper-task",
+        "workload_hash": "sha256:a908794893b8f714892612ef3973908d8a5b12a76e5ff9298dba2d7f4c0cf9ad"
+      }
+    },
+    "resource_lifetimes": [
+      {
+        "allocation_id": "ub.all",
+        "bytes": 4096,
+        "end": 2,
+        "evidence_ref": {
+          "path": "raw.json",
+          "sha256": "sha256:7fb9eb0d7be05f5d253e1c4d9e01e80d947ca1fcf189f7f2d60e165f3e5a7a61"
+        },
+        "group_id": "all",
+        "locator": "fixture buffer allocation",
+        "member_instance_ids": [
+          "action-instance.one",
+          "action-instance.one.second"
+        ],
+        "memory": "UB",
+        "rationale": "共同allocation只计一次",
+        "start": 0
+      }
+    ],
+    "routing_config_hash": "sha256:ec82d8f535262a6e43869d71bce0e77d91aa71040c5f7f87a8e56f5adfd6f1e8",
+    "schema_version": "aprof.scheme-selection/v1",
+    "scheme_hash": "sha256:4fac9eda5c806db704e3f9565837f55edd626299e3c03c0837bcfaf037478c85",
+    "scheme_id": "scheme.transfer"
+  },
+  "stage": "C2",
+  "task_id": "paper-task"
+}

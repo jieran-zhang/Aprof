@@ -1,0 +1,67 @@
+{
+  "answer_id": "answer-64d6646d10b7",
+  "case": "case-01",
+  "facts": [
+    {
+      "id": "CU01.A01",
+      "status": "correct",
+      "rationale": "正确说明正底数的对数变换、非正底数的自然指数分支及shift的位置，并给出本题表达式和三个理想值；明确区分数学期望与设备实测。",
+      "answer_span": "kernel依次执行乘、加、自然指数，因此数学表达式为exp(L×(scale×x+shift))。正base对应base^(scale×x+shift)，非正base走自然指数分支，并不计算负底数幂。本次multiplier约为0.34657359，设备侧shift约为−0.69314718，即计算2^(0.5x−1)。代表输入−2、0、2的数学结果分别为0.25、0.5、1，均可由bfloat16精确表示；这些是数学期望值，不是设备实测结果。"
+    },
+    {
+      "id": "CU01.A02",
+      "status": "correct",
+      "rationale": "结合原始BF16输入及搬入说明，完整描述BF16存储、升为FP32进行乘加指数计算、最终以CAST_RINT转回BF16，没有将存储类型误作全程算术类型。",
+      "answer_span": "本次由`exp_kernel`分派到`KernelExp<bfloat16_t>`。输入先以CAST_NONE转换到fpIn中的float；Muls把乘积写到fpOut，Adds和Exp继续原地更新fpOut；最后以CAST_RINT转换到bfloat16输出。故主要算术在float中进行，输入精度已由文件中的bfloat16决定，输出再次舍入。"
+    },
+    {
+      "id": "CU01.A03",
+      "status": "correct",
+      "rationale": "全文说明乘、加、Exp顺序，FP32直接使用队列输出张量，FP16/BF16使用FP32中间量及各自回转模式；另明确为逐元素运算，无归约或矩阵计算。",
+      "answer_span": "源码列出的float16同样先升为float计算，回写half时用CAST_NONE；按该文档，有精度损失时CAST_NONE表示CAST_RINT，不能解释成截断。float32分支直接在输入、输出队列张量间计算，不申请两个float临时区，也不执行Cast。"
+    },
+    {
+      "id": "CU01.E01",
+      "status": "correct",
+      "rationale": "说明host查询向量核数、调用ComputeExpTiling生成记录、整体复制tiling到设备并据此启动；正确给出blockNum=3、blockLength=8340及tileElements=4096。",
+      "answer_span": "分核依据是useful=max(1,ceil(n/4096))，本次为7；blockNum=max(1,min(3,7))=3，blockLength=ceil(25019/3)=8340，tileElements固定4096，dtype枚举值为2。"
+    },
+    {
+      "id": "CU01.E02",
+      "status": "correct",
+      "rationale": "表中元素起点为0、8340、16680，长度为8340、8340、8339，BF16字节起点为0、16680、33360；后文明确连续覆盖至元素25019且无重叠遗漏。",
+      "answer_span": "| 核块编号 | 全局元素区间，左闭右开 | 三个tile的有效元素数 | 输入或输出相对基址的字节区间 |\n|---|---|---|---|\n| 0 | [0,8340) | 4096、4096、148 | [0,16680) |\n| 1 | [8340,16680) | 4096、4096、148 | [16680,33360) |\n| 2 | [16680,25019) | 4096、4096、147 | [33360,50038) |"
+    },
+    {
+      "id": "CU01.E03",
+      "status": "correct",
+      "rationale": "表格给出每核三轮的完整有效计数，正文说明CopyIn→Compute→CopyOut顺序，并正确区分尾部296/296/294字节搬运与有效元素计算计数。",
+      "answer_span": "每个完整tile搬运8192B，两个148元素尾tile各296B，末核147元素尾tile为294B。输入pad配置为false、左右padding为0，且未调用SetPadValue；按文档，尾部仍会自动补dummy到32B对齐。因此三个尾tile在UB中各占320B，分别补24、24、26B，不能把这些补位当作指定填零。计算始终只覆盖count个有效元素，输出也只写有效字节，dummy不会扩展GM写入范围。"
+    },
+    {
+      "id": "CU01.H01",
+      "status": "correct",
+      "rationale": "正确计算BF16两个8192字节队列槽及两个16384字节FP32缓冲，共49152字节；FP32仅两个16384字节槽，共32768字节，并限定为显式UB数据申请。",
+      "answer_span": "本次两块各8192B，fpIn、fpOut各16384B，共49152B，即每核48KiB显式UB数据空间；float16相同，float32只需两个16384B队列缓冲，共32KiB。"
+    },
+    {
+      "id": "CU01.H02",
+      "status": "correct",
+      "rationale": "完整说明输入输出队列的申请、入队、出队、释放及所有权转移；另明确队列框架保证搬入后计算、计算后搬出与缓冲复用，并说明尾tile复用完整资源。",
+      "answer_span": "每个tile按`CopyIn→Compute→CopyOut`组织。`CopyIn`从inQ申请本地张量，使用`DataCopyPad`把GM输入搬到UB，再入队；`Compute`出队输入并申请输出；计算结果入outQ，输入张量释放；`CopyOut`出队输出，搬回对应GM位置后释放输出张量。入队、出队传递的是本地张量及其所有权，不是再次复制张量数据。"
+    },
+    {
+      "id": "CU01.H03",
+      "status": "correct",
+      "rationale": "明确num=1对应各一个输入输出槽且未启用双缓冲；结合逐tile调用顺序，正确保留实际流水重叠需编译或设备证据的边界，没有从队列推出异步重叠。",
+      "answer_span": "`Init`为inQ、outQ各申请一个4096元素缓冲，`InitBuffer(...,1,...)`明确关闭双缓冲。"
+    },
+    {
+      "id": "CU01.H04",
+      "status": "correct",
+      "rationale": "正确给出MTE2搬入、Vector算术与转换、MTE3搬出路径；另区分尾部UB对齐占用与实际GM字节数、有效计算数，并明确未测总线事务量及运行性能。",
+      "answer_span": "这里走Membase向量数据路径：MTE2搬入GM→UB，Vector执行Cast及算术，MTE3搬出UB→GM，没有矩阵计算或核间数据交换。"
+    }
+  ],
+  "critical_errors": []
+}

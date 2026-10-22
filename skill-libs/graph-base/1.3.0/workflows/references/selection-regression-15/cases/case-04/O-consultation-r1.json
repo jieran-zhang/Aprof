@@ -1,0 +1,43 @@
+{
+  "task_id": "case-04",
+  "round": 1,
+  "stage": "knowledge_consultation_only",
+  "implemented": false,
+  "router_ref": {
+    "path": "O-router-r1.json",
+    "sha256": "sha256:e20bd59919c1e5799e249feb2970081c3e6fdc4feffd089d2bbaa5787ba88ba2"
+  },
+  "adopted_document_readings": [
+    {
+      "opportunity_ids": [
+        "o-merge"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+        "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+      },
+      "locator": "lines:69-108",
+      "effect_kind": "plan",
+      "before": "初始只知道队列/存活或连续分块结构",
+      "after": "先仅在同owner的短segment内组成h行批次，以blockCount/stride搬运x0和x1并批量计算，输出按连续有效行写回；物理行跨度A=align32(S*s)/s须与S分开。长segment维持原路径；不新增Tiling Key，参数由连续性/API和容量决定。；tile放大增加已分配UB和最后读前存活时间；SwiGLU还可能增加行padding与mask处理",
+      "applicability": "partial：正文给方法与完成边，具体SDK支持和资源未确认"
+    },
+    {
+      "opportunity_ids": [
+        "o-pipe"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+        "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+      },
+      "locator": "lines:89-207",
+      "effect_kind": "plan",
+      "before": "初始只知道队列/存活或连续分块结构",
+      "after": "原owner下将raw输入输出物理槽变2，计算scratch单份并明确最后消费者；容量不足返回C2；新增输入/输出物理槽、prolog/drain和回卷事件；若容量导致T缩小，tile和API次数增加",
+      "applicability": "partial：正文给方法与完成边，具体SDK支持和资源未确认"
+    }
+  ],
+  "limitations": "内部router用于方案咨询；尚未建立confirmed C2或implemented C3；命中不等于全部采用；P读取为提取现有计划而非P_KEEP。"
+}

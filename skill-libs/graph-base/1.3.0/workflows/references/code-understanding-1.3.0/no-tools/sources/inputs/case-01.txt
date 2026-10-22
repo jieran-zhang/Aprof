@@ -1,0 +1,244 @@
+你正在AProf算子优化的code-understanding阶段。以下消息已经给出源码、workload和本次可用资料；仅凭这些上下文及你已有知识完成理解，不调用任何工具，不执行代码、CPU脚本或心算工具，不访问文件、网络、设备或其他Agent。不要请求工具或补充材料。
+
+提交一份供后续diagnosis使用的中文代码理解说明：整体算法与数值语义、当前实现策略、实际分派/任务/循环/尾块、数据/存储/依赖，以及对应的910C硬件行为。用当前workload做必要的具体推导，给出文件/符号/行号定位。区分源码事实、平台/API知识、具体推断及尚不能确认的边界；缺少性能测量不妨碍静态理解。不要预选Problem/Action，不设计新优化方案。
+
+所有资料正文已内联；链接和历史路径只作定位，不提供外部手册或检索能力。尽量在3500个中文或ASCII字符内完成，正确且具体的解释比字数和引用数量重要。最终直接提交完整的中文代码理解说明，使用Markdown，不输出JSON外壳。
+
+=== 平台与workload ===
+目标平台：Ascend 910C / Atlas A3，实际device架构条件为 __NPU_ARCH__=2201。host侧NPU_ARCH以workload指定值为准，不与device宏混用。3510只在题面指定时作为静态对照。没有设备编译、运行或profiling结果。
+# 题 1
+
+请阅读完整 source（含 host、参数/tiling 和 kernel 上下文）及 workload。本题要求理解现有实现，请提交一份连贯的代码理解说明：先解释输入输出与整体算法，再解释当前实现怎样分工、搬运、计算和同步，最后说明目标硬件上的执行行为、适用边界和证据不足之处。
+
+用 workload 中的值做必要的具体推导，让地址/计数的单位明确。请给出能定位到源文件/符号的依据。不要预选 Problem/Action，不要求提出优化或改代码。只写能由本题材料支持的结论；字数和引用数量不计分。
+
+
+当前源码是 `source/op_host/exp.asc`、`source/op_kernel/exp_tiling.h` 和 `source/op_kernel/exp_kernel.asc`。
+
+静态 workload：host 参数 `--numel 25019 --dtype bfloat16 --base 2 --scale 0.5 --shift -1`，本题将 `ACL_DEV_ATTR_VECTOR_CORE_NUM` 的返回值固定为 3；输入与输出按一维连续 ND 存放。代表性输入值可取 -2、0、2；输入文件共有 25019 个元素。
+
+请解释这次调用从参数、分核与 tile 到结果写回的完整路径，也覆盖源码列出的其他输入类型在该实现中的处理差别。说明当前资源组织对执行的含义。
+=== 完整输入源码 ===
+=== SOURCE FILE: source/op_host/data_utils.h ; sha256=c56d96c3859c66080329c242d1a4f9fee63178b49a4aaa5e545909b0ac5c80d8 ===
+0001: #pragma once
+0002: #include <filesystem>
+0003: #include <fstream>
+0004: #include <string>
+0005: 
+0006: inline bool ReadFile(const std::string &path, void *data, size_t bytes) {
+0007:     std::ifstream f(path, std::ios::binary);
+0008:     return f && static_cast<bool>(f.read(reinterpret_cast<char *>(data), bytes));
+0009: }
+0010: inline bool WriteFile(const std::string &path, const void *data, size_t bytes) {
+0011:     std::filesystem::path p(path);
+0012:     if (p.has_parent_path()) std::filesystem::create_directories(p.parent_path());
+0013:     std::ofstream f(path, std::ios::binary);
+0014:     return f && static_cast<bool>(f.write(reinterpret_cast<const char *>(data), bytes));
+0015: }
+
+=== SOURCE FILE: source/op_host/exp.asc ; sha256=405597f7fba96c5f76fffedb4d9600a28f9e131561f899b1afa3de383a2c5dee ===
+0001: #include <cmath>
+0002: #include <cstdint>
+0003: #include <cstdlib>
+0004: #include <iostream>
+0005: #include <stdexcept>
+0006: #include <string>
+0007: #include "acl/acl.h"
+0008: #include "exp_tiling.h"
+0009: #include "data_utils.h"
+0010: #include "../op_kernel/exp_kernel.asc"
+0011: 
+0012: namespace {
+0013: void Check(aclError ret, const char *what) {
+0014:     if (ret != ACL_SUCCESS) throw std::runtime_error(std::string(what) + " failed: " + std::to_string(ret));
+0015: }
+0016: std::string Arg(int argc, char **argv, const std::string &name, const std::string &def = "") {
+0017:     for (int i = 1; i + 1 < argc; ++i) if (argv[i] == name) return argv[i + 1];
+0018:     return def;
+0019: }
+0020: uint32_t DType(const std::string &s) {
+0021:     if (s == "float16") return EXP_FLOAT16;
+0022:     if (s == "float32") return EXP_FLOAT32;
+0023:     if (s == "bfloat16") return EXP_BFLOAT16;
+0024:     throw std::invalid_argument("unsupported dtype: " + s);
+0025: }
+0026: }
+0027: 
+0028: int main(int argc, char **argv) {
+0029:     if (argc < 2) {
+0030:         std::cerr << "usage: exp --numel N --dtype float16|float32|bfloat16 --input FILE --output FILE "
+0031:                      "[--base X] [--scale X] [--shift X] [--device N]\n";
+0032:         return 2;
+0033:     }
+0034:     int device = 0;
+0035:     aclrtStream stream = nullptr;
+0036:     void *hostIn = nullptr, *hostOut = nullptr, *devIn = nullptr, *devOut = nullptr, *devTiling = nullptr;
+0037:     try {
+0038:         const uint64_t n = std::stoull(Arg(argc, argv, "--numel"));
+0039:         const uint32_t dtype = DType(Arg(argc, argv, "--dtype"));
+0040:         const size_t bytes = n * (dtype == EXP_FLOAT32 ? 4 : 2);
+0041:         const float base = std::stof(Arg(argc, argv, "--base", "-1"));
+0042:         const float scale = std::stof(Arg(argc, argv, "--scale", "1"));
+0043:         const float shift = std::stof(Arg(argc, argv, "--shift", "0"));
+0044:         device = std::stoi(Arg(argc, argv, "--device", "0"));
+0045:         Check(aclInit(nullptr), "aclInit");
+0046:         Check(aclrtSetDevice(device), "aclrtSetDevice");
+0047:         int64_t cores = 1;
+0048:         Check(aclrtGetDeviceInfo(device, ACL_DEV_ATTR_VECTOR_CORE_NUM, &cores), "query vector cores");
+0049:         const auto tiling = ComputeExpTiling(n, dtype, cores, base, scale, shift);
+0050:         Check(aclrtCreateStream(&stream), "aclrtCreateStream");
+0051:         Check(aclrtMallocHost(&hostIn, bytes), "aclrtMallocHost input");
+0052:         Check(aclrtMallocHost(&hostOut, bytes), "aclrtMallocHost output");
+0053:         Check(aclrtMalloc(&devIn, bytes, ACL_MEM_MALLOC_HUGE_FIRST), "aclrtMalloc input");
+0054:         Check(aclrtMalloc(&devOut, bytes, ACL_MEM_MALLOC_HUGE_FIRST), "aclrtMalloc output");
+0055:         Check(aclrtMalloc(&devTiling, sizeof(tiling), ACL_MEM_MALLOC_HUGE_FIRST), "aclrtMalloc tiling");
+0056:         if (!ReadFile(Arg(argc, argv, "--input"), hostIn, bytes)) throw std::runtime_error("read input failed");
+0057:         Check(aclrtMemcpy(devIn, bytes, hostIn, bytes, ACL_MEMCPY_HOST_TO_DEVICE), "H2D input");
+0058:         Check(aclrtMemcpy(devTiling, sizeof(tiling), &tiling, sizeof(tiling), ACL_MEMCPY_HOST_TO_DEVICE), "H2D tiling");
+0059:         exp_kernel<<<tiling.blockNum, nullptr, stream>>>(
+0060:             static_cast<uint8_t *>(devIn), static_cast<uint8_t *>(devOut), static_cast<uint8_t *>(devTiling));
+0061:         Check(aclrtSynchronizeStream(stream), "kernel synchronize");
+0062:         Check(aclrtMemcpy(hostOut, bytes, devOut, bytes, ACL_MEMCPY_DEVICE_TO_HOST), "D2H output");
+0063:         if (!WriteFile(Arg(argc, argv, "--output"), hostOut, bytes)) throw std::runtime_error("write output failed");
+0064:         std::cout << "exp_kernel completed: numel=" << n << " blocks=" << tiling.blockNum
+0065:                   << " tile=" << tiling.tileElements << "\n";
+0066:         aclrtFree(devTiling); aclrtFree(devOut); aclrtFree(devIn);
+0067:         aclrtFreeHost(hostOut); aclrtFreeHost(hostIn); aclrtDestroyStream(stream);
+0068:         aclrtResetDevice(device); aclFinalize();
+0069:         return 0;
+0070:     } catch (const std::exception &e) {
+0071:         std::cerr << "exp failed: " << e.what() << "\n";
+0072:         if (devTiling) aclrtFree(devTiling); if (devOut) aclrtFree(devOut); if (devIn) aclrtFree(devIn);
+0073:         if (hostOut) aclrtFreeHost(hostOut); if (hostIn) aclrtFreeHost(hostIn);
+0074:         if (stream) aclrtDestroyStream(stream); aclrtResetDevice(device); aclFinalize();
+0075:         return 1;
+0076:     }
+0077: }
+
+=== SOURCE FILE: source/op_kernel/exp_kernel.asc ; sha256=ab81778156f54d348c36dcca5b5831ccc0d159d36e5ee7ef66c9d5699bac869a ===
+0001: #pragma once
+0002: #include <type_traits>
+0003: #include "kernel_operator.h"
+0004: #include "exp_tiling.h"
+0005: 
+0006: template <typename T>
+0007: class KernelExp {
+0008: public:
+0009:     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const __gm__ ExpTilingData *tiling) {
+0010:         tiling_ = tiling;
+0011:         const uint64_t offset = static_cast<uint64_t>(AscendC::GetBlockIdx()) * tiling_->blockLength;
+0012:         uint64_t remain = tiling_->totalLength > offset ? tiling_->totalLength - offset : 0;
+0013:         length_ = remain < tiling_->blockLength ? remain : tiling_->blockLength;
+0014:         x_.SetGlobalBuffer((__gm__ T *)x + offset, length_);
+0015:         y_.SetGlobalBuffer((__gm__ T *)y + offset, length_);
+0016:         const uint32_t rawBytes = tiling_->tileElements * sizeof(T);
+0017:         const uint32_t fpBytes = tiling_->tileElements * sizeof(float);
+0018:         pipe_.InitBuffer(inQ_, 1, rawBytes);
+0019:         pipe_.InitBuffer(outQ_, 1, rawBytes);
+0020:         if constexpr (!std::is_same<T, float>::value) {
+0021:             pipe_.InitBuffer(fpIn_, fpBytes);
+0022:             pipe_.InitBuffer(fpOut_, fpBytes);
+0023:         }
+0024:     }
+0025: 
+0026:     __aicore__ inline void Process() {
+0027:         for (uint64_t off = 0; off < length_; off += tiling_->tileElements) {
+0028:             const uint32_t count = static_cast<uint32_t>(
+0029:                 (length_ - off) < tiling_->tileElements ? (length_ - off) : tiling_->tileElements);
+0030:             CopyIn(off, count);
+0031:             Compute(count);
+0032:             CopyOut(off, count);
+0033:         }
+0034:     }
+0035: 
+0036: private:
+0037:     __aicore__ inline void CopyIn(uint64_t off, uint32_t count) {
+0038:         auto in = inQ_.AllocTensor<T>();
+0039:         AscendC::DataCopyExtParams p{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
+0040:         AscendC::DataCopyPadExtParams<T> pad{false, 0, 0, 0};
+0041:         AscendC::DataCopyPad(in, x_[off], p, pad);
+0042:         inQ_.EnQue(in);
+0043:     }
+0044: 
+0045:     __aicore__ inline void Compute(uint32_t count) {
+0046:         auto in = inQ_.DeQue<T>();
+0047:         auto out = outQ_.AllocTensor<T>();
+0048:         const float multiplier = tiling_->multiplier;
+0049:         const float shift = tiling_->shift;
+0050:         if constexpr (std::is_same<T, float>::value) {
+0051:             AscendC::Muls(out, in, multiplier, count);
+0052:             AscendC::Adds(out, out, shift, count);
+0053:             AscendC::Exp(out, out, count);
+0054:         } else {
+0055:             auto fi = fpIn_.Get<float>();
+0056:             auto fo = fpOut_.Get<float>();
+0057:             AscendC::Cast(fi, in, AscendC::RoundMode::CAST_NONE, count);
+0058:             AscendC::Muls(fo, fi, multiplier, count);
+0059:             AscendC::Adds(fo, fo, shift, count);
+0060:             AscendC::Exp(fo, fo, count);
+0061:             constexpr auto mode = std::is_same<T, bfloat16_t>::value
+0062:                 ? AscendC::RoundMode::CAST_RINT : AscendC::RoundMode::CAST_NONE;
+0063:             AscendC::Cast(out, fo, mode, count);
+0064:         }
+0065:         outQ_.EnQue(out);
+0066:         inQ_.FreeTensor(in);
+0067:     }
+0068: 
+0069:     __aicore__ inline void CopyOut(uint64_t off, uint32_t count) {
+0070:         auto out = outQ_.DeQue<T>();
+0071:         AscendC::DataCopyExtParams p{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
+0072:         AscendC::DataCopyPad(y_[off], out, p);
+0073:         outQ_.FreeTensor(out);
+0074:     }
+0075: 
+0076:     AscendC::TPipe pipe_;
+0077:     const __gm__ ExpTilingData *tiling_;
+0078:     uint64_t length_;
+0079:     AscendC::GlobalTensor<T> x_, y_;
+0080:     AscendC::TQue<AscendC::TPosition::VECIN, 1> inQ_;
+0081:     AscendC::TQue<AscendC::TPosition::VECOUT, 1> outQ_;
+0082:     AscendC::TBuf<AscendC::TPosition::VECCALC> fpIn_, fpOut_;
+0083: };
+0084: 
+0085: extern "C" __global__ __aicore__ void exp_kernel(GM_ADDR x, GM_ADDR y, GM_ADDR tilingAddr) {
+0086:     const __gm__ ExpTilingData *t = reinterpret_cast<const __gm__ ExpTilingData *>(tilingAddr);
+0087:     if (t->dtype == EXP_FLOAT32) {
+0088:         KernelExp<float> op; op.Init(x, y, t); op.Process();
+0089:     } else if (t->dtype == EXP_FLOAT16) {
+0090:         KernelExp<half> op; op.Init(x, y, t); op.Process();
+0091:     } else {
+0092:         KernelExp<bfloat16_t> op; op.Init(x, y, t); op.Process();
+0093:     }
+0094: }
+
+=== SOURCE FILE: source/op_kernel/exp_tiling.h ; sha256=411ed60d96b961f9ffd7e6ec883f6ceae760a54b764cad1e8456112a38af0d8f ===
+0001: #pragma once
+0002: #include <algorithm>
+0003: #include <cmath>
+0004: #include <cstdint>
+0005: 
+0006: enum ExpDType : uint32_t { EXP_FLOAT16 = 0, EXP_FLOAT32 = 1, EXP_BFLOAT16 = 2 };
+0007: 
+0008: struct ExpTilingData {
+0009:     uint64_t totalLength;
+0010:     uint64_t blockLength;
+0011:     uint32_t blockNum;
+0012:     uint32_t tileElements;
+0013:     uint32_t dtype;
+0014:     float multiplier;
+0015:     float shift;
+0016: };
+0017: 
+0018: inline ExpTilingData ComputeExpTiling(uint64_t n, uint32_t dtype, int64_t cores,
+0019:                                       float base, float scale, float shift) {
+0020:     ExpTilingData t{};
+0021:     t.totalLength = n;
+0022:     const uint64_t useful = std::max<uint64_t>(1, (n + 4095) / 4096);
+0023:     t.blockNum = static_cast<uint32_t>(std::max<int64_t>(1, std::min<int64_t>(cores, useful)));
+0024:     t.blockLength = (n + t.blockNum - 1) / t.blockNum;
+0025:     t.tileElements = 4096;
+0026:     t.dtype = dtype;
+0027:     t.multiplier = scale * (base > 0.0f ? std::log(base) : 1.0f);
+0028:     t.shift = shift * (base > 0.0f ? std::log(base) : 1.0f);
+0029:     return t;
+0030: }

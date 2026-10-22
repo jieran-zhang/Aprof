@@ -1,0 +1,155 @@
+{
+  "schema_version": "aprof.evidence/v1",
+  "task_id": "case-06",
+  "source_context_ref": {
+    "path": "target-provenance.json",
+    "sha256": "sha256:6744f7edfb46437e479b202259e7266389affeb35251874bdc1ca346d75ca5b6"
+  },
+  "attributes": {
+    "family": [
+      "indexing"
+    ],
+    "dtype": [
+      "bfloat16",
+      "float16",
+      "float32",
+      "int32",
+      "int64",
+      "int8"
+    ],
+    "features": [
+      "scalar-control",
+      "memory-transfer",
+      "tiling-tail"
+    ],
+    "platform": "dav-2201"
+  },
+  "facts": {
+    "source.kernel": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.kernel",
+      "ref": {
+        "path": "source/op_kernel/gather_kernel.asc",
+        "sha256": "sha256:c2558645a1b97647993bf9179dae4f29385503c0f397801f202ffc398db75ade",
+        "locator": "lines:1-50"
+      }
+    },
+    "source.tiling": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.tiling",
+      "ref": {
+        "path": "source/op_kernel/gather_tiling.h",
+        "sha256": "sha256:9022b7f3f4e5c4b15324266dc929ad421ef076d26df91539dd429a9820411b45",
+        "locator": "lines:1-52"
+      }
+    },
+    "source.host": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.host",
+      "ref": {
+        "path": "source/op_host/gather.asc",
+        "sha256": "sha256:4b34751028a746863704d9c1362774cc0d971281c68ebec354045730c2ae0c34",
+        "locator": "lines:1-111"
+      }
+    },
+    "source.matrix": {
+      "state": true,
+      "kind": "source_review",
+      "view": "workload",
+      "evidence_id": "source.matrix",
+      "ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+        "locator": "lines:1-597"
+      }
+    },
+    "source.oracle": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.oracle",
+      "ref": {
+        "path": "source/scripts/verify_result.py",
+        "sha256": "sha256:58ce3daecb4d61bce1d2610a3ed7a468dbfbd4e4e77c725a7ba891cae582f2fc",
+        "locator": "lines:1-35"
+      }
+    },
+    "symptom.source.control_metadata_overhead.component_1": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.kernel",
+      "ref": {
+        "path": "source/op_kernel/gather_kernel.asc",
+        "sha256": "sha256:c2558645a1b97647993bf9179dae4f29385503c0f397801f202ffc398db75ade",
+        "locator": "lines:1-50"
+      }
+    },
+    "symptom.source.control_metadata_overhead.component_2": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.tiling",
+      "ref": {
+        "path": "source/op_kernel/gather_tiling.h",
+        "sha256": "sha256:9022b7f3f4e5c4b15324266dc929ad421ef076d26df91539dd429a9820411b45",
+        "locator": "lines:1-52"
+      }
+    },
+    "symptom.source.control_metadata_overhead.component_3": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.host",
+      "ref": {
+        "path": "source/op_host/gather.asc",
+        "sha256": "sha256:4b34751028a746863704d9c1362774cc0d971281c68ebec354045730c2ae0c34",
+        "locator": "lines:1-111"
+      }
+    },
+    "constraint.semantic_equivalence": {
+      "state": true,
+      "kind": "source_proof",
+      "view": "constraint",
+      "evidence_id": "semantic-proof",
+      "ref": {
+        "path": "source-analysis-R1.md",
+        "sha256": "sha256:3686ec449f4bfd0adc5b5b87822e14dc74b6e808f486db901719c87dce365ebc",
+        "locator": "lines:1-25"
+      }
+    },
+    "constraint.control_equivalence": {
+      "state": true,
+      "kind": "source_proof",
+      "view": "constraint",
+      "evidence_id": "semantic-proof",
+      "ref": {
+        "path": "source-analysis-R1.md",
+        "sha256": "sha256:3686ec449f4bfd0adc5b5b87822e14dc74b6e808f486db901719c87dce365ebc",
+        "locator": "lines:1-25"
+      }
+    },
+    "constraint.capacity": {
+      "state": true,
+      "kind": "source_proof",
+      "view": "constraint",
+      "evidence_id": "semantic-proof",
+      "ref": {
+        "path": "source-analysis-R1.md",
+        "sha256": "sha256:3686ec449f4bfd0adc5b5b87822e14dc74b6e808f486db901719c87dce365ebc",
+        "locator": "lines:1-25"
+      }
+    },
+    "constraint.output_ownership": {
+      "state": "unknown",
+      "kind": "not_observed",
+      "view": "constraint"
+    }
+  }
+}

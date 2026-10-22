@@ -1,0 +1,109 @@
+# asc_copy_ub2ub
+
+## 产品支持情况
+
+<!-- npu="950" id1 -->
+- Ascend 950PR&950DT系列产品：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- Atlas A3系列产品：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- Atlas A2系列产品：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- Atlas 200I/500 A2推理产品：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- Atlas推理系列产品AI Core：不支持
+<!-- end id5 -->
+<!-- npu="310p" id6 -->
+- Atlas推理系列产品Vector Core：不支持
+<!-- end id6 -->
+<!-- npu="910" id7 -->
+- Atlas训练系列产品：不支持
+<!-- end id7 -->
+
+## 功能说明
+
+头文件路径为：`"c_api/vector_datamove/vector_datamove.h"`。
+
+将数据从Unified Buffer（UB）搬运到UB。
+
+本接口支持连续数据搬运和高维切分数据搬运。连续数据搬运按`size`指定的字节数在UB内连续搬运，如图1所示；高维切分数据搬运按`burst_count`指定搬运的数据块个数，每个数据块按`burst_len`指定的DataBlock个数搬运，并通过`src_gap`和`dst_gap`指定源操作数和目的操作数相邻数据块之间的间隔，如图2所示。
+
+**图1**  连续搬运示意图
+![](../figures/asc_copy_ub2ub_continuous.png "连续搬运示意图")
+
+**图2**  高维切分搬运示意图
+![](../figures/asc_copy_ub2ub_highdim_split.png "高维切分搬运示意图")
+
+本接口仅在AIV上生效。
+
+## 函数原型
+
+### 连续数据搬运
+
+```c
+__aicore__ inline void asc_copy_ub2ub(__ubuf__ void* dst,
+                                      __ubuf__ void* src,
+                                      uint32_t size)
+```
+
+### 高维切分数据搬运
+
+```cpp
+__aicore__ inline void asc_copy_ub2ub(__ubuf__ void* dst, __ubuf__ void* src, uint16_t burst_count, uint16_t burst_len, uint16_t src_gap, uint16_t dst_gap)
+```
+
+## 参数说明
+
+### 连续数据搬运
+
+**表1** 参数说明
+
+| 参数名 | 输入/输出 | 描述 |
+|---|---|---|
+| dst | 输出 | 目的UB的起始地址。需要32字节对齐。 |
+| src | 输入 | 源UB的起始地址。需要32字节对齐。 |
+| size | 输入 | 待搬运数据大小，单位字节。取值范围：[32, 65535×32]，且需为32的整数倍。 |
+
+### 高维切分数据搬运
+
+**表2** 参数说明
+
+| 参数名 | 输入/输出 | 描述 |
+|---|---|---|
+| dst | 输出 | 目的UB的起始地址。需要32字节对齐。 |
+| src | 输入 | 源UB的起始地址。需要32字节对齐。 |
+| burst_count | 输入 | 待搬运的连续数据块个数。取值范围：[1, 65535]。 |
+| burst_len | 输入 | 每个连续数据块的长度，单位为DataBlock（32字节）。取值范围：[1, 65535]。 |
+| src_gap | 输入 | 源操作数相邻连续数据块的间隔（前面一个数据块的尾与后面一个数据块的头的间隔），单位为DataBlock（32字节）。取值范围：[0, $2^{16}−1$]。 |
+| dst_gap | 输入 | 目的操作数相邻连续数据块的间隔（前面一个数据块的尾与后面一个数据块的头的间隔），单位为DataBlock（32字节）。取值范围：[0, $2^{16}−1$]。 |
+
+## 返回值说明
+
+无
+
+## 流水类型
+
+PIPE_V
+
+## 约束说明
+
+### 通用约束
+
+- 本接口在非AIV上调用直接返回。
+- 各存储单元的空间大小和对齐要求请参考[存储单元说明](../general_description_and_constraints.md#存储单元说明)。
+- 源操作数与目的操作数的有效搬运DataBlock要求不重叠。高维切分搬运模式下，若`src_gap`和`dst_gap`使源、目的的实际搬运DataBlock互不重叠，则允许`src`和`dst`覆盖的整体地址跨度存在交叠。
+<!-- npu="950" id9 -->
+- Ascend 950PR&950DT系列产品的`PIPE_V`内部同步由硬件自动保证，多条本接口指令之间无需额外插入同步。
+<!-- end id9 -->
+<!-- npu="A3,910b" id10 -->
+- 如果本指令与其他指令存在数据依赖，需要插入[同步指令](../sync/system_sync_overview.md)，保证多个指令串行化，防止出现异常数据。
+<!-- end id10 -->
+
+### 连续搬运模式约束
+
+- `size`需为32的整数倍，否则`size/32`截断后实际搬运字节数不足，多出非整32字节部分被丢弃。
+

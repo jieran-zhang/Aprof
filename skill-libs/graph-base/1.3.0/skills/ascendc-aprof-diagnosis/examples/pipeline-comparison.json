@@ -1,0 +1,105 @@
+{
+  "schema_version": "aprof.diagnosis-case/v1",
+  "case_id": "paper.pipeline",
+  "evidence_status": "paper",
+  "task_id": "paper.pipeline",
+  "scope": {
+    "task_id": "paper.pipeline",
+    "parent_implementation_hash": "sha256:921b77f9f174de9b8db0f54d9e487ed32b08e3259648a613868ba02afa775bcd",
+    "workload_hash": "sha256:0cacc6813a0470909e9b99e5f3a57271d2df6b37173af75bd4971869731843a3",
+    "target_ids": [
+      "T"
+    ],
+    "stage": "paper_analysis"
+  },
+  "context_ref": null,
+  "reasoning_ref": null,
+  "sources": [
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/elementwise/double_buffer_design.md",
+      "original_path": "ops/ascendc-performance-best-practices/references/elementwise/double_buffer_design.md",
+      "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+      "lines": [
+        40,
+        249
+      ],
+      "sha256": "sha256:142cc0055136ff3bc203672f4c4365cf4f09b41a175a7bfa1d89f3df3b2500ae",
+      "excerpt_sha256": "sha256:28c3372885746552f8fc7c07805f7f715efc2c32ef72a3a0155dcbd49a0967a3"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/matmul/arch22/pipeline_design.md",
+      "original_path": "ops/ascendc-performance-best-practices/references/matmul/arch22/pipeline_design.md",
+      "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+      "lines": [
+        1,
+        139
+      ],
+      "sha256": "sha256:411edebe99b43b0bb05bac2754c1d4ffd4abe46c726df718c0c1b4a7131eb0ed",
+      "excerpt_sha256": "sha256:411edebe99b43b0bb05bac2754c1d4ffd4abe46c726df718c0c1b4a7131eb0ed"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md",
+      "original_path": "ops/ascendc-performance-best-practices/references/flash_attention/arch22/tiling_pipeline_design.md",
+      "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+      "lines": [
+        1,
+        155
+      ],
+      "sha256": "sha256:ea3be814234904a2d8a4a3b99847aec00c849f3fb3ce2647390a3dce0a734ba1",
+      "excerpt_sha256": "sha256:ea3be814234904a2d8a4a3b99847aec00c849f3fb3ce2647390a3dce0a734ba1"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/sync_control/inter_core_sync/CrossCoreWaitFlag_ISASI.md",
+      "original_path": "docs/zh/api/SIMD-API/basic_api/sync_control/inter_core_sync/CrossCoreWaitFlag_ISASI.md",
+      "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+      "lines": [
+        28,
+        151
+      ],
+      "sha256": "sha256:69845e8fa794040e321959eaa57105a79cdf880c2d9460b7bf65a53f3c644827",
+      "excerpt_sha256": "sha256:02edbe3918b020be18c5b07b81c9bc18153e3f3ab7ba41a9962391c7173aa399"
+    }
+  ],
+  "observations": [
+    "纸面输入：源码包含可定位的copy/compute/copy阶段，队列／事件存在串行顺序；多个tensor同时存活，实际架构容量和profile overlap仍未知。"
+  ],
+  "candidate_explanations": [
+    "problem.pipeline_serialization",
+    "problem.onchip_capacity_pressure"
+  ],
+  "selected_action_instances": [],
+  "outcome": {
+    "status": "not_run",
+    "timing_ref": null,
+    "correctness_ref": null,
+    "mechanism_refs": [],
+    "limitations": [
+      "纸面输入，不是设备观测；缺失前提保持unknown。"
+    ]
+  },
+  "claims": [
+    {
+      "id": "pipeline.comparison",
+      "text": "流水串行可能留下可覆盖空洞；容量压力可能限制可用槽数。应分别画ready/free边和每阶段同时live集合，以字节核算UB/L1/L0，不把TQue深度和物理buffer数当同一参数。\n\nnum=2只说明分配形式，不能证明已有重叠。相反，复用不重叠tensor的物理地址可以减少静态容量，却可能和延长存活的大batch／多槽流水竞争。资源不合法会阻塞动作，不意味着串行机制不存在。",
+      "basis": "mechanism_inference",
+      "source_indexes": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "review_status": "reviewed",
+      "limitations": [
+        "该来源只支持方法和限制，未验证当前任务瓶颈或收益。"
+      ]
+    }
+  ],
+  "review": {
+    "reviewer": "primary-agent-paper-curation",
+    "independent": false,
+    "decision": "reviewed",
+    "notes": [
+      "待独立行为复核；无硬件实验。"
+    ]
+  }
+}

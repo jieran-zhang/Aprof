@@ -1,0 +1,191 @@
+---
+schema_version: aprof.knowledge-record/v1
+id: planning.indexing.coordinate_neighborhood
+kind: template
+version: 1.0.0
+status: active
+title: 坐标生成与邻域读取：空间块、复用轴及重算取舍
+scope:
+  platforms:
+  - all
+  workloads:
+  - all
+  dtypes:
+  - all
+sources:
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/README.md
+  original_path: index/gather_elements_v2/README.md
+  revision: 8b42e125134fa9abf1e42a67e6b2792f78c26be5
+  lines:
+  - 1
+  - 16
+  sha256: sha256:c8df45df36e823c8531e2e64a7d396d53f04c7e75ddc223dfb476c3910ffc43e
+  excerpt_sha256: sha256:710989d3762b9a9b098d32ae60880ef24e30e663be574d65aeb494ae047304d6
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_host/gather_elements_v2_tiling.cpp
+  original_path: index/gather_elements_v2/op_host/gather_elements_v2_tiling.cpp
+  revision: 8b42e125134fa9abf1e42a67e6b2792f78c26be5
+  lines:
+  - 105
+  - 280
+  sha256: sha256:c7bb8d76d1741b5c3212a8de9f28bf6f9de5fe2f7d012bfa90780b25e6f12793
+  excerpt_sha256: sha256:e3de11b8245bfed856224ab85e90f622e751b99b8a00cacab770c6d8cb7b2546
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_kernel/gather_elements_v2_scalar.h
+  original_path: index/gather_elements_v2/op_kernel/gather_elements_v2_scalar.h
+  revision: 8b42e125134fa9abf1e42a67e6b2792f78c26be5
+  lines:
+  - 35
+  - 187
+  sha256: sha256:d7038ab1282e3a89aaecc2123a5b5c6bd3e6ce041703dfcbc63c34a0fbace77f
+  excerpt_sha256: sha256:27c6ffe9981fd02e7bf51e3722407a0bbe0b2ec0a73904fb0162e78f43843ab3
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/gather_elements_v2/op_kernel/gather_elements_v2_transpose.h
+  original_path: index/gather_elements_v2/op_kernel/gather_elements_v2_transpose.h
+  revision: 8b42e125134fa9abf1e42a67e6b2792f78c26be5
+  lines:
+  - 1
+  - 522
+  sha256: sha256:cc2ec40a9f9d3cfce1021e356e4e8f2a5f27e1528caaeb2ff1796a6a530c0d75
+  excerpt_sha256: sha256:cc2ec40a9f9d3cfce1021e356e4e8f2a5f27e1528caaeb2ff1796a6a530c0d75
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/cann-samples/17c948bb961fc6a660e4fcab45f6bf217c9c6239/Samples/0_Introduction/03_simt_api/01_gather/general_gather/gather.asc
+  original_path: Samples/0_Introduction/03_simt_api/01_gather/general_gather/gather.asc
+  revision: 17c948bb961fc6a660e4fcab45f6bf217c9c6239
+  lines:
+  - 24
+  - 106
+  sha256: sha256:736f80f904a485299798f602f5dec5349582544ed5bbbf82a74c97479074f913
+  excerpt_sha256: sha256:e61ea7721f247f0bc3c4bfc634d10b507668909fa619d5a0eab4ce14fb4bc5d4
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/cann-samples/17c948bb961fc6a660e4fcab45f6bf217c9c6239/Samples/0_Introduction/03_simt_api/01_gather/general_gather/README.md
+  original_path: Samples/0_Introduction/03_simt_api/01_gather/general_gather/README.md
+  revision: 17c948bb961fc6a660e4fcab45f6bf217c9c6239
+  lines:
+  - 1
+  - 58
+  sha256: sha256:c4f0943995abfc0f44bfcd74fe8ca25ef908ba95d003c7b8dc2649e4683f84f1
+  excerpt_sha256: sha256:aca4c07f4c58eb05c59d299de5d7142d08972a1602152cdc24f5b0a696d310f9
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/README.md
+  original_path: posembedding/rotary_position_embedding/README.md
+  revision: d7e6a7c6c1450c040049486845336c77f3100406
+  lines:
+  - 1
+  - 51
+  sha256: sha256:5c367eaca3ad1b7008afd6804ccc997be9cde35a76bb03d23df2a931d810a784
+  excerpt_sha256: sha256:0584361aaf5de66a2e5290e73880764867c112b65192db8fdd2a8a545b4e5f7f
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_host/rope_interleaved_tiling.cpp
+  original_path: posembedding/rotary_position_embedding/op_host/rope_interleaved_tiling.cpp
+  revision: d7e6a7c6c1450c040049486845336c77f3100406
+  lines:
+  - 151
+  - 348
+  sha256: sha256:0f2bac0d6cd52e57ef38976b7fb8205e3104f2e0ea26f3689f0be1dd0a09cec6
+  excerpt_sha256: sha256:43e2749e99d4ff0e456b7039f18af6a7645511e6d6cbdcbcd6d8d0e58a3b3e85
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_kernel/rotary_position_embedding.cpp
+  original_path: posembedding/rotary_position_embedding/op_kernel/rotary_position_embedding.cpp
+  revision: d7e6a7c6c1450c040049486845336c77f3100406
+  lines:
+  - 145
+  - 200
+  sha256: sha256:5160d08c053ba32694df0c699d31ddc9b67a26d3ae4545f4fb9d6122efc3400e
+  excerpt_sha256: sha256:24d59f53fadba324ba0346704b8fbaff23d6de81b93fd9f8282d5e9d15e28f28
+- path: skills/ascendc-aprof-parallel-planning/knowledge/sources/selection-v2-planning/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bsn.h
+  original_path: posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bsn.h
+  revision: d7e6a7c6c1450c040049486845336c77f3100406
+  lines:
+  - 80
+  - 195
+  sha256: sha256:1b9db64d84e6abf43eda6f65ca706df6d5219e8b73ebeec794c5ff106fa2434b
+  excerpt_sha256: sha256:aee09fcfd96fbd9fa8fd9dee7eee943d5d9f288672ae0c74f2ee4759e5c7f18b
+learning: {}
+tags:
+- indexing
+- coordinate-generation
+- neighborhood-read
+- derived-reuse
+seed_reason: 固定来源确认间接取数/输出所有权及广播分区组成；完整采样骨架为明确条件化的本次机制推导，不是上游已有插值实现。
+parent: planning.indexing
+references:
+- planning.indexing.gather_output_owned
+- planning.elementwise.broadcast
+- planning.layout.transpose
+- planning.under-fusion.vector_producer_consumer
+evidence_status: mechanism_inference_from_reviewed_source_not_benchmarked
+---
+# 坐标生成与邻域读取：空间块、复用轴及重算取舍
+
+## 身份与采用边界
+
+这是**本次机制推导**的通用条件化骨架。固定来源直接确认 GatherElements 的输出独占/间接取数/转置中转，RoPE 的共享输入块广播及按容量分区，950 SIMT Gather 的逐行或输出元素分配；这些事实不证明任意插值公式、边界规则或 API 在目标平台合法。五个固定仓库本次检索未找到可用的 GridSampler/Resize 完整实现链，不能把本条说成已移植的上游采样 kernel。
+
+用于输出可独立计算、每输出从有限邻域读数的任务。实例必须给定：输入/输出真实布局与 stride，坐标来源函数 G，边界函数 B，邻域/权重函数 H，按既定次序消费邻域的函数 F，dtype/Cast/舍入、NaN/Inf、越界与空输入规则。**这些槽位未绑定时只能作为部分原则参考；绑定且证明输出互斥、地址/容量/数值条件后，才可完整采用其任务骨架。** 本条不提供通用插值数值实现，也不授权从任务 oracle 改写特殊值行为。
+
+最近邻可令 K=1、F 为读取合法元素；加权邻域的 K、权重计算精度和累加顺序必须来自任务定义。二维四邻域、三维八邻域只是已绑定特定数学定义后可能出现的 K，不是所有采样任务的假定。GatherElements 的 index 同形语义独立保留，不能因两者都读离散地址就采用同一完整模板。
+
+## 坐标、依赖轴与所有权
+
+示例符号：输出 `Y[n,c,p]`，n 为外层独立对象，c 为可复用轴，p 为展平输出空间点；输入 `X[n,c,i]`，真实 stride 显式保存。几何记录 `D[n,p]=H(B(G(n,p)))` 含 K 个源空间坐标、有效标记及必要权重。当 G/B/H 也依赖 c 时，必须改成 D[n,c,p]，不允许跨 c 复用。输入值 X 仍依赖 c，**几何相同不代表输入值相同**。
+
+将输出切成互斥 `[n,c0:c1,p0:p1]` 矩形；owner 为该矩形唯一写者，完整覆盖各有效维度。物理布局为 NCHW 类时 p 通常连续，c 跨一个源/输出平面；NHWC 类时 c 通常连续、p 跨通道行。代码必须用真实 stride，而非借用上述逻辑维度的连续假设。布局、边界策略、插值模式与 dtype 属于不同适用域；不能把只优化一域计为全算子覆盖。
+
+## 三种骨架与选择
+
+| 骨架 | 步骤与所有权 | 减少的工作与新增代价 |
+| --- | --- | --- |
+| 输出连续空间块，独立生成几何 | 每 owner 固定 n/c，连续 p 片批量生成坐标、验证邻域、读取并写出 | 输出连续、任务多；几何可能跨 c 重算，适合作为通用基线及无共享依赖的域 |
+| 同 owner 的复用轴块×空间块 | 先生成 St 个 D，再按 c 块逐次读取各自输入并消费，保持每个 c 的 p 子块连续 | 几何从每输出一次降为每复用块一次；新增 D 活跃状态、可能减少 task，跨 c 访问可能更离散 |
+| 有局部输入窗口的空间块 | 只有已证明邻域地址落在合法小窗口，才搬入含 halo 的窗口并本地读取 | 减少重复源请求的潜力；增加未用窗口字节、halo 重读和 Gather/布局成本；任意数据相关坐标不能假定局部性 |
+
+窗口方案与几何复用是不同维度，可以组合，也可以分开比较。没有地址局部性证据时保留逐输出间接取数或合法的本地分组方案；不凭输出连续推定源地址连续。950 SIMT 样例只支持其 README 指定产品，不能直接作为 910C/A3 的 GM Gather API。A3 需根据现有可用 Scalar/搬运/UB Gather 路径组成，API 选择归 C3 并须再次核对。
+
+## 工作量、字节与容量公式
+
+设外层数量 N、复用轴长度 C、空间点数 S，tile 为 Ct×St，最大邻域 K。G/B/H 每点的逻辑操作列表记为 g（按操作类型分开）；不把 g 当秒数。逐输出生成需 NCS 次几何，按 c 块保留需 `NS*ceil(C/Ct)` 次；所有 c 由同一 owner 顺序消费时可降到 NS 次，但 task 数会相应减少。边界点 Kvalid≤K 可不同，源读取请求上界 NCSK 个，真实缓存/DRAM 字节需要测量，不能把复用几何直接写成消除这些输入请求。
+
+令 bI/bW 为每索引/权重字节，bM 为每点完整 mask 记录字节，d 为源空间维数，bX/bY 为输入/输出元素宽。一个空间片的几何存储上界：
+
+`B_D = A(St*(K*d*bI + K*bW + bM))` 字节。
+
+A 是当前分配器的字节对齐函数；最近邻不需要权重时令 bW=0；存储基坐标+少量差分可有更小表示，但必须保留数值/范围证明。若每次只处理一个 c，输出 buffer 只需 St 元素；若同时处理 Ct 列，则按 CtSt 分配。保守 UB：
+
+`B_UB = B_D_UB + qX*A(LX*bX) + qY*A(LY*bY) + B_offsets + B_masks + B_cast + B_api_tmp + B_fixed`。
+
+LX 为真实搬入输入窗口/片的元素数，LY 为同时存活输出数，qX/qY 是实际分配份数。若 D 放 Scalar 私有数组，另列私有状态 `B_D_private` 与编译后寄存器/栈/spill 未知；**不能把其从 UB 删除就认定没有资源代价**。跨核共享 D 若另存 GM，还要增加 D 的写读与阶段完成关系；这已改变 C2 通路，不能当作局部复用免费实现。
+
+参数 St/Ct 的扩大可能分别改善空间连续性/几何摊销，也增加存储、尾片浪费、编译器活跃状态并减少 task。仅初始化真正需要的区域；若为合法向量尾部填充，计入 padded−valid 的本地工作。节省坐标操作、增加源访问、额外同步等分项记录，不使用统一成本分数掩盖无时间依据。
+
+## 带语义槽位的完整任务骨架
+
+```python
+# 所有偏移以元素为单位；转换到具体 API 字节偏移只做一次。
+# G/B/H/F 已绑定本任务语义，exact_read 只读取已证明有效的地址。
+for n, c0, c1, p0, p1 in owned_rectangles:
+    D = [H(B(G(n, p))) for p in range(p0, p1)]  # 必须证明不依赖 c
+    for c in range(c0, c1):
+        out = []
+        for p, record in zip(range(p0, p1), D):
+            state = F.begin(n, c, p)
+            for neighbor in record.in_required_order():
+                if neighbor.is_valid:
+                    off = offset_from_true_strides(n, c, neighbor.coordinate)
+                    value = exact_read(X, off)
+                else:
+                    value = F.out_of_bounds_value(neighbor)  # 先判界，禁止先读越界再mask
+                state = F.consume(state, value, neighbor.weight)
+            out.append(F.finish(state))
+        write_valid_owned_output(n, c, p0, out)
+    wait_for_all_consumers_before_reusing(D_or_output_storage)
+```
+
+D 依赖 c 的域改为 c 循环内生成；这不是失败回退，而是语义要求。批量坐标/邻域 API 可以替换内层实现，但需证明 mask、舍入与运算顺序满足任务合同。无跨核归约；若采用两阶段 GM 几何表，生产者写唯一表槽，完成后消费者只读，不能省略阶段同步。
+
+## 复用、重算与 Action 意图
+
+输入值复用保存原始 X/B；派生数据复用保存 G/B/H 的结果；不变量外提保存地址或控制计算；三者分别记录依赖轴、owner 和生命周期。`reuse_input_tiles` 不能自动承载几何派生结果，`hoist_invariant_control` 不能自动承载插值计算重排。新意图 `action.reuse_derived_results` 独立处理合法派生状态复用（须使用经独立复核注册的冻结版本），不能把不适用旧Action改名塞入；未满足其条件时继续部分原则分析。
+
+C2 需比较“复用 D”“缩小 St/Ct 重算 D”“保留源窗口”及最强合理替代；不要求固定比较数量。若选择复用，写出哪些操作仍逐输出执行，以及布局/模式/dtype 的残余域。R2 发生回归时分别检查 D 表示与活跃状态、访存顺序、task 数、初始化/同步和数值实现，再决定缩 tile、重算、换骨架或保留原计划；不能从一次整体退化直接否定重复几何机制。
+
+本条没有硬件收益、通用阈值或完整插值 API 资格证明。最低 CPU 规划检查包括矩形覆盖、零/单点、Ct/St 尾部、依赖轴变化、负/边界坐标、真实 stride、地址溢出和所有生存期容量；这些检查不能代替实际数值与性能验收。
+
+
+## 派生保存、GM中转与布局准备的完整成本
+
+将几何生成、邻域消费与最终Cast分开计数：每个c仍需读取其源值、按原次序加权/累计并写输出。若D要从坐标结构重排为Gather偏移、宽化整数、生成mask或打包权重，准备工作P(St)及其buffer单列；同复用窗口可共享才做一次，不能因移入Init就视为免费。两阶段GM表每份D至少写B_D、按真实消费者次数读B_D，并需要发布完成与workspace容量；NORMAL可容纳后继消费者复用的假设，不保证实际命中。输出/派生表的cache策略统一交action.align_cache_policy，不能由输入样例排除写出方向。
+
+把每消费者重算、UB保留与GM表同时作为条件性候选：保存的生成次数、GM逻辑字节、布局准备、较小tile/较少task、同步及残余逐元素工作分别报告，不以单一总分伪装时间。一般Vector生产消费融合参见planning.under-fusion.vector_producer_consumer；它是现有under-fusion的叶子，不引入新一级分类。具体局部加权和、finalCast及严格阈值见O numeric，未证明数值次序等价时不得重排。

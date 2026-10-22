@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aprof.local/schemas/handler-attempt.schema.json",
+  "title": "AProf HandlerAttempt exploration sidecar 1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "attempt_id",
+    "candidate_id",
+    "session_id",
+    "graph_version",
+    "selected_edge_id",
+    "mechanism_id",
+    "transformation_id",
+    "handler_id",
+    "handler_version",
+    "handler_producer_hash",
+    "parameters",
+    "context_features",
+    "parent_candidate_id",
+    "previous_verdict",
+    "decision_type",
+    "decision_reason",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "attempt_id": {"type": "string", "minLength": 1},
+    "candidate_id": {"type": "string", "minLength": 1},
+    "session_id": {"type": "string", "minLength": 1},
+    "graph_version": {"type": "string", "minLength": 1},
+    "selected_edge_id": {"type": "string", "minLength": 1},
+    "mechanism_id": {"type": "string", "minLength": 1},
+    "transformation_id": {"type": "string", "minLength": 1},
+    "handler_id": {"type": "string", "minLength": 1},
+    "handler_version": {"type": "string", "minLength": 1},
+    "handler_producer_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "parameters": {"type": "object"},
+    "context_features": {"type": "object"},
+    "parent_candidate_id": {"type": ["string", "null"], "minLength": 1},
+    "previous_verdict": {
+      "oneOf": [
+        {"type": "null"},
+        {"enum": [
+          "static_rejected",
+          "build_failed",
+          "accuracy_failed",
+          "runtime_failed",
+          "artifacts_incomplete",
+          "measurement_unstable",
+          "attribution_uncertain",
+          "stable_no_gain",
+          "benchmark_specialized_gain",
+          "heldout_regression",
+          "production_safe_gain",
+          "verified_noop"
+        ]}
+      ]
+    },
+    "decision_type": {
+      "enum": [
+        "initial",
+        "retry_same_handler",
+        "sibling_handler",
+        "sibling_transformation",
+        "reroute_after_evidence",
+        "debug_repair"
+      ]
+    },
+    "decision_reason": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string", "format": "date-time"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"decision_type": {"const": "initial"}}},
+      "then": {
+        "properties": {
+          "parent_candidate_id": {"type": "null"},
+          "previous_verdict": {"type": "null"}
+        }
+      },
+      "else": {
+        "properties": {
+          "parent_candidate_id": {"type": "string", "minLength": 1},
+          "previous_verdict": {"type": "string"}
+        }
+      }
+    }
+  ]
+}

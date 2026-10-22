@@ -1,0 +1,177 @@
+{
+  "algorithm_transformations": [
+    "transformation.balance_tail_assignment",
+    "transformation.decompose_tasks_dynamically"
+  ],
+  "edges": [
+    {
+      "edge_type": "supports",
+      "hard_preconditions": [],
+      "id": "edge.v2.algorithm.support",
+      "name": "Planning transition",
+      "prior_logit": null,
+      "provenance": [
+        {
+          "lines": "1-6",
+          "path": "src/aprof_runtime/planning.py"
+        }
+      ],
+      "source": "predicate.source.algorithm_parallel_plan_required",
+      "target": "mechanism.algorithm_decomposition_choice",
+      "trainable": false,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [],
+      "id": "edge.v2.algorithm.select",
+      "name": "Planning transition",
+      "prior_logit": 1.0,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "1-6",
+          "path": "src/aprof_runtime/planning.py"
+        }
+      ],
+      "source": "mechanism.algorithm_decomposition_choice",
+      "target": "transformation.select_parallel_algorithm",
+      "trainable": true,
+      "version": "1.0.0"
+    },
+    {
+      "edge_type": "problem_to_skill_prior",
+      "hard_preconditions": [],
+      "id": "edge.v2.algorithm.noop",
+      "name": "Planning transition",
+      "prior_logit": -1.0,
+      "prior_status": "expert_seed_unverified",
+      "provenance": [
+        {
+          "lines": "1-6",
+          "path": "src/aprof_runtime/planning.py"
+        }
+      ],
+      "source": "mechanism.algorithm_decomposition_choice",
+      "target": "transformation.noop",
+      "trainable": true,
+      "version": "1.0.0"
+    }
+  ],
+  "mechanisms": [
+    {
+      "id": "mechanism.algorithm_decomposition_choice",
+      "name": "Algorithm decomposition and ownership constrain parallel execution",
+      "provenance": [
+        {
+          "lines": "1-6",
+          "path": "src/aprof_runtime/planning.py"
+        }
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    }
+  ],
+  "predicates": [
+    {
+      "assessment_basis": "manual_source_review",
+      "evaluation": {
+        "extractor_id": "algorithm_parallel_plan_required",
+        "implementation_status": "unimplemented",
+        "mode": "source_match"
+      },
+      "id": "predicate.source.algorithm_parallel_plan_required",
+      "inputs": [
+        "operator_semantics",
+        "source_work_partition",
+        "architecture_profile"
+      ],
+      "name": "Algorithm decomposition alternatives require architecture analysis",
+      "provenance": [
+        {
+          "lines": "1-6",
+          "path": "src/aprof_runtime/planning.py"
+        }
+      ],
+      "returns": "true_false_unknown",
+      "rule": "Manual source review identifies alternative partition, ownership, reduction or fusion algorithms requiring an explicit parallel plan.",
+      "unknown_when": "Operator semantics, architecture or source review is unavailable.",
+      "version": "1.0.0",
+      "view": "source"
+    }
+  ],
+  "required_capabilities": {
+    "transformation.batch_vector_api_calls": [
+      "vector"
+    ],
+    "transformation.pad_ub_layout": [
+      "vector"
+    ],
+    "transformation.vectorize_scalar_loop": [
+      "vector"
+    ]
+  },
+  "schema_version": "1.0.0",
+  "transformations": [
+    {
+      "applicability": "Explicit algorithm decomposition alternatives derived from input operator semantics.",
+      "capacity_constraints": [
+        "query actual platform capacities"
+      ],
+      "contraindications": [
+        "unresolved algorithm semantics or architecture"
+      ],
+      "expected_profile_delta": [
+        "improved independent work or reduced redundant work"
+      ],
+      "gate_spec": [
+        "parallel_plan",
+        "build",
+        "accuracy",
+        "paired_runtime"
+      ],
+      "id": "transformation.select_parallel_algorithm",
+      "kind": "atomic_transformation",
+      "name": "Select an architecture-bound algorithm parallel plan",
+      "optimization_stage": "algorithm_parallel",
+      "parameter_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "group_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "plan_id": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_id",
+          "group_id"
+        ],
+        "type": "object"
+      },
+      "provenance": [
+        {
+          "lines": "1-6",
+          "path": "src/aprof_runtime/planning.py"
+        }
+      ],
+      "required_capabilities": [],
+      "required_evidence": {
+        "all": [
+          "predicate.source.algorithm_parallel_plan_required"
+        ],
+        "any": []
+      },
+      "rollback_spec": "restore previous plan and corresponding implementation",
+      "semantic_invariants": [
+        "preserve operator semantics and precision",
+        "declare partition ownership, reduction, synchronization and workspace"
+      ],
+      "status": "active",
+      "version": "1.0.0"
+    }
+  ]
+}

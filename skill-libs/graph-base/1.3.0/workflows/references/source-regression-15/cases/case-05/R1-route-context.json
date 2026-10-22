@@ -1,0 +1,106 @@
+{
+  "schema_version": "aprof.evidence/v1",
+  "task_id": "raw15-case-05",
+  "source_context_ref": {
+    "path": "origin.json",
+    "sha256": "sha256:9c5214155b44e94cb2294c93dfe94a8ea9c12d787d9736dce8e0276919617a6c"
+  },
+  "attributes": {
+    "family": [
+      "elementwise"
+    ],
+    "dtype": [
+      "float16",
+      "float32",
+      "bfloat16"
+    ],
+    "features": [
+      "tiling-tail",
+      "memory-transfer",
+      "pipeline-sync",
+      "vector-api",
+      "precision-boundaries",
+      "buffer-lifetime",
+      "scalar-control"
+    ]
+  },
+  "facts": {
+    "source.kernel_structure": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "apply_adam_w_kernel.asc#lines:1-344",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "lines:1-344"
+      },
+      "view": "source"
+    },
+    "source.host_dispatch": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "apply_adam_w.asc#lines:1-102",
+      "ref": {
+        "path": "source/op_host/apply_adam_w.asc",
+        "sha256": "sha256:f9e628435d48f27a9521f65f0eac276f58bc8f7929adbc7d54d31e3672cc9dc2",
+        "locator": "lines:1-102"
+      },
+      "view": "source"
+    },
+    "workload.matrix": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "matrix-20.json#cases:1-20",
+      "ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:0bcdecc53621402511d6631fde12caa836a1980898e844da3f8e9bdc2bfd46bf",
+        "locator": "cases:1-20"
+      },
+      "view": "workload"
+    },
+    "source.tiling": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "apply_adam_w_common.h#lines:1-78",
+      "ref": {
+        "path": "source/op_host/apply_adam_w_common.h",
+        "sha256": "sha256:d010363013f57030ab4c465008fd79028c7ff65471c74ca069b21a35af7773c7",
+        "locator": "lines:1-78"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order.component_1": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "apply_adam_w_kernel.asc#explicit-source-proof: Float Process与Half Process均先4路CopyIn，再算术/SafeSqrt/SafeDiv，最后CopyOut；没有单独下一tile预取阶段。",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "explicit-source-proof: Float Process与Half Process均先4路CopyIn，再算术/SafeSqrt/SafeDiv，最后CopyOut；没有单独下一tile预取阶段。"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order.component_2": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "apply_adam_w_kernel.asc#explicit-source-proof: Float五个TQue各num=1；Half五原始队列各num=1、五FP32TBuf；DeQue/Free及写回关系可在CopyOneIn/CastOne/Compute/CopyOut定位。",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "explicit-source-proof: Float五个TQue各num=1；Half五原始队列各num=1、五FP32TBuf；DeQue/Free及写回关系可在CopyOneIn/CastOne/Compute/CopyOut定位。"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order.component_3": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "apply_adam_w_kernel.asc#explicit-source-proof: loops/tail来自host按ubFormer计算；首轮TPipe槽空闲、末轮count=tailCount；输入v_hat和分母仍在SafeSqrt/SafeDiv后段读。库Sqrt/Div内部排程未知，不声称测得低重叠。",
+      "ref": {
+        "path": "source/op_kernel/apply_adam_w_kernel.asc",
+        "sha256": "sha256:a292401f960ae3c5cf659a1bd1493d76616cfb795deb1038824659b5bd64c9c0",
+        "locator": "explicit-source-proof: loops/tail来自host按ubFormer计算；首轮TPipe槽空闲、末轮count=tailCount；输入v_hat和分母仍在SafeSqrt/SafeDiv后段读。库Sqrt/Div内部排程未知，不声称测得低重叠。"
+      },
+      "view": "source"
+    }
+  }
+}

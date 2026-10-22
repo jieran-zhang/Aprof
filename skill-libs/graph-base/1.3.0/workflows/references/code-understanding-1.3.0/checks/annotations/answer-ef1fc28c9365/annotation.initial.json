@@ -1,0 +1,67 @@
+{
+  "answer_id": "answer-ef1fc28c9365",
+  "case": "case-05",
+  "facts": [
+    {
+      "id": "CU05.A01",
+      "status": "correct",
+      "rationale": "明确描述half输入、float L0C累加及half输出；给出的无激活乘积公式和B文件[N,K]布局，正确解释了逻辑转置存储路径。",
+      "answer_span": "两个版本实现相同的矩阵乘：A为行主序half矩阵[8192,8192]，B文件为行主序[N,K]，存放逻辑[K,N]矩阵的转置，因此C[m,n]=ΣₖA[m,k]·B文件[n,k]。Cube以float在L0C累加，最后转换成half，按行主序写回[8192,8192]。三个GM矩阵各占8192²×2=134217728字节，即128MiB。"
+    },
+    {
+      "id": "CU05.A02",
+      "status": "correct",
+      "rationale": "完整给出2201/scenario1的矩阵尺寸、核切分、base尺寸、24块映射、M/N循环及末N分片，并明确每tile有128次K迭代。",
+      "answer_span": "固定SCENARIO_NUM=1、两侧架构宏2201，故执行Process，而非ProcessL2Cache或3510分支。base tile为128×256，baseK=64；每核负责singleCoreM=2048、singleCoreN最多1536以及完整K=8192。InitComputeParams（273—308行）令核号b对应(i,j)=(b%4,b/4)，其A/B/C起点分别为i·2048·8192、j·1536·8192、i·2048·8192+j·1536，单位均为half元素，换成字节需乘2。\n\n前20核各计算2048×1536，末4核从N=7680开始，各计算2048×512。ProcessLoop先遍历N tile，再遍历M tile，最内层128次K迭代；因此前20核各有6×16=96个输出tile，末4核各有2×16=32个。总计2048个tile、262144次Mmad、2048次Fixpipe，无跨核归约。M/N均整除base尺寸，末核虽不足singleCoreN，仍包含两个完整256列tile，不走base尾块分支。"
+    },
+    {
+      "id": "CU05.A03",
+      "status": "correct",
+      "rationale": "答案明确A/B大包分别覆盖8/4次K迭代，L0每轮处理一个baseK；正确说明首轮初始化、后续累加及Mmad/Fixpipe的UnitFlag协议，认可该协议提供L0C生命周期依赖。",
+      "answer_span": "Mmad每次计算128×256×64，t=0用cmatrixInitVal清零，此后保留L0C累加。前127轮unitFlag=2，末轮为3；Fixpipe也为3。固定rawdocs的UnitFlag.md说明，这使连续Mmad占用同一L0C，最后一次发布可读状态，Fixpipe读取后释放，供后续tile复用；它不是L0A/L0B覆盖保护。"
+    },
+    {
+      "id": "CU05.E01",
+      "status": "partial",
+      "rationale": "正确给出两个128KiB大包及共享L1中的四个字节区间，明确B从256KiB开始；未明确给出完整K范围内A共16包、B共32包。",
+      "answer_span": "Process（50—72行）的LocalTensor构造地址以字节计，长度以元素计。A1、B1映射到同一块L1：A Ping/Pong分别占[0,128)、[128,256)KiB，B Ping/Pong占[256,384)、[384,512)KiB。"
+    },
+    {
+      "id": "CU05.E02",
+      "status": "correct",
+      "rationale": "槽起点与长度等价确定全部L0A/L0B区间，并明确两者物理分离；float L0C容量正确。",
+      "answer_span": "L0A与L0B是不同物理存储，即使数值地址相同也不别名。A2两槽各16KiB，起点0、32KiB；B2两槽各32KiB，起点同为0、32KiB。CO1始终指向L0C起点0，占128×256×4=128KiB，所有K迭代及后续输出tile复用该处。"
+    },
+    {
+      "id": "CU05.E03",
+      "status": "correct",
+      "rationale": "前十轮表格及槽选择公式正确；同时说明t=0之后预取Pong、B在t=3/7释放、A在t=7释放，并准确区分A事件ID0/1与B事件ID2/3。",
+      "answer_span": "循环前先装A Ping的K[0,512)、B Ping的K[0,256)。t=0的Compute之后发起B Pong的K[256,512)、A Pong的K[512,1024)搬运。t=3释放B Ping并发起其K[512,768)重填；t=7释放B Pong和A Ping，分别发起K[768,1024)、K[1024,1536)重填。因此t=8读取的是A Pong原有包和B Ping新包。上述是发起次序；完成关系由事件约束，不能直接当作实际时间线。"
+    },
+    {
+      "id": "CU05.H01",
+      "status": "correct",
+      "rationale": "明确MTE2_MTE1仅在包首保障L1就绪，MTE1_M保障Mmad的L0输入就绪；另行说明反向释放依赖，未把正向就绪当作槽复用保证。",
+      "answer_span": "事件关系见ProcessLoop（153—270行）。MTE1_MTE2的ID0/1管理A Ping/Pong可覆盖状态，ID2/3管理B；开始各Set一次，使首次搬入能够通过Wait。MTE2完成大包后Set同ID的MTE2_MTE1，MTE1仅在包首等待：t=0等A0/B2，t=4等B3，t=8等A1/B2。MTE1完成包末切片读取后Set反向MTE1_MTE2：B在t=3、7释放，A在t=7释放；重填对应槽必须先Wait。这保证覆盖发生在旧L1数据读取完成后，而不必等Cube完成计算。\n\n每轮DataLoad之后，Compute用MTE1_M的Set/Wait保证两路L0输入就绪，再执行Mmad，随后Set M_MTE1释放该L0槽。"
+    },
+    {
+      "id": "CU05.H02",
+      "status": "correct",
+      "rationale": "正确解释包末LoadData完成后释放L1、旧Mmad完成后释放L0，区分就绪与可复用；初始空闲置位和最终事件排空均有说明。",
+      "answer_span": "MTE1完成包末切片读取后Set反向MTE1_MTE2：B在t=3、7释放，A在t=7释放；重填对应槽必须先Wait。这保证覆盖发生在旧L1数据读取完成后，而不必等Cube完成计算。\n\n每轮DataLoad之后，Compute用MTE1_M的Set/Wait保证两路L0输入就绪，再执行Mmad，随后Set M_MTE1释放该L0槽。baseline每轮加载前Wait同一M_MTE1槽：t=0、1消费初始置位，t≥2等待Mmad(t−2)完成，从而建立“旧Cube读取完成→同槽重新加载”的依赖。每个tile有128轮，为偶数，所以后续tile仍从槽0开始；末尾Wait收回两个L0事件和四个L1事件。"
+    },
+    {
+      "id": "CU05.H03",
+      "status": "correct",
+      "rationale": "准确定位删除的循环等待及丢失的同槽Compute到后续Load依赖，说明异步覆盖风险，也明确保留正向就绪依赖不能补回反向边。",
+      "answer_span": "variant删除209行的M_MTE1等待后，保留了输入就绪的正向依赖，却失去Mmad(t−2)→Load(t)的反向依赖，t=2起可覆盖仍被Cube读取的槽。"
+    },
+    {
+      "id": "CU05.H04",
+      "status": "correct",
+      "rationale": "正确指出保留Set但缺少逐轮Wait违反配对及单比特事件生命周期；将结论限定为静态保证丢失，未声称已观测到损坏、卡死或性能变化。",
+      "answer_span": "还存在更早的事件契约违例：初始化已Set ID0/1，t=0、1又分别Set同ID，中间没有Wait消费。固定SetFlag_WaitFlag_ISASI.md明确要求匹配配对，并将同一事件ID未消费就再次Set列为未定义行为。单个首tile每个ID已有1次初始化加64次Compute置位，而对应等待只剩ProcessLoop末尾各一次；事件是置位/清零标志，并非计数信号量。末尾等待及核函数末尾PipeBarrier<PIPE_ALL>不能补回已经缺失的覆盖依赖。因此baseline有可证明的槽复用顺序，variant不再具备相同的正确性与完成保证；不能据此断言每次必然出现某种错误或必然更快。"
+    }
+  ],
+  "critical_errors": []
+}

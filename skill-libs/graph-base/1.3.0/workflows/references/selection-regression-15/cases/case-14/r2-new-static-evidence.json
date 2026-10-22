@@ -1,0 +1,189 @@
+{
+  "task_id": "autonomy-c-14",
+  "attempt_identity": {
+    "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+    "implementation_hash": null,
+    "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c"
+  },
+  "source_refs": [
+    {
+      "path": "source/op_kernel/transpose_kernel.asc",
+      "sha256": "sha256:b103972552bd43cc98b15c0daf3b4dfe1b7b2e68a079e98d6b87aac58aa4c0fe"
+    },
+    {
+      "path": "source/matrix-20.json",
+      "sha256": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c"
+    },
+    {
+      "path": "source/op_kernel/transpose_tiling.h",
+      "sha256": "sha256:6aed36c8122bdb797fb28be0c2af2ae3348224edb21e320e22912fc539db2bc6"
+    }
+  ],
+  "kind": "static_source_reassessment",
+  "static_derived_table": [
+    {
+      "case_id": "1",
+      "domain": "suffix-contiguous",
+      "dtype": "float16",
+      "elements": 134217728,
+      "rank": 4,
+      "preserved_suffix_elements": 128
+    },
+    {
+      "case_id": "2",
+      "domain": "matrix-swap",
+      "dtype": "float32",
+      "elements": 4194304,
+      "rank": 2,
+      "preserved_suffix_elements": 1
+    },
+    {
+      "case_id": "3",
+      "domain": "matrix-swap",
+      "dtype": "bfloat16",
+      "elements": 16777216,
+      "rank": 2,
+      "preserved_suffix_elements": 1
+    },
+    {
+      "case_id": "4",
+      "domain": "matrix-swap",
+      "dtype": "int32",
+      "elements": 67108864,
+      "rank": 2,
+      "preserved_suffix_elements": 1
+    },
+    {
+      "case_id": "5",
+      "domain": "matrix-swap",
+      "dtype": "int64",
+      "elements": 33554432,
+      "rank": 2,
+      "preserved_suffix_elements": 1
+    },
+    {
+      "case_id": "6",
+      "domain": "general-permute",
+      "dtype": "int16",
+      "elements": 1179648,
+      "rank": 4,
+      "preserved_suffix_elements": 1
+    },
+    {
+      "case_id": "7",
+      "domain": "matrix-swap",
+      "dtype": "float16",
+      "elements": 1046529,
+      "rank": 2,
+      "preserved_suffix_elements": 1
+    },
+    {
+      "case_id": "8",
+      "domain": "matrix-swap",
+      "dtype": "float32",
+      "elements": 1030189,
+      "rank": 2,
+      "preserved_suffix_elements": 1
+    },
+    {
+      "case_id": "9",
+      "domain": "matrix-swap",
+      "dtype": "bfloat16",
+      "elements": 1181953,
+      "rank": 2,
+      "preserved_suffix_elements": 1
+    },
+    {
+      "case_id": "10",
+      "domain": "general-permute",
+      "dtype": "int32",
+      "elements": 49691433,
+      "rank": 3,
+      "preserved_suffix_elements": 1
+    },
+    {
+      "case_id": "11",
+      "domain": "matrix-swap",
+      "dtype": "float16",
+      "elements": 1051137,
+      "rank": 2,
+      "preserved_suffix_elements": 1
+    },
+    {
+      "case_id": "12",
+      "domain": "general-permute",
+      "dtype": "float32",
+      "elements": 1092273,
+      "rank": 4,
+      "preserved_suffix_elements": 1
+    },
+    {
+      "case_id": "13",
+      "domain": "matrix-swap",
+      "dtype": "bfloat16",
+      "elements": 917504,
+      "rank": 4,
+      "preserved_suffix_elements": 1
+    },
+    {
+      "case_id": "14",
+      "domain": "suffix-contiguous",
+      "dtype": "float32",
+      "elements": 908558,
+      "rank": 4,
+      "preserved_suffix_elements": 127
+    },
+    {
+      "case_id": "15",
+      "domain": "general-permute",
+      "dtype": "float16",
+      "elements": 10912759,
+      "rank": 5,
+      "preserved_suffix_elements": 1
+    },
+    {
+      "case_id": "16",
+      "domain": "general-permute",
+      "dtype": "int64",
+      "elements": 3042039,
+      "rank": 5,
+      "preserved_suffix_elements": 1
+    },
+    {
+      "case_id": "17",
+      "domain": "matrix-swap",
+      "dtype": "float32",
+      "elements": 1049088,
+      "rank": 2,
+      "preserved_suffix_elements": 1
+    },
+    {
+      "case_id": "18",
+      "domain": "matrix-swap",
+      "dtype": "bfloat16",
+      "elements": 2089215,
+      "rank": 2,
+      "preserved_suffix_elements": 1
+    },
+    {
+      "case_id": "19",
+      "domain": "matrix-swap",
+      "dtype": "int8",
+      "elements": 2093567,
+      "rank": 2,
+      "preserved_suffix_elements": 1
+    },
+    {
+      "case_id": "20",
+      "domain": "general-permute",
+      "dtype": "float16",
+      "elements": 2094078,
+      "rank": 3,
+      "preserved_suffix_elements": 1
+    }
+  ],
+  "finding": "新增矩阵逐perm检查：case1、14保留末轴，连续后缀E=128、127；case2/3/4/5/7/8/9/11/17/18/19为二维交换；case13可分批二维交换；其余为一般置换。R2将原广义矩形方案限定为后缀条带和二维/批二维优先，其余保留fallback，收益覆盖不再泛称所有20case。",
+  "counterfactual_probe": "反事实非实测：同N及dtype将perm由swap改为保留长内轴，连续条带可省局部transpose与offset，优先级更高；反之tile很窄且s=1，32B逐行padding大、局部表成本可能使Scalar地址递增更优。",
+  "implemented": false,
+  "measured": false
+}

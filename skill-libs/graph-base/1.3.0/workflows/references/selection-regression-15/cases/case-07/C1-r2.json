@@ -1,0 +1,681 @@
+{
+  "schema_version": "aprof.handoff/v3",
+  "stage": "C1",
+  "task_id": "case-07",
+  "candidate_id": null,
+  "parent_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+  "reasoning": {
+    "schema_version": "aprof.diagnosis-reasoning/v1",
+    "task_id": "case-07",
+    "context_hash": "sha256:4e2b5d7dbad329c03e45ce182b41e8bb1d5fbdfc776f604b275cd685057077a6",
+    "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+    "source_context_ref": {
+      "path": "context-origin.json",
+      "sha256": "sha256:f8d091358616028242f22a8e35fd802044a548b3e9d1624dd40aaaf167575f90"
+    },
+    "context_snapshot": {
+      "schema_version": "aprof.evidence/v1",
+      "task_id": "case-07",
+      "source_context_ref": {
+        "path": "context-origin.json",
+        "sha256": "sha256:f8d091358616028242f22a8e35fd802044a548b3e9d1624dd40aaaf167575f90"
+      },
+      "attributes": {
+        "family": [
+          "indexing",
+          "layout"
+        ],
+        "dtype": [
+          "bfloat16",
+          "float16",
+          "float32",
+          "int32",
+          "int64"
+        ],
+        "features": [
+          "scalar-control",
+          "memory-transfer",
+          "vector-api",
+          "tiling-tail",
+          "pipeline-sync",
+          "buffer-lifetime",
+          "precision-boundaries"
+        ],
+        "platform": "dav-2201"
+      },
+      "facts": {
+        "source.r2": {
+          "state": true,
+          "kind": "derived",
+          "evidence_id": "source.r2",
+          "ref": {
+            "path": "source/op_kernel/strided_slice_kernel.asc",
+            "sha256": "sha256:46080207eb1e6dada5df620d8a255ec92707356d763d631194f53c4533b48206",
+            "locator": "whole-file"
+          },
+          "view": "source"
+        }
+      }
+    },
+    "current": {
+      "implementation_ref": {
+        "path": "source-identity.json",
+        "sha256": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24"
+      },
+      "workload_ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c"
+      },
+      "objects": [
+        {
+          "object_id": "kernel-path",
+          "kind": "object",
+          "description": "Host解释begin/end/masks为outputShape/sourceStep/sourceBase；按64B写所有权对齐分核。Kernel逐元素rank解码，按位复制，不存在浮点算术。"
+        },
+        {
+          "object_id": "stage",
+          "kind": "stage",
+          "description": "host->tiling->kernel完整路径"
+        },
+        {
+          "object_id": "workload",
+          "kind": "workload",
+          "description": "完整matrix20与未覆盖API域分开"
+        },
+        {
+          "object_id": "implementation",
+          "kind": "implementation",
+          "description": "原始源码manifest"
+        }
+      ],
+      "scope": {
+        "task_id": "case-07",
+        "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+        "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      }
+    },
+    "facts": {
+      "source.kernel": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source.kernel",
+        "ref": {
+          "path": "source/op_kernel/strided_slice_kernel.asc",
+          "sha256": "sha256:46080207eb1e6dada5df620d8a255ec92707356d763d631194f53c4533b48206",
+          "locator": "whole-file"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "source.tiling": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source.tiling",
+        "ref": {
+          "path": "source/op_kernel/strided_slice_tiling.h",
+          "sha256": "sha256:a038f2dc047926c24f3c86ad64e2812010e1123b7217dffe3f49150606d6c16b",
+          "locator": "whole-file"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "source.host": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source.host",
+        "ref": {
+          "path": "source/op_host/strided_slice.asc",
+          "sha256": "sha256:2e6d82ce5b6b4e15200ddebb952322f3b932b9134818786e646a14b405438166",
+          "locator": "whole-file"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "workload.matrix": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "workload.matrix",
+        "ref": {
+          "path": "source/matrix-20.json",
+          "sha256": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "locator": "cases"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "workload"
+      },
+      "source.oracle": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source.oracle",
+        "ref": {
+          "path": "source/scripts/verify_result.py",
+          "sha256": "sha256:c2db195f474dc3c563d92d01c0e0e0f97f3796cf6143fcadd2d131bbbd26286b",
+          "locator": "whole-file"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "source.metrics": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "source.host",
+          "source.tiling",
+          "workload.matrix"
+        ],
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "workload"
+      },
+      "constraint.target": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "constraint.target",
+        "ref": {
+          "path": "target-constraint.json",
+          "sha256": "sha256:041bf1ff1c3d3d4e96df6cd0caae84f3bf180ebb89958d1e5bae37116bd6dbfc",
+          "locator": "target"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "constraint"
+      },
+      "constraint.control_equivalence": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "constraint.control_equivalence",
+        "ref": {
+          "path": "source/op_kernel/strided_slice_kernel.asc",
+          "sha256": "sha256:46080207eb1e6dada5df620d8a255ec92707356d763d631194f53c4533b48206",
+          "locator": "address affine within a segment"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "constraint"
+      },
+      "constraint.semantic_equivalence": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "constraint.semantic_equivalence",
+        "ref": {
+          "path": "source/op_kernel/strided_slice_kernel.asc",
+          "sha256": "sha256:46080207eb1e6dada5df620d8a255ec92707356d763d631194f53c4533b48206",
+          "locator": "same per-element formula / storage bits; proposed re-grouping only"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "constraint"
+      },
+      "source.r2": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "source.kernel",
+          "source.host",
+          "source.tiling",
+          "workload.matrix"
+        ],
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.control_metadata_overhead.component_1": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "symptom.source.control_metadata_overhead.component_1",
+        "ref": {
+          "path": "source/op_kernel/strided_slice_kernel.asc",
+          "sha256": "sha256:46080207eb1e6dada5df620d8a255ec92707356d763d631194f53c4533b48206",
+          "locator": "当前热循环重复计算mask、分支、索引或读取TilingData字段"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.control_metadata_overhead.component_2": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "symptom.source.control_metadata_overhead.component_2",
+        "ref": {
+          "path": "source/op_kernel/strided_slice_kernel.asc",
+          "sha256": "sha256:46080207eb1e6dada5df620d8a255ec92707356d763d631194f53c4533b48206",
+          "locator": "当前重复表达式、依赖变量及其循环内变化范围有源码引用"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.control_metadata_overhead.component_3": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "symptom.source.control_metadata_overhead.component_3",
+        "ref": {
+          "path": "source/op_kernel/strided_slice_kernel.asc",
+          "sha256": "sha256:46080207eb1e6dada5df620d8a255ec92707356d763d631194f53c4533b48206",
+          "locator": "当前TilingData ABI和host写入到kernel读取的映射可对应；不要求先外提表达式或证明外提无spill"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.control_metadata_overhead": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "symptom.source.control_metadata_overhead.component_1",
+          "symptom.source.control_metadata_overhead.component_2",
+          "symptom.source.control_metadata_overhead.component_3"
+        ],
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source",
+        "components": [
+          "symptom.source.control_metadata_overhead.component_1",
+          "symptom.source.control_metadata_overhead.component_2",
+          "symptom.source.control_metadata_overhead.component_3"
+        ]
+      },
+      "symptom.source.scalar_element_loop.component_1": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "symptom.source.scalar_element_loop.component_1",
+        "ref": {
+          "path": "source/op_kernel/strided_slice_kernel.asc",
+          "sha256": "sha256:46080207eb1e6dada5df620d8a255ec92707356d763d631194f53c4533b48206",
+          "locator": "当前逐元素循环调用Scalar读写或算术"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.scalar_element_loop.component_2": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "symptom.source.scalar_element_loop.component_2",
+        "ref": {
+          "path": "source/op_kernel/strided_slice_kernel.asc",
+          "sha256": "sha256:46080207eb1e6dada5df620d8a255ec92707356d763d631194f53c4533b48206",
+          "locator": "当前循环有效域、Scalar API、地址更新及数据/控制依赖具有源码引用"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.scalar_element_loop.component_3": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "symptom.source.scalar_element_loop.component_3",
+        "ref": {
+          "path": "source/op_kernel/strided_slice_kernel.asc",
+          "sha256": "sha256:46080207eb1e6dada5df620d8a255ec92707356d763d631194f53c4533b48206",
+          "locator": "当前dtype、分支、别名和有效元素范围已明确；不要求先证明可以向量化"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.scalar_element_loop": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "symptom.source.scalar_element_loop.component_1",
+          "symptom.source.scalar_element_loop.component_2",
+          "symptom.source.scalar_element_loop.component_3"
+        ],
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source",
+        "components": [
+          "symptom.source.scalar_element_loop.component_1",
+          "symptom.source.scalar_element_loop.component_2",
+          "symptom.source.scalar_element_loop.component_3"
+        ]
+      },
+      "constraint.capacity": {
+        "state": "unknown",
+        "kind": "raw",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "constraint"
+      }
+    },
+    "candidates": [
+      {
+        "hypothesis_id": "h-batch",
+        "problem_id": "problem.scalar_control_hot_loop",
+        "mechanism": "按最内有效轴组织片：s=1用按位DMA，s为小正步长时读s*(T-1)+1连续跨度并用同宽UB Gather压紧；大步长保留原标量路径。",
+        "targets": [
+          "kernel-path"
+        ],
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "support": [
+          "source.kernel",
+          "source.tiling",
+          "workload.matrix"
+        ],
+        "counter": [],
+        "unknown": [],
+        "alternatives": [
+          "h-address"
+        ],
+        "checks": [
+          "s大或短E使span读取放大胜过减少Scalar时，分段地址递增优先",
+          "只核对源码逻辑工作，不从逻辑量推出加速比"
+        ],
+        "status": "plausible",
+        "reason": "按最内有效轴组织片：s=1用按位DMA，s为小正步长时读s*(T-1)+1连续跨度并用同宽UB Gather压紧；大步长保留原标量路径。；大步长column保留标量读；负stride与rank8是声明支持但当前矩阵未覆盖；不扩大GM越界读",
+        "excluded_by": [],
+        "independent_evidence_groups": []
+      },
+      {
+        "hypothesis_id": "h-address",
+        "problem_id": "problem.control_metadata_overhead",
+        "mechanism": "每连续输出段保留sourceBase+外轴前缀，内轴用sourceStep增量；所有stride继续按原uint64位模式处理。",
+        "targets": [
+          "kernel-path"
+        ],
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "support": [
+          "source.kernel",
+          "source.tiling",
+          "workload.matrix"
+        ],
+        "counter": [],
+        "unknown": [],
+        "alternatives": [
+          "h-batch"
+        ],
+        "checks": [
+          "若大部分为s=1且E长，批量复制可减少更多标量数据访问",
+          "只核对源码逻辑工作，不从逻辑量推出加速比"
+        ],
+        "status": "plausible",
+        "reason": "每连续输出段保留sourceBase+外轴前缀，内轴用sourceStep增量；所有stride继续按原uint64位模式处理。；N次标量load/store仍在，长连续行错过DMA机会",
+        "excluded_by": [],
+        "independent_evidence_groups": []
+      }
+    ],
+    "action_instances": [
+      {
+        "instance_id": "batch-r2",
+        "action_id": "action.vectorize_scalar_loop",
+        "template_hash": "sha256:999efb87cd58b497fcf2315e3dc294419c39404d0d0256d9f51b45f723311d3a",
+        "hypothesis_id": "h-batch",
+        "targets": {
+          "target": "kernel-path",
+          "stage": "stage",
+          "workload": "workload",
+          "implementation": "implementation"
+        },
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "parameters": {
+          "method": "按最内有效轴组织片：s=1用按位DMA，s为小正步长时读s*(T-1)+1连续跨度并用同宽UB Gather压紧；大步长保留原标量路径。",
+          "resource_bound": "跨度读取新增至多(s-1)*N*b输入字节；UB=A((s*(T-1)+1)*b)+A(T*b)+A(T*offsetBytes)+Tmp+F；int64需同宽或两半按位处理API证明",
+          "paper_only": true
+        },
+        "evidence_bindings": {
+          "symptom.source.scalar_element_loop": "symptom.source.scalar_element_loop",
+          "constraint.semantic_equivalence": "constraint.semantic_equivalence",
+          "constraint.capacity": "constraint.capacity"
+        },
+        "unknowns": [
+          "constraint.capacity"
+        ],
+        "status": "conditional",
+        "reason": "仅条件方案：按最内有效轴组织片：s=1用按位DMA，s为小正步长时读s*(T-1)+1连续跨度并用同宽UB Gather压紧；大步长保留原标量路径。",
+        "parent_plan_hash": null
+      },
+      {
+        "instance_id": "address-r2",
+        "action_id": "action.hoist_invariant_control",
+        "template_hash": "sha256:258231e590dee21154f5750b3732a427144982431b76caf8322543a0384948cf",
+        "hypothesis_id": "h-address",
+        "targets": {
+          "target": "kernel-path",
+          "stage": "stage",
+          "workload": "workload",
+          "implementation": "implementation"
+        },
+        "scope": {
+          "task_id": "case-07",
+          "parent_implementation_hash": "sha256:70cf5758f52f07491ba4adb1ed41a2104f4a70aed19b4af1d2b7896f116c0c24",
+          "workload_hash": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "parameters": {
+          "method": "每连续输出段保留sourceBase+外轴前缀，内轴用sourceStep增量；所有stride继续按原uint64位模式处理。",
+          "resource_bound": "O(d)状态，不增加GM请求或UB；段边界和编译spill未知",
+          "paper_only": true
+        },
+        "evidence_bindings": {
+          "symptom.source.control_metadata_overhead": "symptom.source.control_metadata_overhead",
+          "constraint.control_equivalence": "constraint.control_equivalence",
+          "constraint.semantic_equivalence": "constraint.semantic_equivalence",
+          "constraint.capacity": "constraint.capacity"
+        },
+        "unknowns": [
+          "constraint.capacity"
+        ],
+        "status": "conditional",
+        "reason": "仅条件方案：每连续输出段保留sourceBase+外轴前缀，内轴用sourceStep增量；所有stride继续按原uint64位模式处理。",
+        "parent_plan_hash": null
+      }
+    ],
+    "predecessor_ref": {
+      "path": "reasoning-r1.json",
+      "sha256": "sha256:3ed8114ac15e24c08ce12acbca103ff2124f293afcc2cf6cd29b4e1cf26e3210"
+    }
+  },
+  "artifacts": [
+    {
+      "path": "decision-r2.json",
+      "sha256": "sha256:d3cbcc10ade0c104dd2674803b7f3234c23646e39e34e3633c4ce3ee104bd623"
+    },
+    {
+      "path": "retrieval-r2.json",
+      "sha256": "sha256:bc945e11b72a95fc2bde9acf99e4abbab1c32f79d5cf055375081f005dba103d"
+    },
+    {
+      "path": "expansion-r2.json",
+      "sha256": "sha256:57747587c42265b77bb0fe776212b2f5004e349354cb9126e0d33055c92f8951"
+    },
+    {
+      "path": "consultation-r2.json",
+      "sha256": "sha256:85e72fe1f3479582c8b2566cdf660821f508ccb43a1662dd80a09baa22e36df7"
+    }
+  ]
+}

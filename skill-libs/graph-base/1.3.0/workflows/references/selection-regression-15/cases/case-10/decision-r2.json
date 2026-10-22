@@ -1,0 +1,1231 @@
+{
+  "schema_version": "aprof.action-decision/v2",
+  "task_id": "case-10",
+  "context_hash": "sha256:48f30c86a92d1bc028ee87c088fc62fa368ffa3478bc9f2a1ec42b99cdd17d27",
+  "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+  "reasoning_ref": {
+    "path": "reasoning-r2.json",
+    "sha256": "sha256:4c8594e9ecacedddb6f3a764174d48cc719ef4360aea4dfd1eac0ec52bba79a0"
+  },
+  "reasoning_hash": "sha256:19f3964b463a181db9d6e0d4bf1691169835c12784dd26fc03362e7208443cab",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/ec82d8f535262a6e43869d71bce0e77d91aa71040c5f7f87a8e56f5adfd6f1e8.json",
+    "sha256": "sha256:fde21372195004f2ae06c2a295edd3ca726b0f00da220aa64ef8f1c0bc6507e2"
+  },
+  "round": 2,
+  "current_parent_ref": {
+    "path": "source-identity.json",
+    "sha256": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27"
+  },
+  "opportunities": [
+    {
+      "id": "pipeline",
+      "hypothesis_id": "h-pipeline",
+      "action_id": "action.software_pipeline_stages",
+      "action_instance_id": "pipeline-r2",
+      "case_ids": [
+        "1",
+        "4",
+        "7",
+        "10",
+        "14",
+        "17",
+        "2",
+        "5",
+        "8",
+        "11",
+        "13",
+        "15",
+        "18",
+        "20",
+        "3",
+        "6",
+        "9",
+        "12",
+        "16",
+        "19"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "workload.matrix"
+      ],
+      "cost_mechanism": "建立2份输入/输出物理槽的预取/消费/排空，FP32 cast工作区不跨tile重叠写；保持Sigmoid与原Cast舍入。",
+      "predictions": [
+        {
+          "id": "pipeline-work",
+          "kind": "source_work",
+          "statement": "消除上一tile输入/输出槽释放后才可启动下一独立tile的串行限制；元素算术和2*N*b必要流量不变",
+          "check_method": "逐域静态计数并核对原地址/运算次序；实施后再对照差异",
+          "on_support": "支持该工作减少预测，尚不证明时间收益",
+          "on_refute": "若工作已被编译消除或新增代价抵消，重开比较"
+        },
+        {
+          "id": "pipeline-time",
+          "kind": "performance",
+          "statement": "在合法完整正确性后检验 建立2份输入/输出物理槽的预取/消费/排空，FP32 cast工作区不跨tile重叠写；保持Sigmoid与原Cast舍入。 是否降低同协议Task时间",
+          "check_method": "本轮禁止硬件；将来完整matrix20按统一Task协议测量，分域观察",
+          "on_support": "工程收益证据仍与机制归因分开",
+          "on_refute": "若双槽被迫把T减半且发射/同步成本超过隐藏搬运，较大单槽batch更优"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_overlap_low",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "pipeline-time",
+          "unknown_id": "pipeline-perf-legacy_symptom_profile_overlap_low",
+          "reason": "源码支持结构假设，编译器/关键路径和实际时间未测；不作为实施门禁"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "pipeline-time",
+          "unknown_id": "pipeline-perf-cost_reduction",
+          "reason": "源码支持结构假设，编译器/关键路径和实际时间未测；不作为实施门禁"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "pipeline-constraint.capacity",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "FP32两槽显式16*T、半精度16*T字节（raw双槽8*T+FP32工作8*T），另加API_tmp/F；事件及首尾控制增多；实际可用UB、API tmp及保留区尚未查询，只有公式不授权容量。",
+          "affects": "implementation_legality",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "pipeline-constraint.dependency_lifetime",
+          "kind": "implementation_safety",
+          "fact": "constraint.dependency_lifetime",
+          "expected_state": true,
+          "statement": "核验每输入/输出槽代次的ready/free和排空；工作区不可被异步消费者未完成时覆盖。",
+          "affects": "implementation_legality",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "pipeline-perf-legacy_symptom_profile_overlap_low",
+          "kind": "performance",
+          "fact": "symptom.profile.overlap_low",
+          "expected_state": null,
+          "statement": "尚未测量 建立2份输入/输出物理槽的预取/消费/排空，FP32 cast工作区不跨tile重叠写；保持Sigmoid与原Cast舍入。 的实际指令/等待减少是否超过 FP32两槽显式16*T、半精度16*T字节（raw双槽8*T+FP32工作8*T），另加API_tmp/F；事件及首尾控制增多",
+          "affects": "benefit_magnitude and priority",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "pipeline-perf-cost_reduction",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "尚未测量 建立2份输入/输出物理槽的预取/消费/排空，FP32 cast工作区不跨tile重叠写；保持Sigmoid与原Cast舍入。 的实际指令/等待减少是否超过 FP32两槽显式16*T、半精度16*T字节（raw双槽8*T+FP32工作8*T），另加API_tmp/F；事件及首尾控制增多",
+          "affects": "benefit_magnitude and priority",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "batch",
+      "comparison": "消除上一tile输入/输出槽释放后才可启动下一独立tile的串行限制；元素算术和2*N*b必要流量不变；付出 FP32两槽显式16*T、半精度16*T字节（raw双槽8*T+FP32工作8*T），另加API_tmp/F；事件及首尾控制增多；替代敏感条件：若双槽被迫把T减半且发射/同步成本超过隐藏搬运，较大单槽batch更优",
+      "disposition": "selected",
+      "reason": "建立2份输入/输出物理槽的预取/消费/排空，FP32 cast工作区不跨tile重叠写；保持Sigmoid与原Cast舍入。；若双槽被迫把T减半且发射/同步成本超过隐藏搬运，较大单槽batch更优",
+      "analysis": {
+        "intent_gap": null,
+        "work_delta": [
+          {
+            "id": "pipeline-reduced",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "float16",
+              "float32",
+              "bfloat16"
+            ],
+            "change": "reduced",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "max(ceil(L/T)-1,0)",
+              "unit": "potential cross-tile serialization boundary/core",
+              "symbols": [
+                {
+                  "name": "L",
+                  "meaning": "单核有效元素数",
+                  "unit": "element"
+                },
+                {
+                  "name": "T",
+                  "meaning": "候选tile有效元素上限",
+                  "unit": "element"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "建立2份输入/输出物理槽的预取/消费/排空，FP32 cast工作区不跨tile重叠写；保持Sigmoid与原Cast舍入。"
+          },
+          {
+            "id": "pipeline-retained",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "float16",
+              "float32",
+              "bfloat16"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "qualitative",
+              "expression": "单tile与短片没有稳态，Sigmoid内部计算吞吐及Cast成本保留",
+              "unit": "separate logical operations/bytes",
+              "symbols": [],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "保留项不能消失在整体覆盖声明中"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "pipeline-coverage-float16",
+            "domain_id": "float16",
+            "status": "partial",
+            "region": "建立2份输入/输出物理槽的预取/消费/排空，FP32 cast工作区不跨tile重叠写；保持Sigmoid与原Cast舍入。；域=float16",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "pipeline-coverage-float32",
+            "domain_id": "float32",
+            "status": "partial",
+            "region": "建立2份输入/输出物理槽的预取/消费/排空，FP32 cast工作区不跨tile重叠写；保持Sigmoid与原Cast舍入。；域=float32",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "pipeline-coverage-bfloat16",
+            "domain_id": "bfloat16",
+            "status": "partial",
+            "region": "建立2份输入/输出物理槽的预取/消费/排空，FP32 cast工作区不跨tile重叠写；保持Sigmoid与原Cast舍入。；域=bfloat16",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "pipeline-cost",
+            "domain_ids": [
+              "float16",
+              "float32",
+              "bfloat16"
+            ],
+            "dimension": "resource_access_sync",
+            "change": {
+              "mode": "symbolic",
+              "expression": "16*T+Tmp+F",
+              "unit": "UB allocation byte (both FP32 and half/bf16)",
+              "symbols": [
+                {
+                  "name": "T",
+                  "meaning": "候选tile有效元素上限",
+                  "unit": "element"
+                },
+                {
+                  "name": "Tmp",
+                  "meaning": "目标SDK/API要求的临时区",
+                  "unit": "byte"
+                },
+                {
+                  "name": "F",
+                  "meaning": "对齐外固定保留区",
+                  "unit": "byte"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "consequence": "若双槽被迫把T减半且发射/同步成本超过隐藏搬运，较大单槽batch更优"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "pipeline-residual",
+            "domain_ids": [
+              "float16",
+              "float32",
+              "bfloat16"
+            ],
+            "remaining_work": "单tile与短片没有稳态，Sigmoid内部计算吞吐及Cast成本保留",
+            "next_step": "若双槽被迫把T减半且发射/同步成本超过隐藏搬运，较大单槽batch更优",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling"
+            ]
+          }
+        ],
+        "no_alternative_reason": null
+      }
+    },
+    {
+      "id": "batch",
+      "hypothesis_id": "h-batch",
+      "action_id": "action.batch_vector_api_calls",
+      "action_instance_id": "batch-r2",
+      "case_ids": [
+        "1",
+        "4",
+        "7",
+        "10",
+        "14",
+        "17",
+        "2",
+        "5",
+        "8",
+        "11",
+        "13",
+        "15",
+        "18",
+        "20",
+        "3",
+        "6",
+        "9",
+        "12",
+        "16",
+        "19"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "workload.matrix"
+      ],
+      "cost_mechanism": "保留单槽，T4096扩大到合法更大T以减少Sigmoid/Cast和DMA发射次数。",
+      "predictions": [
+        {
+          "id": "batch-work",
+          "kind": "source_work",
+          "statement": "每核ceil(L/4096)降为ceil(L/T)个API序列；不减少有效Sigmoid/Cast元素数",
+          "check_method": "逐域静态计数并核对原地址/运算次序；实施后再对照差异",
+          "on_support": "支持该工作减少预测，尚不证明时间收益",
+          "on_refute": "若工作已被编译消除或新增代价抵消，重开比较"
+        },
+        {
+          "id": "batch-time",
+          "kind": "performance",
+          "statement": "在合法完整正确性后检验 保留单槽，T4096扩大到合法更大T以减少Sigmoid/Cast和DMA发射次数。 是否降低同协议Task时间",
+          "check_method": "本轮禁止硬件；将来完整matrix20按统一Task协议测量，分域观察",
+          "on_support": "工程收益证据仍与机制归因分开",
+          "on_refute": "长L、API setup明显且双槽需要缩T时，batch可能更优"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_vector_granularity_low",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "batch-time",
+          "unknown_id": "batch-perf-legacy_symptom_profile_vector_granularity_low",
+          "reason": "源码支持结构假设，编译器/关键路径和实际时间未测；不作为实施门禁"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "batch-time",
+          "unknown_id": "batch-perf-cost_reduction",
+          "reason": "源码支持结构假设，编译器/关键路径和实际时间未测；不作为实施门禁"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "batch-constraint.capacity",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "FP328*T、half12*T显式字节+API_tmp/F；API最大count和长生存期需证明；实际可用UB、API tmp及保留区尚未查询，只有公式不授权容量。",
+          "affects": "implementation_legality",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "batch-constraint.vector_batch_compatibility",
+          "kind": "implementation_safety",
+          "fact": "constraint.vector_batch_compatibility",
+          "expected_state": true,
+          "statement": "核验每个所用API的count上限、尾部读写域、alias和相同操作参数。",
+          "affects": "implementation_legality",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "batch-perf-legacy_symptom_profile_vector_granularity_low",
+          "kind": "performance",
+          "fact": "symptom.profile.vector_granularity_low",
+          "expected_state": null,
+          "statement": "尚未测量 保留单槽，T4096扩大到合法更大T以减少Sigmoid/Cast和DMA发射次数。 的实际指令/等待减少是否超过 FP328*T、half12*T显式字节+API_tmp/F；API最大count和长生存期需证明",
+          "affects": "benefit_magnitude and priority",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "batch-perf-cost_reduction",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "尚未测量 保留单槽，T4096扩大到合法更大T以减少Sigmoid/Cast和DMA发射次数。 的实际指令/等待减少是否超过 FP328*T、half12*T显式字节+API_tmp/F；API最大count和长生存期需证明",
+          "affects": "benefit_magnitude and priority",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "pipeline",
+      "comparison": "每核ceil(L/4096)降为ceil(L/T)个API序列；不减少有效Sigmoid/Cast元素数；付出 FP328*T、half12*T显式字节+API_tmp/F；API最大count和长生存期需证明；替代敏感条件：长L、API setup明显且双槽需要缩T时，batch可能更优",
+      "disposition": "deferred",
+      "reason": "保留单槽，T4096扩大到合法更大T以减少Sigmoid/Cast和DMA发射次数。；长L、API setup明显且双槽需要缩T时，batch可能更优",
+      "analysis": {
+        "intent_gap": null,
+        "work_delta": [
+          {
+            "id": "batch-reduced",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "float16",
+              "float32",
+              "bfloat16"
+            ],
+            "change": "reduced",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "max(ceil(L/4096)-ceil(L/T),0)",
+              "unit": "removed tile API sequence/core",
+              "symbols": [
+                {
+                  "name": "L",
+                  "meaning": "单核有效元素数",
+                  "unit": "element"
+                },
+                {
+                  "name": "T",
+                  "meaning": "候选tile有效元素上限",
+                  "unit": "element"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "保留单槽，T4096扩大到合法更大T以减少Sigmoid/Cast和DMA发射次数。"
+          },
+          {
+            "id": "batch-retained",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "float16",
+              "float32",
+              "bfloat16"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "qualitative",
+              "expression": "原4096已非很短调用，进一步减发射可能小；slot依赖未改",
+              "unit": "separate logical operations/bytes",
+              "symbols": [],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "保留项不能消失在整体覆盖声明中"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "batch-coverage-float16",
+            "domain_id": "float16",
+            "status": "partial",
+            "region": "保留单槽，T4096扩大到合法更大T以减少Sigmoid/Cast和DMA发射次数。；域=float16",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "batch-coverage-float32",
+            "domain_id": "float32",
+            "status": "partial",
+            "region": "保留单槽，T4096扩大到合法更大T以减少Sigmoid/Cast和DMA发射次数。；域=float32",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "batch-coverage-bfloat16",
+            "domain_id": "bfloat16",
+            "status": "partial",
+            "region": "保留单槽，T4096扩大到合法更大T以减少Sigmoid/Cast和DMA发射次数。；域=bfloat16",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "batch-cost",
+            "domain_ids": [
+              "float16",
+              "float32",
+              "bfloat16"
+            ],
+            "dimension": "resource_access_sync",
+            "change": {
+              "mode": "symbolic",
+              "expression": "(8 if b=4 else 12)*T+Tmp+F",
+              "unit": "UB allocation byte",
+              "symbols": [
+                {
+                  "name": "b",
+                  "meaning": "输入输出存储宽",
+                  "unit": "byte/element"
+                },
+                {
+                  "name": "T",
+                  "meaning": "候选tile有效元素上限",
+                  "unit": "element"
+                },
+                {
+                  "name": "Tmp",
+                  "meaning": "目标SDK/API要求的临时区",
+                  "unit": "byte"
+                },
+                {
+                  "name": "F",
+                  "meaning": "对齐外固定保留区",
+                  "unit": "byte"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "consequence": "长L、API setup明显且双槽需要缩T时，batch可能更优"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "batch-residual",
+            "domain_ids": [
+              "float16",
+              "float32",
+              "bfloat16"
+            ],
+            "remaining_work": "原4096已非很短调用，进一步减发射可能小；slot依赖未改",
+            "next_step": "长L、API setup明显且双槽需要缩T时，batch可能更优",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling"
+            ]
+          }
+        ],
+        "no_alternative_reason": null
+      }
+    }
+  ],
+  "evidence_requests": [
+    {
+      "id": "request-pipeline-constraint.capacity",
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "unknown_ids": [
+        "pipeline-constraint.capacity"
+      ],
+      "method": "FP32两槽显式16*T、半精度16*T字节（raw双槽8*T+FP32工作8*T），另加API_tmp/F；事件及首尾控制增多；实际可用UB、API tmp及保留区尚未查询，只有公式不授权容量。",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "若双槽被迫把T减半且发射/同步成本超过隐藏搬运，较大单槽batch更优"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-pipeline-constraint.dependency_lifetime",
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "unknown_ids": [
+        "pipeline-constraint.dependency_lifetime"
+      ],
+      "method": "核验每输入/输出槽代次的ready/free和排空；工作区不可被异步消费者未完成时覆盖。",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "若双槽被迫把T减半且发射/同步成本超过隐藏搬运，较大单槽batch更优"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-pipeline-perf-legacy_symptom_profile_overlap_low",
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "unknown_ids": [
+        "pipeline-perf-legacy_symptom_profile_overlap_low"
+      ],
+      "method": "尚未测量 建立2份输入/输出物理槽的预取/消费/排空，FP32 cast工作区不跨tile重叠写；保持Sigmoid与原Cast舍入。 的实际指令/等待减少是否超过 FP32两槽显式16*T、半精度16*T字节（raw双槽8*T+FP32工作8*T），另加API_tmp/F；事件及首尾控制增多",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "若双槽被迫把T减半且发射/同步成本超过隐藏搬运，较大单槽batch更优"
+        }
+      ],
+      "required_before_implementation": false,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-pipeline-perf-cost_reduction",
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "unknown_ids": [
+        "pipeline-perf-cost_reduction"
+      ],
+      "method": "尚未测量 建立2份输入/输出物理槽的预取/消费/排空，FP32 cast工作区不跨tile重叠写；保持Sigmoid与原Cast舍入。 的实际指令/等待减少是否超过 FP32两槽显式16*T、半精度16*T字节（raw双槽8*T+FP32工作8*T），另加API_tmp/F；事件及首尾控制增多",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "若双槽被迫把T减半且发射/同步成本超过隐藏搬运，较大单槽batch更优"
+        }
+      ],
+      "required_before_implementation": false,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-batch-constraint.capacity",
+      "opportunity_ids": [
+        "batch"
+      ],
+      "unknown_ids": [
+        "batch-constraint.capacity"
+      ],
+      "method": "FP328*T、half12*T显式字节+API_tmp/F；API最大count和长生存期需证明；实际可用UB、API tmp及保留区尚未查询，只有公式不授权容量。",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "长L、API setup明显且双槽需要缩T时，batch可能更优"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-batch-constraint.vector_batch_compatibility",
+      "opportunity_ids": [
+        "batch"
+      ],
+      "unknown_ids": [
+        "batch-constraint.vector_batch_compatibility"
+      ],
+      "method": "核验每个所用API的count上限、尾部读写域、alias和相同操作参数。",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "长L、API setup明显且双槽需要缩T时，batch可能更优"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-batch-perf-legacy_symptom_profile_vector_granularity_low",
+      "opportunity_ids": [
+        "batch"
+      ],
+      "unknown_ids": [
+        "batch-perf-legacy_symptom_profile_vector_granularity_low"
+      ],
+      "method": "尚未测量 保留单槽，T4096扩大到合法更大T以减少Sigmoid/Cast和DMA发射次数。 的实际指令/等待减少是否超过 FP328*T、half12*T显式字节+API_tmp/F；API最大count和长生存期需证明",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "长L、API setup明显且双槽需要缩T时，batch可能更优"
+        }
+      ],
+      "required_before_implementation": false,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-batch-perf-cost_reduction",
+      "opportunity_ids": [
+        "batch"
+      ],
+      "unknown_ids": [
+        "batch-perf-cost_reduction"
+      ],
+      "method": "尚未测量 保留单槽，T4096扩大到合法更大T以减少Sigmoid/Cast和DMA发射次数。 的实际指令/等待减少是否超过 FP328*T、half12*T显式字节+API_tmp/F；API最大count和长生存期需证明",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "长L、API setup明显且双槽需要缩T时，batch可能更优"
+        }
+      ],
+      "required_before_implementation": false,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "pipeline",
+        "batch"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+      },
+      "locator": "lines:83-188",
+      "effect_kind": "plan",
+      "before": "从原源码识别 Host展平后按ceil(N/4096)限制有效核数，tile4096。FP32直接Sigmoid，half/bf16先Cast FP32再算再Cast；深度1物理输入/输出槽，CopyIn Compute CopyOut顺序发射。",
+      "after": "多核分配影响每核tile循环数，不能只按全N断言能流水",
+      "applicability": "full：连续同形一元函数任务骨架；无父计划，不是P_KEEP"
+    },
+    {
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+        "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+      },
+      "locator": "lines:89-207",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host展平后按ceil(N/4096)限制有效核数，tile4096。FP32直接Sigmoid，half/bf16先Cast FP32再算再Cast；深度1物理输入/输出槽，CopyIn Compute CopyOut顺序发射。",
+      "after": "显式建MTE2→V、V→下一MTE2、V→MTE3、MTE3→下一V，逐槽代次闭合",
+      "applicability": "full：本核独立多tile流水，1tile保持原路径"
+    },
+    {
+      "opportunity_ids": [
+        "batch"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+        "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+      },
+      "locator": "lines:90-131",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host展平后按ceil(N/4096)限制有效核数，tile4096。FP32直接Sigmoid，half/bf16先Cast FP32再算再Cast；深度1物理输入/输出槽，CopyIn Compute CopyOut顺序发射。",
+      "after": "4096已批量，扩T的收益仅剩发射摊销且增加临时区，作为最强竞争",
+      "applicability": "full：连续count分片边界"
+    },
+    {
+      "opportunity_ids": [
+        "pipeline",
+        "batch"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/cast.md",
+        "sha256": "sha256:61a09c55c6f9139ee767c6dde221cacfbadca53cbbb483d4ced76d0421c7f464"
+      },
+      "locator": "lines:59-97",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host展平后按ceil(N/4096)限制有效核数，tile4096。FP32直接Sigmoid，half/bf16先Cast FP32再算再Cast；深度1物理输入/输出槽，CopyIn Compute CopyOut顺序发射。",
+      "after": "保留half→float→half及bf16 RINT；它们承担计算精度与输出边界而非冗余Cast",
+      "applicability": "full：拒绝删除当前必要转换"
+    },
+    {
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+        "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+      },
+      "locator": "lines:271-407",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host展平后按ceil(N/4096)限制有效核数，tile4096。FP32直接Sigmoid，half/bf16先Cast FP32再算再Cast；深度1物理输入/输出槽，CopyIn Compute CopyOut顺序发射。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；不同tile本可独立的搬运与计算使用同buffer或被过早等待阻断",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    },
+    {
+      "opportunity_ids": [
+        "batch"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.vector_api_fragmentation.md",
+        "sha256": "sha256:e5c0882f45cb270a9fd555e570428ba6f942efbb8c888972f3aadb655c09a34a"
+      },
+      "locator": "lines:258-392",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host展平后按ceil(N/4096)限制有效核数，tile4096。FP32直接Sigmoid，half/bf16先Cast FP32再算再Cast；深度1物理输入/输出槽，CopyIn Compute CopyOut顺序发射。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；可批处理的Vector工作被拆成大量小count/repeat调用",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    },
+    {
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.redundant_cast.md",
+        "sha256": "sha256:c7f8ace396cc0a0f53f4bc0a5b9f0883cbd8b439d45dce74edc1e4f50b1b326d"
+      },
+      "locator": "lines:289-425",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host展平后按ceil(N/4096)限制有效核数，tile4096。FP32直接Sigmoid，half/bf16先Cast FP32再算再Cast；深度1物理输入/输出槽，CopyIn Compute CopyOut顺序发射。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；局部链在相邻阶段反复宽窄往返转换",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    }
+  ],
+  "selection": {
+    "mode": "conditional_plan",
+    "opportunity_id": "pipeline",
+    "action_instance_id": "pipeline-r2",
+    "reason": "消除上一tile输入/输出槽释放后才可启动下一独立tile的串行限制；元素算术和2*N*b必要流量不变；付出 FP32两槽显式16*T、半精度16*T字节（raw双槽8*T+FP32工作8*T），另加API_tmp/F；事件及首尾控制增多；替代敏感条件：若双槽被迫把T减半且发射/同步成本超过隐藏搬运，较大单槽batch更优",
+    "concrete_plan": "从原连续输出owner提取完整计划，无父计划故不使用P_KEEP。先保持T4096作为待证参数，若2槽与API临时区不闭合再比较减T代价；一tile域保留单槽，不新造Tiling Key。 R2：新增按符号核数C_available计算循环条件：源useful=ceil(N/4096)，当C_available≥useful，每核L≤4096、无第二tile，因此不能仅由N很大断言重叠；真实核心数未知。R2将多tile作为pipeline有效域条件，补上FP32与half双槽均16*T显式字节的分账；若目标可用核数导致单tile则batch/原路径优先。",
+    "stop_reason": null,
+    "comparison_basis": [
+      {
+        "opportunity_id": "pipeline",
+        "item_ids": [
+          "pipeline-reduced"
+        ],
+        "role": "benefit",
+        "decision_effect": "消除上一tile输入/输出槽释放后才可启动下一独立tile的串行限制；元素算术和2*N*b必要流量不变",
+        "reversal_condition": "若双槽被迫把T减半且发射/同步成本超过隐藏搬运，较大单槽batch更优"
+      },
+      {
+        "opportunity_id": "pipeline",
+        "item_ids": [
+          "pipeline-cost"
+        ],
+        "role": "cost",
+        "decision_effect": "FP32两槽显式16*T、半精度16*T字节（raw双槽8*T+FP32工作8*T），另加API_tmp/F；事件及首尾控制增多",
+        "reversal_condition": "若双槽被迫把T减半且发射/同步成本超过隐藏搬运，较大单槽batch更优"
+      },
+      {
+        "opportunity_id": "pipeline",
+        "item_ids": [
+          "pipeline-coverage-float16",
+          "pipeline-coverage-float32",
+          "pipeline-coverage-bfloat16"
+        ],
+        "role": "coverage",
+        "decision_effect": "按上述语义域部分覆盖，未改变的主要工作明确保留；不以case数自动胜出",
+        "reversal_condition": "若双槽被迫把T减半且发射/同步成本超过隐藏搬运，较大单槽batch更优"
+      },
+      {
+        "opportunity_id": "pipeline",
+        "item_ids": [
+          "pipeline-residual"
+        ],
+        "role": "residual",
+        "decision_effect": "单tile与短片没有稳态，Sigmoid内部计算吞吐及Cast成本保留",
+        "reversal_condition": "若双槽被迫把T减半且发射/同步成本超过隐藏搬运，较大单槽batch更优"
+      },
+      {
+        "opportunity_id": "batch",
+        "item_ids": [
+          "batch-reduced",
+          "batch-cost"
+        ],
+        "role": "alternative",
+        "decision_effect": "最强替代：每核ceil(L/4096)降为ceil(L/T)个API序列；不减少有效Sigmoid/Cast元素数；付出 FP328*T、half12*T显式字节+API_tmp/F；API最大count和长生存期需证明；替代敏感条件：长L、API setup明显且双槽需要缩T时，batch可能更优",
+        "reversal_condition": "长L、API setup明显且双槽需要缩T时，batch可能更优"
+      }
+    ]
+  },
+  "previous_feedback": {
+    "previous_decision_ref": {
+      "path": "decision-r1.json",
+      "sha256": "sha256:b9c84e0e79b649ac844c04a698f26cf45cd2a84a69852de428a794333ca1bea1"
+    },
+    "result_ref": null,
+    "measurement": "not_measured",
+    "result_limits": "R1未实施、未编译、未正确性测试、未计时；静态分析只更新可行域与逻辑预测",
+    "prediction_updates": [
+      {
+        "prediction_id": "pipeline-work",
+        "judgement": "unresolved",
+        "reason": "新增按符号核数C_available计算循环条件：源useful=ceil(N/4096)，当C_available≥useful，每核L≤4096、无第二tile，因此不能仅由N很大断言重叠；真实核心数未知。R2将多tile作为pipeline有效域条件，补上FP32与half双槽均16*T显式字节的分账；若目标可用核数导致单tile则batch/原路径优先。；没有真实patch，减少工作尚未实现",
+        "evidence_refs": [
+          {
+            "path": "static-evidence-r2.json",
+            "sha256": "sha256:07555b0f639b6ca1745aa42dcf8d0d0322d40737a95932dc361ecd0c9e489f8d"
+          }
+        ]
+      },
+      {
+        "prediction_id": "pipeline-time",
+        "judgement": "not_tested",
+        "reason": "性能未测",
+        "evidence_refs": []
+      }
+    ],
+    "current_parent_ref": {
+      "path": "source-identity.json",
+      "sha256": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27"
+    },
+    "parent_reason": "保持原始父本；没有已实施候选可晋升",
+    "same_action_reason": "新增按符号核数C_available计算循环条件：源useful=ceil(N/4096)，当C_available≥useful，每核L≤4096、无第二tile，因此不能仅由N很大断言重叠；真实核心数未知。R2将多tile作为pipeline有效域条件，补上FP32与half双槽均16*T显式字节的分账；若目标可用核数导致单tile则batch/原路径优先。",
+    "new_information": "新增按符号核数C_available计算循环条件：源useful=ceil(N/4096)，当C_available≥useful，每核L≤4096、无第二tile，因此不能仅由N很大断言重叠；真实核心数未知。R2将多tile作为pipeline有效域条件，补上FP32与half双槽均16*T显式字节的分账；若目标可用核数导致单tile则batch/原路径优先。",
+    "reassessment": {
+      "attempt": {
+        "parent_ref": {
+          "path": "source-identity.json",
+          "sha256": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27"
+        },
+        "implementation_ref": null,
+        "change_ref": null,
+        "workload_ref": {
+          "path": "source/matrix-20.json",
+          "sha256": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380"
+        }
+      },
+      "structure": {
+        "state": "not_implemented",
+        "evidence_refs": [
+          {
+            "path": "static-evidence-r2.json",
+            "sha256": "sha256:07555b0f639b6ca1745aa42dcf8d0d0322d40737a95932dc361ecd0c9e489f8d"
+          }
+        ],
+        "finding": "没有R1候选或patch；新增静态事实不冒充结构已实现"
+      },
+      "correctness": {
+        "state": "not_tested",
+        "evidence_refs": [],
+        "finding": "未编译或运行oracle"
+      },
+      "measured_case_ids": [],
+      "measured_domain_ids": [],
+      "mechanisms": [
+        {
+          "hypothesis_id": "h-pipeline",
+          "judgement": "undetermined",
+          "basis": "static",
+          "evidence_refs": [
+            {
+              "path": "static-evidence-r2.json",
+              "sha256": "sha256:07555b0f639b6ca1745aa42dcf8d0d0322d40737a95932dc361ecd0c9e489f8d"
+            }
+          ],
+          "finding": "新增按符号核数C_available计算循环条件：源useful=ceil(N/4096)，当C_available≥useful，每核L≤4096、无第二tile，因此不能仅由N很大断言重叠；真实核心数未知。R2将多tile作为pipeline有效域条件，补上FP32与half双槽均16*T显式字节的分账；若目标可用核数导致单tile则batch/原路径优先。"
+        }
+      ],
+      "attribution": {
+        "kind": "unmeasured",
+        "limits": "无硬件反馈，无加速比或机制因果结论"
+      },
+      "next_step": {
+        "kind": "continue",
+        "return_to": "C2",
+        "retained": "pipeline",
+        "reopened": "batch",
+        "opportunity_ids": [
+          "pipeline",
+          "batch"
+        ],
+        "discriminating_prediction_ids": [
+          "pipeline-work"
+        ],
+        "reason": "新增按符号核数C_available计算循环条件：源useful=ceil(N/4096)，当C_available≥useful，每核L≤4096、无第二tile，因此不能仅由N很大断言重叠；真实核心数未知。R2将多tile作为pipeline有效域条件，补上FP32与half双槽均16*T显式字节的分账；若目标可用核数导致单tile则batch/原路径优先。"
+      }
+    }
+  },
+  "path_overview": {
+    "workload_ref": {
+      "path": "source/matrix-20.json",
+      "sha256": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380"
+    },
+    "case_ids": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20"
+    ],
+    "domains": [
+      {
+        "id": "float16",
+        "case_ids": [
+          "1",
+          "4",
+          "7",
+          "10",
+          "14",
+          "17"
+        ],
+        "predicate": "float16（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      },
+      {
+        "id": "float32",
+        "case_ids": [
+          "2",
+          "5",
+          "8",
+          "11",
+          "13",
+          "15",
+          "18",
+          "20"
+        ],
+        "predicate": "float32（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      },
+      {
+        "id": "bfloat16",
+        "case_ids": [
+          "3",
+          "6",
+          "9",
+          "12",
+          "16",
+          "19"
+        ],
+        "predicate": "bfloat16（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      }
+    ],
+    "stages": [
+      {
+        "id": "host",
+        "domain_ids": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ],
+        "fact_ids": [
+          "source.host",
+          "source.tiling"
+        ],
+        "behavior": "参数验证、shape/stride/分核与tiling；分配/H2D和输出D2H在kernel外"
+      },
+      {
+        "id": "kernel",
+        "domain_ids": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ],
+        "fact_ids": [
+          "source.kernel"
+        ],
+        "behavior": "Host展平后按ceil(N/4096)限制有效核数，tile4096。FP32直接Sigmoid，half/bf16先Cast FP32再算再Cast；深度1物理输入/输出槽，CopyIn Compute CopyOut顺序发射。"
+      },
+      {
+        "id": "oracle",
+        "domain_ids": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ],
+        "fact_ids": [
+          "source.oracle"
+        ],
+        "behavior": "读取全输出，保留原精度/特殊值/按位契约，本轮不运行"
+      }
+    ],
+    "baseline_work": [
+      {
+        "id": "base-host",
+        "stage_id": "host",
+        "domain_ids": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "qualitative",
+          "expression": "每次调用一次host tiling与kernel launch；设备核心数动态查询但本轮未查询",
+          "unit": "separate logical operations/bytes",
+          "symbols": [],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.kernel",
+            "source.tiling",
+            "workload.matrix"
+          ]
+        },
+        "explanation": "不把host墙钟当kernel热点"
+      },
+      {
+        "id": "base-kernel",
+        "stage_id": "kernel",
+        "domain_ids": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "symbolic",
+          "expression": "ceil(L/4096)",
+          "unit": "tile/core",
+          "symbols": [
+            {
+              "name": "L",
+              "meaning": "单核有效元素数",
+              "unit": "element"
+            }
+          ],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.kernel",
+            "source.tiling",
+            "workload.matrix"
+          ]
+        },
+        "explanation": "各域具体N/d/stride/C/K与已分配字节由metrics列出，逻辑工作非时间占比"
+      },
+      {
+        "id": "base-oracle",
+        "stage_id": "oracle",
+        "domain_ids": [
+          "float16",
+          "float32",
+          "bfloat16"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "qualitative",
+          "expression": "完整输出元素比对；不参与目标Task时间",
+          "unit": "separate logical operations/bytes",
+          "symbols": [],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.kernel",
+            "source.tiling",
+            "workload.matrix"
+          ]
+        },
+        "explanation": "未实施未测试，不伪造passed"
+      }
+    ]
+  }
+}
