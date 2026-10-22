@@ -62,3 +62,5 @@
 ## 交接建议
 允许进入的阶段、接收角色与证据引用：
 ```
+
+计时准备冻结所选稳定性协议、完整case集合及复验额度。当前探索使用[中位数稳定性v2](../../skills/ascendc-aprof-profiling/references/median-stability-v2.md)；轮内波动与中位数漂移分开，旧声明不事后升级。此项沿用原declaration，不增加阶段或日常必跑工具。

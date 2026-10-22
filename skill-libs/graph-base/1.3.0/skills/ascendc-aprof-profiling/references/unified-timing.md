@@ -2,7 +2,7 @@
 
 新任务必须按 [soft_targets_local_v1](../../../workflows/references/execution-policy.md) 执行：耗时仅为软目标，baseline 默认 assumed，新候选完整验证一次，按全输出内容复用；所有运行产物留在 /dev/shm。
 
-协议 ID：`single_role_l2_clean_task_v1`。1.2.0 的代表 case 反馈和完整性能收尾共用此方法。旧 v5/Event 和早期 screen manifest 保持历史含义，不自动升级或作为回退。
+采集协议 ID：`single_role_l2_clean_task_v1`。1.3.0当前优化探索使用显式预声明的[中位数稳定性v2](median-stability-v2.md)，采样与完整调用口径不变。1.2.0及旧记录按各自声明回放。旧 v5/Event 和早期 screen manifest 保持历史含义，不自动升级或作为回退。
 
 ## 测量定义
 
@@ -27,9 +27,13 @@
 
 20 次是同一个进程内重复，不是 20 个独立进程，也不是 20 对 A/B。轮内 CV 仅反映轮内波动。
 
-## 有界异常值处理
+## 统计策略按版本选择
 
-新任务在 declaration.json 中预声明 `stability_policy: "bounded_outlier_v1"`。从全部 20 个完整调用时长计算中位数 m 和 MAD；仅当 |x−m| > max(3×1.482602218505602×MAD, 0.10×m) 时标记异常。最多剔除 2/20，保留至少 18 个样本；对保留样本计算中位数与样本 CV，CV 仍须 ≤5%。两侧用相同规则，快慢异常对称处理且只计算一轮，不能反复剔除直到通过。超过 2 个异常则不剔除并判 inconclusive。原始 CSV、全部 20 个值、阈值、异常/剔除索引和原始 CV 都保留。未声明此字段的旧记录继续按原始 20 值判定，不追改历史结论。
+当前1.3.0探索任务在declaration v3中选择`median_stability_exploration_v2`／`bounded_outlier_v2`：一次对称检测、最多4/20、处理后CV≤10%，另报告双方原始中位数的跨窗口漂移及剔除敏感性。完整定义、需复核与收益的区别见[中位数稳定性v2](median-stability-v2.md)，不把轮内CV当作中位数跨窗口误差。
+
+### 历史 bounded_outlier_v1
+
+旧任务在 declaration.json 中预声明 `stability_policy: "bounded_outlier_v1"`。从全部 20 个完整调用时长计算中位数 m 和 MAD；仅当 |x−m| > max(3×1.482602218505602×MAD, 0.10×m) 时标记异常。最多剔除 2/20，保留至少 18 个样本；对保留样本计算中位数与样本 CV，CV 仍须 ≤5%。两侧用相同规则，快慢异常对称处理且只计算一轮，不能反复剔除直到通过。超过 2 个异常则不剔除并判 inconclusive。原始 CSV、全部 20 个值、阈值、异常/剔除索引和原始 CV 都保留。未声明此字段的旧记录继续按原始 20 值判定，不追改历史结论。
 
 这是确定性的工程稳定性规则，不是异常原因鉴定或统计置信区间。新设备/采集方式应先用包含短 case 的独立进程复验检查中位数可重复性；剔除异常不能修复跨进程漂移。
 
@@ -39,9 +43,11 @@
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "operator": "exp",
-  "stability_policy": "bounded_outlier_v1",
+  "stability_protocol": "median_stability_exploration_v2",
+  "stability_policy": "bounded_outlier_v2",
+  "replication_policy": {"max_retests": 1, "estimator": "last_executed_window"},
   "created_at": "2026-10-16T00:00:00+00:00",
   "case_ids": [1],
   "correctness_case_ids": [1],
@@ -65,7 +71,7 @@ python3 scripts/single_role_task.py --config <implementation-config.json> --outp
 python3 scripts/single_role_task.py --config <implementation-config-with-correctness.json> --output <new-capture-dir> --timeout-seconds <remaining-seconds>
 ```
 
-候选对完整 correctness 集执行第一条命令，产生真实 correctness.json；计时配置用 `correctness: {path, sha256}` 引用，核对全部身份和实际输出内容。默认 baseline 设置 `baseline_status="assumed"` 并在 declaration v2 声明 baseline_trust，不执行第一条命令，也不伪造 correctness.json。用户明确要求验证 baseline 时才执行一次。
+候选对完整 correctness 集执行第一条命令，产生真实 correctness.json；计时配置用 `correctness: {path, sha256}` 引用，核对全部身份和实际输出内容。默认 baseline 设置 `baseline_status="assumed"` 并在 declaration v3（旧协议为v2）声明 baseline_trust，不执行第一条命令，也不伪造 correctness.json。用户明确要求验证 baseline 时才执行一次。
 
 采集配置核心字段：
 
@@ -124,12 +130,14 @@ runtime 0.2.5 增加 [原始 Python oracle 回放](original-oracle.md)：live �
 
 全量 A/B 比较前先完成两侧构建、输入、baseline 信任声明、候选完整正确性和存储准备，再连续采集两侧；不要把修复、归档搬迁或额外模型调查插在有效 A 与 B 之间。若已有 A 的剩余有效窗口不足以完成 B，按预声明规则更新 A 并记录目标/实际成本，保留旧记录；不能通过放宽复用窗口续用过期 A。
 
-采集 artifact 不保存 baseline/candidate 角色；以下请求指定比较关系：
+采集 artifact 不保存 baseline/candidate 角色；以下v2请求指定比较关系；replications登记实际追加窗口，不预先伪造引用：
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "protocol": "single_role_l2_clean_task_v1",
+  "stability_protocol": "median_stability_exploration_v2",
+  "replications": {"baseline": [], "candidate": []},
   "operator": "exp",
   "candidate_id": "candidate-1",
   "baseline_source_sha256": "sha256:<A源码清单摘要>",
@@ -154,7 +162,7 @@ runtime 从原始证据计算：
 
 - 每 case：A/B 各自重建全部 20 次调用，按冻结策略得到中位数，speedup = median(A) / median(B)，回归 = median(B) / median(A) - 1。
 - 全集合：每 case 加速比的等权几何平均，收益目标 ≥1.03。
-- 任一 case 回归不得超过 3%；每侧每 case 按预声明策略计算的轮内 CV 不超过 5%，异常数量不得超限。
+- 任一case回归不得超过3%；轮内质量、跨窗口漂移和剔除敏感性按测前选定版本独立报告。当前v2为4/20、CV≤10%的试用规则；旧v1保持2/20、CV≤5%。超限是波动需复核，不直接当性能失败。
 - 复用时间、A→B 间隔按预声明策略检查；超限或波动过大保持不确定，不能按有利时段挑样本。
 
 结果是 `performance_engineering_only`，输出 accepted/rejected/inconclusive 及原因，不输出 paired count、95% LCB、生产 best 或策略 reward。正式收尾只有这一次入口，不再调用旧 gate/finalize。verify 回放既有证据，不启动 NPU。
@@ -165,6 +173,6 @@ runtime 从原始证据计算：
 
 A/B 必须具有相同 case/workload、输入、实际设备、工具链、采集器及缓存/地址策略。实现源码和 kernel 序列可以不同，分别绑定真实来源。有效 B 可直接作为下一轮 A，无需改写 artifact；变更实现或环境时重新采相应记录。
 
-临界结果、环境变化或异常按预声明规则用同一方法独立复验。不要择优选进程，不重复直到通过；多次尝试全部留存。点估计目标与统计置信下界是不同承诺，轮内 CV 不能证明跨时段稳定。
+临界结果、环境变化或异常按预声明规则用同一方法独立复验。不要择优选进程，不重复直到通过；多次尝试全部留存；v2请求保留首测与全部已执行复验，固定使用最后窗口作点估计，并按首测检查每个复验的原始中位数。复验次数服从声明与外部预算，不增加反复采到通过的路径。点估计目标与统计置信下界是不同承诺，轮内 CV 不能证明跨时段稳定。
 
 本版仍未封版。此前三个 case 的 clean 实验支持计时设计；后续维护记录单独提供原 oracle 全量接入和有界异常统计的硬件验证，不能据此宣称所有算子、设备或跨时段条件均已验证。66 秒只来自旧实验条件下 B 计时的估算，新增回放/快照等开销需单独实测；不能宣布 10 分钟正式验收已达成。

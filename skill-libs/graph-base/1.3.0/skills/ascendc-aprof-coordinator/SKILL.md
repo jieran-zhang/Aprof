@@ -23,7 +23,7 @@ C0 按 [准备契约](../../workflows/contracts/preparation.md) 接入原始 ora
 
 C0 后、C1 前按 [理解契约](../../workflows/contracts/code-understanding.md) 使用独立 [ascendc-code-understanding](../ascendc-code-understanding/SKILL.md)，可由同一 Agent 或受委派角色完成。一份中文阶段 Markdown 依次解释整体算法/数值语义、实际分派/任务/循环/已有策略、数据所有权/布局/存储/依赖和 910C 行为，关键片段附源码定位。已有适用报告直接复用，供 C1、P/O 与所有后继轮次共用；源码或相关条件变化只更新受影响部分并保存后继，纯新 profiling 不重做。性能缺测不阻断理解，此阶段不预选 Problem、Action 或新的 C2 策略。
 
-解析安装技能的符号链接后定位完整包。角色/contract 定义在 workflows 中，实际阶段文档、代码和原始数据放任务工作区。性能反馈与完整收尾采用 [统一计时协议](../ascendc-aprof-profiling/references/unified-timing.md)，机器判定由本包 runtime 完成。新任务在采集前冻结 `bounded_outlier_v1`，具体异常判据只按统一计时文档维护。A/B 计时前先准备好baseline 信任前提与候选完整正确性与存储条件，连续采集以避免修复/搬迁消耗比较窗口。
+解析安装技能的符号链接后定位完整包。角色/contract 定义在 workflows 中，实际阶段文档、代码和原始数据放任务工作区。性能反馈与完整收尾采用 [统一计时协议](../ascendc-aprof-profiling/references/unified-timing.md)，机器判定由本包 runtime 完成。新探索任务在采集前冻结v3声明及中位数稳定性v2、实际复验额度；旧记录按原版本回放。具体异常、窗口和收益判断只按统一计时文档维护。A/B 计时前先准备好baseline 信任前提与候选完整正确性与存储条件，连续采集以避免修复/搬迁消耗比较窗口。
 
 ## 机制诊断与方案交接
 

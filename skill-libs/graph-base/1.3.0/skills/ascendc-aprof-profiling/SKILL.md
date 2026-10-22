@@ -20,8 +20,8 @@ description: 为 Ascend C 算子执行统一 L2 清理 Task 计时、完整调�
 - 使用 `scripts/single_role_task.py` 调度预构建 adapter、导出和校验。设备稳态准备在计时外完成；真实驱逐 callback 由算子工程提供。
 - 采集记录独立于 A/B 比较角色；相同来源和有效条件下可复用。每轮只为缺失的实现/case 采集。
 - 代表集给反馈；完整声明集合及证据齐备后交由协调者调用 `tools/aprofctl timing finalize` 一次收尾。不再切换 v5 或串行调用旧 gate/finalize。
-- 原始与剔除后的 CV 都记录，剔除数超限保持 inconclusive。单进程 CV 只反映轮内波动。新门槛是中位数比点估计，不是 paired/95% LCB。复用超时、环境变化和预声明的异常复验仍用同一方法。
-- 原始 Task 全部保留；新任务预声明 `bounded_outlier_v1`，仅按统一计时文档的一次性、对称、最多 2/20 规则剔除异常，再检查保留样本 CV。不挑有利前缀，不把多 kernel 调用简化成最长 kernel 或各 kernel 中位数之和；缺 Task、乱序、流不明或变化必须拒绝。
+- 当前探索选择[中位数稳定性v2](references/median-stability-v2.md)：轮内波动、双方跨窗口漂移、剔除敏感性和工程收益分别判断。波动超限是需复核，稳定中位数也不自动授予accepted；小收益结合已观察漂移解释，不宣称paired/95% LCB。
+- 原始20值与原始／处理后中位数、CV、异常数量全部保留；新探索任务预声明v3声明及`bounded_outlier_v2`，一次对称最多4/20、处理后CV≤10%，不选择有利窗口、不超预声明复验额度。旧声明不升级。不挑有利前缀，不把多 kernel 调用简化成最长 kernel 或各 kernel 中位数之和；缺 Task、乱序、流不明或变化必须拒绝。
 - 缺少 adapter 或兼容证据时报告缺项，不静默回退旧计时。失败采集保留日志与实际成本。
 
 正式性能结果不等于语义、生产范围、图路由或机制归因均已通过；也不自动成为策略 episode。

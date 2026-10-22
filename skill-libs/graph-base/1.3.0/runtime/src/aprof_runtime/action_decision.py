@@ -8,6 +8,7 @@ from pathlib import Path
 from .errors import GraphError
 from .jsonio import canonical_json, content_hash, file_hash
 from .knowledge import local, validate_schema
+from .median_timing import validate_schema as validate_timing_schema
 
 POLICY_PREFIX = "workflows/references/action-condition-policies/"
 
@@ -206,7 +207,7 @@ def _feedback(root, decision, task_root, selected, policies):
         result_path = _task_ref(task_root, feedback["result_ref"], decision["task_id"])
         result = _json(result_path)
         if measurement == "valid" or result.get("kind") == "unified_timing_result":
-            validate_schema(Path(root), "unified-timing-result", result)
+            validate_timing_schema(Path(root), 'result', result)
             if measurement == "valid" and result.get("verdict") == "inconclusive":
                 raise GraphError("inconclusive 计时不能标为有效反馈")
         if measurement == "valid":

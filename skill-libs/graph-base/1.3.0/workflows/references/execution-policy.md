@@ -1,6 +1,6 @@
 # soft_targets_local_v1（graph-base/1.3.0，未封版）
 
-本版继承 1.2.0 的执行策略；下列计时、正确性、预算和本地存储规则保持原义。
+本版继承 1.2.0 的执行策略；采样、正确性、预算和本地存储规则保持原义；稳定性统计按显式协议版本选择。
 
 ## 执行与证据是两个判据
 
@@ -10,11 +10,11 @@ C0=600、总任务=3120、recorder=600、finalize=600 秒及 build=180、完整�
 
 超出目标触发 checkpoint 和 /proc 的进程、CPU、I/O 诊断，不凭 stdout 静默杀进程。只有明确诊断证据确认局部挂起，才终止对应进程组；其余独立步骤与报告继续。取消会清理本任务进程组。
 
-A/B 间隔、测量有效期、完整 Task 数、20 cases、5 预热/20 正式、真实逐轮清 L2 和 bounded_outlier_v1 均不放宽。过期保留数据并判 inconclusive；按预声明最多一次复验，不挑有利结果。
+A/B间隔、测量有效期、完整Task数、20 cases、5预热/20正式、真实逐轮清L2保持。当前探索任务测前声明[中位数稳定性v2](../../skills/ascendc-aprof-profiling/references/median-stability-v2.md)，旧bounded_outlier_v1仍按旧声明回放。过期保留数据并判inconclusive；复验服从测前明确次数与外部预算，不增加额度、不挑有利窗口。
 
 ## 正确性身份
 
-默认原始 baseline 是用户前提下 assumed，未在本任务验证。C0 仅冻结源码/输入、必要构建、工具链/设备/容量、入口/输出接口和 oracle 契约；不执行完整正确性或隐藏数值预检。用户明确要求才执行 baseline 的一次完整检查。declaration v2 的 baseline_trust 绑定 source/binary；修改计算语义后是新候选，不继承假定。最终 comparison 的 baseline_correctness=null，结果注明 assumed。
+默认原始 baseline 是用户前提下 assumed，未在本任务验证。C0 仅冻结源码/输入、必要构建、工具链/设备/容量、入口/输出接口和 oracle 契约；不执行完整正确性或隐藏数值预检。用户明确要求才执行 baseline 的一次完整检查。declaration v3（旧统计协议为v2）的 baseline_trust 绑定 source/binary；修改计算语义后是新候选，不继承假定。最终 comparison 的 baseline_correctness=null，结果注明 assumed。
 
 每个新候选先实际验证全部声明 case。后续对实际输出全部重新哈希，绑定源码、binary、case、input、workload、oracle 依赖/规则/环境和全输出映射。相同内容使用任务 validation-cache 的真实执行引用；不同输出重新交给原 oracle，不能仅因不同就判错。多输出/原位/TensorList 的完整覆盖继续校验。缓存由实际通过的 oracle 写入并用任务私有密钥认证；任意 passed JSON 不授予通过。信任边界是任务所有者和已冻结 runtime，不防范能读取密钥并替换 runtime 的恶意同用户进程。
 

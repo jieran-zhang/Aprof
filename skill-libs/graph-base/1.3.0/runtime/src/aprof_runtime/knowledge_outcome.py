@@ -6,6 +6,7 @@ from . import bindings
 from .errors import GraphError
 from .jsonio import content_hash, file_hash
 from .knowledge import validate_schema
+from .median_timing import validate_schema as validate_timing_schema
 
 
 def link_result_v3(root, c1, c2, c3, timing, *, task_root, timing_ref):
@@ -33,7 +34,7 @@ def link_result_v3(root, c1, c2, c3, timing, *, task_root, timing_ref):
     if not result_path.is_file() or file_hash(result_path) != timing['sha256']:
         raise GraphError('计时结果引用 hash 不符')
     measured = bindings._json_file(result_path)
-    validate_schema(root, 'unified-timing-result', measured)
+    validate_timing_schema(root, 'result', measured)
     if measured['decision_hash'] != content_hash({key: value for key, value in measured.items() if key != 'decision_hash'}):
         raise GraphError('计时结果 decision_hash 不符')
     if (measured.get('kind') != 'unified_timing_result' or
@@ -49,7 +50,7 @@ def link_result_v3(root, c1, c2, c3, timing, *, task_root, timing_ref):
     if not request_path.is_file() or file_hash(request_path) != ref['sha256']:
         raise GraphError('计时请求引用 hash 不符')
     request = bindings._json_file(request_path)
-    validate_schema(root, 'unified-timing-request', request)
+    validate_timing_schema(root, 'request', request)
     if (request['operator'] != measured['operator'] or
             request['operator'] != c2['selection']['confirmed_plan']['parallel_plan']['operator']):
         raise GraphError('计时请求、结果与确认计划的算子不同')

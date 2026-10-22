@@ -26,7 +26,7 @@ C1 交 action 内容快照；C2 交模板快照、方案比较、参数和自由
 
 ## 1.3.0 中文知识扩充
 
-当前 C2 知识为 v0004，C3 知识为 v0007；历史快照和交接保留。诊断为 v0007，runtime 为 0.8.1。新任务按[Action 选择与反馈](workflows/references/action-selection.md)区分实施条件与性能假设，有来源且适用的知识可用于未测收益的假设试验；[v0004 机制与交接基础规则](workflows/references/diagnosis-v4.md)继续沿用，旧版 Action 前提仅按冻结身份回放。使用方式与分类见[知识扩充说明](workflows/references/knowledge-expansion-1.3.0.md)，输入复用增量见[补齐与回归说明](workflows/references/input-reuse-1.3.0.md)，来源版本见[固定来源清单](workflows/references/knowledge-sources-1.3.0.json)。条目包含中文原理、选择条件、公式及必要代码；sources 仅作审计，不是使用说明的替代品。
+当前 C2 知识为 v0004，C3 知识为 v0007；历史快照和交接保留。诊断为 v0007，runtime 为 0.8.2。新任务按[Action 选择与反馈](workflows/references/action-selection.md)区分实施条件与性能假设，有来源且适用的知识可用于未测收益的假设试验；[v0004 机制与交接基础规则](workflows/references/diagnosis-v4.md)继续沿用，旧版 Action 前提仅按冻结身份回放。使用方式与分类见[知识扩充说明](workflows/references/knowledge-expansion-1.3.0.md)，输入复用增量见[补齐与回归说明](workflows/references/input-reuse-1.3.0.md)，来源版本见[固定来源清单](workflows/references/knowledge-sources-1.3.0.json)。条目包含中文原理、选择条件、公式及必要代码；sources 仅作审计，不是使用说明的替代品。
 
 此前缓存组合过滤、Problem 按需展开、观测自洽校验和自主阅读结果见[修复与自主回放](workflows/references/autonomous-diagnosis-1.3.0.md)。
 
@@ -73,3 +73,5 @@ python3 "$APROF_PACKAGE/tools/release.py" --allow-unsealed
 ## 执行事实、完整代价与正式交接修复
 
 本轮修复的数据相关路径、准备工作收支、修复后重比、通用 Action 与无硬件验收见[开发交付报告](workflows/references/execution-cost-1.3.0/REPORT.md)。新任务仍用 action-decision/v3 和 handoff/v4，历史快照及准入结论不追认。
+
+当前探索计时使用[中位数稳定性v2](skills/ascendc-aprof-profiling/references/median-stability-v2.md)：4/20、CV≤10%是试用轮内标准，跨窗口漂移、剔除敏感性及收益分别报告。来源数据的[离线比较及限制](workflows/references/median-timing-1.3.0/REPORT.md)不追认历史候选；HAP、完整交接和工程收益门槛保持。

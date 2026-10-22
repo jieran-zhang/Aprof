@@ -98,7 +98,7 @@ C3 只有在审查、构建、完整正确性和采集准备齐备后才可进�
 
 ### 6. profiling 接收 C0/C3/请求 → C4
 
-新计时唯一方法为 [single_role_l2_clean_task_v1](../skills/ascendc-aprof-profiling/references/unified-timing.md)：每 case/实现一个新进程、5 次预热、20 次逐轮清 L2 的完整调用，逐轮全部目标 Task 求和后按预声明异常策略取中位数；新任务使用 `bounded_outlier_v1`，原始 20 次和剔除明细全部保留。
+新计时唯一方法为 [single_role_l2_clean_task_v1](../skills/ascendc-aprof-profiling/references/unified-timing.md)：每 case/实现一个新进程、5 次预热、20 次逐轮清 L2 的完整调用，逐轮全部目标 Task 求和后按预声明异常策略取中位数；当前探索任务预声明 `median_stability_exploration_v2`／`bounded_outlier_v2`及复验额度；原始20次、处理前后统计和全部窗口保留，按同一文档区分轮内质量、中位数漂移与工程收益。旧记录继续使用原版本。
 
 复用有效 A，只采 B；先看预声明代表/回归集。需要完整结论时，协调者用 C5 请求 C4 只补缺少 case。合格采集直接进入全量收尾，不因“正式”标签重采。
 

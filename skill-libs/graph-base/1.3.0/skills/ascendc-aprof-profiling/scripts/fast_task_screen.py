@@ -38,6 +38,10 @@ def compare(baseline_path, candidate_path):
     if "sample_statistics" in a:
         result.update(stability_policy=a["sample_statistics"]["policy"],
                       baseline_statistics=a["sample_statistics"], candidate_statistics=b["sample_statistics"])
+        if a["sample_statistics"]["policy"] == "bounded_outlier_v2":
+            from aprof_runtime.median_timing import STABILITY_PROTOCOL
+            result["stability_protocol"] = STABILITY_PROTOCOL
+            result["quality_status"] = "not_evaluated_across_windows"
     return result
 
 

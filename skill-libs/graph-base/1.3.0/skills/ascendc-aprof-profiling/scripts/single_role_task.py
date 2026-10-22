@@ -323,6 +323,7 @@ def collect_case(config, case, root, declaration, deadline, runner, store, *, co
                            str(RELEASE / "runtime/src/aprof_runtime/unified_task_samples.py"),
                            str(RELEASE / "runtime/src/aprof_runtime/unified_timing.py"),
                            str(RELEASE / "runtime/src/aprof_runtime/task_statistics.py"),
+                           str(RELEASE / "runtime/src/aprof_runtime/median_timing.py"),
                            str(RELEASE / "runtime/src/aprof_runtime/original_oracle.py"),
                            str(RELEASE / "runtime/src/aprof_runtime/validation_cache.py"),
                            str(RELEASE / "runtime/src/aprof_runtime/execution_policy.py"),

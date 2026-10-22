@@ -92,7 +92,7 @@ from aprof_runtime import __version__, bindings, diagnosis
 from aprof_runtime.graph import load_snapshot
 from aprof_runtime.knowledge import verify as verify_tree
 from aprof_runtime.diagnosis_reasoning import validate_case, validate_proposal
-assert __version__ == '0.8.1'
+assert __version__ == '0.8.2'
 assert diagnosis.verify(root)['version'] == 'v0007'
 for owner, version in (('parallel-planning', 'v0004'), ('optimization', 'v0007')):
     assert verify_tree(root, owner)['version'] == version

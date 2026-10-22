@@ -359,6 +359,8 @@ def run(arguments: argparse.Namespace) -> Any:
             if digest(path.read_bytes()) != timing_ref["sha256"]:
                 raise ContractError("计时结果引用 hash 不符")
             result = load_json(path)
+            if result.get("schema_version") != 1:
+                raise ContractError("新的中位数稳定性结果须使用 v3/v4 交接，不能改写旧交接含义")
             if (result.get("kind") != "unified_timing_result"
                     or result.get("candidate_id") != timing_ref["candidate_id"]
                     or result.get("protocol") != timing_ref["protocol"]):

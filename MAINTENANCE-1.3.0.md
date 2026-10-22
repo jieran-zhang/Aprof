@@ -1,4 +1,4 @@
-# graph-base/1.3.0 / runtime 0.8.1（未封版）
+# graph-base/1.3.0 / runtime 0.8.2（未封版）
 
 本版完整包位于 `skill-libs/graph-base/1.3.0`，实验必须显式指定此路径及其任务内冻结副本。现有默认版本、1.2.0、旧 schema 和冻结快照保留；本次维护不代表封版、发布或硬件性能验收。
 
@@ -27,3 +27,5 @@ PYTHONDONTWRITEBYTECODE=1 python3 -B skill-libs/graph-base/1.3.0/tools/release.p
 本轮 runtime 0.8.1 修复数据相关触发、准备工作收支、正确性修复后的重比和完整方案交接：新增派生结果复用、buffer/事件管理简化两项通用Action，测前冻结完整workload并保留历史映射限制。原因、正式交接纸面例、独立复核和无硬件A/B见[执行事实与完整代价维护报告](skill-libs/graph-base/1.3.0/workflows/references/execution-cost-1.3.0/REPORT.md)。历史实验准入状态不追认。
 
 本轮开发验收为155项回归通过、30组事件CPU模型、三份完整P/O交接纸面例及独立目录检查。24次无工具A/B事实分均96/96，未证明准确率提升；新版的派生复用交接和静态管理备选覆盖有所改善，平均输入增加约3.42%。原始答案、失败preflight成本及独立评分复核随包保存，不据此宣称性能或HAP提升。
+
+当前 runtime 0.8.2 加入[中位数探索稳定性v2](skill-libs/graph-base/1.3.0/skills/ascendc-aprof-profiling/references/median-stability-v2.md)：一次对称最多4/20、处理后CV≤10%，完整保留原始统计；双方原始中位数漂移、剔除敏感性和工程收益分开。采集5/20、原oracle、HAP、Action—P/O准入和工程门槛保持。既有30轮的[离线比较](skill-libs/graph-base/1.3.0/workflows/references/median-timing-1.3.0/REPORT.md)不是新协议独立验证，不追认历史候选。本轮未启动硬件。

@@ -91,17 +91,30 @@ def inventory(root, ref):
 
 def declaration(root, ref):
     value = read_json(reference(root, ref))
+    require(isinstance(value, dict), "预声明必须为对象")
     names = {"schema_version", "operator", "created_at", "case_ids", "correctness_case_ids", "reuse_policy"}
     if isinstance(value, dict) and "stability_policy" in value:
         names.add("stability_policy")
-        require(value["stability_policy"] == BOUNDED_OUTLIER_POLICY, "未知 stability_policy")
+        from .median_timing import STABILITY_POLICY
+        require(value["stability_policy"] in (BOUNDED_OUTLIER_POLICY, STABILITY_POLICY), "未知 stability_policy")
+    if isinstance(value, dict) and value.get("schema_version") == 3:
+        from .median_timing import STABILITY_POLICY, STABILITY_PROTOCOL
+        names |= {"stability_policy", "stability_protocol", "replication_policy"}
+        require(value.get("stability_policy") == STABILITY_POLICY
+                and value.get("stability_protocol") == STABILITY_PROTOCOL, "v3 声明必须显式选择中位数探索协议")
+        fields(value.get("replication_policy"), {"max_retests", "estimator"}, "复验策略")
+        replication = value["replication_policy"]
+        require(type(replication["max_retests"]) is int and replication["max_retests"] >= 0
+                and replication["estimator"] == "last_executed_window", "复验预算或固定窗口估计规则无效")
+    else:
+        require(value.get("stability_policy") in (None, BOUNDED_OUTLIER_POLICY), "新 stability_policy 需要 v3 测前声明")
     if "baseline_trust" in value:
         names.add("baseline_trust")
         trust = value["baseline_trust"]
         fields(trust, {"status", "source_sha256", "binary_sha256", "basis"}, "baseline trust")
         require(trust["status"] == "assumed" and trust["basis"] == "user_provided_baseline", "baseline trust basis invalid")
     fields(value, names, "预声明")
-    require(value["schema_version"] in (1, 2) and isinstance(value["operator"], str) and value["operator"], "预声明身份无效")
+    require(value["schema_version"] in (1, 2, 3) and isinstance(value["operator"], str) and value["operator"], "预声明身份无效")
     for key in ("case_ids", "correctness_case_ids"):
         ids = value[key]
         require(isinstance(ids, list) and ids and all(type(item) is int and item > 0 for item in ids) and len(ids) == len(set(ids)), f"{key} 必须为不重复正整数")
@@ -115,7 +128,7 @@ def declaration(root, ref):
 
 def check_baseline_trust(decl, identity):
     trust = decl.get("baseline_trust", {})
-    require(decl["schema_version"] == 2 and trust.get("status") == "assumed"
+    require(decl["schema_version"] in (2, 3) and trust.get("status") == "assumed"
             and trust.get("basis") == "user_provided_baseline", "baseline assumption not predeclared")
     for key in ("source_sha256", "binary_sha256"):
         require(trust.get(key) == identity[key], "modified implementation cannot inherit baseline trust")
@@ -307,6 +320,10 @@ def replay_capture(path, *, deadline=None, verified=None):
         if decl.get("stability_policy") == BOUNDED_OUTLIER_POLICY:
             stats = bounded_statistics(parsed["values_us"])
             result.update(sample_statistics=stats, median_us=stats["median_us"], within_process_cv=stats["cv"])
+        elif decl.get("schema_version") == 3:
+            from .median_timing import sample_statistics
+            stats = sample_statistics(parsed["values_us"])
+            result.update(sample_statistics=stats, median_us=stats["median_us"], within_process_cv=stats["cv"])
         return result
     except (KeyError, TypeError, ValueError) as exc:
         if hasattr(exc, "reason"):
@@ -356,6 +373,7 @@ def _evaluate_request(path, *, evaluated_at=None):
     fields(request, {"schema_version", "protocol", "operator", "candidate_id", "baseline_source_sha256", "candidate_source_sha256", "declaration", "baseline_captures", "candidate_captures", "baseline_correctness", "candidate_correctness"}, "性能验收请求")
     require(request["schema_version"] == 1 and request["protocol"] == PROTOCOL and isinstance(request["candidate_id"], str) and request["candidate_id"], "性能验收请求身份无效")
     decl = declaration(path.parent, request["declaration"])
+    require(decl["schema_version"] in (1, 2), "v3 声明需要 v2 性能请求，不能混用旧判定")
     require(decl["operator"] == request["operator"], "operator 与声明不符")
     declared_ref = request["declaration"]["sha256"]
     when = evaluated_at or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
@@ -432,6 +450,10 @@ def _evaluate_request(path, *, evaluated_at=None):
 
 def evaluate_request(path, *, evaluated_at=None):
     try:
+        value = read_json(path)
+        if isinstance(value, dict) and value.get("schema_version") == 2:
+            from .median_timing import evaluate_request as evaluate_medians
+            return evaluate_medians(path, evaluated_at=evaluated_at)
         return _evaluate_request(path, evaluated_at=evaluated_at)
     except (KeyError, TypeError, ValueError, OverflowError) as exc:
         if hasattr(exc, "reason"):

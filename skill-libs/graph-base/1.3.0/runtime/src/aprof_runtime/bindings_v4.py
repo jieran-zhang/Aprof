@@ -16,6 +16,7 @@ from . import bindings as b
 from .errors import GraphError
 from .jsonio import content_hash, file_hash
 from .knowledge import validate_schema
+from .median_timing import validate_schema as validate_timing_schema
 
 SCHEMA = "aprof.handoff/v4"
 JOINT_DIMENSIONS = {"ownership", "data_path", "layout", "synchronization", "workspace_ownership", "numeric_semantics", "resource_lifetimes"}
@@ -557,7 +558,7 @@ def link_result_v4(c1, c2, c3, timing, *, task_root=None, timing_ref=None, root=
     if not measured_path.is_file() or file_hash(measured_path) != timing["sha256"]:
         raise GraphError("计时结果引用 hash 不匹配")
     measured = b._json_file(measured_path)
-    validate_schema(root, "unified-timing-result", measured)
+    validate_timing_schema(root, 'result', measured)
     if measured["decision_hash"] != content_hash({k: v for k, v in measured.items() if k != "decision_hash"}):
         raise GraphError("统一计时结果 decision_hash 不匹配")
     if (measured.get("kind") != "unified_timing_result" or measured.get("candidate_id") != timing["candidate_id"] or
@@ -572,7 +573,7 @@ def link_result_v4(c1, c2, c3, timing, *, task_root=None, timing_ref=None, root=
     if not request_path.is_file() or file_hash(request_path) != request_ref["sha256"]:
         raise GraphError("计时请求 hash 不匹配")
     request = b._json_file(request_path)
-    validate_schema(root, "unified-timing-request", request)
+    validate_timing_schema(root, 'request', request)
     if (request.get("candidate_id") != c3["candidate_id"] or request.get("protocol") != timing["protocol"] or
             request["operator"] != measured["operator"] or request["operator"] != c2["selection"]["confirmed_plan"]["parallel_plan"]["operator"] or
             request.get("candidate_source_sha256") != c3["execution"]["implementation_source_ref"]["sha256"] or

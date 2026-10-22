@@ -9,6 +9,7 @@ import math
 from .errors import GraphError
 from .jsonio import content_hash
 from .knowledge import digest, local, validate_schema
+from .median_timing import validate_schema as validate_timing_schema
 from . import diagnosis
 
 
@@ -326,7 +327,7 @@ def _validate_case_identity(root, record, task_root):
                 profiles.add(fact["ref"]["sha256"])
     timing = json.loads(_checked_reference(task_root, outcome["timing_ref"]).read_text())
     correctness = json.loads(_checked_reference(task_root, outcome["correctness_ref"]).read_text())
-    validate_schema(root, "unified-timing-result", timing)
+    validate_timing_schema(root, 'result', timing)
     validate_schema(root, "unified-correctness", correctness)
     if timing["verdict"] != outcome["status"] or timing["operator"] != correctness["operator"] or timing["decision_hash"] != content_hash({k: v for k, v in timing.items() if k != "decision_hash"}):
         raise GraphError("案例性能/正确性记录身份或decision_hash不一致")
@@ -337,7 +338,7 @@ def _validate_case_identity(root, record, task_root):
             raise GraphError("案例timing request越出任务根")
         request_ref["path"] = request_path.resolve().relative_to(task_root.resolve()).as_posix()
     request = json.loads(_checked_reference(task_root, request_ref).read_text())
-    validate_schema(root, "unified-timing-request", request)
+    validate_timing_schema(root, 'request', request)
     if request["candidate_id"] != timing["candidate_id"] or request["baseline_source_sha256"] != record["scope"]["parent_implementation_hash"] or request["candidate_source_sha256"] != correctness["source_sha256"] or request["candidate_correctness"]["sha256"] != outcome["correctness_ref"]["sha256"]:
         raise GraphError("案例父实现、候选或正确性引用不一致")
     operator = context.get("operator")

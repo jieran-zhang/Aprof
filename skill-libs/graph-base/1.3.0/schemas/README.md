@@ -67,3 +67,5 @@ tools/aprofctl knowledge validate-chain --root <完整包> --task-root <任务�
 字段、显式版本分派与回放入口见[完整方案格式](../workflows/references/action-decision-v3.md)。
 
 当前 runtime 0.8.1 沿用上述 v3/v4 schema。D v0007 新任务测前冻结完整 workload case payload，历史身份和回放不追认；见[映射说明](../workflows/references/action-decision-v3.md#完整-workload-的测前映射)。
+
+中位数探索统计使用独立版本：[declaration v3](unified-timing-declaration-v3.schema.json)、[request v2](unified-timing-request-v2.schema.json)、[result v2](unified-timing-result-v2.schema.json)。采集protocol仍为single_role_l2_clean_task_v1，结果另绑定median_stability_exploration_v2；运行时按schema_version显式分派，旧schema文件及历史结果不变。

@@ -34,7 +34,8 @@ class CaseRunner(FakeRunner):
             self.duration = configured
 
 
-def campaign(root, *, baseline_us=100, candidate_us=80, case_ids=(1,), stability_policy=None, samples=None):
+def campaign(root, *, baseline_us=100, candidate_us=80, case_ids=(1,), stability_policy=None, samples=None,
+             declaration_overrides=None):
     """纯 CPU 联合集成样例；FakeRunner 不启动 NPU。"""
     config = capture_config(root / "inputs")
     declaration_path = Path(config["declaration"]["path"])
@@ -43,6 +44,8 @@ def campaign(root, *, baseline_us=100, candidate_us=80, case_ids=(1,), stability
     declaration["correctness_case_ids"] = list(case_ids)
     if stability_policy is not None:
         declaration["stability_policy"] = stability_policy
+    if declaration_overrides:
+        declaration.update(declaration_overrides)
     write(declaration_path, declaration)
     config["declaration"]["sha256"] = file_hash(declaration_path)
     config["cases"] = [{**deepcopy(config["cases"][0]), "case_id": case} for case in case_ids]

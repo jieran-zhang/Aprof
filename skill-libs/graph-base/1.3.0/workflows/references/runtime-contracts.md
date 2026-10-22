@@ -126,3 +126,7 @@ v4 C1 绑定 reasoning、decision 与所选方案身份；C2 对成员分别调�
 当前知识为 D v0007、P v0004、O v0007、routing v0006、条件策略 v0002；新输入继续使用 action-decision/v3 和 handoff/v4，旧 schema/快照不变。新图首次正式实施前与有效反馈共用完整 workload 映射解析；缺映射可以继续分析，但不能把仅有 case 身份的任务报成实施 ready。格式和历史边界见[方案决策格式](action-decision-v3.md#完整-workload-的测前映射)。
 
 完整链与独立交接决策校验都核对实际非空方案身份；局部成员就绪不能代替完整链。机器校验只能检查声明、引用和状态，不能证明自然语言成本理由成立。数据相关覆盖、准备工作收支与修复后的重比由[选择规则](action-selection.md)指导，并在开发自主行为验收中检验，不增加日常必跑工具。
+
+## runtime 0.8.2：中位数探索稳定性
+
+新增median_stability_exploration_v2：采集仍为原5/20完整调用，v3测前声明、v2比较请求/结果，4/20和CV≤10%仅作试用轮内规则，全部窗口、原始／处理后统计、A/B独立漂移和剔除敏感性可回放。旧schema及旧判定保持，新增版本只进入当前v3/v4知识交接，未改正确性、HAP或工程收益要求。详见[专业规则](../../skills/ascendc-aprof-profiling/references/median-stability-v2.md)。
