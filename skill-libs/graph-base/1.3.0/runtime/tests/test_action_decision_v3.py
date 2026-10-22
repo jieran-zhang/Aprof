@@ -241,7 +241,8 @@ def test_handoff_v4_requires_exact_scheme_and_all_members(sample):
 
 
 @pytest.mark.parametrize('candidate_us,judgement,wrong_payload', [(80, 'supported', False), (110, 'weakened', False), (80, 'supported', True)])
-def test_compound_feedback_support_and_regression_are_scoped_not_single_factor(sample, candidate_us, judgement, wrong_payload):
+@pytest.mark.parametrize('timing_version', [1, 2])
+def test_compound_feedback_support_and_regression_are_scoped_not_single_factor(sample, candidate_us, judgement, wrong_payload, timing_version, authority_wrapped=False):
     import json
     from aprof_runtime.unified_timing import finalize_timing
     from aprof_runtime.jsonio import file_hash
@@ -250,7 +251,11 @@ def test_compound_feedback_support_and_regression_are_scoped_not_single_factor(s
     root, artifact, task, d, chain = sample
     add_member(d, chain, task)
     measurement = task / 'measurement'; measurement.mkdir()
-    request_path, config = campaign(measurement, candidate_us=candidate_us)  # CPU FakeRunner，无设备。
+    if timing_version == 2:
+        from test_median_timing import new_campaign
+        request_path, config = new_campaign(measurement, candidate_us=candidate_us)
+    else:
+        request_path, config = campaign(measurement, candidate_us=candidate_us)  # CPU FakeRunner，无设备。
     request = json.loads(request_path.read_text())
     sources = {}
     for role in ('baseline', 'candidate'):
@@ -275,6 +280,11 @@ def test_compound_feedback_support_and_regression_are_scoped_not_single_factor(s
     context_path = task / reasoning['source_context_ref']['path']
     context = json.loads(context_path.read_text()); context['operator'] = request['operator']
     reasoning['source_context_ref'] = write_json(context_path, context)
+    if authority_wrapped:
+        reasoning['source_context_ref'] = write_json(task / 'routing-authority.json', {
+            'schema_version': 'aprof.evidence/v1', 'task_id': d['task_id'],
+            'source_context_ref': deepcopy(reasoning['source_context_ref']),
+            'attributes': deepcopy(reasoning['context_snapshot']['attributes']), 'facts': {}})
     reasoning['context_snapshot']['source_context_ref'] = deepcopy(reasoning['source_context_ref'])
     reasoning['context_hash'] = content_hash(reasoning['context_snapshot'])
     d['context_hash'] = reasoning['context_hash']; d['current_parent_ref'] = deepcopy(sources['baseline'])
@@ -305,6 +315,61 @@ def test_compound_feedback_support_and_regression_are_scoped_not_single_factor(s
     assert check(data)['status'] == 'conditional'
     r['attribution']['kind'] = 'single_change'
     with pytest.raises(GraphError, match='单项归因'): check(data)
+    r['attribution']['kind'] = 'compound'
+    result = json.loads(result_path.read_text())
+    assert result['schema_version'] == timing_version
+    for key, value, error in [('unexpected_field', True, 'Additional properties'),
+                               ('speedup', result['speedup'] + 1, '反馈统一计时原始链回放失败')]:
+        tampered = dict(result, **{key: value})
+        result_path.write_text(json.dumps(tampered))
+        f['result_ref']['sha256'] = file_hash(result_path)
+        with pytest.raises(GraphError, match=error):
+            check(data)
+
+
+def test_feedback_accepts_evidence_authority_without_adding_operator(sample):
+    test_compound_feedback_support_and_regression_are_scoped_not_single_factor(
+        sample, 80, 'supported', False, 2, authority_wrapped=True)
+
+
+def test_feedback_context_resolves_nested_hash_bound_authorities(tmp_path):
+    from aprof_runtime.action_decision_v3 import _feedback_context
+    context = {'schema_version': '1.0.0', 'task_id': 'task', 'operator': 'op',
+               'hardware_fingerprint': 'CPU fixture', 'workload': {}, 'budget': {}}
+    ref = write_json(tmp_path / 'context.json', context)
+    for name in ('inner', 'outer'):
+        ref = write_json(tmp_path / (name + '.json'), {'schema_version': 'aprof.evidence/v1',
+            'task_id': 'task', 'source_context_ref': ref, 'attributes': {}, 'facts': {}})
+    assert _feedback_context(ROOT, tmp_path, ref, 'task') == context
+    with pytest.raises(GraphError, match='跨 task'):
+        _feedback_context(ROOT, tmp_path, ref, 'other-task')
+    with pytest.raises(GraphError, match='hash 不匹配'):
+        _feedback_context(ROOT, tmp_path, dict(ref, sha256='sha256:' + '0' * 64), 'task')
+    other = write_json(tmp_path / 'other-task.json', dict(context, task_id='other-task'))
+    other = write_json(tmp_path / 'wrong-terminal.json', {
+        'schema_version': 'aprof.evidence/v1', 'task_id': 'task',
+        'source_context_ref': other, 'attributes': {}, 'facts': {}})
+    with pytest.raises(GraphError, match='跨 task'):
+        _feedback_context(ROOT, tmp_path, other, 'task')
+    unknown = write_json(tmp_path / 'unknown-schema.json', dict(context, schema_version='unknown'))
+    with pytest.raises(GraphError, match='schema_version'):
+        _feedback_context(ROOT, tmp_path, unknown, 'task')
+    context.pop('operator')
+    bad = write_json(tmp_path / 'missing-operator.json', context)
+    with pytest.raises(GraphError, match='operator'):
+        _feedback_context(ROOT, tmp_path, bad, 'task')
+
+
+def test_feedback_context_rejects_cycle(tmp_path, monkeypatch):
+    from aprof_runtime import action_decision_v3 as module
+    path = tmp_path / 'cycle.json'
+    ref = {'path': path.name, 'sha256': 'sha256:' + '0' * 64}
+    write_json(path, {'schema_version': 'aprof.evidence/v1', 'task_id': 'task',
+                     'source_context_ref': ref, 'attributes': {}, 'facts': {}})
+    # Isolate cycle detection; a real content-hash cycle cannot be constructed ordinarily.
+    monkeypatch.setattr(module, '_task_ref', lambda *_: path)
+    with pytest.raises(GraphError, match='不能循环'):
+        module._feedback_context(ROOT, tmp_path, ref, 'task')
 
 
 def test_invalid_measurement_and_repair_do_not_force_new_action(sample):

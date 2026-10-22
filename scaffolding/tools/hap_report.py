@@ -70,13 +70,22 @@ def normalize_replay(replay, capture_path, *, evaluated_at=None):
     age = timing.timestamp(when) - timing.timestamp(capture['captured_at'])
     stats = replay.get('sample_statistics')
     reasons = []
-    if stats is None or stats.get('policy') != 'bounded_outlier_v1':
+    if decl.get('schema_version') == 3:
+        from aprof_runtime.median_timing import STABILITY_POLICY, STABILITY_PROTOCOL, MAX_CV
+        expected_policy, max_cv = STABILITY_POLICY, MAX_CV
+        if decl.get('stability_protocol') != STABILITY_PROTOCOL:
+            reasons.append('incompatible_declared_stability_protocol')
+    else:
+        from aprof_runtime.task_statistics import BOUNDED_OUTLIER_POLICY
+        expected_policy, max_cv = BOUNDED_OUTLIER_POLICY, .05
+    if (decl.get('stability_policy') != expected_policy or stats is None
+            or stats.get('policy') != expected_policy):
         reasons.append('missing_current_stability_policy')
     if len(replay['values_us']) != 20:
         reasons.append('complete_call_count_not_20')
     if stats and stats.get('exclusion_limit_exceeded'):
         reasons.append('outlier_limit_exceeded')
-    if not math.isfinite(replay['within_process_cv']) or replay['within_process_cv'] > .05:
+    if not math.isfinite(replay['within_process_cv']) or replay['within_process_cv'] > max_cv:
         reasons.append('within_process_cv_over_limit')
     if age < 0 or age > decl['reuse_policy']['max_age_seconds']:
         reasons.append('outside_declared_capture_age')
@@ -90,6 +99,8 @@ def normalize_replay(replay, capture_path, *, evaluated_at=None):
             'correctness_status': 'assumed' if assumed else 'verified',
             'correctness_basis': 'user_provided_baseline' if assumed else 'actual_oracle_or_authenticated_content_reuse',
             'timing_valid': not reasons, 'validation_reasons': reasons,
+            'declaration_schema_version': decl['schema_version'],
+            'stability_policy': expected_policy, 'max_within_process_cv': max_cv,
             'observed_median_us': replay['median_us'], 'sample_statistics': stats,
             'raw_values_us': list(replay['values_us']),
             'raw_median_us': stats['raw_median_us'] if stats else None,
@@ -139,7 +150,7 @@ def score_rows(anchor, operator, rows, *, global_errors=None):
         if evidence_valid and not positive(C):
             reasons.append('invalid_C')
         qualified = evidence_valid and numbers['anchor_valid'] and numbers['threshold_met'] is True
-        row_fields = ['correctness_status', 'correctness_basis', 'correctness_valid', 'timing_valid', 'raw_median_us', 'retained_median_us', 'raw_cv', 'retained_cv',
+        row_fields = ['correctness_status', 'correctness_basis', 'correctness_valid', 'timing_valid', 'declaration_schema_version', 'stability_policy', 'max_within_process_cv', 'raw_median_us', 'retained_median_us', 'raw_cv', 'retained_cv',
                       'outlier_indices', 'excluded_indices', 'retained_count', 'outlier_threshold_us', 'exclusion_limit_exceeded',
                       'raw_values_us', 'capture', 'identity', 'hardware', 'captured_at', 'evaluated_at', 'sample_statistics']
         result.append({'case_id': cid, **numbers, **{key: row.get(key) if row else None for key in row_fields},

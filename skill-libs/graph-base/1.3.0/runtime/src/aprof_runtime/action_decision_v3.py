@@ -542,6 +542,26 @@ def _validate_resources(scheme, context, steps, members):
                 raise GraphError('生命周期容量判断与精确工作核算矛盾')
 
 
+def _feedback_context(root, task_root, ref, task_id):
+    """Resolve the Context behind the evidence authority accepted by C1."""
+    from .contracts import Context
+    from .knowledge import _evidence
+    seen = set()
+    while True:
+        path = _task_ref(task_root, ref, task_id)
+        if path in seen:
+            raise GraphError("反馈 source Context 引用链不能循环")
+        seen.add(path)
+        context = _json(path)
+        if context.get("schema_version") == "aprof.evidence/v1":
+            _evidence(context)
+            ref = context["source_context_ref"]
+            continue
+        validate_schema(Path(root), "context", context)
+        Context.from_dict(context)
+        return context
+
+
 def _validate_feedback(root, decision, reasoning, policies, task_root):
     from .action_decision import decision_schema
     feedback = decision["previous_feedback"]
@@ -602,7 +622,8 @@ def _validate_feedback(root, decision, reasoning, policies, task_root):
         result_path = _task_ref(task_root, feedback["result_ref"], decision["task_id"])
         result = _json(result_path)
         if measurement == "valid" or result.get("kind") == "unified_timing_result":
-            validate_schema(Path(root), "unified-timing-result", result)
+            from .median_timing import validate_schema as validate_timing_schema
+            validate_timing_schema(Path(root), "result", result)
             if measurement == "valid" and result.get("verdict") == "inconclusive":
                 raise GraphError("inconclusive 计时不能标为有效反馈")
         if measurement == "valid":
@@ -614,7 +635,7 @@ def _validate_feedback(root, decision, reasoning, policies, task_root):
             except (ContractError, OSError, ValueError) as exc:
                 raise GraphError(f"反馈统一计时原始链回放失败: {exc}") from exc
             prior_reasoning = _json(_task_ref(task_root, previous["reasoning_ref"], decision["task_id"]))
-            prior_context = _json(_task_ref(task_root, prior_reasoning["source_context_ref"], decision["task_id"]))
+            prior_context = _feedback_context(root, task_root, prior_reasoning["source_context_ref"], decision["task_id"])
             if (result["operator"] != prior_context.get("operator") or
                     request["baseline_source_sha256"] != previous["current_parent_ref"]["sha256"]):
                 raise GraphError("反馈算子/父实现与前轮决策不匹配")
