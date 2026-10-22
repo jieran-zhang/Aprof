@@ -7,7 +7,7 @@ import subprocess
 
 import pytest
 
-from aprof_runtime import diagnosis
+from aprof_runtime import bindings
 from aprof_runtime.errors import GraphError
 from aprof_runtime.jsonio import content_hash
 from aprof_runtime.knowledge_outcome import link_result_v3
@@ -15,6 +15,9 @@ from test_action_decision import attach, make_decision
 from test_action_decision_v2 import v2_fields
 from test_action_handoff_v3 import write_json
 from test_action_handoff_v4 import synthetic_timing
+from test_action_decision_v3 import scheme_package as _scheme_package_fixture
+
+scheme_package = _scheme_package_fixture
 
 ROOT = Path(__file__).resolve().parents[2]
 EXAMPLES = ROOT / 'workflows/references/optimization-schemes-1.3.0/examples'
@@ -69,14 +72,32 @@ def test_public_chain_rejects_mixed_versions(example):
     assert '版本' in json.loads(replay.stderr)['error']
 
 
-def test_old_v3_link_uses_frozen_bundle_and_bound_sources(tmp_path):
+@pytest.mark.parametrize('mutation', ['missing', 'tampered'])
+def test_handoff_bundle_rejects_missing_or_changed_frozen_routing(example, tmp_path, mutation):
+    task, chain = example
+    isolated = tmp_path / 'isolated-package'
+    shutil.copytree(ROOT / 'schemas', isolated / 'schemas')
+    config_hash = chain[1]['selection']['routing_config_hash']
+    name = f"{bindings.ROUTING_SNAPSHOTS}/{config_hash.removeprefix('sha256:')}.json"
+    if mutation == 'tampered':
+        value = json.loads((ROOT / name).read_text())
+        value['version'] = 'v9999'
+        target = isolated / name
+        target.parent.mkdir(parents=True)
+        write_json(target, value)
+    with pytest.raises(GraphError, match='快照缺失' if mutation == 'missing' else '内容地址'):
+        bindings.load_handoff_bundle(isolated, chain[1])
+
+
+def test_old_v3_link_uses_frozen_bundle_and_bound_sources(scheme_package, tmp_path):
     task = tmp_path / 'legacy'
-    artifact = diagnosis.verify(ROOT)
-    decision, chain = make_decision(ROOT, artifact, task)
+    root, artifact = scheme_package
+    assert artifact['version'] == 'v0006'
+    decision, chain = make_decision(root, artifact, task)
     decision = v2_fields(decision, chain[0]['reasoning'])
     attach(decision, chain, task)
     request, measured, timing = synthetic_timing(task, chain)
-    result = link_result_v3(ROOT, *chain, timing, task_root=task, timing_ref=task / 'timing-ref.json')
+    result = link_result_v3(root, *chain, timing, task_root=task, timing_ref=task / 'timing-ref.json')
     assert result['schema_version'] == 'aprof.knowledge-outcome/v2'
     assert result['executed_instances'] == chain[2]['execution']['executed_instances']
     assert result['actual_combination']['optimization_snapshots'][0]['body']
@@ -91,8 +112,8 @@ def test_old_v3_link_uses_frozen_bundle_and_bound_sources(tmp_path):
         wrong_timing = dict(write_json(task / 'timing-wrong-operator.json', wrong_measured),
                             candidate_id=timing['candidate_id'], protocol=timing['protocol'])
         with pytest.raises(GraphError, match='算子不同'):
-            link_result_v3(ROOT, *chain, wrong_timing, task_root=task, timing_ref=task / 'timing-ref.json')
+            link_result_v3(root, *chain, wrong_timing, task_root=task, timing_ref=task / 'timing-ref.json')
     measured['speedup'] = 7
     timing.update(write_json(task / 'timing.json', measured))
     with pytest.raises(GraphError, match='decision_hash'):
-        link_result_v3(ROOT, *chain, timing, task_root=task, timing_ref=task / 'timing-ref.json')
+        link_result_v3(root, *chain, timing, task_root=task, timing_ref=task / 'timing-ref.json')

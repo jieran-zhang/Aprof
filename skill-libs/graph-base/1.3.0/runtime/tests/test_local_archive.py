@@ -169,16 +169,19 @@ def test_installed_runtime_finds_package_and_rejects_different_source(tmp_path):
 
 
 def test_scaffolding_dispatch_requires_explicit_package_and_keeps_legacy_bytes(tmp_path):
-    repository=archive.PACKAGE.parents[2]
-    dispatcher=repository/'scaffolding/collection/scripts/archive_local_evidence.py'
-    if not dispatcher.is_file():
+    dispatchers = [parent / 'scaffolding/collection/scripts/archive_local_evidence.py'
+                   for parent in archive.PACKAGE.parents]
+    dispatcher = next((path for path in dispatchers if path.is_file()), None)
+    if dispatcher is None:
         pytest.skip('开发仓库 scaffolding 兼容专项；独立技能包不携带该入口')
     result=subprocess.run([sys.executable,'-B',str(dispatcher)],cwd=tmp_path,capture_output=True,text=True)
     assert result.returncode!=0 and '--skill-lib' in result.stderr and '--legacy-v051' in result.stderr
     old=dispatcher.with_name('archive_local_evidence_v051.py')
     assert 'skill-libs/graph-base/0.5.1' in old.read_text()
     assert 'task_terminal_v1' not in old.read_text()
-    missing=subprocess.run([sys.executable,'-B',str(dispatcher),'--skill-lib',str(archive.PACKAGE.with_name('1.0.0'))],
+    unbound_package = tmp_path / 'unbound-package'
+    unbound_package.mkdir()
+    missing=subprocess.run([sys.executable,'-B',str(dispatcher),'--skill-lib',str(unbound_package)],
         cwd=tmp_path,capture_output=True,text=True)
     assert missing.returncode!=0 and 'no fallback' in missing.stderr
 

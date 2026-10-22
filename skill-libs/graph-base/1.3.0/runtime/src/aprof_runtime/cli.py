@@ -323,10 +323,13 @@ def run(arguments: argparse.Namespace) -> Any:
                 "records": len(artifact["records"])}
     if arguments.command == "knowledge":
         if arguments.action == "validate-chain":
-            from .bindings import validate_chain
-            return validate_chain(arguments.root, load_json(arguments.c1), load_json(arguments.c2),
+            from .bindings import load_handoff_bundle, validate_chain
+            c2 = load_json(arguments.c2)
+            artifacts, routing = load_handoff_bundle(arguments.root, c2)
+            return validate_chain(arguments.root, load_json(arguments.c1), c2,
                                   load_json(arguments.c3) if arguments.c3 else None,
-                                  task_root=arguments.task_root)
+                                  task_root=arguments.task_root, artifacts=artifacts,
+                                  routing_config=routing)
         if arguments.action == "coverage":
             from .bindings import coverage
             return coverage(arguments.root)
@@ -345,12 +348,15 @@ def run(arguments: argparse.Namespace) -> Any:
                     raise ContractError("结果关联不能混装交接版本")
                 if versions == {"aprof.handoff/v4"}:
                     from .bindings_v4 import link_result_v4 as link_current_result
+                    from .bindings import load_handoff_bundle
+                    artifacts, routing = load_handoff_bundle(arguments.root, chain[1])
                 else:
                     from .knowledge_outcome import link_result_v3
                     return link_result_v3(arguments.root, *chain, load_json(arguments.timing_ref),
                         task_root=arguments.task_root or arguments.c1.parent, timing_ref=arguments.timing_ref)
                 return link_current_result(*chain, load_json(arguments.timing_ref), root=arguments.root,
-                    task_root=arguments.task_root or arguments.c1.parent, timing_ref=arguments.timing_ref)
+                    task_root=arguments.task_root or arguments.c1.parent, timing_ref=arguments.timing_ref,
+                    artifacts=artifacts, routing_config=routing)
             for value in chain:
                 validate_schema(arguments.root, "knowledge-handoff", value)
             from .knowledge import digest

@@ -310,6 +310,8 @@ def copy_condition_policy(future, artifact):
     policy["legacy_graph_ref"].update(path=str(v4 / "graph.json"),
         file_sha256=digest((future / v4 / "graph.json").read_bytes()), graph_sha256=content_hash(artifact))
     actions = {r["id"]: r for r in artifact["records"] if r["kind"] == "action"}
+    assert set(actions) <= {row["action_id"] for row in policy["actions"]}
+    policy["actions"] = [row for row in policy["actions"] if row["action_id"] in actions]
     for row in policy["actions"]:
         original = actions[row["action_id"]]["preconditions"]
         row["legacy_preconditions"] = deepcopy(original)
@@ -320,7 +322,7 @@ def copy_condition_policy(future, artifact):
     raw = json.dumps(policy, ensure_ascii=False)
     policy_path = future / "workflows/references/action-condition-policy.json"
     policy_path.write_text(raw)
-    frozen = future / "workflows/references/action-condition-policies/v0001.json"
+    frozen = future / f"workflows/references/action-condition-policies/{policy['version']}.json"
     frozen.parent.mkdir(parents=True, exist_ok=True)
     frozen.write_text(raw)
     shutil.copy(ROOT / "schemas/action-condition-policy.schema.json", future / "schemas")

@@ -114,8 +114,9 @@ def test_malformed_mapping_is_rejected_by_real_decision(new_sample, value):
 
 
 @pytest.mark.parametrize('wrong_payload', [False, True])
-def test_first_and_effective_feedback_consume_same_full_payload(new_sample, wrong_payload):
-    check_measured_feedback(new_sample, 80, 'supported', wrong_payload)
+@pytest.mark.parametrize('timing_version', [1, 2])
+def test_first_and_effective_feedback_consume_same_full_payload(new_sample, wrong_payload, timing_version):
+    check_measured_feedback(new_sample, 80, 'supported', wrong_payload, timing_version)
 
 
 def test_real_v4_chain_propagates_mapping_gap_and_refuses_c3(new_package, tmp_path):

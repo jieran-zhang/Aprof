@@ -78,7 +78,13 @@ def package(tmp_path_factory, request):
                 if not target.exists():
                     target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy(ROOT / source["path"], target)
-    shutil.copy(ROOT / bindings.CONFIG, root / bindings.CONFIG)
+    # This fixture registers the frozen D3 action set, not the latest actions.
+    config = json.loads((ROOT / bindings.CONFIG).read_text())
+    action_ids = {r["id"] for r in artifact["records"] if r["kind"] == "action"}
+    assert action_ids <= {row["action_id"] for row in config["actions"]}
+    for field in ("actions", "variant_reviews"):
+        config[field] = [row for row in config[field] if row["action_id"] in action_ids]
+    write_json(root / bindings.CONFIG, config)
     bindings.freeze_bases(root)
     return root, artifact
 

@@ -109,6 +109,25 @@ def load_frozen_bundle(root: Path, routing_ref: dict) -> tuple[dict, dict]:
     return _routing_inputs(root, routing_config=config)
 
 
+def load_handoff_bundle(root: Path, c2: dict) -> tuple[dict, dict]:
+    """Replay the explicit content-addressed routing identity bound by C2."""
+    root = Path(root)
+    version = c2.get("schema_version")
+    schemas = {"aprof.handoff/v3": "knowledge-handoff-v3",
+               "aprof.handoff/v4": "knowledge-handoff-v4"}
+    if version not in schemas:
+        raise GraphError("不支持的交接版本，不能选择历史路由快照")
+    validate_schema(root, schemas[version], c2)
+    config_hash = c2["selection"]["routing_config_hash"]
+    name = f"{ROUTING_SNAPSHOTS}/{config_hash.removeprefix('sha256:')}.json"
+    path = local(root, name)
+    if not path.is_file():
+        raise GraphError("交接绑定的历史路由快照缺失")
+    # load_frozen_bundle verifies its content address, every base and source.
+    # validate_chain subsequently verifies C1/C2/C3 against this exact bundle.
+    return load_frozen_bundle(root, {"path": name, "sha256": file_hash(path)})
+
+
 def load_routing(root: Path, *, artifacts=None, routing_config=None) -> dict:
     """默认校验当前知识；显式bundle只校验该冻结版本，绝不改绑latest。"""
     return _routing_inputs(Path(root), artifacts=artifacts, routing_config=routing_config)[1]

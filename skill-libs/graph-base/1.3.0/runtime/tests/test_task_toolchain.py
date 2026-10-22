@@ -161,6 +161,14 @@ def test_explicit_separate_python_is_preflighted_and_frozen(installed, tmp_path,
     venv.EnvBuilder(system_site_packages=True, symlinks=False, with_pip=False).create(environment)
     python = environment/'bin/python'
     monkeypatch.setattr(tools, '_python_environment', _REAL_PROBE)
+    observed = _REAL_PROBE(str(python))
+    if observed['host_arch'] != 'aarch64':
+        with pytest.raises(ContractError, match='executable/architecture differs'):
+            tools.discover_task_toolchain(sdk_root=installed[0], python=str(python), **installed[1])
+    # This CPU fixture simulates the SDK's aarch64 target; retain the real
+    # interpreter, pyvenv.cfg, numpy import and installed file roster checks.
+    monkeypatch.setattr(tools, '_python_environment',
+                        lambda selected: dict(_REAL_PROBE(selected), host_arch='aarch64'))
     binding = tools.discover_task_toolchain(sdk_root=installed[0], python=str(python), **installed[1])
     assert binding['tools']['python'] == str(python)
     assert binding['python_binary'] == str(python.resolve())
