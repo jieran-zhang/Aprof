@@ -1,0 +1,70 @@
+{
+  "tests": 179,
+  "passed": 178,
+  "skipped": 1,
+  "failures": 0,
+  "errors": 0,
+  "method": "完整CPU回归后，两处测试固定版本假设更新并定向复测；按模块和用例名以最终结果去重。无重复已通过项。",
+  "initial_failures": [
+    "未来分类测试写死O后继v0003，与已冻结v0003冲突",
+    "离线集成测试仍断言当前O为v0002"
+  ],
+  "fixes": "仅更新测试版本分配和预期；runtime实现与schema未修改。",
+  "runs": [
+    {
+      "run": "cpu-tests.xml",
+      "counts": {
+        "passed": 176,
+        "skipped": 1,
+        "failed": 2
+      },
+      "seconds": 636.565,
+      "sha256": "sha256:65406a89539da27f126955954b4bd4a925c8e83197891aa4948e81ffea62405a"
+    },
+    {
+      "run": "future-category-test.xml",
+      "counts": {
+        "passed": 1
+      },
+      "seconds": 32.95,
+      "sha256": "sha256:7312a947291f65006c660f58c7cc0ae7ea9f8c5e21a578d510ca34da77ced31f"
+    },
+    {
+      "run": "offline-integration-test.xml",
+      "counts": {
+        "passed": 1
+      },
+      "seconds": 91.184,
+      "sha256": "sha256:0b9b1b075d0c02f4fddf1e8402c32f5e03efbe64075211c2668495f8272f5324"
+    }
+  ],
+  "by_module": {
+    "tests.test_action_handoff_v3": {
+      "passed": 45
+    },
+    "tests.test_diagnosis_integration_v130": {
+      "passed": 3
+    },
+    "tests.test_diagnosis_v4": {
+      "passed": 50
+    },
+    "tests.test_input_reuse_v130": {
+      "passed": 20
+    },
+    "tests.test_knowledge": {
+      "passed": 27
+    },
+    "tests.test_knowledge_v130": {
+      "passed": 7
+    },
+    "tests.test_local_archive": {
+      "passed": 21,
+      "skipped": 1
+    },
+    "tests.test_workflow_package": {
+      "passed": 5
+    }
+  },
+  "skip_reason": "可选开发仓库的旧归档分派入口缺失；技能包不依赖该入口。",
+  "hardware": false
+}

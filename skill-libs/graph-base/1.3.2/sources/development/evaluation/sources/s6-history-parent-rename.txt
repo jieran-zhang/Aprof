@@ -1,0 +1,255 @@
+数值与运行契约：目标910C/dav-2201，输入/输出外部布局NCDHW，grid为[N,S,3]；三线性8邻居按源码k=0..7累加，越界贡献零。内存容量/延迟未实测。非有限值和舍入不得偷换；所有未列元数据形状保持通用fallback。只讨论源码允许的试验，不宣称已测收益。
+当前历史快照（只给原始源码变更与原始记录，不给旧分析）：
+source L0 = 以下原始GridSampler3DScalar<float>完整源码，全部输出写入。
+source L1 = L0唯一变更：for(linear=begin;linear<end;linear+=2)，其它相同。
+source L2 = L0字节相同的重新保存副本；记录源码identity仍单独保留。
+workload N=1,C=8,D=H=W=16,S=256,nearest,zeros,alignCorners=false，x=1,grid=0，所有输出初始化为0，reference为全1。
+原始日志：L0 correctness status=passed且覆盖2048输出；L1 correctness status=failed,1024个错误；L2 correctness status=passed且覆盖2048输出。
+计时原始记录：T0 source=L0,ms=1.0,start=before_launch,end=after_stream_synchronize,cases=当前域；T1 source=L1,ms=0.4,start=before_launch,end=after_stream_synchronize；T2 source=L2,ms=0.2,start=before_launch,end=after_enqueue_before_synchronize。数字为本题合成原始记录，不是硬件实测。
+子例a：名称L0/L1/L2，函数名GridSampler3DScalar；子例b：相同字节/事实仅改标识Pine/Fir/Oak，函数名RunIndexed，不改变任何程序语义。若你认为改名影响优化选择，请给来源。
+// 原始只读定位 /tmp/aprof-raw15-suoslncl/case-08/op_kernel/grid_sampler_3d_kernel.asc:1-197
+1: #pragma once
+2: #include <cstdint>
+3: #include <type_traits>
+4: #include "kernel_operator.h"
+5: #include "grid_sampler_3d_tiling.h"
+6: 
+7: template <typename T>
+8: __aicore__ inline float GridToFloat(T value) {
+9:     if constexpr (std::is_same<T, half>::value) {
+10:         const uint16_t raw = *reinterpret_cast<uint16_t *>(&value);
+11:         const uint32_t sign = static_cast<uint32_t>(raw & 0x8000U) << 16;
+12:         const uint32_t exp = (raw >> 10) & 0x1fU;
+13:         uint32_t mantissa = raw & 0x3ffU;
+14:         uint32_t bits = sign;
+15:         if (exp == 0x1fU) {
+16:             bits |= 0x7f800000U | (mantissa << 13);
+17:             if (mantissa) bits |= 0x400000U;
+18:         } else if (exp) {
+19:             bits |= ((exp + 112U) << 23) | (mantissa << 13);
+20:         } else if (mantissa) {
+21:             int32_t e = -14;
+22:             while ((mantissa & 0x400U) == 0) { mantissa <<= 1; --e; }
+23:             mantissa &= 0x3ffU;
+24:             bits |= (static_cast<uint32_t>(e + 127) << 23) | (mantissa << 13);
+25:         }
+26:         return *reinterpret_cast<float *>(&bits);
+27:     } else return value;
+28: }
+29: 
+30: template <typename T>
+31: __aicore__ inline T GridFromFloat(float value) {
+32:     if constexpr (std::is_same<T, half>::value)
+33:         return AscendC::ScalarCast<float, half, AscendC::RoundMode::CAST_RINT>(value);
+34:     else
+35:         return value;
+36: }
+37: 
+38: __aicore__ inline float GridClamp(float value, float low, float high) {
+39:     if (value < low) return low;
+40:     if (value > high) return high;
+41:     return value;
+42: }
+43: 
+44: __aicore__ inline int64_t GridFloor(float value) {
+45:     int64_t out = static_cast<int64_t>(value);
+46:     if (static_cast<float>(out) > value) --out;
+47:     return out;
+48: }
+49: 
+50: __aicore__ inline int64_t GridRoundEven(float value) {
+51:     const int64_t low = GridFloor(value);
+52:     const float fraction = value - static_cast<float>(low);
+53:     if (fraction < 0.5f) return low;
+54:     if (fraction > 0.5f) return low + 1;
+55:     return (low & 1LL) == 0 ? low : low + 1;
+56: }
+57: 
+58: __aicore__ inline float GridReflect(float value, uint64_t size, float sizeFloat, uint32_t alignCorners) {
+59:     if (size <= 1) return 0.0f;
+60:     const float low = alignCorners ? 0.0f : -0.5f;
+61:     const float high = alignCorners ? sizeFloat - 1.0f : sizeFloat - 0.5f;
+62:     const float span = high - low;
+63:     float distance = value - low;
+64:     if (distance < 0.0f) distance = -distance;
+65:     int64_t flips = static_cast<int64_t>(distance / span);
+66:     float extra = distance - static_cast<float>(flips) * span;
+67:     float reflected = (flips & 1LL) == 0 ? extra + low : high - extra;
+68:     return GridClamp(reflected, 0.0f, sizeFloat - 1.0f);
+69: }
+70: 
+71: __aicore__ inline float GridUnnormalize(float coord, float size, uint32_t alignCorners) {
+72:     if (alignCorners) return ((coord + 1.0f) * (size - 1.0f)) * 0.5f;
+73:     return ((coord + 1.0f) * size - 1.0f) * 0.5f;
+74: }
+75: 
+76: __aicore__ inline float GridApplyPadding(float coord, uint64_t size, float sizeFloat,
+77:                                          uint32_t padding, uint32_t alignCorners) {
+78:     if (padding == GRID_BORDER)
+79:         return GridClamp(coord, 0.0f, sizeFloat - 1.0f);
+80:     if (padding == GRID_REFLECTION)
+81:         return GridReflect(coord, size, sizeFloat, alignCorners);
+82:     return coord;
+83: }
+84: 
+85: template <typename T>
+86: __aicore__ inline float GridRead(const __gm__ T *x, uint64_t base,
+87:                                  int64_t z, int64_t y, int64_t xx,
+88:                                  const __gm__ GridSampler3DTilingData *t) {
+89:     if (z < 0 || y < 0 || xx < 0 || static_cast<uint64_t>(z) >= t->d ||
+90:         static_cast<uint64_t>(y) >= t->h || static_cast<uint64_t>(xx) >= t->w)
+91:         return 0.0f;
+92:     const uint64_t offset = base + (static_cast<uint64_t>(z) * t->h +
+93:         static_cast<uint64_t>(y)) * t->w + static_cast<uint64_t>(xx);
+94:     return GridToFloat<T>(x[offset]);
+95: }
+96: 
+97: template <typename T>
+98: __aicore__ inline float GridSampler3DOne(const __gm__ T *x, const __gm__ T *grid,
+99:                                           uint64_t linear,
+100:                                           const __gm__ GridSampler3DTilingData *t) {
+101:         const uint64_t inputSpatial = t->d * t->h * t->w;
+102:         const uint64_t spatial = linear % t->spatialOut;
+103:         const uint64_t nc = linear / t->spatialOut;
+104:         const uint64_t channel = nc % t->c;
+105:         const uint64_t batch = nc / t->c;
+106:         const uint64_t gridBase = (batch * t->spatialOut + spatial) * 3;
+107:         float ix = GridUnnormalize(GridToFloat<T>(grid[gridBase]), t->wFloat, t->alignCorners);
+108:         float iy = GridUnnormalize(GridToFloat<T>(grid[gridBase + 1]), t->hFloat, t->alignCorners);
+109:         float iz = GridUnnormalize(GridToFloat<T>(grid[gridBase + 2]), t->dFloat, t->alignCorners);
+110:         ix = GridApplyPadding(ix, t->w, t->wFloat, t->padding, t->alignCorners);
+111:         iy = GridApplyPadding(iy, t->h, t->hFloat, t->padding, t->alignCorners);
+112:         iz = GridApplyPadding(iz, t->d, t->dFloat, t->padding, t->alignCorners);
+113:         const uint64_t xBase = (batch * t->c + channel) * inputSpatial;
+114:         float result = 0.0f;
+115:         if (t->interpolation == GRID_NEAREST) {
+116:             const int64_t xn = GridRoundEven(ix), yn = GridRoundEven(iy), zn = GridRoundEven(iz);
+117:             result = GridRead<T>(x, xBase, zn, yn, xn, t);
+118:         } else {
+119:             const int64_t x0 = GridFloor(ix), y0 = GridFloor(iy), z0 = GridFloor(iz);
+120:             const int64_t x1 = x0 + 1, y1 = y0 + 1, z1 = z0 + 1;
+121:             const float dx = ix - static_cast<float>(x0);
+122:             const float dy = iy - static_cast<float>(y0);
+123:             const float dz = iz - static_cast<float>(z0);
+124:             const float wx0 = 1.0f - dx, wy0 = 1.0f - dy, wz0 = 1.0f - dz;
+125:             result += GridRead<T>(x, xBase, z0, y0, x0, t) * wx0 * wy0 * wz0;
+126:             result += GridRead<T>(x, xBase, z0, y0, x1, t) * dx  * wy0 * wz0;
+127:             result += GridRead<T>(x, xBase, z0, y1, x0, t) * wx0 * dy  * wz0;
+128:             result += GridRead<T>(x, xBase, z0, y1, x1, t) * dx  * dy  * wz0;
+129:             result += GridRead<T>(x, xBase, z1, y0, x0, t) * wx0 * wy0 * dz;
+130:             result += GridRead<T>(x, xBase, z1, y0, x1, t) * dx  * wy0 * dz;
+131:             result += GridRead<T>(x, xBase, z1, y1, x0, t) * wx0 * dy  * dz;
+132:             result += GridRead<T>(x, xBase, z1, y1, x1, t) * dx  * dy  * dz;
+133:         }
+134:         return result;
+135: }
+136: 
+137: template <typename T>
+138: __aicore__ inline void GridSampler3DScalar(GM_ADDR xAddr, GM_ADDR gridAddr, GM_ADDR yAddr,
+139:                                             const __gm__ GridSampler3DTilingData *t) {
+140:     const __gm__ T *x = reinterpret_cast<const __gm__ T *>(xAddr);
+141:     const __gm__ T *grid = reinterpret_cast<const __gm__ T *>(gridAddr);
+142:     __gm__ T *out = reinterpret_cast<__gm__ T *>(yAddr);
+143:     const uint64_t begin = static_cast<uint64_t>(AscendC::GetBlockIdx()) * t->blockLength;
+144:     uint64_t end = begin + t->blockLength;
+145:     if (end > t->outputNumel) end = t->outputNumel;
+146:     for (uint64_t linear = begin; linear < end; ++linear) {
+147:         out[linear] = GridFromFloat<T>(GridSampler3DOne<T>(x, grid, linear, t));
+148:     }
+149: }
+150: 
+151: class GridSampler3DHalf {
+152: public:
+153:     __aicore__ inline void Init(GM_ADDR xAddr, GM_ADDR gridAddr, GM_ADDR yAddr,
+154:                                 const __gm__ GridSampler3DTilingData *t) {
+155:         t_ = t;
+156:         x_ = reinterpret_cast<const __gm__ half *>(xAddr);
+157:         grid_ = reinterpret_cast<const __gm__ half *>(gridAddr);
+158:         y_.SetGlobalBuffer(reinterpret_cast<__gm__ half *>(yAddr), t->outputNumel);
+159:         pipe_.InitBuffer(fpBuf_, kTile * sizeof(float));
+160:         pipe_.InitBuffer(rawBuf_, kTile * sizeof(half));
+161:     }
+162:     __aicore__ inline void Process() {
+163:         const uint64_t begin = static_cast<uint64_t>(AscendC::GetBlockIdx()) * t_->blockLength;
+164:         uint64_t end = begin + t_->blockLength;
+165:         if (end > t_->outputNumel) end = t_->outputNumel;
+166:         auto fp = fpBuf_.Get<float>();
+167:         auto raw = rawBuf_.Get<half>();
+168:         for (uint64_t offset = begin; offset < end; offset += kTile) {
+169:             const uint32_t count = static_cast<uint32_t>(end - offset < kTile ? end - offset : kTile);
+170:             for (uint32_t i = 0; i < count; ++i)
+171:                 fp.SetValue(i, GridSampler3DOne<half>(x_, grid_, offset + i, t_));
+172:             AscendC::PipeBarrier<PIPE_ALL>();
+173:             AscendC::Cast(raw, fp, AscendC::RoundMode::CAST_NONE, count);
+174:             AscendC::PipeBarrier<PIPE_ALL>();
+175:             AscendC::DataCopyExtParams copy{1, count * static_cast<uint32_t>(sizeof(half)), 0, 0, 0};
+176:             AscendC::DataCopyPad(y_[offset], raw, copy);
+177:             AscendC::PipeBarrier<PIPE_ALL>();
+178:         }
+179:     }
+180: private:
+181:     static constexpr uint32_t kTile = 1024;
+182:     const __gm__ GridSampler3DTilingData *t_;
+183:     const __gm__ half *x_;
+184:     const __gm__ half *grid_;
+185:     AscendC::GlobalTensor<half> y_;
+186:     AscendC::TPipe pipe_;
+187:     AscendC::TBuf<AscendC::TPosition::VECCALC> fpBuf_, rawBuf_;
+188: };
+189: 
+190: extern "C" __global__ __aicore__ __attribute__((aiv)) void grid_sampler_3d_kernel(
+191:     GM_ADDR x, GM_ADDR grid, GM_ADDR y, GM_ADDR tilingAddr) {
+192:     const __gm__ GridSampler3DTilingData *t =
+193:         reinterpret_cast<const __gm__ GridSampler3DTilingData *>(tilingAddr);
+194:     if (t->dtype == GRID_FP16) {
+195:         GridSampler3DHalf op; op.Init(x, grid, y, t); op.Process();
+196:     } else GridSampler3DScalar<float>(x, grid, y, t);
+197: }
+// 原始只读定位 /tmp/aprof-raw15-suoslncl/case-08/op_kernel/grid_sampler_3d_tiling.h:1-47
+1: #pragma once
+2: #include <algorithm>
+3: #include <cstdint>
+4: #include <stdexcept>
+5: #include <vector>
+6: 
+7: enum GridSamplerDType : uint32_t { GRID_FP16 = 0, GRID_FP32 = 1 };
+8: enum GridSamplerInterpolation : uint32_t { GRID_BILINEAR = 0, GRID_NEAREST = 1 };
+9: enum GridSamplerPadding : uint32_t { GRID_ZEROS = 0, GRID_BORDER = 1, GRID_REFLECTION = 2 };
+10: 
+11: struct GridSampler3DTilingData {
+12:     uint64_t n, c, d, h, w;
+13:     uint64_t outD, outH, outW;
+14:     uint64_t spatialOut, outputNumel;
+15:     uint64_t blockLength;
+16:     float dFloat, hFloat, wFloat;
+17:     uint32_t blockNum;
+18:     uint32_t dtype;
+19:     uint32_t interpolation;
+20:     uint32_t padding;
+21:     uint32_t alignCorners;
+22: };
+23: 
+24: inline GridSampler3DTilingData ComputeGridSampler3DTiling(
+25:     const std::vector<uint64_t> &x, const std::vector<uint64_t> &grid,
+26:     uint32_t dtype, uint32_t interpolation, uint32_t padding,
+27:     bool alignCorners, int64_t cores) {
+28:     if (x.size() != 5 || grid.size() != 5 || grid[4] != 3 || x[0] != grid[0])
+29:         throw std::invalid_argument("expected x[N,C,D,H,W], grid[N,Do,Ho,Wo,3] with matching N");
+30:     for (uint64_t v : x) if (v == 0) throw std::invalid_argument("zero dimensions are unsupported");
+31:     for (uint64_t v : grid) if (v == 0) throw std::invalid_argument("zero dimensions are unsupported");
+32:     GridSampler3DTilingData t{};
+33:     t.n=x[0]; t.c=x[1]; t.d=x[2]; t.h=x[3]; t.w=x[4];
+34:     t.dFloat=static_cast<float>(t.d); t.hFloat=static_cast<float>(t.h); t.wFloat=static_cast<float>(t.w);
+35:     t.outD=grid[1]; t.outH=grid[2]; t.outW=grid[3];
+36:     t.spatialOut=t.outD*t.outH*t.outW;
+37:     t.outputNumel=t.n*t.c*t.spatialOut;
+38:     t.dtype=dtype; t.interpolation=interpolation; t.padding=padding;
+39:     t.alignCorners=alignCorners ? 1U : 0U;
+40:     const uint64_t available=static_cast<uint64_t>(std::max<int64_t>(1, cores));
+41:     const uint64_t alignment=dtype == GRID_FP16 ? 32 : 16; // 64-byte GM ownership boundary.
+42:     const uint64_t useful=std::max<uint64_t>(1, (t.outputNumel + alignment - 1) / alignment);
+43:     t.blockNum=static_cast<uint32_t>(std::min<uint64_t>(available, useful));
+44:     const uint64_t raw=(t.outputNumel + t.blockNum - 1) / t.blockNum;
+45:     t.blockLength=((raw + alignment - 1) / alignment) * alignment;
+46:     return t;
+47: }

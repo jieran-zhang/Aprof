@@ -1,0 +1,243 @@
+外部语义Maximum，float32且有限非NaN；入口当前用原始KernelMaximumSame<float>，Nelem=1048576,tileElements=4096，均匀互斥连续块，无跨核输出重叠，块尾完整处理。双子例输入各读一次，无输入跨调用复用；a：输出仅D2H一次，不再被设备kernel读；b：输出随即由一个完整顺序读的设备kernel消费。未提供真实cache命中/管理周期数据。
+已有计划文档只声明：plan_id=p_same；范围sameShape float32；每core连续区间唯一写者；workspace=0；a/b各输入单槽queue,y单槽queue；资源3*tileElements*4字节；支持所有整块及尾块。它没有覆盖broadcast/int64，也没有双输入slot或显式event的生命周期证明。后续仍要支持通用fallback。
+// 原始只读定位 /tmp/aprof-raw15-suoslncl/case-12/op_kernel/maximum_kernel.asc:1-183
+1: #pragma once
+2: #include <type_traits>
+3: #include "kernel_operator.h"
+4: #include "maximum_tiling.h"
+5: 
+6: template <typename T>
+7: class KernelMaximumSame {
+8: public:
+9:     __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+10:                                 const __gm__ MaximumTilingData *t) {
+11:         t_ = t;
+12:         const uint64_t offset = static_cast<uint64_t>(AscendC::GetBlockIdx()) * t_->blockLength;
+13:         const uint64_t remain = t_->totalLength > offset ? t_->totalLength - offset : 0;
+14:         length_ = remain < t_->blockLength ? remain : t_->blockLength;
+15:         x1_.SetGlobalBuffer((__gm__ T *)x1 + offset, length_);
+16:         x2_.SetGlobalBuffer((__gm__ T *)x2 + offset, length_);
+17:         y_.SetGlobalBuffer((__gm__ T *)y + offset, length_);
+18:         const uint32_t count = t_->tileElements;
+19:         pipe_.InitBuffer(x1Q_, 1, count * sizeof(T));
+20:         pipe_.InitBuffer(x2Q_, 1, count * sizeof(T));
+21:         pipe_.InitBuffer(yQ_, 1, count * sizeof(T));
+22:         if constexpr (std::is_same<T, bfloat16_t>::value || std::is_same<T, int8_t>::value) {
+23:             pipe_.InitBuffer(tmp1_, count * sizeof(float));
+24:             pipe_.InitBuffer(tmp2_, count * sizeof(float));
+25:             pipe_.InitBuffer(tmpOut_, count * sizeof(float));
+26:             if constexpr (std::is_same<T, int8_t>::value)
+27:                 pipe_.InitBuffer(tmpHalf_, count * sizeof(half));
+28:         }
+29:     }
+30: 
+31:     __aicore__ inline void Process() {
+32:         for (uint64_t off = 0; off < length_; off += t_->tileElements) {
+33:             const uint32_t count = static_cast<uint32_t>(
+34:                 (length_ - off) < t_->tileElements ? length_ - off : t_->tileElements);
+35:             auto a = x1Q_.AllocTensor<T>();
+36:             auto b = x2Q_.AllocTensor<T>();
+37:             AscendC::DataCopyExtParams p{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
+38:             AscendC::DataCopyPadExtParams<T> pad{false, 0, 0, 0};
+39:             AscendC::DataCopyPad(a, x1_[off], p, pad);
+40:             AscendC::DataCopyPad(b, x2_[off], p, pad);
+41:             x1Q_.EnQue(a); x2Q_.EnQue(b);
+42:             a = x1Q_.DeQue<T>(); b = x2Q_.DeQue<T>();
+43:             auto out = yQ_.AllocTensor<T>();
+44:             if constexpr (std::is_same<T, bfloat16_t>::value) {
+45:                 auto af = tmp1_.Get<float>(); auto bf = tmp2_.Get<float>(); auto of = tmpOut_.Get<float>();
+46:                 AscendC::Cast(af, a, AscendC::RoundMode::CAST_NONE, count);
+47:                 AscendC::Cast(bf, b, AscendC::RoundMode::CAST_NONE, count);
+48:                 AscendC::Max(of, af, bf, count);
+49:                 AscendC::Cast(out, of, AscendC::RoundMode::CAST_RINT, count);
+50:             } else if constexpr (std::is_same<T, int8_t>::value) {
+51:                 auto ah = tmpHalf_.Get<half>(); auto af = tmp1_.Get<float>();
+52:                 auto bf = tmp2_.Get<float>(); auto of = tmpOut_.Get<float>();
+53:                 AscendC::Cast(ah, a, AscendC::RoundMode::CAST_NONE, count);
+54:                 AscendC::Cast(af, ah, AscendC::RoundMode::CAST_NONE, count);
+55:                 AscendC::Cast(ah, b, AscendC::RoundMode::CAST_NONE, count);
+56:                 AscendC::Cast(bf, ah, AscendC::RoundMode::CAST_NONE, count);
+57:                 AscendC::Max(of, af, bf, count);
+58:                 AscendC::Cast(ah, of, AscendC::RoundMode::CAST_RINT, count);
+59:                 AscendC::Cast(out, ah, AscendC::RoundMode::CAST_RINT, count);
+60:             } else {
+61:                 AscendC::Max(out, a, b, count);
+62:             }
+63:             yQ_.EnQue(out); x2Q_.FreeTensor(b); x1Q_.FreeTensor(a);
+64:             out = yQ_.DeQue<T>();
+65:             AscendC::DataCopyPad(y_[off], out, p);
+66:             yQ_.FreeTensor(out);
+67:         }
+68:     }
+69: private:
+70:     AscendC::TPipe pipe_;
+71:     const __gm__ MaximumTilingData *t_;
+72:     uint64_t length_;
+73:     AscendC::GlobalTensor<T> x1_, x2_, y_;
+74:     AscendC::TQue<AscendC::TPosition::VECIN, 1> x1Q_, x2Q_;
+75:     AscendC::TQue<AscendC::TPosition::VECOUT, 1> yQ_;
+76:     AscendC::TBuf<AscendC::TPosition::VECCALC> tmp1_, tmp2_, tmpOut_, tmpHalf_;
+77: };
+78: 
+79: // FP16 broadcast cases are processed as contiguous innermost-axis segments.
+80: // This keeps all half comparisons in the vector unit; dav-2201 does not allow
+81: // half scalar arithmetic in an aicore function.
+82: class KernelMaximumHalfLastAxisBroadcast {
+83: public:
+84:     __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+85:                                 const __gm__ MaximumTilingData *t) {
+86:         t_ = t;
+87:         begin_ = static_cast<uint64_t>(AscendC::GetBlockIdx()) * t_->blockLength;
+88:         end_ = begin_ + t_->blockLength;
+89:         if (end_ > t_->totalLength) end_ = t_->totalLength;
+90:         row_ = t_->outShape[t_->rank - 1];
+91:         x1_.SetGlobalBuffer((__gm__ half *)x1, t_->totalLength);
+92:         x2_.SetGlobalBuffer((__gm__ half *)x2, row_);
+93:         y_.SetGlobalBuffer((__gm__ half *)y, t_->totalLength);
+94:         const uint32_t count = t_->tileElements;
+95:         pipe_.InitBuffer(x1Q_, 1, count * sizeof(half));
+96:         pipe_.InitBuffer(x2Q_, 1, count * sizeof(half));
+97:         pipe_.InitBuffer(yQ_, 1, count * sizeof(half));
+98:     }
+99:     __aicore__ inline void Process() {
+100:         for (uint64_t off = begin_; off < end_;) {
+101:             uint64_t count64 = end_ - off;
+102:             if (count64 > t_->tileElements) count64 = t_->tileElements;
+103:             const uint64_t rowRemain = row_ - (off % row_);
+104:             if (count64 > rowRemain) count64 = rowRemain;
+105:             const uint32_t count = static_cast<uint32_t>(count64);
+106:             auto a = x1Q_.AllocTensor<half>(); auto b = x2Q_.AllocTensor<half>();
+107:             AscendC::DataCopyExtParams p{1, static_cast<uint32_t>(count * sizeof(half)), 0, 0, 0};
+108:             AscendC::DataCopyPadExtParams<half> pad{false, 0, 0, 0};
+109:             AscendC::DataCopyPad(a, x1_[off], p, pad);
+110:             AscendC::DataCopyPad(b, x2_[off % row_], p, pad);
+111:             x1Q_.EnQue(a); x2Q_.EnQue(b); a = x1Q_.DeQue<half>(); b = x2Q_.DeQue<half>();
+112:             auto out = yQ_.AllocTensor<half>(); AscendC::Max(out, a, b, count); yQ_.EnQue(out);
+113:             x2Q_.FreeTensor(b); x1Q_.FreeTensor(a); out = yQ_.DeQue<half>();
+114:             AscendC::DataCopyPad(y_[off], out, p); yQ_.FreeTensor(out); off += count;
+115:         }
+116:     }
+117: private:
+118:     AscendC::TPipe pipe_; const __gm__ MaximumTilingData *t_;
+119:     uint64_t begin_, end_, row_;
+120:     AscendC::GlobalTensor<half> x1_, x2_, y_;
+121:     AscendC::TQue<AscendC::TPosition::VECIN, 1> x1Q_, x2Q_;
+122:     AscendC::TQue<AscendC::TPosition::VECOUT, 1> yQ_;
+123: };
+124: 
+125: template <typename T>
+126: __aicore__ inline void MaximumScalar(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+127:                                      const __gm__ MaximumTilingData *t) {
+128:     __gm__ T *a = reinterpret_cast<__gm__ T *>(x1);
+129:     __gm__ T *b = reinterpret_cast<__gm__ T *>(x2);
+130:     __gm__ T *out = reinterpret_cast<__gm__ T *>(y);
+131:     const uint64_t begin = static_cast<uint64_t>(AscendC::GetBlockIdx()) * t->blockLength;
+132:     uint64_t end = begin + t->blockLength;
+133:     if (end > t->totalLength) end = t->totalLength;
+134:     for (uint64_t linear = begin; linear < end; ++linear) {
+135:         uint64_t rem = linear, ai = 0, bi = 0;
+136:         for (int dim = static_cast<int>(t->rank) - 1; dim >= 0; --dim) {
+137:             const uint64_t coord = rem % t->outShape[dim];
+138:             rem /= t->outShape[dim];
+139:             ai += coord * t->x1Stride[dim];
+140:             bi += coord * t->x2Stride[dim];
+141:         }
+142:         const T av = a[ai], bv = b[bi];
+143:         if constexpr (std::is_same<T, half>::value || std::is_same<T, bfloat16_t>::value) {
+144:             const float af = AscendC::ScalarCast<T, float, AscendC::RoundMode::CAST_NONE>(av);
+145:             const float bf = AscendC::ScalarCast<T, float, AscendC::RoundMode::CAST_NONE>(bv);
+146:             out[linear] = af > bf ? av : bv;
+147:         } else {
+148:             out[linear] = av > bv ? av : bv;
+149:         }
+150:     }
+151: }
+152: 
+153: template <typename T>
+154: __aicore__ inline void DispatchMaximum(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+155:                                        const __gm__ MaximumTilingData *t) {
+156:     if constexpr (std::is_same<T, int64_t>::value) {
+157:         MaximumScalar<T>(x1, x2, y, t);
+158:     } else if constexpr (std::is_same<T, half>::value) {
+159:         if (t->sameShape) {
+160:             KernelMaximumSame<T> op; op.Init(x1, x2, y, t); op.Process();
+161:         } else {
+162:             KernelMaximumHalfLastAxisBroadcast op; op.Init(x1, x2, y, t); op.Process();
+163:         }
+164:     } else {
+165:         if (t->sameShape) {
+166:             KernelMaximumSame<T> op; op.Init(x1, x2, y, t); op.Process();
+167:         } else {
+168:             MaximumScalar<T>(x1, x2, y, t);
+169:         }
+170:     }
+171: }
+172: 
+173: extern "C" __global__ __aicore__ void maximum_kernel(
+174:     GM_ADDR x1, GM_ADDR x2, GM_ADDR y, GM_ADDR tilingAddr) {
+175:     const __gm__ MaximumTilingData *t =
+176:         reinterpret_cast<const __gm__ MaximumTilingData *>(tilingAddr);
+177:     if (t->dtype == MAX_FLOAT16) DispatchMaximum<half>(x1, x2, y, t);
+178:     else if (t->dtype == MAX_FLOAT32) DispatchMaximum<float>(x1, x2, y, t);
+179:     else if (t->dtype == MAX_BFLOAT16) DispatchMaximum<bfloat16_t>(x1, x2, y, t);
+180:     else if (t->dtype == MAX_INT8) DispatchMaximum<int8_t>(x1, x2, y, t);
+181:     else if (t->dtype == MAX_INT32) DispatchMaximum<int32_t>(x1, x2, y, t);
+182:     else DispatchMaximum<int64_t>(x1, x2, y, t);
+183: }
+// 原始只读定位 /tmp/aprof-raw15-suoslncl/case-12/op_kernel/maximum_tiling.h:1-56
+1: #pragma once
+2: #include <algorithm>
+3: #include <cstdint>
+4: #include <stdexcept>
+5: #include <vector>
+6: 
+7: enum MaximumDType : uint32_t {
+8:     MAX_FLOAT16 = 0,
+9:     MAX_FLOAT32 = 1,
+10:     MAX_BFLOAT16 = 2,
+11:     MAX_INT8 = 3,
+12:     MAX_INT32 = 4,
+13:     MAX_INT64 = 5,
+14: };
+15: 
+16: struct MaximumTilingData {
+17:     uint64_t totalLength;
+18:     uint64_t blockLength;
+19:     uint64_t outShape[8];
+20:     uint64_t x1Stride[8];
+21:     uint64_t x2Stride[8];
+22:     uint32_t blockNum;
+23:     uint32_t tileElements;
+24:     uint32_t dtype;
+25:     uint32_t rank;
+26:     uint32_t sameShape;
+27: };
+28: 
+29: inline MaximumTilingData ComputeMaximumTiling(
+30:     const std::vector<uint64_t> &x1Shape, const std::vector<uint64_t> &x2Shape,
+31:     uint32_t dtype, int64_t cores) {
+32:     if (x1Shape.empty() || x2Shape.empty() || x1Shape.size() > 8 || x2Shape.size() > 8)
+33:         throw std::invalid_argument("rank must be in [1, 8]");
+34:     MaximumTilingData t{};
+35:     t.rank = static_cast<uint32_t>(std::max(x1Shape.size(), x2Shape.size()));
+36:     t.dtype = dtype;
+37:     t.tileElements = 4096;
+38:     t.sameShape = x1Shape == x2Shape;
+39:     std::vector<uint64_t> a(t.rank, 1), b(t.rank, 1);
+40:     std::copy(x1Shape.begin(), x1Shape.end(), a.begin() + t.rank - x1Shape.size());
+41:     std::copy(x2Shape.begin(), x2Shape.end(), b.begin() + t.rank - x2Shape.size());
+42:     uint64_t aStride = 1, bStride = 1, total = 1;
+43:     for (int i = static_cast<int>(t.rank) - 1; i >= 0; --i) {
+44:         if (a[i] != b[i] && a[i] != 1 && b[i] != 1)
+45:             throw std::invalid_argument("incompatible broadcast shapes");
+46:         t.outShape[i] = std::max(a[i], b[i]);
+47:         t.x1Stride[i] = a[i] == 1 ? 0 : aStride;
+48:         t.x2Stride[i] = b[i] == 1 ? 0 : bStride;
+49:         aStride *= a[i]; bStride *= b[i]; total *= t.outShape[i];
+50:     }
+51:     t.totalLength = total;
+52:     const uint64_t useful = std::max<uint64_t>(1, (total + 4095) / 4096);
+53:     t.blockNum = static_cast<uint32_t>(std::max<int64_t>(1, std::min<int64_t>(cores, useful)));
+54:     t.blockLength = (total + t.blockNum - 1) / t.blockNum;
+55:     return t;
+56: }

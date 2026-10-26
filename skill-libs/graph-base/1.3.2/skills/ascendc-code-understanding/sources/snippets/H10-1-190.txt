@@ -1,0 +1,190 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/*!
+ * \file kernel_operator_data_copy_impl.h
+ * \brief
+ */
+#if !defined(__ASCENDC_INCLUDE_INTERNAL_HEADERS__)
+#pragma message( \
+    "impl/basic_api/dav_c220/kernel_operator_data_copy_impl.h is an internal header file and must not be used directly. Functions or variables defined in this file may be removed in the future. Please use \"#include \"basic_api/kernel_tensor.h\"\" and use public functions or variables defined in interface headers files.")
+#define __ASCENDC_INCLUDE_INTERNAL_HEADERS__
+#define __UNDEF_ASCENDC_INCLUDE_INTERNAL_HEADERS_KERNEL_OPERATOR_DATA_COPY_IMPL_H__
+#endif
+#ifndef ASCENDC_MODULE_OPERATOR_DATA_COPY_IMPL_H
+#define ASCENDC_MODULE_OPERATOR_DATA_COPY_IMPL_H
+#include "kernel_operator_scm_data_copy_impl.h"
+#include "../../../include/basic_api/kernel_common.h"
+#include "../kernel_process_lock.h"
+namespace AscendC {
+__aicore__ inline void ValidateUbL1Address(uint64_t absUbAddr, uint64_t absL1Addr, uint32_t tensorSize)
+{
+    ASCENDC_ASSERT((absUbAddr < TOTAL_UB_SIZE), {
+        KERNEL_LOG(KERNEL_ERROR, "absUbAddr is 0x%lx, which should be in range of [0, %u)", absUbAddr, TOTAL_UB_SIZE);
+    });
+    ASCENDC_ASSERT((static_cast<uint64_t>(absUbAddr + tensorSize) < TOTAL_UB_SIZE), {
+        KERNEL_LOG(
+            KERNEL_ERROR, "absUbAddr is 0x%lx, tensorSize is %u, which exceeds the limit of ub %d)", absUbAddr,
+            tensorSize, TOTAL_UB_SIZE);
+    });
+    ASCENDC_ASSERT((absL1Addr < TOTAL_L1_SIZE), {
+        KERNEL_LOG(KERNEL_ERROR, "absL1Addr is 0x%lx, which should be in range [0, %u)", absL1Addr, TOTAL_L1_SIZE);
+    });
+    ASCENDC_ASSERT((static_cast<uint64_t>(absL1Addr + tensorSize) < TOTAL_L1_SIZE), {
+        KERNEL_LOG(
+            KERNEL_ERROR, "absL1Addr is 0x%lx, tensorSize is %u, which exceeds the limit of l1 %u)", absL1Addr,
+            tensorSize, TOTAL_L1_SIZE);
+    });
+}
+
+template <TPosition pos>
+__aicore__ inline uint64_t TransUBAddr(uint64_t addr);
+/* **************************************************************************************************
+ * DataCopy                                             *
+ * ************************************************************************************************* */
+template <typename T>
+__aicore__ inline void DataCopyGM2UBImpl(__ubuf__ T* dst, __gm__ T* src, const DataCopyParams& intriParams)
+{
+    if ASCEND_IS_AIV {
+        ASCENDC_DEBUG_ASSERT(
+            (TransUBAddr<TPosition::VECIN>(reinterpret_cast<uint64_t>(dst)) % ONE_BLK_SIZE == 0),
+            KERNEL_LOG_INTERNAL(KERNEL_ERROR, "dst address should be 32B aligned \n"));
+        if constexpr (g_gm_overflow_check) {
+            __gm__ uint8_t* workSpace = GetSysWorkSpacePtr();
+            AscendCUtils::CheckGmMemOverflowNormal(src, workSpace, true, false, intriParams);
+        }
+        copy_gm_to_ubuf(
+            (__ubuf__ void*)dst, (__gm__ void*)src, 0, intriParams.blockCount, intriParams.blockLen,
+            intriParams.srcStride, intriParams.dstStride);
+    }
+}
+
+template <typename T>
+__aicore__ inline void DataCopyGM2L1Impl(__cbuf__ T* dst, __gm__ T* src, const DataCopyParams& intriParams)
+{
+    if ASCEND_IS_AIC {
+        ASCENDC_CHECK_TENSOR_PTR_ALIGN(
+            dst, TPosition::A1, ONE_BLK_SIZE, "dstLocal", "DataCopy from GM to L1 Buffer(A1/B1)");
+        if constexpr (g_gm_overflow_check) {
+            __gm__ uint8_t* workSpace = GetSysWorkSpacePtr();
+            AscendCUtils::CheckGmMemOverflowNormal(src, workSpace, true, false, intriParams);
+        }
+        copy_gm_to_cbuf(
+            (__cbuf__ void*)dst, (__gm__ void*)src, (int8_t)0, static_cast<uint16_t>(intriParams.blockCount),
+            static_cast<uint16_t>(intriParams.blockLen), static_cast<uint16_t>(intriParams.srcStride),
+            static_cast<uint16_t>(intriParams.dstStride), (pad_t)0);
+    } else if ASCEND_IS_AIV { // Add for TSCM AIV: just send the message to aic;
+
+#if ASCENDC_CPU_DEBUG
+        uint8_t* tscmCpuBaseAddr = GetTPipePtr()->GetBaseAddr(int8_t(TPosition::TSCM));
+        uint64_t l1Addr = (uint8_t*)dst - tscmCpuBaseAddr;
+        ScmDataCopyMsg((__cbuf__ void*)l1Addr, (__gm__ void*)src, intriParams, -1);
+#else
+        // scm data copy will call kfc msg, must have kfc server
+        // this macro is used to infer pure cube channel op
+#ifndef __NO_KFC_SERVER__
+        ScmDataCopyMsg((__cbuf__ void*)dst, (__gm__ void*)src, intriParams, -1);
+#endif
+#endif
+    }
+}
+
+template <typename T>
+__aicore__ inline void DataCopyUB2GMImpl(__gm__ T* dst, __ubuf__ T* src, const DataCopyParams& intriParams)
+{
+    if ASCEND_IS_AIV {
+        ASCENDC_ASSERT((dst != nullptr), { KERNEL_LOG(KERNEL_ERROR, "dst ptr can not be nullptr"); });
+        ASCENDC_ASSERT((src != nullptr), { KERNEL_LOG(KERNEL_ERROR, "src ptr can not be nullptr"); });
+        ASCENDC_DEBUG_ASSERT(
+            (TransUBAddr<TPosition::VECIN>(reinterpret_cast<uint64_t>(src)) % ONE_BLK_SIZE == 0),
+            KERNEL_LOG_INTERNAL(KERNEL_ERROR, "src address should be 32B aligned \n"));
+
+        if constexpr (g_gm_overflow_check) {
+            __gm__ uint8_t* workSpace = GetSysWorkSpacePtr();
+            AscendCUtils::CheckGmMemOverflowNormal(dst, workSpace, false, false, intriParams);
+        }
+        copy_ubuf_to_gm(
+            (__gm__ void*)dst, (__ubuf__ void*)src, 0, intriParams.blockCount, intriParams.blockLen,
+            intriParams.srcStride, intriParams.dstStride);
+    }
+}
+
+template <typename T>
+__aicore__ inline void DataCopyUB2UBImpl(__ubuf__ T* dst, __ubuf__ T* src, const DataCopyParams& intriParams)
+{
+    if ASCEND_IS_AIV {
+        ASCENDC_DEBUG_ASSERT(
+            (TransUBAddr<TPosition::VECIN>(reinterpret_cast<uint64_t>(src)) % ONE_BLK_SIZE == 0),
+            KERNEL_LOG_INTERNAL(KERNEL_ERROR, "src address should be 32B aligned \n"));
+        ASCENDC_DEBUG_ASSERT(
+            (TransUBAddr<TPosition::VECIN>(reinterpret_cast<uint64_t>(dst)) % ONE_BLK_SIZE == 0),
+            KERNEL_LOG_INTERNAL(KERNEL_ERROR, "dst address should be 32B aligned \n"));
+        copy_ubuf_to_ubuf(
+            (__ubuf__ void*)dst, (__ubuf__ void*)src, 0, intriParams.blockCount, intriParams.blockLen,
+            intriParams.srcStride, intriParams.dstStride);
+    }
+}
+
+template <typename T>
+__aicore__ inline void DataCopyUB2L1Impl(__cbuf__ T* dst, __ubuf__ T* src, const DataCopyParams& intriParams)
+{
+    // Add for TSCM AIV: Copy buffer into workspace, and send message to AIC
+    ASCENDC_ASSERT((GetTPipePtr() != nullptr), { KERNEL_LOG(KERNEL_ERROR, "tpipe ptr can not be nullptr"); });
+    ASCENDC_ASSERT((dst != nullptr), { KERNEL_LOG(KERNEL_ERROR, "dst ptr can not be nullptr"); });
+    ASCENDC_ASSERT((src != nullptr), { KERNEL_LOG(KERNEL_ERROR, "src ptr can not be nullptr"); });
+    if ASCEND_IS_AIV {
+        ASCENDC_DEBUG_ASSERT(
+            (GetKfcClient() != nullptr),
+            KERNEL_LOG_INTERNAL(
+                KERNEL_ERROR,
+                "DataCopy from UB to L1 is software-emulated on this device and works with Matmul API. Use "
+                "REGISTER_MATMUL_OBJ to enable Matmul API first.\n"));
+        ASCENDC_DEBUG_ASSERT(
+            (TransUBAddr<TPosition::VECIN>(reinterpret_cast<uint64_t>(src)) % ONE_BLK_SIZE == 0),
+            KERNEL_LOG_INTERNAL(KERNEL_ERROR, "src address should be 32B aligned \n"));
+        // 1.获取GM的地址
+        uint32_t tensorSize = intriParams.blockCount * intriParams.blockLen * 32;
+        int32_t ubAddr = -1;
+#if ASCENDC_CPU_DEBUG
+        uint64_t absSrc = (uint8_t*)src - (uint8_t*)(GetTPipePtr()->GetBaseAddr((int8_t)TPosition::VECIN));
+        ASCENDC_ASSERT((static_cast<uint64_t>(absSrc) >= 0 && static_cast<uint64_t>(absSrc) < TOTAL_UB_SIZE), {
+            KERNEL_LOG(KERNEL_ERROR, "abs src is 0x%lx, which should be in range of [0, %u)", absSrc, TOTAL_UB_SIZE);
+        });
+        GM_ADDR gmAddr = (GetKfcClient()->ubStart) + static_cast<uint64_t>(absSrc);
+#else
+        GM_ADDR gmAddr = (GetKfcClient()->AllocUB(tensorSize, ubAddr));
+#endif
+        event_t eventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+        SetFlag<HardEvent::V_MTE3>(eventID);
+        WaitFlag<HardEvent::V_MTE3>(eventID);
+        // 2.进行对等拷贝ub->GM
+        copy_ubuf_to_gm(
+            (__gm__ void*)gmAddr, (__ubuf__ void*)src, 0, intriParams.blockCount, intriParams.blockLen,
+            intriParams.srcStride, intriParams.srcStride);
+
+        // 3.发送消息,从GM拷贝至L1
+#if ASCENDC_CPU_DEBUG
+        uint8_t* aicBaseTSCMAddr = GetTPipePtr()->GetBaseAddr(int8_t(TPosition::TSCM));
+        ASCENDC_ASSERT(
+            (aicBaseTSCMAddr != nullptr), { KERNEL_LOG(KERNEL_ERROR, "aicBaseTSCMAddr can not be nullptr"); });
+        uint64_t l1AddrDst = (uint8_t*)dst - (uint8_t*)aicBaseTSCMAddr;
+        ASCENDC_ASSERT((l1AddrDst < TOTAL_L1_SIZE), {
+            KERNEL_LOG(
+                KERNEL_ERROR, "l1AddrDst is 0x%lx, which should be in range of [0, %u)", l1AddrDst, TOTAL_L1_SIZE);
+        });
+        ScmDataCopyMsg((__cbuf__ void*)l1AddrDst, (__gm__ void*)gmAddr, intriParams, ubAddr);
+#else
+#ifndef __NO_KFC_SERVER__
+        ScmDataCopyMsg((__cbuf__ void*)dst, (__gm__ void*)gmAddr, intriParams, ubAddr);
+#endif
+#endif
+    }
+}
+

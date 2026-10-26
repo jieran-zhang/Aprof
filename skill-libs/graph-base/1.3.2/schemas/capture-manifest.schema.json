@@ -1,0 +1,222 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aprof.local/schemas/capture-manifest.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "backend": {
+      "enum": [
+        "msprof",
+        "npu-compute"
+      ]
+    },
+    "collector_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "protocol_version": {
+      "const": "independent_capture_v1"
+    },
+    "role": {
+      "enum": [
+        "baseline",
+        "candidate"
+      ]
+    },
+    "case_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "kernel": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workload_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "source_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "binary_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "hardware_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "executable_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "executable_hash",
+        "version"
+      ]
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "warmups": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "repeats": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sections": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "warmups",
+        "repeats",
+        "sections"
+      ]
+    },
+    "warmup_runs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "argv": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          },
+          "exit_code": {
+            "type": "integer"
+          },
+          "log_hash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "argv",
+          "exit_code",
+          "log_hash"
+        ]
+      }
+    },
+    "captures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "argv": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          },
+          "exit_code": {
+            "type": "integer"
+          },
+          "log_hash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "capture_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "collection": {
+            "type": "string",
+            "minLength": 1
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "artifact_hash": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "format": {
+                  "enum": [
+                    "csv",
+                    "jsonl",
+                    "json",
+                    "binary"
+                  ]
+                },
+                "kernel": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "path",
+                "artifact_hash",
+                "format",
+                "kernel"
+              ]
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "argv",
+          "exit_code",
+          "log_hash",
+          "capture_id",
+          "collection",
+          "files"
+        ]
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "schema_version",
+    "backend",
+    "collector_hash",
+    "protocol_version",
+    "role",
+    "case_id",
+    "kernel",
+    "workload_hash",
+    "source_hash",
+    "binary_hash",
+    "hardware_hash",
+    "tool",
+    "policy",
+    "warmup_runs",
+    "captures"
+  ]
+}

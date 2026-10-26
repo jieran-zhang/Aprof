@@ -1,0 +1,257 @@
+{
+  "package": "graph-base/1.3.0",
+  "status": "draft_complete_cpu_and_autonomous_activation_checked",
+  "checked_at_utc": "2026-10-20T16:32:08.271100+00:00",
+  "runtime_version": "0.5.0",
+  "knowledge_versions": {
+    "diagnosis": "v0004",
+    "parallel-planning": "v0002",
+    "optimization": "v0004"
+  },
+  "routing_config_version": "v0003",
+  "fixes": {
+    "K": "L2方法增加同实例缓存允许条件，false/unknown不能就绪或实施，UB驻留独立。",
+    "Problem_expansion": "明确请求按需展开完整正文及来源；精确身份与回放；候选比较/排除/Action前阅读规则。",
+    "L": "旧记录不改；新后继保持时间分解及logical/HBM分层；数值/依赖复算并拒绝格式或中间算术错误。"
+  },
+  "autonomous_runs": {
+    "agents": 3,
+    "raw_input_cases": 7,
+    "target_Problem_or_Action_supplied": false,
+    "previous_solutions_or_test_reports_supplied": false,
+    "problem_directory_size_each": 28,
+    "expanded_Problem_counts": [
+      3,
+      4,
+      4,
+      3,
+      5,
+      4,
+      4
+    ],
+    "chain_ready": 3,
+    "chain_conditional": 4,
+    "all_final_chains_replayed": true,
+    "all_final_context_expansions_replayed": true,
+    "all_final_O_routes_identical_on_replay": true,
+    "reading_identities_checked": true,
+    "actual_semantic_reading_recorded_by_agents": true,
+    "reading_is_not_inferred_from_runtime_whole_graph_load": true,
+    "report": "workflows/references/autonomous-diagnosis-1.3.0.md",
+    "replay": "workflows/references/autonomous-diagnosis-reviews/replay.json",
+    "readings": "workflows/references/autonomous-diagnosis-reviews/readings.json"
+  },
+  "cpu": {
+    "tests": 262,
+    "passed": 261,
+    "skipped": 1,
+    "failures": 0,
+    "errors": 0,
+    "method": "完整CPU回归；最终观测数值模块增加格式及溢出反例后定向重跑。按模块和用例名取最终结果去重，不将重复运行累计为新增用例。",
+    "runs": [
+      {
+        "run": "cpu-tests.xml",
+        "counts": {
+          "passed": 234,
+          "skipped": 1
+        },
+        "seconds": "755.679",
+        "sha256": "sha256:a4fd45eba53535921b79b681f71e9cf80ff1b8d7722f63df2ae28e473a7fee77"
+      },
+      {
+        "run": "observation-final.xml",
+        "counts": {
+          "passed": 34
+        },
+        "seconds": "0.106",
+        "sha256": "sha256:40087c05644d9d3e39fb182c06f8348c8c6feeeb6af7dfa2f90619daf49e97ca"
+      },
+      {
+        "run": "final-junit.xml",
+        "counts": {
+          "passed": 52
+        },
+        "seconds": "0.259",
+        "sha256": "sha256:4dd25b80382ff7e7ddde14e7a6bbf12c19746f61ed9e495ba1b9b84ee3e8655e"
+      }
+    ],
+    "by_module": {
+      "tests.test_input_reuse_v130": {
+        "passed": 20
+      },
+      "tests.test_knowledge": {
+        "passed": 27
+      },
+      "tests.test_knowledge_v130": {
+        "passed": 7
+      },
+      "tests.test_workflow_package": {
+        "passed": 5
+      },
+      "tests.test_local_archive": {
+        "passed": 21,
+        "skipped": 1
+      },
+      "tests.test_diagnosis_v4": {
+        "passed": 50
+      },
+      "tests.test_action_handoff_v3": {
+        "passed": 45
+      },
+      "tests.test_diagnosis_integration_v130": {
+        "passed": 3
+      },
+      "tests.test_cache_compatibility_v130": {
+        "passed": 10
+      },
+      "tests.test_problem_expansion_v130": {
+        "passed": 21
+      },
+      "tests.test_observation_checks_v130": {
+        "passed": 52
+      }
+    },
+    "skip_reason": "可选开发仓库的旧归档分派入口缺失；技能包不依赖该入口。",
+    "hardware": false
+  },
+  "independent_review": {
+    "status": "no_remaining_blocker_in_reviewed_scope",
+    "scope": "三项修复的源码、固定字节、CPU边界负例及已有合成展开/交接回放；非全图正确性或硬件性能证明。",
+    "summary": {
+      "core_runtime_unchanged": 3,
+      "old_schemas_unchanged": 40,
+      "old_snapshot_files_unchanged": 22,
+      "l2_states_checked": 4,
+      "expansion_negative_checks": 8,
+      "final_expansions_replayed": 10,
+      "C1_C2_chains_replayed": 5,
+      "numeric_cases_replayed": 9,
+      "numeric_type_matrix_cases": 252,
+      "remaining_blockers": 0
+    },
+    "observation_module_sha256": "sha256:bb7ba3c450757dec8fa4564a465591b250c43438823eef4e18285a8657e30cb7",
+    "private_report_sha256": "sha256:6791a405e06d178725e253446cc22e66d9a92cca9d869c9c4677084d5b253a6f",
+    "resolved_findings": [
+      "计数kind类型错误未捕获",
+      "单位换算、求和与比值中间溢出或下溢",
+      "重复同口径带宽reference静默覆盖"
+    ],
+    "original_negative_probes_replayed": true,
+    "new_L_recomputed_object_equals_frozen_derivations": true,
+    "old_and_new_L_artifact_hashes_verified": 4,
+    "hardware": false,
+    "sdk_compilation": false,
+    "C3_created": false,
+    "limits": [
+      "CPU only; no hardware, SDK compilation, performance timing or network",
+      "No full-suite rerun",
+      "No C3 produced or implementation authorization",
+      "Synthetic evidence remains synthetic; no case_support or causality claim"
+    ]
+  },
+  "standalone": {
+    "status": "passed",
+    "complete_package_copy": true,
+    "negative_guards": {
+      "original_worktree": true,
+      "tmp": true,
+      "original_task": true,
+      "network": true
+    },
+    "knowledge": {
+      "parallel-planning": {
+        "version": "v0002",
+        "rebuild_identical": true
+      },
+      "optimization": {
+        "version": "v0004",
+        "rebuild_identical": true
+      },
+      "diagnosis": {
+        "version": "v0004",
+        "verify": true
+      }
+    },
+    "cases": [
+      {
+        "task_id": "03",
+        "chain": "ready",
+        "Problem_bodies_replayed": [
+          "problem.insufficient_input_reuse",
+          "problem.memory_bandwidth_saturation",
+          "problem.tiny_transfer_setup_amplification",
+          "problem.cache_policy_mismatch"
+        ],
+        "O_route_identical": true,
+        "l2": {
+          "status": "needs_evidence",
+          "missing": [
+            "constraint.l2_cache_enabled"
+          ]
+        },
+        "observation": "valid",
+        "C3": false
+      },
+      {
+        "task_id": "04",
+        "chain": "ready",
+        "Problem_bodies_replayed": [
+          "problem.insufficient_input_reuse",
+          "problem.memory_bandwidth_saturation",
+          "problem.cache_policy_mismatch"
+        ],
+        "O_route_identical": true,
+        "l2": {
+          "status": "reference_ready",
+          "missing": []
+        },
+        "observation": "valid",
+        "C3": false
+      }
+    ],
+    "hardware": false,
+    "sdk_compilation": false
+  },
+  "protection": {
+    "protected_files": 492,
+    "old_json_schemas": 40,
+    "old_schema_directory_files": 41,
+    "violations": [],
+    "report": "workflows/references/autonomous-diagnosis-reviews/preservation.json",
+    "knowledge_py_unchanged": true,
+    "diagnosis_py_unchanged": true,
+    "bindings_py_unchanged": true,
+    "P_and_diagnosis_knowledge_unchanged": true
+  },
+  "observations": {
+    "raw_cases_frozen_before_agent_runs": true,
+    "raw_input_files_hash_checked": 57,
+    "new_L_hbm_active_GB_per_s": 780.9031447272727,
+    "new_L_logical_gm_active_GB_per_s": 1171.354717090909,
+    "migration": "workflows/references/autonomous-diagnosis-reviews/observation-migration.json",
+    "frozen_L_recalculation_equal_after_numeric_fix": true
+  },
+  "remaining_gaps": [
+    "公共区/halo/union输入加载仍缺独立分段方法及消费者/同步证明。",
+    "原地破坏性消费者须另证原值保留布局、容量和生命周期。",
+    "实际wrapper的MTE参数/对象级时间线、SDK、L2/HBM真实性仍需任务证据；extractor未实现。",
+    "现有路由用needs_evidence同时显示false和unknown，必须查看facts原值区分不兼容与未知。"
+  ],
+  "no_C3_created": true,
+  "hardware": false,
+  "sdk_compilation": false,
+  "performance_claim": false,
+  "edge_weight_training": false,
+  "default_version_changed": false,
+  "release_sealed": false,
+  "publication_accepted": false,
+  "structure": {
+    "valid": true,
+    "release_id": "graph-base/1.3.0",
+    "files": 1097,
+    "status": "unsealed",
+    "verification": "structure_only",
+    "publication_accepted": false,
+    "final_copy_bytes_and_modes_identical": true
+  }
+}

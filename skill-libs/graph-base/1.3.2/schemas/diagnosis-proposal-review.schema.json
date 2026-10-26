@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aprof:diagnosis-proposal-review",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "aprof.diagnosis-proposal-review/v1"
+    },
+    "proposal_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "proposal_basis_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "base_knowledge_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "target_version": {
+      "type": "string",
+      "pattern": "^v[0-9]{4}$"
+    },
+    "reviewer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "independent": {
+      "type": "boolean"
+    },
+    "decision": {
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ]
+    },
+    "blocking_findings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "proposal_id",
+    "proposal_basis_hash",
+    "base_knowledge_hash",
+    "target_version",
+    "reviewer",
+    "independent",
+    "decision",
+    "blocking_findings",
+    "notes"
+  ],
+  "additionalProperties": false
+}

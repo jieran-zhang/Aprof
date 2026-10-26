@@ -1,0 +1,93 @@
+{
+  "schema_version": "aprof.diagnosis-case/v1",
+  "case_id": "paper.fusion",
+  "evidence_status": "paper",
+  "task_id": "paper.fusion",
+  "scope": {
+    "task_id": "paper.fusion",
+    "parent_implementation_hash": "sha256:0bd603ece15c15770981b19d36e44298afe5144f01361cbe40904a64bff7a7d8",
+    "workload_hash": "sha256:c48ed582da5775213ad84843facdb9b40363d0f043cd05ddf19de84319c00e9e",
+    "target_ids": [
+      "T"
+    ],
+    "stage": "paper_analysis"
+  },
+  "context_ref": null,
+  "reasoning_ref": null,
+  "sources": [
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/03_fusion_compute/matmul_gelu_high_performance/mmad_gelu.asc",
+      "original_path": "examples/01_simd_cpp_api/05_best_practices/03_fusion_compute/matmul_gelu_high_performance/mmad_gelu.asc",
+      "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+      "lines": [
+        21,
+        613
+      ],
+      "sha256": "sha256:2fb232c81805420c88755d9bc41ea3561c3f4107946306425d1a43b48c31dd1d",
+      "excerpt_sha256": "sha256:a9dc9e4064f9198bc1a959600b5ec80e454c71f38ac2681b7cbe3e0a8d5d9728"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/03_fusion_compute/matmul_gelu_high_performance/README.md",
+      "original_path": "examples/01_simd_cpp_api/05_best_practices/03_fusion_compute/matmul_gelu_high_performance/README.md",
+      "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+      "lines": [
+        31,
+        157
+      ],
+      "sha256": "sha256:f455633ee4affaed0ad5591c0acc1d47c2d7099c3bc25a8a87a3f2259783008e",
+      "excerpt_sha256": "sha256:cce28e26891a94ea183739fcf3345e32edd588c63c48de46dbc427b2878e36cd"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/elementwise/double_buffer_design.md",
+      "original_path": "ops/ascendc-performance-best-practices/references/elementwise/double_buffer_design.md",
+      "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+      "lines": [
+        40,
+        249
+      ],
+      "sha256": "sha256:142cc0055136ff3bc203672f4c4365cf4f09b41a175a7bfa1d89f3df3b2500ae",
+      "excerpt_sha256": "sha256:28c3372885746552f8fc7c07805f7f715efc2c32ef72a3a0155dcbd49a0967a3"
+    }
+  ],
+  "observations": [
+    "纸面输入：tensor T从生产者P写GM，由消费者C读回；两阶段之间的布局、元素范围和生命周期可审读，但中间GM流量放大及可用容量尚无实测证据。"
+  ],
+  "candidate_explanations": [
+    "problem.redundant_gm_round_trip",
+    "problem.missing_kernel_fusion"
+  ],
+  "selected_action_instances": [],
+  "outcome": {
+    "status": "not_run",
+    "timing_ref": null,
+    "correctness_ref": null,
+    "mechanism_refs": [],
+    "limitations": [
+      "纸面输入，不是设备观测；缺失前提保持unknown。"
+    ]
+  },
+  "claims": [
+    {
+      "id": "fusion.comparison",
+      "text": "融合边界、数据通路、流水重叠是三个不同问题。Vector链在合法region内可以复用片上数据；Cube–Vector实现也可能仍经GM交接。一个kernel不自动消除GM写读，950专用通路也不自动支持910C。\n\n比较是否同一owner、是否需全局归约或重排、所有消费者是否在region内、数值边界是否可保留。若消费者必须跨owner读取，简单UB驻留可能不合法；这削弱当前驻留方案，不必否认所有融合方案。",
+      "basis": "mechanism_inference",
+      "source_indexes": [
+        0,
+        1,
+        2
+      ],
+      "review_status": "reviewed",
+      "limitations": [
+        "该来源只支持方法和限制，未验证当前任务瓶颈或收益。"
+      ]
+    }
+  ],
+  "review": {
+    "reviewer": "primary-agent-paper-curation",
+    "independent": false,
+    "decision": "reviewed",
+    "notes": [
+      "待独立行为复核；无硬件实验。"
+    ]
+  }
+}

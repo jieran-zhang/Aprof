@@ -1,0 +1,657 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aprof.local/schemas/unified-timing-result-v2.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 2
+    },
+    "kind": {
+      "const": "unified_timing_result"
+    },
+    "protocol": {
+      "const": "single_role_l2_clean_task_v1"
+    },
+    "metric": {
+      "const": "msprof.Task_Duration.complete_call"
+    },
+    "operator": {
+      "type": "string",
+      "minLength": 1
+    },
+    "candidate_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ]
+    },
+    "evaluated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "verdict": {
+      "enum": [
+        "accepted",
+        "rejected",
+        "inconclusive"
+      ]
+    },
+    "speedup": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "max_case_regression": {
+      "type": "number"
+    },
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min_speedup": {
+          "const": 1.03
+        },
+        "max_case_regression": {
+          "const": 0.03
+        },
+        "max_within_process_cv": {
+          "const": 0.1
+        },
+        "max_excluded": {
+          "const": 4
+        },
+        "stable_drift": {
+          "const": 0.03
+        },
+        "caution_drift": {
+          "const": 0.05
+        }
+      },
+      "required": [
+        "min_speedup",
+        "max_case_regression",
+        "max_within_process_cv",
+        "max_excluded",
+        "stable_drift",
+        "caution_drift"
+      ]
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "case_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "baseline": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "windows": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/statistics"
+                }
+              },
+              "median_stability": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "not_measured",
+                      "stable_evidence",
+                      "caution",
+                      "uncertain"
+                    ]
+                  },
+                  "raw_medians_us": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    }
+                  },
+                  "drift_fractions_from_first": {
+                    "type": "array",
+                    "minItems": 0,
+                    "items": {
+                      "type": "number",
+                      "minimum": 0
+                    }
+                  },
+                  "max_drift_fraction": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0
+                  },
+                  "threshold_scope": {
+                    "const": "exploration_trial_only"
+                  }
+                },
+                "required": [
+                  "status",
+                  "raw_medians_us",
+                  "drift_fractions_from_first",
+                  "max_drift_fraction",
+                  "threshold_scope"
+                ]
+              },
+              "further_benefit_review_possible": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "windows",
+              "median_stability",
+              "further_benefit_review_possible"
+            ]
+          },
+          "candidate": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "windows": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/statistics"
+                }
+              },
+              "median_stability": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "not_measured",
+                      "stable_evidence",
+                      "caution",
+                      "uncertain"
+                    ]
+                  },
+                  "raw_medians_us": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    }
+                  },
+                  "drift_fractions_from_first": {
+                    "type": "array",
+                    "minItems": 0,
+                    "items": {
+                      "type": "number",
+                      "minimum": 0
+                    }
+                  },
+                  "max_drift_fraction": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0
+                  },
+                  "threshold_scope": {
+                    "const": "exploration_trial_only"
+                  }
+                },
+                "required": [
+                  "status",
+                  "raw_medians_us",
+                  "drift_fractions_from_first",
+                  "max_drift_fraction",
+                  "threshold_scope"
+                ]
+              },
+              "further_benefit_review_possible": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "windows",
+              "median_stability",
+              "further_benefit_review_possible"
+            ]
+          },
+          "speedup": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "regression": {
+            "type": "number"
+          },
+          "raw_speedup": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "capture_refs": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "baseline": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                }
+              },
+              "candidate": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                }
+              }
+            },
+            "required": [
+              "baseline",
+              "candidate"
+            ]
+          },
+          "baseline_capture_ref": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "candidate_capture_ref": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "baseline_median_us": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "candidate_median_us": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "baseline_within_process_cv": {
+            "type": "number",
+            "minimum": 0
+          },
+          "candidate_within_process_cv": {
+            "type": "number",
+            "minimum": 0
+          },
+          "ab_gap_seconds": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "case_id",
+          "baseline",
+          "candidate",
+          "speedup",
+          "regression",
+          "raw_speedup",
+          "capture_refs",
+          "baseline_capture_ref",
+          "candidate_capture_ref",
+          "baseline_median_us",
+          "candidate_median_us",
+          "baseline_within_process_cv",
+          "candidate_within_process_cv",
+          "ab_gap_seconds"
+        ]
+      }
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "authority": {
+      "const": "performance_engineering_only"
+    },
+    "replication_recommended": {
+      "type": "boolean"
+    },
+    "uncertainty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "decision_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "stability_policy": {
+      "const": "bounded_outlier_v2"
+    },
+    "baseline_correctness_status": {
+      "enum": [
+        "assumed",
+        "verified"
+      ]
+    },
+    "stability_protocol": {
+      "const": "median_stability_exploration_v2"
+    },
+    "engineering_assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "speedup": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "max_case_regression": {
+          "type": "number"
+        },
+        "reasons": {
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "type": "string"
+          }
+        },
+        "verdict": {
+          "enum": [
+            "accepted",
+            "rejected"
+          ]
+        }
+      },
+      "required": [
+        "speedup",
+        "max_case_regression",
+        "reasons",
+        "verdict"
+      ]
+    },
+    "raw_engineering_assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "speedup": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "max_case_regression": {
+          "type": "number"
+        },
+        "reasons": {
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "type": "string"
+          }
+        },
+        "verdict": {
+          "enum": [
+            "accepted",
+            "rejected"
+          ]
+        }
+      },
+      "required": [
+        "speedup",
+        "max_case_regression",
+        "reasons",
+        "verdict"
+      ]
+    },
+    "exclusion_changes_conclusion": {
+      "type": "boolean"
+    },
+    "observed_window_sensitivity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "conservative": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "speedup": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "max_case_regression": {
+              "type": "number"
+            },
+            "reasons": {
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string"
+              }
+            },
+            "verdict": {
+              "enum": [
+                "accepted",
+                "rejected"
+              ]
+            }
+          },
+          "required": [
+            "speedup",
+            "max_case_regression",
+            "reasons",
+            "verdict"
+          ]
+        },
+        "optimistic": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "speedup": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "max_case_regression": {
+              "type": "number"
+            },
+            "reasons": {
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string"
+              }
+            },
+            "verdict": {
+              "enum": [
+                "accepted",
+                "rejected"
+              ]
+            }
+          },
+          "required": [
+            "speedup",
+            "max_case_regression",
+            "reasons",
+            "verdict"
+          ]
+        },
+        "is_confidence_interval": {
+          "const": false
+        }
+      },
+      "required": [
+        "conservative",
+        "optimistic",
+        "is_confidence_interval"
+      ]
+    },
+    "timing_quality": {
+      "enum": [
+        "uncertain",
+        "review_required",
+        "within_trial_rule"
+      ]
+    },
+    "quality_reasons": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "kind",
+    "protocol",
+    "metric",
+    "operator",
+    "candidate_id",
+    "request",
+    "evaluated_at",
+    "verdict",
+    "speedup",
+    "max_case_regression",
+    "thresholds",
+    "cases",
+    "reasons",
+    "authority",
+    "replication_recommended",
+    "uncertainty",
+    "decision_hash",
+    "stability_protocol",
+    "stability_policy",
+    "engineering_assessment",
+    "raw_engineering_assessment",
+    "exclusion_changes_conclusion",
+    "observed_window_sensitivity",
+    "timing_quality",
+    "quality_reasons",
+    "baseline_correctness_status"
+  ],
+  "$defs": {
+    "statistics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "policy": {
+          "const": "bounded_outlier_v2"
+        },
+        "max_excluded": {
+          "const": 4
+        },
+        "max_cv": {
+          "const": 0.1
+        },
+        "raw_values_us": {
+          "type": "array",
+          "minItems": 20,
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "maxItems": 20
+        },
+        "raw_median_us": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "median_us": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "raw_cv": {
+          "type": "number",
+          "minimum": 0
+        },
+        "cv": {
+          "type": "number",
+          "minimum": 0
+        },
+        "mad_us": {
+          "type": "number",
+          "minimum": 0
+        },
+        "outlier_threshold_us": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "outlier_indices": {
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
+        },
+        "outlier_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "excluded_indices": {
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
+        },
+        "retained_count": {
+          "type": "integer",
+          "minimum": 16,
+          "maximum": 20
+        },
+        "exclusion_limit_exceeded": {
+          "type": "boolean"
+        },
+        "median_shift_fraction": {
+          "type": "number",
+          "minimum": 0
+        },
+        "quality_status": {
+          "enum": [
+            "variable_review_required",
+            "within_window_acceptable"
+          ]
+        }
+      },
+      "required": [
+        "policy",
+        "max_excluded",
+        "max_cv",
+        "raw_values_us",
+        "raw_median_us",
+        "median_us",
+        "raw_cv",
+        "cv",
+        "mad_us",
+        "outlier_threshold_us",
+        "outlier_indices",
+        "outlier_count",
+        "excluded_indices",
+        "retained_count",
+        "exclusion_limit_exceeded",
+        "median_shift_fraction",
+        "quality_status"
+      ]
+    }
+  }
+}

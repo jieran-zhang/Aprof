@@ -1,0 +1,226 @@
+{
+  "reviewer": "review_diagnosis_runtime_safety",
+  "scope": "incremental profiling temporal evidence only",
+  "prior_runtime_findings": "7 remain resolved; old campaign/case suite not rerun",
+  "source_files_modified": false,
+  "hardware_network_training_invoked": false,
+  "probes": [
+    {
+      "probe": "full_artifact_true_positive",
+      "expected_accept": true,
+      "accepted": true,
+      "profile_time_known": true,
+      "effective_state": true,
+      "input_unchanged": true,
+      "error": null
+    },
+    {
+      "probe": "interval_false_positive",
+      "expected_accept": true,
+      "accepted": true,
+      "profile_time_known": true,
+      "effective_state": false,
+      "input_unchanged": true,
+      "error": null
+    },
+    {
+      "probe": "interval_equal_endpoints_positive",
+      "expected_accept": true,
+      "accepted": true,
+      "profile_time_known": true,
+      "effective_state": true,
+      "input_unchanged": true,
+      "error": null
+    },
+    {
+      "probe": "profile_without_time_range",
+      "expected_accept": false,
+      "accepted": false,
+      "profile_time_known": false,
+      "effective_state": "unknown",
+      "input_unchanged": true,
+      "error": "GraphError: 已知profile raw事实缺少时间口径；请将state标unknown或建立补证据后继"
+    },
+    {
+      "probe": "unknown_profile_without_time_range",
+      "expected_accept": true,
+      "accepted": true,
+      "profile_time_known": false,
+      "effective_state": "unknown",
+      "input_unchanged": true,
+      "error": null
+    },
+    {
+      "probe": "schema_extra_interval_field",
+      "expected_accept": false,
+      "accepted": false,
+      "profile_time_known": false,
+      "effective_state": "unknown",
+      "input_unchanged": true,
+      "error": "GraphError: diagnosis-reasoning: $.facts['profile.audit'].time_range: {'kind': 'interval', 'start': 0, 'end': 1.5, 'unit': 'us', 'origin': 'capture_start', 'score': 1} is not valid under any of the given schemas"
+    },
+    {
+      "probe": "schema_extra_full_artifact_field",
+      "expected_accept": false,
+      "accepted": false,
+      "profile_time_known": false,
+      "effective_state": "unknown",
+      "input_unchanged": true,
+      "error": "GraphError: diagnosis-reasoning: $.facts['profile.audit'].time_range: {'kind': 'full_artifact', 'aggregation': 'all_recorded_samples', 'start': 0} is not valid under any of the given schemas"
+    },
+    {
+      "probe": "bool_start",
+      "expected_accept": false,
+      "accepted": false,
+      "profile_time_known": false,
+      "effective_state": "unknown",
+      "input_unchanged": true,
+      "error": "GraphError: diagnosis-reasoning: $.facts['profile.audit'].time_range: {'kind': 'interval', 'start': True, 'end': 1.5, 'unit': 'us', 'origin': 'capture_start'} is not valid under any of the given schemas"
+    },
+    {
+      "probe": "nonfinite_start_nan",
+      "expected_accept": false,
+      "accepted": false,
+      "profile_time_known": false,
+      "effective_state": "unknown",
+      "input_unchanged": true,
+      "error": "GraphError: 事实time_range必须是完整artifact聚合或合法有限非倒置interval"
+    },
+    {
+      "probe": "nonfinite_end_inf",
+      "expected_accept": false,
+      "accepted": false,
+      "profile_time_known": false,
+      "effective_state": "unknown",
+      "input_unchanged": true,
+      "error": "GraphError: 事实time_range必须是完整artifact聚合或合法有限非倒置interval"
+    },
+    {
+      "probe": "inverted_interval",
+      "expected_accept": false,
+      "accepted": false,
+      "profile_time_known": false,
+      "effective_state": "unknown",
+      "input_unchanged": true,
+      "error": "GraphError: 事实time_range必须是完整artifact聚合或合法有限非倒置interval"
+    },
+    {
+      "probe": "empty_origin",
+      "expected_accept": false,
+      "accepted": false,
+      "profile_time_known": false,
+      "effective_state": "unknown",
+      "input_unchanged": true,
+      "error": "GraphError: diagnosis-reasoning: $.facts['profile.audit'].time_range: {'kind': 'interval', 'start': 0, 'end': 1.5, 'unit': 'us', 'origin': ''} is not valid under any of the given schemas"
+    },
+    {
+      "probe": "whitespace_origin",
+      "expected_accept": false,
+      "accepted": false,
+      "profile_time_known": false,
+      "effective_state": "unknown",
+      "input_unchanged": true,
+      "error": "GraphError: 事实time_range必须是完整artifact聚合或合法有限非倒置interval"
+    },
+    {
+      "probe": "wrong_full_artifact_aggregation",
+      "expected_accept": false,
+      "accepted": false,
+      "profile_time_known": false,
+      "effective_state": "unknown",
+      "input_unchanged": true,
+      "error": "GraphError: diagnosis-reasoning: $.facts['profile.audit'].time_range: {'kind': 'full_artifact', 'aggregation': 'latest_sample'} is not valid under any of the given schemas"
+    },
+    {
+      "probe": "unit_boolean",
+      "expected_accept": false,
+      "accepted": false,
+      "profile_time_known": false,
+      "effective_state": "unknown",
+      "input_unchanged": true,
+      "error": "GraphError: diagnosis-reasoning: $.facts['profile.audit'].time_range: {'kind': 'interval', 'start': 0, 'end': 1.5, 'unit': True, 'origin': 'capture_start'} is not valid under any of the given schemas"
+    },
+    {
+      "probe": "same_raw_renamed_and_rewindowed_groups",
+      "expected_accept": false,
+      "accepted": false,
+      "error": "同一原始证据及其派生量不能伪装为独立证据组"
+    },
+    {
+      "probe": "same_raw_renamed_same_group",
+      "expected_accept": true,
+      "accepted": true,
+      "error": null
+    },
+    {
+      "probe": "derived_windows_same_raw_independent_groups",
+      "expected_accept": false,
+      "accepted": false,
+      "error": "同一原始证据及其派生量不能伪装为独立证据组"
+    },
+    {
+      "probe": "retrieval_missing_True",
+      "expected_state": "unknown",
+      "observed_state": "unknown",
+      "pass": true
+    },
+    {
+      "probe": "retrieval_invalid_True",
+      "expected_state": "unknown",
+      "observed_state": "unknown",
+      "pass": true
+    },
+    {
+      "probe": "retrieval_full_artifact_True",
+      "expected_state": true,
+      "observed_state": true,
+      "pass": true
+    },
+    {
+      "probe": "retrieval_missing_False",
+      "expected_state": "unknown",
+      "observed_state": "unknown",
+      "pass": true
+    },
+    {
+      "probe": "retrieval_invalid_False",
+      "expected_state": "unknown",
+      "observed_state": "unknown",
+      "pass": true
+    },
+    {
+      "probe": "retrieval_full_artifact_False",
+      "expected_state": false,
+      "observed_state": false,
+      "pass": true
+    },
+    {
+      "probe": "handoff_embedded_reasoning_schema_synchronized",
+      "pass": true
+    },
+    {
+      "probe": "embedded_handoff_unknown_time_field",
+      "expected_accept": false,
+      "accepted": false,
+      "error": "knowledge-handoff-v3: $.reasoning.facts['profile.audit'].time_range: {'kind': 'interval', 'start': 0, 'end': 1.5, 'unit': 'us', 'origin': 'capture_start', 'unexpected': True} is not valid under any of the given schemas"
+    }
+  ],
+  "failed_expectations": [],
+  "source_hashes": {
+    "runtime/src/aprof_runtime/diagnosis_reasoning.py": "sha256:bd6c2c347c3997d43d85c669ec85c105b2a9c091019e26bd3fecbe3a17959a1d",
+    "runtime/src/aprof_runtime/diagnosis_retrieval.py": "sha256:81c0b09859d97724bfb4e331f1ccdef40f99e5a6601d4f3344692ef5ea9e9b52",
+    "schemas/diagnosis-reasoning.schema.json": "sha256:4bd88f224aa29a3e4a67eae3239be21cde54be8b4cd015c50d8bb6136353a567",
+    "schemas/knowledge-handoff-v3.schema.json": "sha256:205729e0fe53ec4b49a371be257c6d97f7eba4bf6212ac69f0a7ce30c9979806"
+  },
+  "conclusion": {
+    "checks": 26,
+    "failed_expectations": 0,
+    "blocking_findings": [],
+    "status": "passed_incremental_independent_review"
+  },
+  "reproduction_command": "python [一次性CPU复核工作区]/temporal-audit/probe.py",
+  "limitations": [
+    "Only the temporal-evidence increment was rechecked; the previous full case/campaign suite was intentionally not rerun.",
+    "This uses an isolated minimal reasoning fixture and a frozen historical migration artifact; it does not assert hardware timing authenticity or causal independence."
+  ]
+}

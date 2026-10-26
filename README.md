@@ -12,6 +12,7 @@ AProf 将稳定可用的 skill 库与研发、测量、trace 采集工程分开�
 | [graph-base 1.2.0 draft](skill-libs/graph-base/1.2.0/README.md) | 新任务开发版：runtime 0.3.0、软时间目标、本地工作区与校验复用；未封版，见 [维护说明](MAINTENANCE-1.2.0.md) |
 | [graph-base 1.3.0 draft](skill-libs/graph-base/1.3.0/README.md) | 910C代码理解前置阶段、v0007机制诊断、数据相关覆盖/完整代价比较及共同P/O交接；runtime 0.8.2，未封版，见 [维护说明](MAINTENANCE-1.3.0.md)；不切换默认版本 |
 | [graph-base 1.3.1 draft](skill-libs/graph-base/1.3.1/README.md) | 精简开发包：七组回归/评测材料移至 scaffolding；runtime 0.8.2，保留运行时与历史兼容依赖，见 [维护说明](MAINTENANCE-1.3.1.md)；未封版，不切换默认版本 |
+| [graph-base 1.3.2 draft](skill-libs/graph-base/1.3.2/README.md) | 技能开发材料外移、开发审计与安装检查拆分；runtime 0.8.3，见 [维护说明](MAINTENANCE-1.3.2.md)；未封版，不切换默认版本 |
 | [graph-base 0.4.2](skill-libs/graph-base/0.4.2/README.md) | 保留的历史稳定版；Vector / 910C(A3)、按架构选择 profiler、CAS 证据回放 |
 | [graph-base 0.4.1](skill-libs/graph-base/0.4.1/README.md) | 保留的历史稳定版，源于 0.4.0 / d8f6837 |
 | [新采集与学习脚手架](scaffolding/README.md) | 批量调用 APROF、独立 memory 整理、离线更新三个知识区 |

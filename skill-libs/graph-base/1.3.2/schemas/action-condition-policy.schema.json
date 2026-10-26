@@ -1,0 +1,287 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aprof:action-condition-policy:v1",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "aprof.action-condition-policy/v1"
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "applies_from_graph_version": {
+      "type": "string",
+      "pattern": "^v[0-9]{4}$"
+    },
+    "legacy_graph_ref": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "file_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "graph_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "path",
+        "file_sha256",
+        "graph_sha256",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "policy": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "legacy_preconditions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fact": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "state": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "fact",
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0
+          },
+          "safety_conditions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fact": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "state": {
+                  "type": "boolean"
+                },
+                "kind": {
+                  "enum": [
+                    "implementation_safety",
+                    "structural_applicability"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "fact",
+                "state",
+                "kind",
+                "reason"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          },
+          "performance_hypotheses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "legacy_condition": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "fact": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "state": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "fact",
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "statement": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "next_checks": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1
+                }
+              },
+              "required": [
+                "id",
+                "legacy_condition",
+                "statement",
+                "reason",
+                "next_checks"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          },
+          "applicability": {
+            "type": "string",
+            "minLength": 1
+          },
+          "added_safety_predicates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fact": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "state": {
+                  "type": "boolean"
+                },
+                "definition": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "proof_requirements": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1
+                },
+                "unknown_when": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1
+                }
+              },
+              "required": [
+                "fact",
+                "state",
+                "definition",
+                "reason",
+                "proof_requirements",
+                "unknown_when"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0
+          },
+          "legacy_dispositions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fact": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "state": {
+                  "type": "boolean"
+                },
+                "destination": {
+                  "enum": [
+                    "safety_conditions",
+                    "performance_hypotheses"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "fact",
+                "state",
+                "destination",
+                "reason"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0
+          }
+        },
+        "required": [
+          "action_id",
+          "legacy_preconditions",
+          "safety_conditions",
+          "performance_hypotheses",
+          "applicability",
+          "added_safety_predicates",
+          "legacy_dispositions"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "schema_version",
+    "version",
+    "applies_from_graph_version",
+    "legacy_graph_ref",
+    "policy",
+    "actions"
+  ],
+  "additionalProperties": false
+}

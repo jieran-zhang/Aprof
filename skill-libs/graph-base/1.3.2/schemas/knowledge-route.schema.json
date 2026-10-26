@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aprof:knowledge-route:v1",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "aprof.knowledge-route/v1"
+    },
+    "owner": {
+      "enum": [
+        "diagnosis",
+        "parallel-planning",
+        "optimization"
+      ]
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "knowledge_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "context_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "override_hash": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "selection_mode": {
+      "const": "deterministic"
+    },
+    "evidence": {
+      "type": "object"
+    },
+    "diagnostic_state": {
+      "enum": [
+        "resolved",
+        "unknown",
+        "workload_limited",
+        "measurement_limited"
+      ]
+    },
+    "problems": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "deduplicated": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "missing": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "selected_action": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "matches": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "considered": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "context_snapshot": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "task_id",
+        "source_context_ref",
+        "facts",
+        "attributes"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "owner",
+    "version",
+    "knowledge_hash",
+    "context_hash",
+    "task_id",
+    "override_hash",
+    "selection_mode",
+    "evidence",
+    "context_snapshot"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "owner": {
+            "const": "diagnosis"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "diagnostic_state",
+          "problems",
+          "actions",
+          "deduplicated",
+          "missing",
+          "selected_action"
+        ]
+      },
+      "else": {
+        "required": [
+          "matches",
+          "considered"
+        ]
+      }
+    }
+  ]
+}

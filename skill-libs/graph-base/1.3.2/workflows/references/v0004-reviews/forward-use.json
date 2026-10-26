@@ -1,0 +1,667 @@
+{
+  "schema_version": "aprof.review-forward-use/v1",
+  "reviewed_at_utc": "2026-10-20T13:51:27.471949+00:00",
+  "reviewer": "independent-read-only-workflow-agent",
+  "scope": {
+    "mode": "read_only_package_review",
+    "package_files_written_by_reviewer": false,
+    "po_knowledge_modified_by_reviewer": false,
+    "spawned_agents": false,
+    "workspace_outputs": "[一次性CPU复核工作区]/review-forward-use",
+    "selected_case": "paper.control",
+    "final_routing_freeze_required_or_used": false
+  },
+  "verdict": {
+    "status": "no_blockers",
+    "technical_blockers": [],
+    "remaining_must_fix": [],
+    "optional_polish_count": 0,
+    "meaning": "就本次机制比较、包内自足理解和新旧模式分派复核，无剩余阻塞。未覆盖完整真实实现或发布验收。"
+  },
+  "resolved_findings": [
+    {
+      "id": "DOC-001",
+      "severity": "documentation_blocker",
+      "title": "schema入口把v2误称当前交接",
+      "original_locations": [
+        {
+          "path": "schemas/README.md",
+          "line": 32
+        },
+        {
+          "path": "schemas/README.md",
+          "line": 34
+        },
+        {
+          "path": "schemas/README.md",
+          "line": 38
+        },
+        {
+          "path": "schemas/README.md",
+          "line": 42
+        }
+      ],
+      "problem": "原文称三个知识区共用旧knowledge-record和当前handoff/v2，且示例knowledge validate --owner diagnosis会被当前运行时拒绝。",
+      "resolution": "主任务将段落标为旧诊断与P/O兼容格式，明确诊断v4独立契约，将示例改为parallel-planning，并添加diagnosis verify/retrieve及validate-chain。",
+      "verified_locations": [
+        {
+          "path": "schemas/README.md",
+          "line": 32
+        },
+        {
+          "path": "schemas/README.md",
+          "line": 34
+        },
+        {
+          "path": "schemas/README.md",
+          "line": 42
+        },
+        {
+          "path": "schemas/README.md",
+          "line": 47
+        },
+        {
+          "path": "schemas/README.md",
+          "line": 57
+        }
+      ],
+      "status": "resolved_and_reread"
+    },
+    {
+      "id": "DOC-002",
+      "severity": "documentation_blocker",
+      "title": "runtime契约示例仍指向被拒绝的诊断build入口",
+      "original_locations": [
+        {
+          "path": "workflows/references/runtime-contracts.md",
+          "line": 68
+        },
+        {
+          "path": "workflows/references/runtime-contracts.md",
+          "line": 74
+        }
+      ],
+      "problem": "原示例knowledge build --owner diagnosis与99行当前诊断源码应拒绝旧命令矛盾，容易令新agent使用失败路径。",
+      "resolution": "主任务将build owner改为parallel-planning，handoff校验改为knowledge-handoff-v3，74行明确当前diagnosis使用下节独立命令。",
+      "verified_locations": [
+        {
+          "path": "workflows/references/runtime-contracts.md",
+          "line": 68
+        },
+        {
+          "path": "workflows/references/runtime-contracts.md",
+          "line": 71
+        },
+        {
+          "path": "workflows/references/runtime-contracts.md",
+          "line": 74
+        }
+      ],
+      "status": "resolved_and_reread"
+    },
+    {
+      "id": "POLISH-001",
+      "severity": "optional_document_clarification",
+      "title": "控制案例的临时Problem与已有模板差异不够具体",
+      "locations": [
+        {
+          "path": "skills/ascendc-aprof-diagnosis/examples/control-comparison.md",
+          "line": 7
+        },
+        {
+          "path": "skills/ascendc-aprof-diagnosis/examples/control-comparison.md",
+          "line": 11
+        },
+        {
+          "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+          "line": 311
+        }
+      ],
+      "observation": "案例称现目录未完整描述同一tiling字段在热点解码路径重复读取，但既有control_metadata_overhead机制链已包含循环不变字段重复加载、热点字段读取和编译器外提反例。",
+      "suggestion": "若保留临时Problem演练，可明确是哪一项现有模板不能解释的观测或机制差异；也可说明只是任务内细化，不声称发现新机制。",
+      "why_not_blocking": "当前规则本身允许临时Problem且保留原Action前提；该纸面案例未进入执行或知识晋升。无需修改P/O知识。",
+      "status": "resolved_and_reread",
+      "resolution": "主任务已把控制案例改为任务内细化练习，明确既有control_metadata模板覆盖一般重复读取；仅对象/参数细化归入已有实例，只有独立机制差异才形成新Problem提案。Markdown与JSON已同步，修改后纸面case再次校验通过。",
+      "verified_locations": [
+        {
+          "path": "skills/ascendc-aprof-diagnosis/examples/control-comparison.md",
+          "line": 7
+        },
+        {
+          "path": "skills/ascendc-aprof-diagnosis/examples/control-comparison.md",
+          "line": 11
+        },
+        {
+          "path": "skills/ascendc-aprof-diagnosis/examples/control-comparison.md",
+          "line": 17
+        }
+      ]
+    }
+  ],
+  "optional_polish": [],
+  "behavior_checks": [
+    {
+      "requirement": "support_counter_unknown",
+      "result": "pass",
+      "evidence": [
+        {
+          "path": "skills/ascendc-aprof-diagnosis/SKILL.md",
+          "line": 12
+        },
+        {
+          "path": "skills/ascendc-aprof-diagnosis/SKILL.md",
+          "line": 14
+        },
+        {
+          "path": "workflows/references/diagnosis-v4.md",
+          "line": 19
+        },
+        {
+          "path": "skills/ascendc-aprof-diagnosis/examples/control-comparison.md",
+          "line": 7
+        },
+        {
+          "path": "skills/ascendc-aprof-diagnosis/examples/control-comparison.md",
+          "line": 11
+        }
+      ],
+      "explanation": "源码重复仅支持待核验候选；编译器已外提或字段随tile变化是可反驳情况；不变性、别名/副作用、编译成本未明为unknown，不因缺profile排除机制。"
+    },
+    {
+      "requirement": "complete_directory_and_symptom_adjacency",
+      "result": "pass",
+      "evidence": [
+        {
+          "path": "skills/ascendc-aprof-diagnosis/SKILL.md",
+          "line": 10
+        },
+        {
+          "path": "workflows/references/diagnosis-v4.md",
+          "line": 17
+        }
+      ],
+      "explanation": "五次CLI检索均返回28个Problem轻目录、55个观察；邻接只作线索，不是候选边界，无自动selected_action或分数。"
+    },
+    {
+      "requirement": "temporary_problem_reuses_registered_action",
+      "result": "pass",
+      "evidence": [
+        {
+          "path": "skills/ascendc-aprof-diagnosis/SKILL.md",
+          "line": 14
+        },
+        {
+          "path": "skills/ascendc-aprof-diagnosis/SKILL.md",
+          "line": 16
+        },
+        {
+          "path": "workflows/contracts/diagnosis.md",
+          "line": 57
+        },
+        {
+          "path": "skills/ascendc-aprof-diagnosis/examples/control-comparison.md",
+          "line": 17
+        }
+      ],
+      "explanation": "任务内临时解释可复用hoist_invariant_control；不补造边、不执行临时新Action；仅对象/参数细化应归入现有实例，独立机制差异才提案。四项原preconditions与invariants在包内明确。"
+    },
+    {
+      "requirement": "c1_c2_c3_two_stage_routing",
+      "result": "pass",
+      "evidence": [
+        {
+          "path": "workflows/references/diagnosis-v4.md",
+          "line": 26
+        },
+        {
+          "path": "workflows/references/diagnosis-v4.md",
+          "line": 28
+        },
+        {
+          "path": "workflows/references/diagnosis-v4.md",
+          "line": 30
+        },
+        {
+          "path": "workflows/contracts/planning.md",
+          "line": 51
+        },
+        {
+          "path": "workflows/contracts/candidate.md",
+          "line": 57
+        }
+      ],
+      "explanation": "C1交实例和路由提示；C2选实际P及自由度，O保留请求；C3再按确认计划选recipe/步骤。未见主动路径要求预锁完整P/O组合或固定SPA。"
+    },
+    {
+      "requirement": "p_keep_o_keep_and_empty_intersection",
+      "result": "pass",
+      "evidence": [
+        {
+          "path": "workflows/references/diagnosis-v4.md",
+          "line": 32
+        },
+        {
+          "path": "workflows/references/diagnosis-v4.md",
+          "line": 33
+        },
+        {
+          "path": "workflows/references/diagnosis-v4.md",
+          "line": 34
+        },
+        {
+          "path": "workflows/references/diagnosis-v4.md",
+          "line": 35
+        },
+        {
+          "path": "workflows/contracts/candidate.md",
+          "line": 59
+        }
+      ],
+      "explanation": "P_KEEP要求完整有效计划；O_KEEP只是无额外局部优化，P_CHANGE仍可改源码；双KEEP为NOOP；空交集/fallback/unsupported/needs_evidence不转KEEP。"
+    },
+    {
+      "requirement": "out_of_freedom_returns_c2",
+      "result": "pass",
+      "evidence": [
+        {
+          "path": "workflows/references/diagnosis-v4.md",
+          "line": 39
+        },
+        {
+          "path": "workflows/contracts/planning.md",
+          "line": 53
+        },
+        {
+          "path": "workflows/contracts/candidate.md",
+          "line": 61
+        },
+        {
+          "path": "skills/ascendc-aprof-diagnosis/graph/actions/action.hoist_invariant_control.md",
+          "line": 261
+        }
+      ],
+      "explanation": "算法、owner、归并/数值次序、同步拓扑、workspace owner、融合/通路或dispatch域超自由度返回C2；普通许可内局部参数可复用计划。"
+    },
+    {
+      "requirement": "conditional_analysis_does_not_authorize_implementation",
+      "result": "pass",
+      "evidence": [
+        {
+          "path": "workflows/agents/diagnosis.md",
+          "line": 15
+        },
+        {
+          "path": "workflows/contracts/diagnosis.md",
+          "line": 57
+        },
+        {
+          "path": "workflows/contracts/planning.md",
+          "line": 20
+        },
+        {
+          "path": "workflows/references/diagnosis-v4.md",
+          "line": 37
+        }
+      ],
+      "explanation": "unknown允许条件化C2分析；C3前需原Action全部fact/state及方法条件满足，不能把proxy、提示或其他实例证据当授权。"
+    },
+    {
+      "requirement": "current_and_historical_dispatch",
+      "result": "pass_after_document_fixes",
+      "evidence": [
+        {
+          "path": "skills/ascendc-aprof-diagnosis/SKILL.md",
+          "line": 20
+        },
+        {
+          "path": "workflows/contracts/common.md",
+          "line": 95
+        },
+        {
+          "path": "workflows/references/runtime-contracts.md",
+          "line": 99
+        },
+        {
+          "path": "schemas/README.md",
+          "line": 57
+        }
+      ],
+      "explanation": "新诊断使用diagnosis build/verify/retrieve与v3交接；v0003显式graph --graph回放；P/O保留原knowledge树。旧入口的拒绝有明确说明。"
+    }
+  ],
+  "selected_case_walkthrough": {
+    "case_id": "paper.control",
+    "evidence_status": "paper/source_review",
+    "inputs": "重复tiling元数据读取这一纸面源码形态；无设备profiling、构建或候选执行。",
+    "candidate_comparison": [
+      "temporary.metadata_decode_repeated",
+      "problem.control_metadata_overhead",
+      "problem.scalar_control_hot_loop"
+    ],
+    "support": "重复读取/地址构造为待核验源码线索；不能推出Scalar瓶颈。",
+    "counter": "编译器已外提，或字段随tile变化，需修订外提解释。",
+    "unknown": [
+      "实际不变性",
+      "别名及副作用",
+      "编译后动态指令与spill",
+      "目标资源容量和动作等价性"
+    ],
+    "intervention": "仅在四个原前提满足后实例化hoist_invariant_control；C2条件分析或完整计划复用，C3选择实际方法。",
+    "interpretation": "案例及本复核均不支持性能或因果结论。"
+  },
+  "cli_checks": [
+    {
+      "command": "tools/aprofctl contract validate --kind diagnosis-case --root . --input skills/ascendc-aprof-diagnosis/examples/control-comparison.json",
+      "exit_code": 0,
+      "valid": true,
+      "validation": "declared_evidence_and_identity",
+      "meaning": "纸面案例结构、声明证据与来源身份检查通过；不表示真实实验通过。",
+      "revalidated_after_case_revision": true,
+      "raw_output": "[一次性CPU复核工作区]/review-forward-use/control-case-validation.json"
+    },
+    {
+      "command": "tools/aprofctl knowledge validate --root . --owner diagnosis",
+      "exit_code": 2,
+      "expected_rejection": true,
+      "error": "当前机制模板请使用 diagnosis build/verify/retrieve；历史回放请显式 graph --graph <v0003快照目录>",
+      "meaning": "验证旧入口拒绝当前格式，作为文档分派核查。"
+    },
+    {
+      "command": "tools/aprofctl diagnosis retrieve --root <package> --context <synthetic-paper-evidence>",
+      "runs": [
+        {
+          "name": "empty",
+          "exit_code": 0,
+          "top_keys": [
+            "ok",
+            "result"
+          ],
+          "result_keys": [
+            "context_hash",
+            "graph_version",
+            "knowledge_hash",
+            "limitations",
+            "observations",
+            "problem_directory",
+            "schema_version",
+            "source_context_ref",
+            "symptom_adjacency",
+            "task_id"
+          ],
+          "stderr": "",
+          "problem_count": 28,
+          "observation_count": 55,
+          "source_state": "unknown",
+          "adjacency": [],
+          "automatic_action_selection": false
+        },
+        {
+          "name": "parent-only",
+          "exit_code": 0,
+          "top_keys": [
+            "ok",
+            "result"
+          ],
+          "result_keys": [
+            "context_hash",
+            "graph_version",
+            "knowledge_hash",
+            "limitations",
+            "observations",
+            "problem_directory",
+            "schema_version",
+            "source_context_ref",
+            "symptom_adjacency",
+            "task_id"
+          ],
+          "stderr": "",
+          "problem_count": 28,
+          "observation_count": 55,
+          "source_state": "unknown",
+          "adjacency": [],
+          "automatic_action_selection": false
+        },
+        {
+          "name": "members-true",
+          "exit_code": 0,
+          "top_keys": [
+            "ok",
+            "result"
+          ],
+          "result_keys": [
+            "context_hash",
+            "graph_version",
+            "knowledge_hash",
+            "limitations",
+            "observations",
+            "problem_directory",
+            "schema_version",
+            "source_context_ref",
+            "symptom_adjacency",
+            "task_id"
+          ],
+          "stderr": "",
+          "problem_count": 28,
+          "observation_count": 55,
+          "source_state": true,
+          "adjacency": [
+            {
+              "problem_id": "problem.control_metadata_overhead",
+              "relation": "supports",
+              "observation_state": true
+            }
+          ],
+          "automatic_action_selection": false
+        },
+        {
+          "name": "member-false",
+          "exit_code": 0,
+          "top_keys": [
+            "ok",
+            "result"
+          ],
+          "result_keys": [
+            "context_hash",
+            "graph_version",
+            "knowledge_hash",
+            "limitations",
+            "observations",
+            "problem_directory",
+            "schema_version",
+            "source_context_ref",
+            "symptom_adjacency",
+            "task_id"
+          ],
+          "stderr": "",
+          "problem_count": 28,
+          "observation_count": 55,
+          "source_state": false,
+          "adjacency": [
+            {
+              "problem_id": "problem.control_metadata_overhead",
+              "relation": "supports",
+              "observation_state": false
+            }
+          ],
+          "automatic_action_selection": false
+        },
+        {
+          "name": "member-proxy",
+          "exit_code": 0,
+          "top_keys": [
+            "ok",
+            "result"
+          ],
+          "result_keys": [
+            "context_hash",
+            "graph_version",
+            "knowledge_hash",
+            "limitations",
+            "observations",
+            "problem_directory",
+            "schema_version",
+            "source_context_ref",
+            "symptom_adjacency",
+            "task_id"
+          ],
+          "stderr": "",
+          "problem_count": 28,
+          "observation_count": 55,
+          "source_state": "unknown",
+          "adjacency": [],
+          "automatic_action_selection": false
+        }
+      ],
+      "raw_outputs_directory": "[一次性CPU复核工作区]/review-forward-use",
+      "knowledge_hashes_seen": [
+        "sha256:1e87eb1a38a1925049cfcf43ce7e1dfbe02609304dfc5ded171090857bac25c6"
+      ],
+      "graph_versions_seen": [
+        "v0004"
+      ],
+      "limitations": "输入为明确标记的CPU合成检索用例，不是设备/任务观测；未验证C1-C3全链运行或最终路由冻结。"
+    }
+  ],
+  "reviewed_files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "sha256:796d37a24d75944db6004fbcc9a5cf8cfb715b925eb1e0ce8bad4f551454fa9b"
+    },
+    {
+      "path": "README.md",
+      "sha256": "sha256:2d90a5ef0da7c1fa592a6dd770f10c4657c90c5663c533f7e2cdc04813ba9c7b"
+    },
+    {
+      "path": "schemas/README.md",
+      "sha256": "sha256:bde00be564a4d8d22967847d269582f0d3d7fe819940056c5d0d44b68d80e10d"
+    },
+    {
+      "path": "skills/ascendc-aprof-diagnosis/SKILL.md",
+      "sha256": "sha256:d7b2599e14bcf28b1d7e75a44874a8b54cb8617e9e7cf9196d8ee4c7e23a3083"
+    },
+    {
+      "path": "skills/ascendc-aprof-diagnosis/graph/README.md",
+      "sha256": "sha256:823cf4e37f04b57c48b1bd49dfb840059bd2330ca363b67798d4233d84b52949"
+    },
+    {
+      "path": "skills/ascendc-aprof-diagnosis/graph/FORMAT.md",
+      "sha256": "sha256:593b5ce460d3607dddb0be3107d1371c59f161d66d8348793abcfb1e215d861e"
+    },
+    {
+      "path": "skills/ascendc-aprof-diagnosis/examples/README.md",
+      "sha256": "sha256:d092dd9c1710923538974698a3a2b29c2eafa436ebb890647097f64efe909653"
+    },
+    {
+      "path": "skills/ascendc-aprof-diagnosis/examples/control-comparison.md",
+      "sha256": "sha256:e6bb0732c800b87a3c312bbcdb7a6d1be22b6bbf66517ef19e93e7c352ec17da"
+    },
+    {
+      "path": "skills/ascendc-aprof-diagnosis/examples/control-comparison.json",
+      "sha256": "sha256:7c029a5a964fef63b72e1e76d1ab6acb43b9c0888654efd0fc3ec8daca1d802c"
+    },
+    {
+      "path": "skills/ascendc-aprof-diagnosis/examples/transfer-comparison.md",
+      "sha256": "sha256:419849accb8fe8d550ca612d93e6aa175e5a69d1958b3130661b66d40f4ead36"
+    },
+    {
+      "path": "skills/ascendc-aprof-diagnosis/graph/symptoms/symptom.source.control_metadata_overhead.md",
+      "sha256": "sha256:312a1eee13dd7ce22104dcac2270057137049461b38d0a6aca1d01fe69709dac"
+    },
+    {
+      "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+      "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+    },
+    {
+      "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+      "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+    },
+    {
+      "path": "skills/ascendc-aprof-diagnosis/graph/actions/action.hoist_invariant_control.md",
+      "sha256": "sha256:4b0ec08be079f8fd2d2c6b87cfc3e7a963e17d59a3c015b3029e1172b178261e"
+    },
+    {
+      "path": "workflows/aprof-performance-workflow.md",
+      "sha256": "sha256:2a8f7a235e24baae4a435d76cd13dc478c0d0e8e12ca966c83030bf76523abd7"
+    },
+    {
+      "path": "workflows/agents/coordinator.md",
+      "sha256": "sha256:7a84decb183035888e7c72cb2d47c69783c9a7d7f05b4ff2327a49826ea02a52"
+    },
+    {
+      "path": "workflows/agents/diagnosis.md",
+      "sha256": "sha256:5a4f04ee5e4ceafee4b03b51c6d89a9a7178a80ddba8388187043ea525bf23b7"
+    },
+    {
+      "path": "workflows/agents/parallel-planning.md",
+      "sha256": "sha256:f5d96233f5d2356ab454818781d44c3d78fe7c1c6b8a13cc3cbb61eb63d01905"
+    },
+    {
+      "path": "workflows/agents/optimization.md",
+      "sha256": "sha256:78670b4370ae8b70bc8913f91a73a2bf8899853fa31fdda7430d8dc1aa8889a4"
+    },
+    {
+      "path": "workflows/contracts/common.md",
+      "sha256": "sha256:c31e3df7564c3785028bf9ff7fabbafc8be10b4a4b7064d4b63d765a20a7e130"
+    },
+    {
+      "path": "workflows/contracts/diagnosis.md",
+      "sha256": "sha256:80dc4b6171941b0af1a2015fbe3afa8d1f2782ec7a3ea0aa72e9b914f65d29f4"
+    },
+    {
+      "path": "workflows/contracts/planning.md",
+      "sha256": "sha256:1606cb57937ee05dcee9ea36889c3c0e9c039547a91167a4973787cfa49074e3"
+    },
+    {
+      "path": "workflows/contracts/candidate.md",
+      "sha256": "sha256:dd5516aa70c2b84ab65ccafcb50ee80536b3dc5a4a30781966caf21f844b6e5b"
+    },
+    {
+      "path": "workflows/references/diagnosis-v4.md",
+      "sha256": "sha256:8c74e198f11c3712949eb883205e03791d5aa4f57082991682970627584c8945"
+    },
+    {
+      "path": "workflows/references/runtime-contracts.md",
+      "sha256": "sha256:cebcb2ed1407ddaa5419d2ae39043b6559d9a69ba6de4dee1cd9eafaed51dd9b"
+    },
+    {
+      "path": "skills/ascendc-aprof-coordinator/SKILL.md",
+      "sha256": "sha256:b50e0df3def183b150ec8552350ee447e24445cc9fce8ff87b9f2562e3ea7f17"
+    },
+    {
+      "path": "skills/ascendc-aprof-parallel-planning/SKILL.md",
+      "sha256": "sha256:8ecfedb4bc34f667be6b08dc1836e6b76bf6d306232aa73cd072b169e88dc96f"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/SKILL.md",
+      "sha256": "sha256:765071f85b08bfc48822183b34e4497aa90bf4181be95dc1bb81c6ec6d276aa5"
+    },
+    {
+      "path": "skills/ascendc-aprof-parallel-planning/knowledge/FORMAT.md",
+      "sha256": "sha256:4ec363a2099fe8c2f10fdba07881ed1f2950d898fa0ce2d55154c7a809eb814f"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/FORMAT.md",
+      "sha256": "sha256:093ce3cb5ba9a4c845ef50ac81d63a15b30e3ebe92b78cbf2aa5a9017c395841"
+    },
+    {
+      "path": "skills/ascendc-aprof-parallel-planning/knowledge/ROUTER.md",
+      "sha256": "sha256:6dff5ab850b1f2eb2ed79d2b3fc707cf227e228e6104c57b7445c459114f25de"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/ROUTER.md",
+      "sha256": "sha256:ea7f054760f1d62333c66135815130c662d9c94c8f15852e4fd1e0cceb79ac59"
+    },
+    {
+      "path": "runtime/src/aprof_runtime/diagnosis_retrieval.py",
+      "sha256": "sha256:c55d7d93001de95377ae938bcb917eb6716f41f15fca31b3b3cc5507b015af2c"
+    }
+  ],
+  "not_checked": [
+    "未构建、编译或运行Ascend C候选",
+    "未采集或重放设备性能/PMU",
+    "未据CPU纸面检查给出收益、瓶颈或因果结论",
+    "未做最终routing bundle冻结、发布或默认入口切换",
+    "未重复完整runtime回归；本任务独立检查文档、案例与只读检索"
+  ],
+  "risk": "只读文档/纸面通过不保证真实任务中的硬前提、编译、正确性、性能或因果归因成立。"
+}

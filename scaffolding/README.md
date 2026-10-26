@@ -62,3 +62,7 @@ python3 -m pytest scaffolding/tests/test_learning_records.py -q
 ## 1.3.1 开发材料归档
 
 七组回归、评测和维护材料及两个离线回放入口已移至[开发归档](curation/graph-base-1.3.1-development/README.md)。运行时保留在独立的 graph-base 1.3.1 包中；归档不参与日常加载。
+
+## 1.3.2 技能开发审计
+
+221 个旧种子、审计输入和报告归入[技能开发归档](curation/graph-base-1.3.2-development/README.md)，包含完整开发审计、迁移身份、案例及提案验证。独立技能包安装不依赖该目录。

@@ -1,0 +1,849 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aprof:diagnosis-reasoning",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "aprof.diagnosis-reasoning/v1"
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "context_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "knowledge_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "source_context_ref": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "additionalProperties": false
+    },
+    "context_snapshot": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": "aprof.evidence/v1"
+        },
+        "task_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_context_ref": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          },
+          "required": [
+            "path",
+            "sha256"
+          ],
+          "additionalProperties": false
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "facts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "enum": [
+                  true,
+                  false,
+                  "unknown"
+                ]
+              },
+              "kind": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "ref": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "sha256": {
+                        "type": "string",
+                        "pattern": "^sha256:[0-9a-f]{64}$"
+                      },
+                      "locator": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "path",
+                      "sha256",
+                      "locator"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "time_range": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "interval"
+                      },
+                      "start": {
+                        "type": "number"
+                      },
+                      "end": {
+                        "type": "number"
+                      },
+                      "unit": {
+                        "enum": [
+                          "ns",
+                          "us",
+                          "ms",
+                          "s",
+                          "cycles",
+                          "ticks"
+                        ]
+                      },
+                      "origin": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "start",
+                      "end",
+                      "unit",
+                      "origin"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "full_artifact"
+                      },
+                      "aggregation": {
+                        "const": "all_recorded_samples"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "aggregation"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "view": {
+                "enum": [
+                  "source",
+                  "profile",
+                  "workload",
+                  "constraint"
+                ]
+              }
+            },
+            "required": [
+              "state"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "task_id",
+        "source_context_ref",
+        "attributes",
+        "facts"
+      ],
+      "additionalProperties": false
+    },
+    "current": {
+      "type": "object",
+      "properties": {
+        "implementation_ref": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          },
+          "required": [
+            "path",
+            "sha256"
+          ],
+          "additionalProperties": false
+        },
+        "workload_ref": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          },
+          "required": [
+            "path",
+            "sha256"
+          ],
+          "additionalProperties": false
+        },
+        "objects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "object_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "enum": [
+                  "tensor",
+                  "task",
+                  "stage",
+                  "workload",
+                  "implementation",
+                  "object"
+                ]
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "object_id",
+              "kind",
+              "description"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "task_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "parent_implementation_hash": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "workload_hash": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "target_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "stage": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "task_id",
+            "parent_implementation_hash",
+            "workload_hash",
+            "target_ids",
+            "stage"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "implementation_ref",
+        "workload_ref",
+        "objects",
+        "scope"
+      ],
+      "additionalProperties": false
+    },
+    "facts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "enum": [
+              true,
+              false,
+              "unknown"
+            ]
+          },
+          "kind": {
+            "enum": [
+              "raw",
+              "derived",
+              "proxy"
+            ]
+          },
+          "evidence_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ref": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "sha256": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                  },
+                  "locator": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "path",
+                  "sha256",
+                  "locator"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "derived_from": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "scope": {
+            "type": "object",
+            "properties": {
+              "task_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "parent_implementation_hash": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "workload_hash": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "target_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              },
+              "stage": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "task_id",
+              "parent_implementation_hash",
+              "workload_hash",
+              "target_ids",
+              "stage"
+            ],
+            "additionalProperties": false
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "view": {
+            "enum": [
+              "source",
+              "profile",
+              "workload",
+              "constraint"
+            ]
+          },
+          "predicate": {
+            "type": "string",
+            "minLength": 1
+          },
+          "time_range": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "interval"
+                  },
+                  "start": {
+                    "type": "number"
+                  },
+                  "end": {
+                    "type": "number"
+                  },
+                  "unit": {
+                    "enum": [
+                      "ns",
+                      "us",
+                      "ms",
+                      "s",
+                      "cycles",
+                      "ticks"
+                    ]
+                  },
+                  "origin": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "kind",
+                  "start",
+                  "end",
+                  "unit",
+                  "origin"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "full_artifact"
+                  },
+                  "aggregation": {
+                    "const": "all_recorded_samples"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "aggregation"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "required": [
+          "state",
+          "kind",
+          "evidence_id",
+          "ref",
+          "derived_from",
+          "scope"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "hypothesis_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "problem_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mechanism": {
+            "type": "string",
+            "minLength": 1
+          },
+          "targets": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "scope": {
+            "type": "object",
+            "properties": {
+              "task_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "parent_implementation_hash": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "workload_hash": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "target_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              },
+              "stage": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "task_id",
+              "parent_implementation_hash",
+              "workload_hash",
+              "target_ids",
+              "stage"
+            ],
+            "additionalProperties": false
+          },
+          "support": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "counter": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "unknown": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "alternatives": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "status": {
+            "enum": [
+              "supported",
+              "plausible",
+              "needs_evidence",
+              "rejected"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "excluded_by": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "independent_evidence_groups": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        "required": [
+          "hypothesis_id",
+          "problem_id",
+          "mechanism",
+          "targets",
+          "scope",
+          "support",
+          "counter",
+          "unknown",
+          "alternatives",
+          "checks",
+          "status",
+          "reason",
+          "excluded_by",
+          "independent_evidence_groups"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "action_instances": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "instance_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "action_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "template_hash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "hypothesis_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "targets": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "scope": {
+            "type": "object",
+            "properties": {
+              "task_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "parent_implementation_hash": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "workload_hash": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "target_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              },
+              "stage": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "task_id",
+              "parent_implementation_hash",
+              "workload_hash",
+              "target_ids",
+              "stage"
+            ],
+            "additionalProperties": false
+          },
+          "parameters": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "evidence_bindings": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "unknowns": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "conditional",
+              "needs_evidence"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "parent_plan_hash": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "instance_id",
+          "action_id",
+          "template_hash",
+          "hypothesis_id",
+          "targets",
+          "scope",
+          "parameters",
+          "evidence_bindings",
+          "unknowns",
+          "status",
+          "reason",
+          "parent_plan_hash"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "predecessor_ref": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          },
+          "required": [
+            "path",
+            "sha256"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "task_id",
+    "context_hash",
+    "knowledge_hash",
+    "source_context_ref",
+    "context_snapshot",
+    "current",
+    "facts",
+    "candidates",
+    "action_instances",
+    "predecessor_ref"
+  ],
+  "additionalProperties": false
+}

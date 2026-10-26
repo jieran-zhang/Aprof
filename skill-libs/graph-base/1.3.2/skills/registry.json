@@ -1,0 +1,232 @@
+{
+  "schema_version": 1,
+  "library": {
+    "name": "aprof-skills",
+    "version": "1.3.2",
+    "description": "AProf 完整技能库：架构与并行规划、工作负载派发、统一性能计时、预算内优化和可回放证据。"
+  },
+  "workflow_plugin": {
+    "name": "aprof-performance-workflow",
+    "version": "1.3.2",
+    "description": "AProf 完整技能库：架构与并行规划、工作负载派发、统一性能计时、预算内优化和可回放证据。",
+    "dependencies": [],
+    "agents": [
+      "workflows/agents/coordinator.md",
+      "workflows/agents/code-understanding.md",
+      "workflows/agents/diagnosis.md",
+      "workflows/agents/parallel-planning.md",
+      "workflows/agents/optimization.md",
+      "workflows/agents/profiling.md"
+    ],
+    "codex": {
+      "marketplace_name": "aprof",
+      "marketplace_display_name": "AProf",
+      "display_name": "AProf 算子优化工作流",
+      "short_description": "统一性能计时与 Ascend C 算子优化",
+      "long_description": "AProf 完整技能库：架构与并行规划、工作负载派发、统一性能计时、预算内优化和可回放证据。",
+      "developer_name": "AProf",
+      "category": "Productivity",
+      "capabilities": [
+        "Read",
+        "Write"
+      ],
+      "default_prompt": [
+        "使用 AProf 优化这个 Ascend C 算子，保留原始证据并给出中文报告。",
+        "只做 AProf 机制检索、证据比较和条件化规划，不执行硬件实验。",
+        "解释统一性能结果与历史训练 episode 的区别。"
+      ]
+    }
+  },
+  "capabilities": {
+    "core": [
+      {
+        "name": "ascendc-aprof-coordinator",
+        "source": "skills/ascendc-aprof-coordinator",
+        "purpose": "完整优化方案与跨轮摘要的统一用户入口。"
+      },
+      {
+        "name": "ascendc-code-understanding",
+        "source": "skills/ascendc-code-understanding",
+        "purpose": "诊断前解释当前算法、分派、数据依赖与910C行为，供诊断、P/O及后续轮次复用。"
+      },
+      {
+        "name": "ascendc-aprof-parallel-planning",
+        "source": "skills/ascendc-aprof-parallel-planning",
+        "purpose": "面向方案成员的共同架构、算法/任务规划与 workload 派发。"
+      },
+      {
+        "name": "ascendc-aprof-diagnosis",
+        "source": "skills/ascendc-aprof-diagnosis",
+        "purpose": "基于源码、workload 与证据比较机制，选择完整优化方案。",
+        "legacy_names": [
+          "aprof-ascendc-diagnosis"
+        ]
+      },
+      {
+        "name": "ascendc-aprof-profiling",
+        "source": "skills/ascendc-aprof-profiling",
+        "purpose": "统一计时、按需机制采集与原始来源解析。",
+        "legacy_names": [
+          "aprof-ascendc-profiling"
+        ]
+      },
+      {
+        "name": "ascendc-aprof-optimization",
+        "source": "skills/ascendc-aprof-optimization",
+        "purpose": "在共同计划内实施完整候选方案并验证完整正确性。",
+        "legacy_names": [
+          "aprof-ascendc-optimization"
+        ]
+      }
+    ]
+  },
+  "support_skills": [
+    {
+      "name": "ascendc-env-check",
+      "source": "skills/ascendc-env-check",
+      "roles": [
+        "coordinator"
+      ],
+      "trigger": "C0；工具链、设备或运行环境变化"
+    },
+    {
+      "name": "ascendc-api-best-practices",
+      "source": "skills/ascendc-api-best-practices",
+      "roles": [
+        "code-understanding",
+        "parallel-planning",
+        "optimization"
+      ],
+      "trigger": "code-understanding/C2/C3；关键API语义、平台、单位或参数边界需要核实"
+    },
+    {
+      "name": "ascendc-docs-search",
+      "source": "skills/ascendc-docs-search",
+      "roles": [
+        "code-understanding",
+        "diagnosis",
+        "parallel-planning",
+        "optimization"
+      ],
+      "trigger": "code-understanding/C1/C2/C3；本地 API/硬件依据不足"
+    },
+    {
+      "name": "ascendc-code-review",
+      "source": "skills/ascendc-code-review",
+      "roles": [
+        "optimization"
+      ],
+      "trigger": "C3；候选构建与完整正确性验证前"
+    },
+    {
+      "name": "ascendc-precision-debug",
+      "source": "skills/ascendc-precision-debug",
+      "roles": [
+        "optimization"
+      ],
+      "trigger": "C3；完整正确性失败"
+    },
+    {
+      "name": "ascendc-runtime-debug",
+      "source": "skills/ascendc-runtime-debug",
+      "roles": [
+        "optimization",
+        "profiling"
+      ],
+      "trigger": "C3/C4；运行错误、异常或超时"
+    },
+    {
+      "name": "ascendc-crash-debug",
+      "source": "skills/ascendc-crash-debug",
+      "roles": [
+        "optimization",
+        "profiling"
+      ],
+      "trigger": "C3/C4；崩溃、挂起或运行故障无法定位"
+    },
+    {
+      "name": "ops-profiling",
+      "source": "skills/ops-profiling",
+      "roles": [
+        "profiling"
+      ],
+      "trigger": "C4 mechanism；按需机制采集与报告解释"
+    },
+    {
+      "name": "ops-simulator",
+      "source": "skills/ops-simulator",
+      "roles": [
+        "profiling"
+      ],
+      "trigger": "C4 mechanism；硬件证据缺失时生成标记为 proxy 的模拟证据"
+    },
+    {
+      "name": "npu-arch",
+      "source": "skills/npu-arch",
+      "roles": [
+        "coordinator",
+        "code-understanding",
+        "parallel-planning"
+      ],
+      "trigger": "C0/code-understanding/C2；架构变化、硬件行为、容量或硬件分母需要核实"
+    },
+    {
+      "name": "tool-npu-compute",
+      "source": "skills/tool-npu-compute",
+      "roles": [
+        "diagnosis",
+        "profiling"
+      ],
+      "trigger": "C1/C4；核对算力、吞吐与计数器口径"
+    },
+    {
+      "name": "ascendc-kernel-direct-invoke",
+      "source": "skills/ascendc-kernel-direct-invoke",
+      "purpose": "将原始 kernel 接入完整可运行工程。",
+      "legacy_names": [
+        "aprof-ascendc-kernel-direct-invoke"
+      ],
+      "roles": [
+        "coordinator",
+        "optimization"
+      ],
+      "trigger": "C0/C3；只有裸 kernel、缺少启动工程"
+    }
+  ],
+  "cursor_agents": [
+    {
+      "name": "aprof-performance-workflow",
+      "source": "AGENTS.md"
+    },
+    {
+      "name": "aprof-coordinator",
+      "source": "workflows/agents/coordinator.md"
+    },
+    {
+      "name": "aprof-code-understanding-agent",
+      "source": "workflows/agents/code-understanding.md"
+    },
+    {
+      "name": "aprof-diagnosis-agent",
+      "source": "workflows/agents/diagnosis.md"
+    },
+    {
+      "name": "aprof-parallel-planning-agent",
+      "source": "workflows/agents/parallel-planning.md"
+    },
+    {
+      "name": "aprof-optimization-agent",
+      "source": "workflows/agents/optimization.md"
+    },
+    {
+      "name": "aprof-profiling-agent",
+      "source": "workflows/agents/profiling.md"
+    }
+  ],
+  "knowledge": {
+    "diagnosis": "skills/ascendc-aprof-diagnosis/graph",
+    "parallel-planning": "skills/ascendc-aprof-parallel-planning/knowledge",
+    "optimization": "skills/ascendc-aprof-optimization/knowledge"
+  },
+  "default_graph_version": "v0003"
+}
