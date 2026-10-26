@@ -1,0 +1,43 @@
+{
+  "frozen_at_utc": "2026-10-22T04:00:59.804603+00:00",
+  "basis": "independent raw source/static reasoning; no B text or old diagnosis read",
+  "criteria": {
+    "s1-value-domain": [
+      "a中全通道扫描不触发software；b虽极值未采样仍因扫描整个input_而触发该通道全部tile软件加权。",
+      "扫描每次换nc；每个输出8次软件FMA，真实路径工作受值域及扫描范围影响，不能仅凭dtype/shape或每个输出极值概率估计。",
+      "必须比较保留数值语义的缩窄检查/逐tile或逐lane、普通矢量与软件修复工作，计入检测和同步新增成本；不指定唯一Action。",
+      "完整域保留极值/NaN/Inf/尾部语义；小值样本不允许删除通用修复。"
+    ],
+    "s2-correctness-work": [
+      "half非同形全进LastAxisBroadcast，该kernel假定x1完整且x2连续末轴向量。a成立，b不成立。",
+      "b的bi应依中间维变化，正确值索引floor(linear/5)%3；实际off%5访问b并在3,4越界，不能计为有效快速父本。",
+      "修复路由/广播索引改变计算/地址/搬运工作；先形成正确父本并重新估算机会，不能在错误输出上承诺加速。",
+      "讨论正确通用fallback或合法连续广播方案及量化工作变化，保留整个域和边界。"
+    ],
+    "s3-pack-total-cost": [
+      "cp=64，双平面pair pack写入约2*N*(I+1)*cp*4字节，读入N*C*I*4；几何约64*N*S字节，输出padded及compact也有流量和启动。",
+      "采样API/通道减少不能直接证明总体更快，pack成本按I*C与输出S无关，b的I/S远大于a，局部复用或直接采样成为重要替代。",
+      "需要比较完整原始/derived/packed方案，正确加入pad/zero sentinel/布局转换/geometry/compact、launch/同步/容量，并保持数值次序。",
+      "双子例选择可相同但必须说明S变化如何改变成本；不强制一例某Action。"
+    ],
+    "s4-derived-reuse": [
+      "gridBase=(batch*S+spatial)*3与channel无关，坐标变换/reflection/8邻居offset和权重每通道重算，相同n,s可共享派生结果。",
+      "三线性8个uint32 offset+8个float weight为64*N*S字节，仅在offset范围可证时；一般使用64位索引则更大，须按范围验证。",
+      "全局派生引入一次预处理、workspace写读、launch和同步；tile内跨channel复用需要共同所有权/布局/容量。C=1无跨通道复用，C=128工作减少有明显倍数但收益未知。",
+      "输入复用不能替代派生结果复用；保留不同channel的输入读取/加权，不能错误复用输出。允许注册能力缺口如实记为版本差异。"
+    ],
+    "s5-maximum-plan-cache": [
+      "同形float32每tile两次input queue申请/入队/出队/释放，一次output队列全生命周期，3个槽，Max本体与管理分开；改管理并不减少Maximum数学工作。",
+      "输出cache策略按消费者不同比较，a可考虑write-streaming/bypass作为假设，b不能无条件同样关cache；输入和输出策略分别核算。",
+      "队列/显式TBuf事件替代与cache策略可联合比较且须兼容共同计划、生命周期和尾部；双input slot将至少5*T*4字节，不是原计划3*T*4。",
+      "KEEP仅在完整相关方案所有权/资源/同步等已有效覆盖时成立；原p_same不能证明更改slot/event后的共同计划有效，也不能覆盖broadcast/int64。"
+    ],
+    "s6-history-parent-rename": [
+      "L1跳过半数输出，不能当作正确父本/收益证据；L2计时遗漏同步，不能与T0比较。",
+      "可从最近完整正确且完成范围有效的L2源码或等价L0开展；选择源父与接受性能父分开，不能自动宣称L2为production best。",
+      "T1/T2不能把旧局部最佳趋势或0.2/0.4速度沿用为当前真实加速；具体重测完整同步窗口+全域正确性。",
+      "重命名变体应保持事实/候选比较和合法父本一致；允许重排叙述，不要求字词一致。"
+    ]
+  },
+  "grading": "Human semantic review against source facts; never regex/keyword pass. 4 criteria each scored 0 missing/wrong, 1 partial, 2 concrete and correct; no forced Action or A/B superiority."
+}

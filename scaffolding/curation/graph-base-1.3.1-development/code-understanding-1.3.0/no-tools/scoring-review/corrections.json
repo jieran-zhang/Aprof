@@ -1,0 +1,13 @@
+[
+  {
+    "answer_id": "answer-5bde3bbae7a7",
+    "id": "CU05.A02",
+    "target_type": "fact",
+    "correction_type": "answer_span_only",
+    "original_status": "correct",
+    "suggested_status": "correct",
+    "rationale": "原注释在段首device之前多录一个ASCII空格，致answer_span不是候选答案的逐字连续子串。删除该转录空格即可；候选答案已完整支持本fact，保留correct和3分，所有维度得分不变。",
+    "original_answer_span": "本题 host `NPU_ARCH=2201` 选择：\n- `baseM/baseK/baseN=128/64/256`；\n- `singleCoreM/K/N=2048/8192/1536`；\n- `stepKa/Kb=8/4`，launch 24 个 Cube block。\n\n device `__NPU_ARCH__=2201` 决定 LoadData API 分支，不能与 host 宏混用。`SCENARIO_NUM=1` 只走 `Process()`；`ProcessL2Cache()` 不执行（L562–572），因此没有该函数的外层分批调度。\n\n`InitComputeParams`（L273–306）将 block \\(q\\) 映射为：\n- \\(i=q\\bmod4\\)，M 起点 `i*2048`；\n- \\(j=\\lfloor q/4\\rfloor\\)，N 起点 `j*1536`。\n\nq=0…19 各负责 `2048×1536`；q=20…23 各负责 `2048×512`。每个 block 都独立完成全部 K，无 split-K 或跨核归约。\n\n循环次序为 **N tile → M tile → K tile**（L170–192）：\n- M 循环16次；\n- 前20个 block 的 N 循环6次，后4个为2次；\n- 每个输出 tile 的 K 循环128次。\n\n全矩阵共 `64×32=2048` 个 `128×256` 输出 tile。末组 block 的512列仍是两个完整 baseN tile；M/N 的 `tail` 和对齐尾长均为0，循环不会进入零长度尾块分支。K 同样无尾块。",
+    "answer_span": "本题 host `NPU_ARCH=2201` 选择：\n- `baseM/baseK/baseN=128/64/256`；\n- `singleCoreM/K/N=2048/8192/1536`；\n- `stepKa/Kb=8/4`，launch 24 个 Cube block。\n\ndevice `__NPU_ARCH__=2201` 决定 LoadData API 分支，不能与 host 宏混用。`SCENARIO_NUM=1` 只走 `Process()`；`ProcessL2Cache()` 不执行（L562–572），因此没有该函数的外层分批调度。\n\n`InitComputeParams`（L273–306）将 block \\(q\\) 映射为：\n- \\(i=q\\bmod4\\)，M 起点 `i*2048`；\n- \\(j=\\lfloor q/4\\rfloor\\)，N 起点 `j*1536`。\n\nq=0…19 各负责 `2048×1536`；q=20…23 各负责 `2048×512`。每个 block 都独立完成全部 K，无 split-K 或跨核归约。\n\n循环次序为 **N tile → M tile → K tile**（L170–192）：\n- M 循环16次；\n- 前20个 block 的 N 循环6次，后4个为2次；\n- 每个输出 tile 的 K 循环128次。\n\n全矩阵共 `64×32=2048` 个 `128×256` 输出 tile。末组 block 的512列仍是两个完整 baseN tile；M/N 的 `tail` 和对齐尾长均为0，循环不会进入零长度尾块分支。K 同样无尾块。"
+  }
+]

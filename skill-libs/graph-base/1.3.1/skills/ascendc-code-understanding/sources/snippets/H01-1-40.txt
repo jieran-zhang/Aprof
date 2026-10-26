@@ -1,0 +1,40 @@
+# SIMD BuiltIn关键字<a name="ZH-CN_TOPIC_0000002509863893"></a>
+
+## 预定义宏<a name="section2035104120360"></a>
+
+如其他语言一样，会提供一些内置的宏方便用户编写程序。预定义宏一节着重介绍一些用户在做异构编程时会经常用到的宏，以及宏的解释。
+
+-   <a id="npu-arch"></a>**\_\_NPU\_ARCH\_\_**
+
+    \_\_NPU\_ARCH\_\_是Device侧AI Core代码中的预处理宏，用于标识AI处理器的架构版本。通过该宏，开发者可以针对不同AI处理器，差异化进行代码适配和优化。产品型号和NPU架构版本的对应关系如下：
+
+    <!-- npu="950" id1 -->
+    - Ascend 950PR&950DT系列产品：3510
+    <!-- end id1 -->
+    <!-- npu="A3" id2 -->
+    - Atlas A3系列产品：2201
+    <!-- end id2 -->
+    <!-- npu="910b" id3 -->
+    - Atlas A2系列产品：2201
+    <!-- end id3 -->
+    <!-- npu="310b" id4 -->
+    - Atlas 200I/500 A2推理产品：3002
+    <!-- end id4 -->
+    <!-- npu="310p" id5 -->
+    - Atlas推理系列产品：2002
+    <!-- end id5 -->
+    <!-- npu="910" id6 -->
+    - Atlas训练系列产品：1001
+    <!-- end id6 -->
+
+    以下为通过\_\_NPU\_ARCH\_\_控制在不同AI处理器上算子输出值舍入模式的示例。
+
+    ```
+    __aicore__ static inline void CopyOut(uint64_t mulLen)
+    {
+    #if __NPU_ARCH__ == 2002
+        Cast(dstLocal, srcLocal, RoundMode::CAST_NONE, mulLen); // CAST_NONE表示舍入模式在转换有精度损失时使用CAST_RINT模式，在不涉及精度损失时不进行舍入
+    #elif __NPU_ARCH__ == 2201
+        Cast(dstLocal, srcLocal, RoundMode::CAST_RINT, mulLen); // CAST_RINT表示舍入模式为四舍六入五成双舍入
+    #endif
+        event_t eventVToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));

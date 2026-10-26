@@ -1,0 +1,356 @@
+{
+  "schema": "aprof.code-understanding-gold/v1",
+  "case": "case-04",
+  "title_private": "Cube to GM to Vector: full mixed-core path and intermediate half rounding",
+  "max_score": 30,
+  "dimensions": {
+    "algorithm_strategy": 10,
+    "execution": 10,
+    "hardware": 10
+  },
+  "facts": [
+    {
+      "id": "CU04.A01",
+      "dimension": "algorithm_strategy",
+      "points": 4,
+      "expected": "The ideal operation is C=LeakyRelu(A*B) with negative slope about 0.001, no bias. Actual storage path accumulates half inputs into float L0C, Fixpipe converts to half GM, then half Vector LeakyRelu writes the final half output. An all-FP32 fused activation followed by one cast is not this source path.",
+      "sources": [
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 115,
+          "line_end": 115,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 125,
+          "line_end": 127,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 166,
+          "line_end": 166,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU04.A02",
+      "dimension": "algorithm_strategy",
+      "points": 3,
+      "expected": "The two AICs compute disjoint M slabs, each 256x128 C tile, using all K=128. Four AIVs each activate half of one corresponding AIC tile. The mixed kernel is __mix__(1,2), not a pure Cube kernel and not one Vector per Cube.",
+      "sources": [
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 188,
+          "line_end": 193,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 215,
+          "line_end": 215,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 41,
+          "line_end": 44,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU04.A03",
+      "dimension": "algorithm_strategy",
+      "points": 3,
+      "expected": "For these constants there is one M/N base tile and one K tile per AIC, not a hidden repeated K loop. Mmad cmatrixInitVal=true initializes the float C accumulator. The source does not perform an in-UB full matmul followed by activation.",
+      "sources": [
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 48,
+          "line_end": 115,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 204,
+          "line_end": 210,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU04.E01",
+      "dimension": "execution",
+      "points": 4,
+      "expected": "numBlocks=2 launches two AIC work items with four AIV work items under the mixed ratio. AIC i uses A GM element offset i*32768 and C GM element offset i*32768; B is shared unchanged. Each AIC output covers 256 full rows.",
+      "sources": [
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 38,
+          "line_end": 39,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 215,
+          "line_end": 215,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "half element offsets; multiply by 2 for bytes."
+    },
+    {
+      "id": "CU04.E02",
+      "dimension": "execution",
+      "points": 3,
+      "expected": "AIV j maps to AIC slab floor(j/2) and half-row offset (j%2)*16384 elements. Absolute C starts for j=0..3 are [0,16384,32768,49152] half elements; each processes 128x128=16384 elements. Together they cover all 65536 output elements without overlap.",
+      "sources": [
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 44,
+          "line_end": 44,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 150,
+          "line_end": 157,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 138,
+          "line_end": 138,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU04.E03",
+      "dimension": "execution",
+      "points": 3,
+      "expected": "Each AIC copies A=256x128 half and B=128x128 half, allocates float C=256x128. Explicit bytes: L1 A 65536 and B 32768; L0A A 65536; L0B B 32768; L0C C 131072; each AIV UB 32768. AIV copies 128 rows, blockLen=256 bytes, GM gap=(N-baseN)*2=0, UB gap=0.",
+      "sources": [
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 57,
+          "line_end": 61,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 134,
+          "line_end": 134,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 146,
+          "line_end": 147,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 157,
+          "line_end": 157,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU04.H01",
+      "dimension": "hardware",
+      "points": 4,
+      "expected": "On 2201: DataCopy converts ND GM to NZ L1; LoadData routes A NZ->Zz in L0A and B NZ->Zn in L0B with inner transpose; Mmad uses L0A/L0B and writes NZ float L0C; Fixpipe converts NZ->ND and float->half to GM; Vector stages GM half through UB and writes GM. It is not L0C directly to UB.",
+      "sources": [
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 65,
+          "line_end": 68,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 75,
+          "line_end": 92,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 125,
+          "line_end": 127,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/cube_compute_ISASI/cube_compute_store/Fixpipe_L0CToGM.md",
+          "line_start": 124,
+          "line_end": 124,
+          "sha256": "1f55a31fe89adbed8b4eca9e8eb8c8ef8b2e6668d8a3fe35b23401e50ddacf35"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU04.H02",
+      "dimension": "hardware",
+      "points": 3,
+      "expected": "The chain is MTE2->MTE1 before LoadData; MTE1->M before Mmad; M->FIX before Fixpipe; PIPE_FIX CrossCoreSetFlag mode2/flag0 to the paired AIV CrossCoreWaitFlag before GM read; MTE2->V before activation; V->MTE3 before final store. These orders are data dependencies with matching producer/consumer stages.",
+      "sources": [
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 72,
+          "line_end": 72,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 110,
+          "line_end": 110,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 119,
+          "line_end": 119,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 129,
+          "line_end": 129,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 136,
+          "line_end": 136,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 162,
+          "line_end": 162,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 170,
+          "line_end": 170,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/sync_control/inter_core_sync/CrossCoreWaitFlag_ISASI.md",
+          "line_start": 79,
+          "line_end": 79,
+          "sha256": "69845e8fa794040e321959eaa57105a79cdf880c2d9460b7bf65a53f3c644827"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU04.H03",
+      "dimension": "hardware",
+      "points": 2,
+      "expected": "GM is an explicit intermediate between Cube and Vector; final stores update the same C GM regions. Cross-core synchronization establishes readiness, but does not remove that intermediate storage or imply one common UB shared by AIC/AIV.",
+      "sources": [
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 126,
+          "line_end": 129,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 156,
+          "line_end": 158,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 175,
+          "line_end": 175,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU04.H04",
+      "dimension": "hardware",
+      "points": 1,
+      "expected": "3510 is a separate compile-time branch using LoadData2DParamsV2 and an NZ L0A layout. The actual target selects 2201; source existence of 3510 does not prove cross-platform compilation or performance.",
+      "sources": [
+        {
+          "file": "case-04/source/matmul_leakyrelu_basic_api.asc",
+          "line_start": 92,
+          "line_end": 107,
+          "sha256": "64086c964d5df9daf2dd0b81ba07b9352564ee06ede372423b58fea8a46b05e6"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/guide/programming_guide/language_extension/simd_builtin_keywords.md",
+          "line_start": 15,
+          "line_end": 15,
+          "sha256": "2257e8b42d59119dd45bb132eff1eb3958c01b70a3554e9fa566510442e669cb"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    }
+  ],
+  "critical_errors": [
+    {
+      "id": "CU04.C01",
+      "dimension": "hardware",
+      "cap": 2,
+      "explicit_claim_trigger": "Claims direct L0C->UB activation in this source or assigns 3510 L0A NZ layout to the 2201 path.",
+      "omission_does_not_trigger": true
+    },
+    {
+      "id": "CU04.C02",
+      "dimension": "algorithm_strategy",
+      "cap": 3,
+      "explicit_claim_trigger": "Claims activation occurs before the FP32-to-half Fixpipe conversion or that the operation keeps FP32 through activation.",
+      "omission_does_not_trigger": true
+    },
+    {
+      "id": "CU04.C03",
+      "dimension": "execution",
+      "cap": 3,
+      "explicit_claim_trigger": "Claims one AIV per AIC or gives all AIVs the same complete C tile.",
+      "omission_does_not_trigger": true
+    }
+  ],
+  "acceptable_unknowns": [
+    "Exact accumulation/activation bits and speed require unprovided hardware evidence.",
+    "GlobalTensor or LocalTensor names are not evidence of physical sharing.",
+    "No need for a performance optimization."
+  ],
+  "grading": "Use private/GRADING_PROTOCOL.md; do not infer unsupported measurements or penalize brevity."
+}

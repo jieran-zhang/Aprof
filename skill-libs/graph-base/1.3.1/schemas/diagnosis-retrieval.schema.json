@@ -1,0 +1,469 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aprof:diagnosis-retrieval",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "aprof.diagnosis-retrieval/v1"
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "context_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "knowledge_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "graph_version": {
+      "type": "string",
+      "pattern": "^v[0-9]{4}$"
+    },
+    "source_context_ref": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "additionalProperties": false
+    },
+    "problem_directory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mechanism": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scope": {
+            "type": "object",
+            "properties": {
+              "platforms": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "workloads": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "dtypes": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "required": [
+              "platforms",
+              "workloads",
+              "dtypes"
+            ],
+            "additionalProperties": false
+          },
+          "slots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "kind": {
+                  "enum": [
+                    "tensor",
+                    "task",
+                    "stage",
+                    "workload",
+                    "implementation",
+                    "object"
+                  ]
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "required": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "name",
+                "kind",
+                "description",
+                "required"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "source_path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_hash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "review": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "enum": [
+                  "reviewed_with_limits",
+                  "gap"
+                ]
+              },
+              "source_credibility": {
+                "type": "string",
+                "minLength": 1
+              },
+              "discriminating_power": {
+                "type": "string",
+                "minLength": 1
+              },
+              "observed_frequency": {
+                "type": "string",
+                "minLength": 1
+              },
+              "gaps": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "required": [
+              "state",
+              "source_credibility",
+              "discriminating_power",
+              "observed_frequency",
+              "gaps"
+            ],
+            "additionalProperties": false
+          },
+          "mechanism_summary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "alternatives": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "problem_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "distinction": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "check": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "problem_id",
+                "distinction",
+                "check"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "discriminating_checks": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "scope_status": {
+            "enum": [
+              "match",
+              "mismatch",
+              "unknown"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "mechanism",
+          "scope",
+          "slots",
+          "source_path",
+          "source_hash",
+          "review",
+          "mechanism_summary",
+          "alternatives",
+          "discriminating_checks",
+          "scope_status"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "observations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "state": {
+            "enum": [
+              true,
+              false,
+              "unknown"
+            ]
+          },
+          "view": {
+            "enum": [
+              "source",
+              "profile",
+              "workload"
+            ]
+          },
+          "required_components": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "scope_status": {
+            "const": "unbound"
+          },
+          "interpretation_boundary": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "state",
+          "view",
+          "required_components",
+          "scope_status",
+          "interpretation_boundary"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "symptom_adjacency": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "symptom_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "problem_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "relation": {
+            "enum": [
+              "supports",
+              "refutes"
+            ]
+          },
+          "edge_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "binding": {
+            "type": "object",
+            "properties": {
+              "object_bindings": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "from_slot": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "to_slot": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "rule": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "from_slot",
+                    "to_slot",
+                    "rule"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "joint_requirements": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "fact": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "state": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "fact",
+                    "state"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "rationale": {
+                "type": "string",
+                "minLength": 1
+              },
+              "discriminating_checks": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "required": [
+              "object_bindings",
+              "joint_requirements",
+              "exceptions",
+              "rationale",
+              "discriminating_checks"
+            ],
+            "additionalProperties": false
+          },
+          "legacy_prior": {
+            "type": "object",
+            "properties": {
+              "weight": {
+                "type": "number"
+              },
+              "role": {
+                "const": "uncalibrated_auxiliary_only"
+              }
+            },
+            "required": [
+              "weight",
+              "role"
+            ],
+            "additionalProperties": false
+          },
+          "observation_state": {
+            "type": "boolean"
+          },
+          "condition_state": {
+            "const": "not_evaluated"
+          },
+          "claim_basis": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "source_statement",
+                "code_fact",
+                "mechanism_inference",
+                "case_support",
+                "legacy_seed"
+              ]
+            }
+          },
+          "source_path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_hash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "symptom_id",
+          "problem_id",
+          "relation",
+          "edge_id",
+          "binding",
+          "legacy_prior",
+          "observation_state",
+          "condition_state",
+          "claim_basis",
+          "source_path",
+          "source_hash"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "schema_version",
+    "task_id",
+    "context_hash",
+    "knowledge_hash",
+    "graph_version",
+    "source_context_ref",
+    "problem_directory",
+    "observations",
+    "symptom_adjacency",
+    "limitations"
+  ],
+  "additionalProperties": false
+}

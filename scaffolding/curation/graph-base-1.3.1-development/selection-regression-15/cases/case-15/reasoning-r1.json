@@ -1,0 +1,633 @@
+{
+  "schema_version": "aprof.diagnosis-reasoning/v1",
+  "task_id": "autonomy-c-15",
+  "context_hash": "sha256:77110f93949acddabcb2b64a988621e2cfc31e2a01236def81da08c2604fd13f",
+  "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+  "source_context_ref": {
+    "path": "authority.json",
+    "sha256": "sha256:eb125a94bee6321b35ca6d6ad0a80eac4dcd1499eb8c244c9f42526c5b4ec587"
+  },
+  "context_snapshot": {
+    "schema_version": "aprof.evidence/v1",
+    "task_id": "autonomy-c-15",
+    "source_context_ref": {
+      "path": "authority.json",
+      "sha256": "sha256:eb125a94bee6321b35ca6d6ad0a80eac4dcd1499eb8c244c9f42526c5b4ec587"
+    },
+    "attributes": {
+      "platform": "dav-2201",
+      "family": [
+        "indexing",
+        "elementwise"
+      ],
+      "dtype": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "features": [
+        "scalar-control",
+        "memory-transfer",
+        "vector-api"
+      ]
+    },
+    "facts": {}
+  },
+  "current": {
+    "implementation_ref": {
+      "path": "parent-source.json",
+      "sha256": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704"
+    },
+    "workload_ref": {
+      "path": "source/matrix-20.json",
+      "sha256": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00"
+    },
+    "objects": [
+      {
+        "object_id": "path",
+        "kind": "object",
+        "description": "NCHW输出连续分核；每输出decode nc/oh/ow，两轴ResizeCoord及Floor/clip，四邻居Scalar GM取值和FP32加权；float直接Scalar写，B16先逐点SetValue再按1024 Cast/DMA。"
+      },
+      {
+        "object_id": "stage",
+        "kind": "stage",
+        "description": "kernel complete compute/data path"
+      },
+      {
+        "object_id": "workload",
+        "kind": "workload",
+        "description": "20 cases matrix"
+      },
+      {
+        "object_id": "implementation",
+        "kind": "implementation",
+        "description": "frozen full source parent"
+      }
+    ],
+    "scope": {
+      "task_id": "autonomy-c-15",
+      "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+      "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+      "target_ids": [
+        "path"
+      ],
+      "stage": "kernel-full-path"
+    }
+  },
+  "facts": {
+    "source.kernel": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source/op_kernel/resize_bilinear_kernel.asc@lines:1-18",
+      "ref": {
+        "path": "source/op_kernel/resize_bilinear_kernel.asc",
+        "sha256": "sha256:19cf99df77bb39be99c1f7e23848c8a0e9648f80178b40dba0c8ab84daad5863",
+        "locator": "lines:1-18"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "autonomy-c-15",
+        "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+        "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      },
+      "view": "source"
+    },
+    "source.host": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source/op_host/resize_bilinear.asc@lines:1-13",
+      "ref": {
+        "path": "source/op_host/resize_bilinear.asc",
+        "sha256": "sha256:a604c9ada83e33c67de6aa4de5c9e5ccf60c794a8327e2813a8662a2256f906e",
+        "locator": "lines:1-13"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "autonomy-c-15",
+        "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+        "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      },
+      "view": "source"
+    },
+    "source.tiling": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source/op_kernel/resize_bilinear_tiling.h@lines:1-16",
+      "ref": {
+        "path": "source/op_kernel/resize_bilinear_tiling.h",
+        "sha256": "sha256:fae2d2a88ae73aecfc7a7140db95c3103777a24c8a045ed981e24cebe8e44f38",
+        "locator": "lines:1-16"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "autonomy-c-15",
+        "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+        "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      },
+      "view": "source"
+    },
+    "source.workload": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source/matrix-20.json@cases",
+      "ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "locator": "cases"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "autonomy-c-15",
+        "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+        "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      },
+      "view": "workload"
+    },
+    "source.oracle": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source/scripts/verify_result.py@main",
+      "ref": {
+        "path": "source/scripts/verify_result.py",
+        "sha256": "sha256:a28070be721760b595b0af68d5f168e18d552ddb523118217f613b5a3946d643",
+        "locator": "main"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "autonomy-c-15",
+        "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+        "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      },
+      "view": "source"
+    },
+    "primary.symptom.source.scalar_element_loop": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [
+        "primary.symptom.source.scalar_element_loop.component_1",
+        "primary.symptom.source.scalar_element_loop.component_2",
+        "primary.symptom.source.scalar_element_loop.component_3"
+      ],
+      "components": [
+        "primary.symptom.source.scalar_element_loop.component_1",
+        "primary.symptom.source.scalar_element_loop.component_2",
+        "primary.symptom.source.scalar_element_loop.component_3"
+      ],
+      "scope": {
+        "task_id": "autonomy-c-15",
+        "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+        "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      },
+      "view": "source",
+      "predicate": "symptom.source.scalar_element_loop"
+    },
+    "primary.symptom.source.scalar_element_loop.component_1": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source/op_kernel/resize_bilinear_kernel.asc@lines:1-18",
+      "ref": {
+        "path": "source/op_kernel/resize_bilinear_kernel.asc",
+        "sha256": "sha256:19cf99df77bb39be99c1f7e23848c8a0e9648f80178b40dba0c8ab84daad5863",
+        "locator": "lines:1-18"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "autonomy-c-15",
+        "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+        "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      },
+      "view": "source",
+      "predicate": "symptom.source.scalar_element_loop.component_1"
+    },
+    "primary.symptom.source.scalar_element_loop.component_2": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source/op_kernel/resize_bilinear_kernel.asc@lines:1-18",
+      "ref": {
+        "path": "source/op_kernel/resize_bilinear_kernel.asc",
+        "sha256": "sha256:19cf99df77bb39be99c1f7e23848c8a0e9648f80178b40dba0c8ab84daad5863",
+        "locator": "lines:1-18"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "autonomy-c-15",
+        "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+        "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      },
+      "view": "source",
+      "predicate": "symptom.source.scalar_element_loop.component_2"
+    },
+    "primary.symptom.source.scalar_element_loop.component_3": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source/op_kernel/resize_bilinear_kernel.asc@lines:1-18",
+      "ref": {
+        "path": "source/op_kernel/resize_bilinear_kernel.asc",
+        "sha256": "sha256:19cf99df77bb39be99c1f7e23848c8a0e9648f80178b40dba0c8ab84daad5863",
+        "locator": "lines:1-18"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "autonomy-c-15",
+        "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+        "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      },
+      "view": "source",
+      "predicate": "symptom.source.scalar_element_loop.component_3"
+    },
+    "primary.constraint.semantic_equivalence": {
+      "state": "unknown",
+      "kind": "raw",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [],
+      "scope": {
+        "task_id": "autonomy-c-15",
+        "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+        "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      },
+      "view": "constraint",
+      "predicate": "constraint.semantic_equivalence"
+    },
+    "primary.constraint.capacity": {
+      "state": "unknown",
+      "kind": "raw",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [],
+      "scope": {
+        "task_id": "autonomy-c-15",
+        "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+        "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      },
+      "view": "constraint",
+      "predicate": "constraint.capacity"
+    },
+    "alternative.symptom.source.insufficient_input_reuse": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [
+        "alternative.symptom.source.insufficient_input_reuse.component_1",
+        "alternative.symptom.source.insufficient_input_reuse.component_2",
+        "alternative.symptom.source.insufficient_input_reuse.component_3"
+      ],
+      "components": [
+        "alternative.symptom.source.insufficient_input_reuse.component_1",
+        "alternative.symptom.source.insufficient_input_reuse.component_2",
+        "alternative.symptom.source.insufficient_input_reuse.component_3"
+      ],
+      "scope": {
+        "task_id": "autonomy-c-15",
+        "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+        "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      },
+      "view": "source",
+      "predicate": "symptom.source.insufficient_input_reuse"
+    },
+    "alternative.symptom.source.insufficient_input_reuse.component_1": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source/op_kernel/resize_bilinear_kernel.asc@lines:1-18",
+      "ref": {
+        "path": "source/op_kernel/resize_bilinear_kernel.asc",
+        "sha256": "sha256:19cf99df77bb39be99c1f7e23848c8a0e9648f80178b40dba0c8ab84daad5863",
+        "locator": "lines:1-18"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "autonomy-c-15",
+        "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+        "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      },
+      "view": "source",
+      "predicate": "symptom.source.insufficient_input_reuse.component_1"
+    },
+    "alternative.symptom.source.insufficient_input_reuse.component_2": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source/op_kernel/resize_bilinear_kernel.asc@lines:1-18",
+      "ref": {
+        "path": "source/op_kernel/resize_bilinear_kernel.asc",
+        "sha256": "sha256:19cf99df77bb39be99c1f7e23848c8a0e9648f80178b40dba0c8ab84daad5863",
+        "locator": "lines:1-18"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "autonomy-c-15",
+        "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+        "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      },
+      "view": "source",
+      "predicate": "symptom.source.insufficient_input_reuse.component_2"
+    },
+    "alternative.symptom.source.insufficient_input_reuse.component_3": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source/op_kernel/resize_bilinear_kernel.asc@lines:1-18",
+      "ref": {
+        "path": "source/op_kernel/resize_bilinear_kernel.asc",
+        "sha256": "sha256:19cf99df77bb39be99c1f7e23848c8a0e9648f80178b40dba0c8ab84daad5863",
+        "locator": "lines:1-18"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "autonomy-c-15",
+        "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+        "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      },
+      "view": "source",
+      "predicate": "symptom.source.insufficient_input_reuse.component_3"
+    },
+    "alternative.constraint.reuse_domain": {
+      "state": "unknown",
+      "kind": "raw",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [],
+      "scope": {
+        "task_id": "autonomy-c-15",
+        "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+        "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      },
+      "view": "constraint",
+      "predicate": "constraint.reuse_domain"
+    }
+  },
+  "candidates": [
+    {
+      "hypothesis_id": "H-primary",
+      "problem_id": "problem.scalar_control_hot_loop",
+      "mechanism": "将每点四项加权的Scalar乘加及B16逐点SetValue改为St点批量Vector计算；地址生成与四邻域收集作为明确残余，不把derived geometry当原输入",
+      "targets": [
+        "path"
+      ],
+      "scope": {
+        "task_id": "autonomy-c-15",
+        "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+        "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      },
+      "support": [
+        "source.kernel",
+        "source.tiling",
+        "source.workload"
+      ],
+      "counter": [],
+      "unknown": [
+        "primary.constraint.semantic_equivalence",
+        "primary.constraint.capacity"
+      ],
+      "alternatives": [
+        "H-alternative"
+      ],
+      "checks": [
+        "用源码地址/数值/API/物理容量闭合，再用编译/同协议Task测量区分逻辑工作和关键路径"
+      ],
+      "status": "plausible",
+      "reason": "固定nc的连续空间St片生成原坐标/合法邻居，再收集四路值，按原a*ah*aw+b*ah*dw+c*dh*aw+d*dh*dw顺序批量Mul/Add，保持FP32路径和B16回写舍入，输出统一有效DMA；不修改align/clip/Floor。",
+      "excluded_by": [],
+      "independent_evidence_groups": [
+        [
+          "source.kernel",
+          "source.tiling",
+          "source.workload"
+        ]
+      ]
+    },
+    {
+      "hypothesis_id": "H-alternative",
+      "problem_id": "problem.insufficient_input_reuse",
+      "mechanism": "窗口内重复地址请求由4*St降为unique_neighbor_count；仅保存本nc原输入，跨nc不能共用输入值",
+      "targets": [
+        "path"
+      ],
+      "scope": {
+        "task_id": "autonomy-c-15",
+        "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+        "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      },
+      "support": [
+        "source.kernel",
+        "source.tiling",
+        "source.workload"
+      ],
+      "counter": [],
+      "unknown": [
+        "alternative.constraint.reuse_domain",
+        "primary.constraint.semantic_equivalence",
+        "primary.constraint.capacity"
+      ],
+      "alternatives": [
+        "H-primary"
+      ],
+      "checks": [
+        "用源码地址/数值/API/物理容量闭合，再用编译/同协议Task测量区分逻辑工作和关键路径"
+      ],
+      "status": "plausible",
+      "reason": "局部输入窗口驻留可减少上采样重读，但下采样邻域稀疏时加载未消费间隙，halo重读和UB局部gather增加代价；不能把跨channel坐标相同当相同输入值。",
+      "excluded_by": [],
+      "independent_evidence_groups": [
+        [
+          "source.kernel",
+          "source.tiling",
+          "source.workload"
+        ]
+      ]
+    },
+    {
+      "hypothesis_id": "H-geometry",
+      "problem_id": null,
+      "mechanism": "ResizeCoord/Floor/neighbor weights由oh/ow及shape决定，跨NC重复生成派生几何；与原输入值复用不同。",
+      "targets": [
+        "path"
+      ],
+      "scope": {
+        "task_id": "autonomy-c-15",
+        "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+        "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      },
+      "support": [
+        "source.kernel",
+        "source.tiling",
+        "source.workload"
+      ],
+      "counter": [],
+      "unknown": [],
+      "alternatives": [
+        "H-primary",
+        "H-alternative"
+      ],
+      "checks": [
+        "改变Ct后比较几何记录、活跃字节、task数和访问跨度；先提案独立Action"
+      ],
+      "status": "plausible",
+      "reason": "来源coordinate_neighborhood明确区分派生记录与输入值；已有Action不授权该独立意图。",
+      "excluded_by": [],
+      "independent_evidence_groups": [
+        [
+          "source.kernel",
+          "source.tiling",
+          "source.workload"
+        ]
+      ]
+    }
+  ],
+  "action_instances": [
+    {
+      "instance_id": "I-primary",
+      "action_id": "action.vectorize_scalar_loop",
+      "template_hash": "sha256:999efb87cd58b497fcf2315e3dc294419c39404d0d0256d9f51b45f723311d3a",
+      "hypothesis_id": "H-primary",
+      "targets": {
+        "target": "path",
+        "stage": "stage",
+        "workload": "workload",
+        "implementation": "implementation"
+      },
+      "scope": {
+        "task_id": "autonomy-c-15",
+        "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+        "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      },
+      "parameters": {
+        "plan": "固定nc的连续空间St片生成原坐标/合法邻居，再收集四路值，按原a*ah*aw+b*ah*dw+c*dh*aw+d*dh*dw顺序批量Mul/Add，保持FP32路径和B16回写舍入，输出统一有效DMA；不修改align/clip/Floor。",
+        "capacity_formula": "四邻域FP32数组及输出至少5*A(4*St)，另加索引/权重/转换/原始暂存；Scalar gather→UB新增存储和同步，需比较St及原float直接写"
+      },
+      "evidence_bindings": {
+        "symptom.source.scalar_element_loop": "primary.symptom.source.scalar_element_loop",
+        "constraint.semantic_equivalence": "primary.constraint.semantic_equivalence",
+        "constraint.capacity": "primary.constraint.capacity"
+      },
+      "unknowns": [
+        "constraint.semantic_equivalence",
+        "constraint.capacity"
+      ],
+      "status": "conditional",
+      "reason": "已知源码支持具体假设；最终API、物理容量及实例等价证明未做，不能实施。",
+      "parent_plan_hash": null
+    },
+    {
+      "instance_id": "I-alternative",
+      "action_id": "action.reuse_input_tiles",
+      "template_hash": "sha256:a428e6e7f933209aaa3209fe76f80f176f16c3526b15ad79214f2a6634d8d920",
+      "hypothesis_id": "H-alternative",
+      "targets": {
+        "target": "path",
+        "stage": "stage",
+        "workload": "workload",
+        "implementation": "implementation"
+      },
+      "scope": {
+        "task_id": "autonomy-c-15",
+        "parent_implementation_hash": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704",
+        "workload_hash": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      },
+      "parameters": {
+        "plan": "局部输入窗口驻留可减少上采样重读，但下采样邻域稀疏时加载未消费间隙，halo重读和UB局部gather增加代价；不能把跨channel坐标相同当相同输入值。",
+        "capacity_formula": "Bwindow=windowH*aligned(windowW*s)，另有halo、索引和转换；downsampling可能Bwindow>4*St*s，窗口并非总能省流量"
+      },
+      "evidence_bindings": {
+        "symptom.source.insufficient_input_reuse": "alternative.symptom.source.insufficient_input_reuse",
+        "constraint.reuse_domain": "alternative.constraint.reuse_domain",
+        "constraint.semantic_equivalence": "primary.constraint.semantic_equivalence",
+        "constraint.capacity": "primary.constraint.capacity"
+      },
+      "unknowns": [
+        "constraint.reuse_domain",
+        "constraint.semantic_equivalence",
+        "constraint.capacity"
+      ],
+      "status": "conditional",
+      "reason": "已知源码支持具体假设；最终API、物理容量及实例等价证明未做，不能实施。",
+      "parent_plan_hash": null
+    }
+  ],
+  "predecessor_ref": null
+}

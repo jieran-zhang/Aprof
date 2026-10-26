@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aprof:diagnosis-case-review",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "aprof.diagnosis-case-review/v1"
+    },
+    "case_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "case_basis_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "reviewer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "independent": {
+      "type": "boolean"
+    },
+    "decision": {
+      "enum": [
+        "pending",
+        "reviewed",
+        "rejected"
+      ]
+    },
+    "blocking_findings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "case_id",
+    "case_basis_hash",
+    "reviewer",
+    "independent",
+    "decision",
+    "blocking_findings",
+    "notes"
+  ],
+  "additionalProperties": false
+}

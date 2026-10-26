@@ -1,0 +1,39 @@
+当前实现是按行截取并改变物理行距的数据搬运。输入按 float32 存储，物理形状为 [5,20]，共 5×20×4=400B，input[r,c]=100r+c；输出分配 [5,18]，共360B，预先逐字节置为0xA5。最终每行前13个 float 等于输入同行前13个值，其余5个 float 所占字节保持0xA5。因此各行有效值依次为0～12、100～112、200～212、300～312、400～412；保留区若按float32解释，其位模式为0xA5A5A5A5，不能解释为补零。
+
+依据是 [source/current/data_copy_pad.asc](/tmp/eval/source/current/data_copy_pad.asc:20) 中固定的 scenarioNum=2，以及 main 的常量和调用（220～269行）。SRC_ROWS=5、SRC_COLS=13、DST_COLS=16、DST_TOTAL_LENGTH=5×24=120；这些量分别控制块数、有效行长、UB填充后行长和UB分配元素数，不是同一个形状。main 分配内存、初始化输出、读取输入并复制到设备，随后以 numBlocks=1 启动模板实例 data_copy_pad_custom<5,13,16,120>，同步后将完整360B输出复制回host并写文件。data_utils.h 的 ReadFile/WriteFile 只进行二进制读写，不生成输入，也不计算参考答案；这里采用题面给定的输入内容。
+
+kernel入口（194～213行）声明为 __vector__，调用 InitSocState，选择 float 实例并执行 Init、Process。Init仅将两个GM地址解释为float指针并绑定GlobalTensor。工程没有独立tiling结构或动态切分函数，划分参数由host编译期模板直接传入；一个Vector block处理全部5行，没有按核号偏移、分块循环或跨核协作。3510条件编译下的Compact和loop mode分支不属于本题2201执行路径。
+
+Process（58～69行）通过 LocalMemAllocator<Hardware::UB>::Alloc<float,120>() 获得一块120×4=480B的UB tensor，并用Duplicate将全部120个元素清零。固定原始文档 LocalMemAllocator/Alloc.md 将tileSize定义为元素数；这里没有TQue、TPipe或双缓冲。以下所有区间均为相对于各自缓冲区基址的字节偏移，使用左闭右开记法，不能理解为已知的绝对设备地址。
+
+CopyIn的场景2分支（95～105行）使用 DataCopyExtParams{5,52,28,1,0}：5块，每块13×4=52B。依据 shared/rawdocs 中 DataCopyPad_GMToUB.md 的A3表4，GM侧srcStride以字节计，UB侧dstStride以32B dataBlock计，且stride表示块间空隙。因此输入GM行起点间距为52+28=80B，正好对应20个float；每行只读取列0～12，列13～19的28B不读。
+
+padParams设置 isPad=true、leftPadding=0、rightPadding=16−13=3、paddingValue=0。依据同文档表5，左右padding以元素计，故显式右补3×4=12B。有效数据加填充为52+12=64B，已经32B对齐，不需要额外dummy。再加dstStride=1所代表的32B间隙，UB行起点间距为64+32=96B，即24个float。各行实际范围如下：
+
+| 行r | 输入GM有效区 | UB有效区 | UB右填充区 | UB其后零区 |
+|---|---|---|---|---|
+| 0 | [0,52) | [0,52) | [52,64) | [64,96) |
+| 1 | [80,132) | [96,148) | [148,160) | [160,192) |
+| 2 | [160,212) | [192,244) | [244,256) | [256,288) |
+| 3 | [240,292) | [288,340) | [340,352) | [352,384) |
+| 4 | [320,372) | [384,436) | [436,448) | [448,480) |
+
+输入GM每行未读区为[80r+52,80r+80)，共5×28=140B。UB表中前四个“其后零区”是行间stride空隙，最后一个是分配尾部；这些区域的零来自先前Duplicate，并非DataCopyPad填充。CopyIn总计读入260B有效数据、产生60B显式零填充；其目标布局包络为[0,448)，其中包含四段32B间隙，整个480B分配足以容纳。
+
+写回使用 Process 的 DataCopyExtParams{5,52,1,20,0}。根据原始 DataCopyPad_UBToGM.md 的A3表4及非对齐搬运说明，此时单位随方向改变：srcStride在UB侧以32B计，dstStride在GM侧以字节计。UB每块有效52B按32B向上对齐到64B，加32B间隔，源行距仍为96B，恰好读取前述五行；输出GM行距则为52+20=72B，即18个float。非对齐搬出只向GM提交每块52B有效内容，对齐部分被丢弃；UB中的12B右填充和32B行间空隙均不写入输出。
+
+| 行r | 输出GM写入区 | 保持0xA5的区间 |
+|---|---|---|
+| 0 | [0,52) | [52,72) |
+| 1 | [72,124) | [124,144) |
+| 2 | [144,196) | [196,216) |
+| 3 | [216,268) | [268,288) |
+| 4 | [288,340) | [340,360) |
+
+因此写回共65个float、260B，保留25个float对应的100B。实际写入最高至偏移339，包络长度340B，输出分配为360B；上述输入、UB和输出范围均未越界。输出变换可写成：对0≤r<5、0≤c<13，将输入偏移80r+4c处的float复制到输出偏移72r+4c处；13≤c<18保持原始字节。
+
+910C/Atlas A3的2201行为按workload/sdk-contract.md指定的固定SDK契约解释。原始两份DataCopyPad文档均支持A3上的float和当前不带mode模板参数的重载。硬件数据路径是V流水先清零UB，随后MTE2将GM有效数据搬入UB并填充，再由MTE3从同一UB搬到输出GM。这里只使用Vector侧资源，没有Cube矩阵计算，也没有L1、L0A/B、L0C或格式转换；float值搬运过程中不发生算术、类型转换或舍入。
+
+同步对应具体依赖：63～64行的 V_MTE2 事件使MTE2等待Duplicate完成，保护同一UB上的先清零、后覆盖关系，也保证间隙初始化完成；66～67行的 MTE2_MTE3 事件使MTE3等待输入搬运及填充结束，避免读取尚未就绪的数据。两组均使用EVENT_ID0，但事件方向不同且各自Set/Wait配对，不是同一事件重复置位。原始 SetFlag_WaitFlag_ISASI.md 说明Set在源流水前序读写完成后置位，Wait阻塞目的流水并消耗标志。入口末尾的 PipeBarrier<PIPE_ALL>() 用于核内各相关流水前序操作的完成收束；host的 aclrtSynchronizeStream 则保证本stream上的kernel完成后再回读、写文件和释放内存。它们均不构成跨核同步。
+
+以上是源码与固定API契约共同给出的静态结果，以输入符合题面、相关API成功执行为前提。host未检查读取、分配及运行调用的返回状态，静态材料不能证明实际成功执行；也没有构建产物或设备观测来确认指令展开、耗时、带宽或流水重叠。numBlocks=1只能说明此次启动的工作块数量，不能推出910C的物理核数。

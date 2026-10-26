@@ -1,0 +1,41 @@
+{
+  "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+  "task_id": "raw15-case-05",
+  "context_hash": "sha256:6c0178ab5b6dec5668a414fe550b1a839821d28cb8909372df8c0b9893c4f6cf",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "graph_version": "v0005",
+  "source_context_ref": {
+    "path": "origin.json",
+    "sha256": "sha256:9c5214155b44e94cb2294c93dfe94a8ea9c12d787d9736dce8e0276919617a6c"
+  },
+  "retrieval_hash": "sha256:a0da4452a76b126fa737f82560305141f0bdccfa11f0014d8589cf8aadbc5584",
+  "selections": [
+    {
+      "problem_id": "problem.pipeline_serialization",
+      "reason": "四输入一输出与长safe-sqrt/div计算单槽顺序，提出原始输入预取。",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.current_kernel"
+      ]
+    },
+    {
+      "problem_id": "problem.onchip_capacity_pressure",
+      "reason": "host已有20/30 bytes/element容量算法；双槽要重算而非宣称容量压力。",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.current_kernel"
+      ]
+    },
+    {
+      "problem_id": "problem.control_metadata_overhead",
+      "reason": "每tile加载12个tiling字段，比较可能编译器外提与真实计算/数据成本。",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.current_kernel"
+      ]
+    }
+  ]
+}

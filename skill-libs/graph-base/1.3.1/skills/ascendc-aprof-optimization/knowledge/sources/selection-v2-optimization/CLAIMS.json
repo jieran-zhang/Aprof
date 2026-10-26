@@ -1,0 +1,350 @@
+{
+  "claims": [
+    {
+      "id": "compare-count-a23",
+      "basis_type": "upstream_statement",
+      "statement": "A2/A3 Compare count有效元素所占空间必须256B对齐，未对齐部分不参与；不是所有count API通则",
+      "sources": [
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Compare.md",
+          "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+          "sha256": "sha256:353264a38c342ca8b668d0400e48750461820fa743be89ba59d6824eb4764262",
+          "lines": [
+            226,
+            233
+          ],
+          "needle": "未对齐部分元素不参与计算"
+        }
+      ],
+      "review_status": "source_reviewed",
+      "performance_status": "not_measured"
+    },
+    {
+      "id": "compare-mask-a23",
+      "basis_type": "upstream_statement",
+      "statement": "A2/A3 Compare mask设置无效，950设置有效",
+      "sources": [
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Compare.md",
+          "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+          "sha256": "sha256:353264a38c342ca8b668d0400e48750461820fa743be89ba59d6824eb4764262",
+          "lines": [
+            121,
+            128
+          ],
+          "needle": "针对Atlas A3系列产品，保留参数"
+        }
+      ],
+      "review_status": "source_reviewed",
+      "performance_status": "not_measured"
+    },
+    {
+      "id": "compare-implementation",
+      "basis_type": "source_fact",
+      "statement": "dav_c220 CompareCompute使用count*sizeof(T)/ONE_REPEAT_BYTE_SIZE整除得到repeat",
+      "sources": [
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/impl/basic_api/dav_c220/kernel_operator_vec_cmp_impl.h",
+          "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+          "sha256": "sha256:cf6f865a3350eeca13b0dd1355c0275f0085d9e10beaaa8f6e71d1f894d2ac9f",
+          "lines": [
+            156,
+            379
+          ],
+          "needle": "uint32_t sumRepeat = count * sizeof(T)"
+        }
+      ],
+      "review_status": "source_reviewed",
+      "performance_status": "not_measured"
+    },
+    {
+      "id": "select-modes",
+      "basis_type": "upstream_statement",
+      "statement": "Select模式0每轮复用同一predicate，模式2连续消费不同部分",
+      "sources": [
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Select.md",
+          "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+          "sha256": "sha256:615845595e9b6ca5d150548eb27e9e6fd9d0bb972ee1533f933ad6bea8d940b5",
+          "lines": [
+            45,
+            52
+          ],
+          "needle": "模式0（"
+        },
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Select.md",
+          "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+          "sha256": "sha256:615845595e9b6ca5d150548eb27e9e6fd9d0bb972ee1533f933ad6bea8d940b5",
+          "lines": [
+            53,
+            60
+          ],
+          "needle": "模式2（"
+        }
+      ],
+      "review_status": "source_reviewed",
+      "performance_status": "not_measured"
+    },
+    {
+      "id": "select-workspace",
+      "basis_type": "upstream_statement",
+      "statement": "A2/A3模式1/2需预留8KB UB；950按重载区分",
+      "sources": [
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Select.md",
+          "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+          "sha256": "sha256:615845595e9b6ca5d150548eb27e9e6fd9d0bb972ee1533f933ad6bea8d940b5",
+          "lines": [
+            229,
+            236
+          ],
+          "needle": "使用时需要预留8KB"
+        }
+      ],
+      "review_status": "source_reviewed",
+      "performance_status": "not_measured"
+    },
+    {
+      "id": "copy-padding",
+      "basis_type": "upstream_statement",
+      "statement": "DataCopyPad UB→GM不把对齐dummy写入GM",
+      "sources": [
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_UBToGM.md",
+          "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+          "sha256": "sha256:23e9b37e62ff5c2fed4b142ad65b346f8987aa6be527e291dae63466dc88f315",
+          "lines": [
+            164,
+            171
+          ],
+          "needle": "再自动将填充的假数据丢弃掉"
+        }
+      ],
+      "review_status": "source_reviewed",
+      "performance_status": "not_measured"
+    },
+    {
+      "id": "rms-queue",
+      "basis_type": "source_fact",
+      "statement": "RMSNormQuant固定样例两份x/y物理槽、gamma在Process循环前装入转换",
+      "sources": [
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/cann-samples/17c948bb961fc6a660e4fcab45f6bf217c9c6239/Samples/2_Performance/rms_norm_quant_story/src/4_double_buffer.asc",
+          "revision": "17c948bb961fc6a660e4fcab45f6bf217c9c6239",
+          "sha256": "sha256:6b027cb2b0faa24546a5d13339f06f93a1e8fe0bed527c80866038ae12c0557a",
+          "lines": [
+            232,
+            239
+          ],
+          "needle": "InitBuffer(xInQueue_"
+        },
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/cann-samples/17c948bb961fc6a660e4fcab45f6bf217c9c6239/Samples/2_Performance/rms_norm_quant_story/src/4_double_buffer.asc",
+          "revision": "17c948bb961fc6a660e4fcab45f6bf217c9c6239",
+          "sha256": "sha256:6b027cb2b0faa24546a5d13339f06f93a1e8fe0bed527c80866038ae12c0557a",
+          "lines": [
+            309,
+            316
+          ],
+          "needle": "CopyInGamma();"
+        }
+      ],
+      "review_status": "source_reviewed",
+      "performance_status": "not_measured"
+    },
+    {
+      "id": "rms-platform",
+      "basis_type": "source_fact",
+      "statement": "RMSNormQuant样例限定dav-3510/950，VF代码不作为910C实现依据",
+      "sources": [
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/cann-samples/17c948bb961fc6a660e4fcab45f6bf217c9c6239/Samples/2_Performance/rms_norm_quant_story/CMakeLists.txt",
+          "revision": "17c948bb961fc6a660e4fcab45f6bf217c9c6239",
+          "sha256": "sha256:6e7620af55c25f4c17416072ad4e9b82f065e23d55b58449d56db6ad3e46a123",
+          "lines": [
+            9,
+            16
+          ],
+          "needle": "cann_sample_check_arch(dav-3510)"
+        },
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/cann-samples/17c948bb961fc6a660e4fcab45f6bf217c9c6239/Samples/2_Performance/rms_norm_quant_story/README.md",
+          "revision": "17c948bb961fc6a660e4fcab45f6bf217c9c6239",
+          "sha256": "sha256:31d54b8888424d789e909b56e16e410042d3575ce85c3b0df8e62f717affa2aa",
+          "lines": [
+            4,
+            11
+          ],
+          "needle": "**平台**"
+        }
+      ],
+      "review_status": "source_reviewed",
+      "performance_status": "not_measured"
+    },
+    {
+      "id": "rope-derived",
+      "basis_type": "source_fact",
+      "statement": "RoPE SplitBS在Process前构造Gather偏移表并在循环中复用",
+      "sources": [
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bs.h",
+          "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+          "sha256": "sha256:92e2365907ffbd499d113d173a67bd2ade41d1a92d82f3d20b3965eaad17b001",
+          "lines": [
+            201,
+            208
+          ],
+          "needle": "SetGatherSrcOffset(gatherOffset"
+        },
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bs.h",
+          "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+          "sha256": "sha256:92e2365907ffbd499d113d173a67bd2ade41d1a92d82f3d20b3965eaad17b001",
+          "lines": [
+            113,
+            120
+          ],
+          "needle": "gatherOffsetLenSize ="
+        }
+      ],
+      "review_status": "source_reviewed",
+      "performance_status": "not_measured"
+    },
+    {
+      "id": "rope-owner-host",
+      "basis_type": "source_fact",
+      "statement": "Host为SplitB等路径按dtype临时区和UB容量计算批量，entry映射对应类",
+      "sources": [
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_host/rope_interleaved_tiling.cpp",
+          "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+          "sha256": "sha256:0f2bac0d6cd52e57ef38976b7fb8205e3104f2e0ea26f3689f0be1dd0a09cec6",
+          "lines": [
+            170,
+            177
+          ],
+          "needle": "ge::graphStatus TilingSplitB"
+        },
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_kernel/rotary_position_embedding.cpp",
+          "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+          "sha256": "sha256:5160d08c053ba32694df0c699d31ddc9b67a26d3ae4545f4fb9d6122efc3400e",
+          "lines": [
+            175,
+            182
+          ],
+          "needle": "InterleavedSplitBS<float>"
+        }
+      ],
+      "review_status": "source_reviewed",
+      "performance_status": "not_measured"
+    },
+    {
+      "id": "rope-storage-reuse",
+      "basis_type": "source_fact",
+      "statement": "cos与sin复用存储时V→MTE2完成边保护前值最后消费者",
+      "sources": [
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bs.h",
+          "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+          "sha256": "sha256:92e2365907ffbd499d113d173a67bd2ade41d1a92d82f3d20b3965eaad17b001",
+          "lines": [
+            168,
+            177
+          ],
+          "needle": "HardEvent::V_MTE2"
+        }
+      ],
+      "review_status": "source_reviewed",
+      "performance_status": "not_measured"
+    },
+    {
+      "id": "relu-key",
+      "basis_type": "source_fact",
+      "statement": "SquaredRelu Host按dtype选key，entry以相同key实例化对应dtype",
+      "sources": [
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/activation/squared_relu/op_host/squared_relu_tiling.cpp",
+          "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+          "sha256": "sha256:697c6defba0cef026c0f4a803516acf04e3addb7fd8eab135024febbd505d477",
+          "lines": [
+            85,
+            92
+          ],
+          "needle": "dataType == ge::DT_FLOAT16"
+        },
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/activation/squared_relu/op_kernel/squared_relu.cpp",
+          "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+          "sha256": "sha256:fec0dbec3c56df4d0351baa8c88deedf837558871a02491f0c425ad3ca33b6a8",
+          "lines": [
+            27,
+            34
+          ],
+          "needle": "TILING_KEY_IS(1)"
+        }
+      ],
+      "review_status": "source_reviewed",
+      "performance_status": "not_measured"
+    },
+    {
+      "id": "scalar-live",
+      "basis_type": "upstream_statement",
+      "statement": "较长活跃范围可能增加寄存器压力/spill；具体分配须目标编译确认",
+      "sources": [
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/coding_principles.md",
+          "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+          "sha256": "sha256:a387544bac3f38ad940fae2930e75c9f7cda45c8e25324f4cd864bee1ce4827c",
+          "lines": [
+            231,
+            238
+          ],
+          "needle": "活跃范围（Live Range）"
+        }
+      ],
+      "review_status": "source_reviewed",
+      "performance_status": "not_measured"
+    },
+    {
+      "id": "cost-models",
+      "basis_type": "mechanism_inference",
+      "statement": "补齐/驻留/流水/覆盖公式为工程推导，只表示工作/资源/理想时间模型，不是已测收益",
+      "sources": [
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Compare.md",
+          "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+          "sha256": "sha256:353264a38c342ca8b668d0400e48750461820fa743be89ba59d6824eb4764262",
+          "lines": [
+            226,
+            233
+          ],
+          "needle": "未对齐部分元素不参与计算"
+        },
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/ops-transformer/d7e6a7c6c1450c040049486845336c77f3100406/posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bs.h",
+          "revision": "d7e6a7c6c1450c040049486845336c77f3100406",
+          "sha256": "sha256:92e2365907ffbd499d113d173a67bd2ade41d1a92d82f3d20b3965eaad17b001",
+          "lines": [
+            113,
+            120
+          ],
+          "needle": "gatherOffsetLenSize ="
+        },
+        {
+          "source": "skills/ascendc-aprof-optimization/knowledge/sources/selection-v2-optimization/cann-samples/17c948bb961fc6a660e4fcab45f6bf217c9c6239/Samples/2_Performance/rms_norm_quant_story/src/4_double_buffer.asc",
+          "revision": "17c948bb961fc6a660e4fcab45f6bf217c9c6239",
+          "sha256": "sha256:6b027cb2b0faa24546a5d13339f06f93a1e8fe0bed527c80866038ae12c0557a",
+          "lines": [
+            232,
+            239
+          ],
+          "needle": "InitBuffer(xInQueue_"
+        }
+      ],
+      "review_status": "source_reviewed",
+      "performance_status": "not_measured"
+    }
+  ]
+}

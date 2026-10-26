@@ -1,0 +1,1601 @@
+{
+  "schema": "aprof.anonymous-behavior-grades/v1",
+  "graded_at_utc": "2026-10-21T11:58:12.836427+00:00",
+  "masking_read": false,
+  "original_runs_read": false,
+  "old_evaluations_read": false,
+  "hardware_used": false,
+  "facts_frozen": {
+    "evaluation/FACTS.md": "sha256:b88ed82cfe2eebb780cb3075715ecdc0db79efc1a2efe62398fa4e39ec0df5f2",
+    "evaluation/FACTS-ADDENDUM.md": "sha256:97d991051873d6b127e182f918e41271e4fafc47e5d32fbaec382cb7c5f8a2dd"
+  },
+  "rubric": {
+    "anchors": {
+      "0": "关键事实/计划/行为缺失或明确冲突",
+      "1": "有可用判断，但缺会改变选择的具体环节或有实质边界误述",
+      "2": "关键判断与源码、方法、联合代价及适用范围充分相连"
+    },
+    "failures_are_separate": true,
+    "conditional_plan_no_change_single_or_multi_action_are_allowed": true,
+    "adopted_means": "拟采用到纸面计划；不是已执行代码或正式router命中",
+    "not_scored": [
+      "Action数",
+      "是否换Action",
+      "Key数",
+      "字数",
+      "硬件未测",
+      "真实检索效率",
+      "主体没有调用被禁用的工具"
+    ],
+    "scope": "八份独立一轮静态方案/初始摘要；真实后继摘要使用另作定性检查"
+  },
+  "results": [
+    {
+      "anonymous_id": "answer-01c6ded3ab",
+      "operator": "grid_sampler_3d",
+      "answer_sha256": "sha256:c039bbd129fc7be46c7896272629ce5c085808d6be468a0b1fa68b93b998ddb5",
+      "plan": "输出owner不变，Scalar生成坐标/样本，Vector按原八项顺序计算bilinear，nearest保留",
+      "action_count_is_not_a_scoring_factor": true,
+      "actions": [
+        {
+          "id": "action.vectorize_scalar_loop",
+          "use": "adopted",
+          "instance_count": 1
+        }
+      ],
+      "problem_mentions": [
+        {
+          "id": "problem.noncontiguous_access",
+          "use": "referenced",
+          "effect": "拒绝用规则stride冒充随机gather。"
+        }
+      ],
+      "dimensions": [
+        {
+          "key": "source_hardware_facts",
+          "label": "源码与硬件事实",
+          "score": 2,
+          "reason": "正确区分FP16手工解码、Scalar主循环与末端Vector Cast；保留原乘法括号/八项顺序和14/6分域。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-01c6ded3ab/answer.md",
+            "start_line": 31,
+            "end_line": 36,
+            "quote": "- 八项贡献在源码中是 **`((value * wx) * wy) * wz` 后依次加到 `result`**，不是预先形成 `wx*wy*wz` 再乘输入。\n- 无效邻点由 `GridRead` 返回 `0.0f`，然后仍进入乘法和累加。\n- 有效邻点即使权重为零也不能跳过：例如 `Inf*0` 的 NaN 传播属于本题必须保留的行为。\n- FP16 输入由 `GridToFloat` 手工展开位模式，包括次正规数和非有限值；实际 FP16 输出路径用 Vector `Cast(..., CAST_NONE, count)`，不是未被调用的逐元素 `GridFromFloat<half>`。\n\n因此，删除零权重项、合并权重、使用 FMA 或改成 Cube 小矩阵乘法，都不是可默认等价的替换。"
+          },
+          "source_evidence": [
+            "evaluation/sources/grid_sampler_3d/op_kernel/grid_sampler_3d_kernel.asc:8",
+            "evaluation/sources/grid_sampler_3d/op_kernel/grid_sampler_3d_kernel.asc:125",
+            "evaluation/sources/grid_sampler_3d/op_kernel/grid_sampler_3d_kernel.asc:170"
+          ]
+        },
+        {
+          "key": "complete_scheme_dependencies",
+          "label": "完整方案及必要依赖",
+          "score": 2,
+          "reason": "一个实例覆盖Scalar producer、Vector consumer、有效写回和缓冲最后消费者；没有为API/文件增凑Action。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-01c6ded3ab/answer.md",
+            "start_line": 217,
+            "end_line": 224,
+            "quote": "必要依赖由方案自身兑现：\n\n1. Scalar producer 完成八邻值、六因子和累加初值的写入；\n2. 每个 Vector consumer 只消费本 tile 的有效 n 个元素；\n3. 八轮计算顺序固定；\n4. Cast/写出前等待结果完成；\n5. DMA 最后读取结束后才能覆盖对应输出槽；\n6. nearest 不进入新暂存或 Vector 插值路径。"
+          },
+          "source_evidence": [
+            "evaluation/sources/grid_sampler_3d/op_kernel/grid_sampler_3d_kernel.asc:163"
+          ]
+        },
+        {
+          "key": "work_coverage_cost_selection",
+          "label": "工作/覆盖/代价影响选择",
+          "score": 2,
+          "reason": "对照24乘+8加的Scalar减少与16个FP32数组、staging/UB/发射新增代价；说明强替代与重开条件。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-01c6ded3ab/answer.md",
+            "start_line": 135,
+            "end_line": 142,
+            "quote": "| 八项三乘链 | 24 次 Scalar 乘法 | 相同数学顺序的 Vector Mul |\n| 八次累加 | Scalar | 相同顺序的 Vector Add |\n| 结果输出 | FP32 逐元素；FP16 已分块 | 两 dtype 均按有效连续块写出 |\n| 新增 | — | 邻点、因子暂存及 UB 读写、Vector 发射和完成边 |\n\n一个 tile 是 24 个 Mul 调用、8 个 Add 调用，而不是每输出 32 次 Vector 调用。该方案不减少输入 x 的必要逻辑读取，也不减少跨通道几何重算。\n\n选择理由：它直接作用于大型 bilinear 路径的实际数据算术，注册意图明确；不依赖尚未提供的 GM gather API、不要求重新分核或假设输入局部性，且可逐元素保持原乘法与累加顺序。代价也不小：**Scalar 暂存和 UB 流量可能抵消算术收益**，必须将其作为整体试验，而非认定 Vector 必快。"
+          },
+          "source_evidence": [
+            "evaluation/sources/grid_sampler_3d/op_kernel/grid_sampler_3d_kernel.asc:125",
+            "evaluation/sources/grid_sampler_3d/op_kernel/grid_sampler_3d_kernel.asc:159"
+          ]
+        },
+        {
+          "key": "po_substantive_use",
+          "label": "P/O正文实质采用",
+          "score": 2,
+          "reason": "P将G/B/H/F绑定实际采样语义，并明确Gather仅参考原则；O的count、Cast、尾块和别名约束进入方案。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-01c6ded3ab/answer.md",
+            "start_line": 232,
+            "end_line": 244,
+            "quote": "完整采用 P 的 `indexing/templates/coordinate_neighborhood.md` 中：\n\n> **输出连续空间块，独立生成几何**骨架。\n\n语义槽位绑定为：\n\n- G：第 106–109 行的 grid 读取与 `GridUnnormalize`；\n- B：`GridApplyPadding`；\n- H：floor、八邻点和六轴因子；\n- F：八项按源码顺序的三乘链及累加；\n- 越界读：原 `GridRead`，**先判界再读取**。\n\n不采用该模板的跨通道几何复用和源窗口分支。`gather_output_owned.md` 只采用“输出独占、Scalar 间接取数、批量输出”的原则，**不采用其 GatherElements 完整语义**。"
+          },
+          "source_evidence": [
+            "skill-libs/graph-base/1.3.0/skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/coordinate_neighborhood.md:79"
+          ]
+        },
+        {
+          "key": "scope_unknown_attribution_external_rounds",
+          "label": "范围/unknown/归因/外部轮次",
+          "score": 2,
+          "reason": "三部分摘要明确一轮授权、R0唯一实际工程与未测；API/资源缺项为实施条件，性能缺测不否决比较。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-01c6ded3ab/answer.md",
+            "start_line": 448,
+            "end_line": 450,
+            "quote": "### 当前状态\n\n用户授权一轮、仅纸面方案与 C2/C3 交接；禁止修改、编译、工具及硬件。本轮未产生候选源码或测试结果，原实现仍是唯一实际工程。目标为用户指定的 910C/dav-2201，设备核数、SDK、可用 UB 未探测。采用本回答的当前实现理解与 `P1-output-owned-scalar-gather-vector-eval` 条件计划；性能 `not_measured`，正式接纳 `not_evaluated`。"
+          },
+          "source_evidence": [
+            "evaluation/sources/grid_sampler_3d/scripts/verify_result.py:29"
+          ]
+        }
+      ],
+      "score": 10,
+      "out_of": 10,
+      "knowledge_documents": [
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/coordinate_neighborhood.md",
+          "use": "adopted",
+          "effect": "采用输出连续块、独立几何的分支，拒绝将跨c派生几何复用归入输入驻留。"
+        },
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+          "use": "referenced",
+          "effect": "只采用输出独占/间接取数原则，不冒称GatherElements完整骨架。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+          "use": "adopted",
+          "effect": "连续count计算，24Mul+8Add按tile发射。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/cast.md",
+          "use": "adopted",
+          "effect": "保留实际FP16 CAST_NONE最终边界。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+          "use": "adopted",
+          "effect": "不预乘权重、不跳零项、不改FMA/累加树。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+          "use": "adopted",
+          "effect": "FP32结果按连续有效区汇总写回。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/recipes/valid-length.md",
+          "use": "adopted",
+          "effect": "有效元素数、GM有效字节与UB物理跨度分开。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+          "use": "referenced",
+          "effect": "单槽保守完成边，未采用流水优化。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+          "use": "referenced",
+          "effect": "按独立物理区核算，本轮拒绝别名复用。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/compare-select-tail.md",
+          "use": "rejected",
+          "effect": "完整坐标向量化的256B比较域/8KiB临时区增加成本，本轮不并入。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+          "use": "referenced",
+          "effect": "作为地址分段外提替代。"
+        }
+      ],
+      "gaps": [
+        {
+          "kind": "implementation_prerequisite",
+          "blocking_implementation": true,
+          "finding": "目标Mul/Add/Cast的浮点/精确alias、SDK与完整UB预留仍须闭合；回答明确conditional_plan，未假称已通过。",
+          "evidence_lines": [
+            430,
+            436
+          ]
+        },
+        {
+          "kind": "residual",
+          "blocking_implementation": false,
+          "finding": "nearest、跨c几何重算、Scalar随机取数和输入扩位保留；没有将全正确性覆盖冒称全域优化。",
+          "evidence_lines": [
+            458,
+            461
+          ]
+        }
+      ],
+      "explicit_failures": [],
+      "engineering_status": "paper_only; no build, correctness or hardware-performance admission"
+    },
+    {
+      "anonymous_id": "answer-3ac7de846c",
+      "operator": "maximum",
+      "answer_sha256": "sha256:0386dfe379738dcecf2dc821b3b9db933ac5f8a0b240ec843dc245fa39856135",
+      "plan": "同形int8的6Cast+float Max改3Cast+half Max，完整int8域精确",
+      "action_count_is_not_a_scoring_factor": true,
+      "actions": [
+        {
+          "id": "action.coalesce_cast",
+          "use": "adopted",
+          "instance_count": 1
+        }
+      ],
+      "problem_mentions": [
+        {
+          "id": "problem.scalar_control_hot_loop",
+          "use": "referenced",
+          "effect": "支持广播数据计算批量化替代。"
+        },
+        {
+          "id": "problem.broadcast_strategy_mismatch",
+          "use": "referenced",
+          "effect": "区分解码、展开及源复用。"
+        },
+        {
+          "id": "problem.pipeline_serialization",
+          "use": "referenced",
+          "effect": "单槽不自动证明重叠不足或增槽收益。"
+        }
+      ],
+      "dimensions": [
+        {
+          "key": "source_hardware_facts",
+          "label": "源码与硬件事实",
+          "score": 2,
+          "reason": "实际路径、int64同形Scalar例外、FP16专用广播边界和原oracle语义均准确。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-3ac7de846c/answer.md",
+            "start_line": 67,
+            "end_line": 70,
+            "quote": "有两个会改变后续选择的事实：\n\n- **int64 同形也没有绕过多维解码**。case 5 仍逐元素遍历 rank，而不是线性比较。\n- **half 广播类不是通用广播 fallback**：它假设 x1 可按完整输出线性读取，x2 只有一条末轴向量。该假设适用于 case 18，但不能认证任意合法 half 广播；例如交换大、小输入就可能不成立。此次保留源码不等于确认其通用正确性。"
+          },
+          "source_evidence": [
+            "evaluation/sources/maximum/op_kernel/maximum_kernel.asc:156",
+            "evaluation/sources/maximum/op_kernel/maximum_kernel.asc:91"
+          ]
+        },
+        {
+          "key": "complete_scheme_dependencies",
+          "label": "完整方案及必要依赖",
+          "score": 2,
+          "reason": "单个coalesce_cast覆盖独立half临时区、三次转换、Max和读写完成边，未用不必要Action凑数。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-3ac7de846c/answer.md",
+            "start_line": 229,
+            "end_line": 239,
+            "quote": "必要依赖是本实例内部步骤，不额外拆 Action：\n\n```text\nint8 输入搬入完成\n→ 两份独立 half 输入转换完成\n→ half Max 完成\n→ half→int8 完成\n→ 输出搬出；临时区允许下一 tile 覆写\n```\n\n没有第二个独立优化目标，不注册 `reuse_disjoint_onchip_buffers`、`reduce_memory_traffic` 或 `dispatch_by_workload` 来重复计功。"
+          },
+          "source_evidence": [
+            "evaluation/sources/maximum/op_kernel/maximum_kernel.asc:50"
+          ]
+        },
+        {
+          "key": "work_coverage_cost_selection",
+          "label": "工作/覆盖/代价影响选择",
+          "score": 2,
+          "reason": "6S到3S、17T到9T、3N GM字节不变；广播短行/API/特殊值的联合成本实际影响选择。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-3ac7de846c/answer.md",
+            "start_line": 167,
+            "end_line": 177,
+            "quote": "可行替代骨架是按连续内轴解码一次，保留广播映射，再批量计算。但具体成本明显分化：\n\n- case 11：`H=513`，源行 2052B，不能靠 UB padding 假装满足静态 axis=0 Broadcast 的原始源 shape 32B 条件。\n- case 12：内轴 37；case 20：内轴 101。逐行向量化可能制造大量短调用，需要比较行组合、展开与驻留。\n- 若用 FP32 `Compare(GT)+Select` 保留原三元选择，A3 Compare 必须补到 64 元素粒度，Select 模式2还需 **8KB API 临时区**。单行 37 元素要比较 64，101 元素要比较128；初始化和 predicate 成本不能漏算。\n- 该组合**不能直接承接 int32 大小比较或 int64**：给定正文明确 A3 int32 Compare 仅 EQ，Select 只支持 half/float。不能利用矩阵中的小整数范围，偷偷把一般 int32/int64 转成 float。\n- FP32 三元选择和 `torch.maximum` 的 NaN 合同仍需分开处理，不能用一种替换同时宣称两者已等价。\n\n**本轮为何选 int8：**广播方案可能更有关键路径收益，但需要更复杂的布局、短行组合、特殊值与 API 路径证明；int8 方案在大工作量上能直接删除转换链，新增存储反而更少，使用的转换方向也已出现在父源码中。这里不是拿 Cast 次数与 Scalar 迭代次数作跨单位排名，而是权衡了减少工作的规模、可证明范围与联合新增成本。\n\n若后续发现 int8 路径主要受必要 GM 流量限制、转换减少未落入关键路径，或同步开销抵消收益，应优先重开广播连续段方案，而不是继续机械缩减临时区。"
+          },
+          "source_evidence": [
+            "evaluation/sources/maximum/op_kernel/maximum_kernel.asc:53",
+            "evaluation/sources/maximum/scripts/cases.py:13"
+          ]
+        },
+        {
+          "key": "po_substantive_use",
+          "label": "P/O正文实质采用",
+          "score": 2,
+          "reason": "具体Cast值域、P连续owner、Broadcast对齐和Compare/Select的256B/8KiB约束改变方法及替代排序。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-3ac7de846c/answer.md",
+            "start_line": 369,
+            "end_line": 377,
+            "quote": "## 5.3 正文怎样实际影响方法\n\n- `vector-api/recipes/cast.md`：促使先逐边检查舍入，选择完整 int8 值域证明；没有把一般 float→half→float 当恒等。\n- `buffer-lifetime/recipes/reuse.md` 与 fallback：决定采用独立 half 区，不用 C++ 作用域假装复用，也不引入手工 alias。\n- `precision-boundaries/numeric.md`：阻止把 Scalar 三元选择直接换成“名字相似”的 Max，并要求保留 NaN/Inf/±0回归；本次仅整数域消除了这些选择歧义。\n- `compare-select-tail.md`：其 A3 截尾规则、类型支持和8KB临时区实质改变了广播替代的成本判断；本方案**未采用 Compare/Select**。\n- `memory-transfer/coalesce.md`、`strided-pad.md`：帮助区分发射减少、有效字节减少与 UB padding；此次没有可宣称删除的 int8 GM 流量。\n- `pipeline.md`、`slots.md`：决定不把临时区节省自动转成双缓冲，也不为普通 Vector 添加全局槽。\n- `valid-length.md`、`bounds.md`：决定有效 count、分配容量和 DMA 字节分别计数，所有乘加先宽整数检查。"
+          },
+          "source_evidence": [
+            "skill-libs/graph-base/1.3.0/skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/compare-select-tail.md:1"
+          ]
+        },
+        {
+          "key": "scope_unknown_attribution_external_rounds",
+          "label": "范围/unknown/归因/外部轮次",
+          "score": 2,
+          "reason": "区分完整20case回归与case6实际优化，未测SDK/capacity不造ready或KEEP，保留无硬件限制。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-3ac7de846c/answer.md",
+            "start_line": 205,
+            "end_line": 207,
+            "quote": "- **优化域：**`DispatchMaximum<int8_t>` 的 `sameShape=true` 分支；覆盖任意合法连续同形 int8 输入，不按 case ID 分派。\n- **当前 workload 优化覆盖：**case 6。\n- **完整回归覆盖：**二十组，不把未改变组称作优化收益覆盖。"
+          },
+          "source_evidence": [
+            "evaluation/sources/maximum/scripts/verify_result.py:18"
+          ]
+        }
+      ],
+      "score": 10,
+      "out_of": 10,
+      "knowledge_documents": [
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+          "use": "adopted",
+          "effect": "原连续owner、tile、物理槽及转换区按字节计。"
+        },
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/broadcast.md",
+          "use": "referenced",
+          "effect": "比较广播替代，不能padding后伪造axis=0原shape合法性。"
+        },
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/fallback.md",
+          "use": "referenced",
+          "effect": "保留原路径不等于已验证fallback。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/cast.md",
+          "use": "adopted",
+          "effect": "用完整int8域的half精确表示删除3条转换，不推广BF16/int64。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+          "use": "adopted",
+          "effect": "整数精确域与浮点NaN/Max/三元选择区分。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/compare-select-tail.md",
+          "use": "referenced",
+          "effect": "广播替代成本含256B比较域、predicate与8KiB临时区，本轮未采用。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+          "use": "referenced",
+          "effect": "三个half区独立，不申报物理alias节省。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/recipes/valid-length.md",
+          "use": "adopted",
+          "effect": "有效count与对齐分配分开。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+          "use": "rejected",
+          "effect": "不将节省空间自动用于双缓冲。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+          "use": "referenced",
+          "effect": "int64线性索引/广播段解码替代，保留精确比较。"
+        }
+      ],
+      "gaps": [
+        {
+          "kind": "implementation_prerequisite",
+          "blocking_implementation": true,
+          "finding": "安装SDK的half Max/转换具体位置与同步、可用UB和隐含预留尚待核验；不是该纸面证明的事实错误。",
+          "evidence_lines": [
+            367
+          ]
+        },
+        {
+          "kind": "inherited_source_boundary",
+          "blocking_implementation": false,
+          "finding": "一般FP16广播与浮点Scalar三元选择的既有API域问题单列；本轮只改同形int8，不夸大全域正确。",
+          "evidence_lines": [
+            28,
+            70
+          ]
+        }
+      ],
+      "explicit_failures": [],
+      "engineering_status": "paper_only; no build, correctness or hardware-performance admission"
+    },
+    {
+      "anonymous_id": "answer-3be217d2ac",
+      "operator": "transpose",
+      "answer_sha256": "sha256:cf9102541255fa5a9def53d4dd3b609fb4d9d697523cf3434c46c78cef84b5ba",
+      "plan": "共同连续尾段批量DMA；其余置换保持Raw复制并用混合进位递推地址",
+      "action_count_is_not_a_scoring_factor": true,
+      "actions": [
+        {
+          "id": "action.coalesce_contiguous_transfers",
+          "use": "adopted",
+          "instance_count": 1
+        },
+        {
+          "id": "action.hoist_invariant_control",
+          "use": "adopted",
+          "instance_count": 1
+        }
+      ],
+      "problem_mentions": [
+        {
+          "id": "problem.insufficient_input_reuse",
+          "use": "rejected",
+          "effect": "置换双射，一次逻辑消费不满足原输入多消费者。"
+        },
+        {
+          "id": "problem.cache_policy_mismatch",
+          "use": "referenced",
+          "effect": "一次性访问不证明缓存策略错。"
+        },
+        {
+          "id": "problem.dynamic_shape_mismatch",
+          "use": "referenced",
+          "effect": "不因20case造阈值/Key。"
+        }
+      ],
+      "dimensions": [
+        {
+          "key": "source_hardware_facts",
+          "label": "源码与硬件事实",
+          "score": 2,
+          "reason": "恢复Raw位保持、输出flat所有权与每元素rank解码；case1/14共同连续尾轴和高rank合轴边界准确。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-3be217d2ac/answer.md",
+            "start_line": 73,
+            "end_line": 87,
+            "quote": "| 地址结构 | case | 对选择的影响 |\n|---|---|---|\n| 保留共同连续尾轴 | 1、14 | 尾长分别为 128、127，可以直接复制位模式，不需要局部转置 |\n| 二维转置或可合并成批量二维转置 | 2–5、6–13、17–19 | 大部分输出相邻元素的源地址不连续，不能当连续 memcpy |\n| 更复杂的多轴重排 | 15、16、20 | 不能不经证明就归成一次普通二维矩阵转置 |\n\n具体推导：\n\n- case 1 为 `[64,32,512,128]→[64,512,32,128]`，共同连续段长 128。\n- case 14 共同连续段长 127，行有效字节为 `127×4=508B`，需要合法非对齐搬运。\n- case 6 可视为两个 `[9,65536]→[65536,9]`，是小通道转置，不是广播。\n- case 10 可合并为 `[363×367,373]→[373,363×367]`。\n- case 12 为三个 `[91,4001]→[4001,91]`。\n- case 13 为 14 个 `256×256` 转置。\n- case 20 虽有两个可合并输入前轴，但输出还反转了这两个轴的内部次序，不能直接套普通矩阵转置。"
+          },
+          "source_evidence": [
+            "evaluation/sources/transpose/op_kernel/transpose_kernel.asc:16",
+            "evaluation/sources/transpose/scripts/cases.py:3"
+          ]
+        },
+        {
+          "key": "complete_scheme_dependencies",
+          "label": "完整方案及必要依赖",
+          "score": 2,
+          "reason": "两Action有独立目标、互斥域，明确不重复计工作；A2递推不变量与A1边界完整。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-3be217d2ac/answer.md",
+            "start_line": 193,
+            "end_line": 207,
+            "quote": "## A2：`action.hoist_invariant_control`\n\n- **目标**：未走 A1 的置换路径，其输出坐标解码和源地址生成。\n- **阶段**：kernel Scalar 地址控制。\n- **workload/父实现**：原通用 Raw 路径，`transpose_kernel.asc:14–20`。\n- **实施方法**：缓存本循环不变的输出维度与映射后源 stride；只在核起点做完整解码，随后等价进位。\n- `symptom.source.control_metadata_overhead=true`：源码反复处理相同维度、stride 和完整解码结构；这不等于已经测得控制主导。\n- `constraint.control_equivalence`：需按下节递推不变量审查。\n- `constraint.semantic_equivalence`：数据操作及顺序保持。\n- `constraint.capacity`：标量状态有界；实际寄存器/栈资源待编译确认。\n- **代价**：坐标状态、进位分支、较长标量生存期。\n\nA2 是地址控制变换，不是缓存派生数值张量，不借此授权任意数学预计算。\n\n**依赖关系**：A1、A2 无结果依赖，互斥执行，共享同一分核和输出映射。容量不能相加；也不能把 A1 段解码减少和 A2 递推减少重复计到同一元素上。两实例均保持完整语义、唯一有效写回、合法容量/依赖/所有权。越过 owner、通路、workspace、dispatch 域或容量自由度应返回 C2。"
+          },
+          "source_evidence": [
+            "evaluation/sources/transpose/op_kernel/transpose_kernel.asc:14"
+          ]
+        },
+        {
+          "key": "work_coverage_cost_selection",
+          "label": "工作/覆盖/代价影响选择",
+          "score": 2,
+          "reason": "保留2Ns逻辑GM字节、核算连续段数量/UB/同步/Scalar状态，明确非连续GM读取仍残余；比较矩形转置替代。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-3be217d2ac/answer.md",
+            "start_line": 131,
+            "end_line": 142,
+            "quote": "| 项目 | 原实现 | S1 |\n|---|---|---|\n| 共同连续域坐标解码 | 每元素一次完整解码 | 每搬运段一次 |\n| 共同连续域 GM 数据访问 | 每元素 Scalar 读写 | 每段一次搬入、一次搬出 |\n| 非连续域坐标解码 | 每元素 rank 次除模 | 每核初始解码，之后进位更新 |\n| 有效逻辑 GM 字节 | \\(2Ns\\) | 仍为 \\(2Ns\\) |\n| 非连续域数据搬运 | 离散 Scalar 读、连续 Scalar 写 | 保留 |\n| 新增代价 | 无显式 UB | UB、DMA 设置与完成等待、坐标状态和进位分支 |\n\n对 case 1，原来有 134,217,728 次逐元素处理；以不跨 128 元素连续段为单位，约为 1,048,576 个搬运段，另加原分核边界造成的少量拆段。case 14 有 7,154 个完整连续段，尾长 127。这里说的是**源码调用粒度预测**，不是指令数或加速倍数。\n\n路径 B 对一般矩阵转置，大多数元素只更新最内轴；行末再进位。rank≤8 时最坏仍可能检查多维，但避免了每元素固定执行全部维度除模。新增数组状态的实际寄存器、栈和 spill 由编译结果决定。"
+          },
+          "source_evidence": [
+            "evaluation/sources/transpose/op_kernel/transpose_kernel.asc:21"
+          ]
+        },
+        {
+          "key": "po_substantive_use",
+          "label": "P/O正文实质采用",
+          "score": 2,
+          "reason": "P按双端连续性收敛范围，O给出有效508B而非512B、地址递推、尾块及宽整数检查。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-3be217d2ac/answer.md",
+            "start_line": 373,
+            "end_line": 382,
+            "quote": "| 正文 | 对本轮的具体影响 |\n|---|---|\n| P `layout/templates/transpose.md` | 使方案从“所有 permute 都批量 memcpy”收敛为共同连续段与一般映射两路；保留输出唯一 owner，拒绝把 case 20 误合成普通矩阵转置 |\n| O `memory-transfer/coalesce.md`、`strided-pad.md` | 规定只合并真实连续地址；case 14 用 508B 有效长度，而不是 512B GM 读写 |\n| O `tiling-tail/valid-length.md`、`precision-boundaries/bounds.md` | 将有效量、UB 对齐跨度、API 字节字段分别计算；要求宽整数预检和末地址证明 |\n| O `scalar-control/hot-loop-address.md` | 支持等价地址递增和边界推演；但不把逻辑除模减少直接当成耗时同比减少 |\n| O `scalar-control/tilingdata-access.md`、`constant-lifetime.md` | 当前已是 GM tiling 指针直读，没有整结构拷栈可删除；只缓存必要字段，防止入口缓存全部内容增加 spill |\n| O `pipeline-sync/pipeline.md`、fallback | 选择单槽浅路径，不以 `num=2` 或历史 sigmoid 倍率为本题流水收益证据 |\n| O `buffer-lifetime/reuse.md`、arch22 bank 正文 | 当前无可节省的独立临时区；不添加自定义 arena、固定 padding 或样例 UB 地址 |\n| Cube、fusion、Cast、Compare/Select 正文 | 它们不是本题所需的保位置换原语；其数值、临时区和平台限制阻止用不等价计算拼装“转置” |"
+          },
+          "source_evidence": [
+            "skill-libs/graph-base/1.3.0/skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md:64"
+          ]
+        },
+        {
+          "key": "scope_unknown_attribution_external_rounds",
+          "label": "范围/unknown/归因/外部轮次",
+          "score": 2,
+          "reason": "条件计划未冒称API就绪或全域Vector转置；三部分摘要区分纸面与实际、允许整体联合评价而不作成员归因。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-3be217d2ac/answer.md",
+            "start_line": 386,
+            "end_line": 393,
+            "quote": "### 实施前仍须补齐的合法性证据\n\n1. 安装 SDK 中上述 **VECIN TBuf→GM 的 DataCopyPad 重载**、half/float 类型和非对齐写出行为与材料一致。\n2. 当前可用 UB及框架预留足以容纳选定参数。\n3. 目标编译分支确为 dav-2201，生成代码资源合法。\n4. 最终源码确实兑现所有分支覆盖、地址递推和完成边。\n\n其中前三项不能由本轮纸面分析伪填 true。编译器是否已经优化原除模、S1 是否更快，是后续预测检查，不是相同性质的安全门禁。"
+          },
+          "source_evidence": [
+            "evaluation/sources/transpose/scripts/verify_result.py:15"
+          ]
+        }
+      ],
+      "score": 10,
+      "out_of": 10,
+      "knowledge_documents": [
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md",
+          "use": "adopted",
+          "effect": "双端连续性、输出owner、合轴边界决定连续段和通用映射两路。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+          "use": "adopted",
+          "effect": "仅共同连续区合并，2/4B DMA视图无数值运算。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/strided-pad.md",
+          "use": "adopted",
+          "effect": "有效GM字节与UB对齐跨度分开，case14写508B。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+          "use": "adopted",
+          "effect": "初始解码与有界进位更新，保留相同元素序列。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/tilingdata-access.md",
+          "use": "referenced",
+          "effect": "没有整结构栈拷贝可删，不优先少量字段缓存。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/recipes/valid-length.md",
+          "use": "adopted",
+          "effect": "段长度不得跨连续尾段/owner/tile边界。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/bounds.md",
+          "use": "adopted",
+          "effect": "检查最大地址/乘法溢出，无符号回绕不造负stride。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+          "use": "referenced",
+          "effect": "浅单槽完成后复用，本轮不叠加流水变换。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+          "use": "rejected",
+          "effect": "原路径无独立临时区可复用，不添加arena。"
+        }
+      ],
+      "gaps": [
+        {
+          "kind": "implementation_prerequisite",
+          "blocking_implementation": true,
+          "finding": "VECIN TBuf→GM DataCopyPad方向/位置/类型及非对齐写出契约、可用UB、最终递推地址尚待闭合；回答没有把这些缺项藏在ready里。",
+          "evidence_lines": [
+            388,
+            391
+          ]
+        },
+        {
+          "kind": "residual",
+          "blocking_implementation": false,
+          "finding": "其余18case仍Scalar离散GM复制，矩形保位转置API路线待补；未宣称全部perm均变成DMA转置。",
+          "evidence_lines": [
+            127,
+            148,
+            158
+          ]
+        }
+      ],
+      "explicit_failures": [],
+      "engineering_status": "paper_only; no build, correctness or hardware-performance admission"
+    },
+    {
+      "anonymous_id": "answer-77a9a43cb4",
+      "operator": "maximum",
+      "answer_sha256": "sha256:395eeb9eda40cebc9c523916f4bed19607b4bbca0fa272f4f6d2dad9dd138ff6",
+      "plan": "同形int8精确half Max链，保留owner/4096tile，广播为强替代",
+      "action_count_is_not_a_scoring_factor": true,
+      "actions": [
+        {
+          "id": "action.coalesce_cast",
+          "use": "adopted",
+          "instance_count": 1
+        }
+      ],
+      "problem_mentions": [
+        {
+          "id": "problem.control_metadata_overhead",
+          "use": "referenced",
+          "effect": "字段缓存不消除主要逐元素数据处理。"
+        },
+        {
+          "id": "problem.cache_policy_mismatch",
+          "use": "referenced",
+          "effect": "不将单次输入推成无复用/统一bypass。"
+        }
+      ],
+      "dimensions": [
+        {
+          "key": "source_hardware_facts",
+          "label": "源码与硬件事实",
+          "score": 2,
+          "reason": "恢复实际int64和FP16广播例外、UB映射和单物理槽；区分源码API与已验证支持。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-77a9a43cb4/answer.md",
+            "start_line": 75,
+            "end_line": 93,
+            "quote": "特别需要保留的理解边界：\n\n- half 非同形分支实际假定 **X1 是完整输出、X2 是末轴向量**，`x2_` 长度直接设为末轴长度，未使用通用 stride。它适用于 case 18，但 **Host 接受的任意 half 广播形状并不因此都受支持**。\n- `MaximumScalar` 使用 `av > bv ? av : bv`；浮点遇 NaN 时不自动等价于 `torch.maximum`。当前矩阵中广播浮点范围为有限值，但不能把这个事实扩成通用浮点广播合同。\n- 同形 Vector Max 的特殊值行为也不能仅凭 API 名称认定正确或错误。case 14、15、16 需要原 oracle 核验，当前没有结果。\n\n## 1.4 数据位置、分配与依赖\n\n同形 Vector 路径是：\n\n```text\nGM 输入 → MTE2 → UB 输入队列\n                    ↓ Cast/Max，Vector\nGM 输出 ← MTE3 ← UB 输出队列\n```\n\n`VECIN/VECCALC/VECOUT` 都映射到 UB，不是三个物理存储层。三个队列均为 `TQue<...,1>`，且 `InitBuffer(...,1,...)` 只分配一物理槽。代码每轮搬入、计算、搬出，不能凭队列存在宣称已经获得跨 tile 重叠。\n\n队列协议保护输入就绪、输出就绪及槽位回收；转换临时区的 V 内依赖仍须由目标 SDK 的同步规则和编译审查闭合。本文不把顺序发射当作所有异步操作均已完成。"
+          },
+          "source_evidence": [
+            "evaluation/sources/maximum/op_kernel/maximum_kernel.asc:156",
+            "evaluation/sources/maximum/op_kernel/maximum_kernel.asc:91"
+          ]
+        },
+        {
+          "key": "complete_scheme_dependencies",
+          "label": "完整方案及必要依赖",
+          "score": 2,
+          "reason": "单Action内完整处理转换、三个独立half区与最后消费者，不把减Cast等同新增流水/复用意图。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-77a9a43cb4/answer.md",
+            "start_line": 294,
+            "end_line": 311,
+            "quote": "2. 在 `Init` 的 int8 分支，将 `tmp1_/tmp2_/tmpOut_` 的 float 分配和共用 `tmpHalf_` 替换为三个独立 half 区；BF16 分支保持原样。\n3. 仅替换 int8 Compute 的六 Cast 链，调用形态为：\n\n```cpp\n// ah、bh、oh：独立、32B 对齐的 half LocalTensor，容量各至少 T。\n// a、b、out：当前队列实际分配的 int8 tensor；count 为有效元素数。\nAscendC::Cast(ah, a, AscendC::RoundMode::CAST_NONE, count);\nAscendC::Cast(bh, b, AscendC::RoundMode::CAST_NONE, count);\n// 按目标 SDK 同步契约保证两次 Cast 的结果可供 Max 读取。\nAscendC::Max(oh, ah, bh, count);\n// 保证 Max 结果可供缩位读取。\nAscendC::Cast(out, oh, AscendC::RoundMode::CAST_RINT, count);\n```\n\n这只是拟采用的计算片段，**不是已构建代码**。若安装 SDK 要求显式 V 内屏障，在两处真实依赖间使用合法 `PipeBarrier<PIPE_V>()`；不得把它当作跨流水完成边。跨轮重用 `oh` 前还必须保证上轮缩位已经读完。\n\n4. 保留现有队列 EnQue/DeQue/Free 的合法顺序和 DataCopyPad。\n5. 更新资源表，确认原 float TBuf 的实际 `InitBuffer` 已删除；不能只改视图后仍声称省了分配。"
+          },
+          "source_evidence": [
+            "evaluation/sources/maximum/op_kernel/maximum_kernel.asc:50"
+          ]
+        },
+        {
+          "key": "work_coverage_cost_selection",
+          "label": "工作/覆盖/代价影响选择",
+          "score": 2,
+          "reason": "比较134M int8域的3次Cast删除、32KiB空间节省与广播93,587,070轴处理/短行/API成本，条件改变会重排优先级。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-77a9a43cb4/answer.md",
+            "start_line": 175,
+            "end_line": 190,
+            "quote": "float32 广播的结构机会很大，具体可采用：\n\n- **case 11 类 `[R,H]` 与 `[H]`**：B 在本 owner 中驻留，A 按行/段搬运；不能将 H=513 的源伪装成满足 axis=0 静态 Broadcast 对齐要求的原始 shape。\n- **case 12/20 类 `[P,K,H]` 与 `[K,1]`**：按若干连续行组成 UB 批次，B 的每行标量通过合法 axis=1 广播展开；A/Y 的 GM 有效行宽仍为 H。\n- 条件选择使用 GT predicate 和 Select 模式2；要覆盖通用 maximum 的 NaN 传播，还需显式修正，不能只把 `a>b?a:b` 改写为一次选择。\n\n`compare-select-tail.md` 改变了本轮成本判断：\n\n- A3 Compare count 只计算完整 256B；\n- FP32 必须按 \\(c=64\\lceil n/64\\rceil\\) 建立已定义输入域；\n- H=37、101 分别至少对应 64、128 个比较元素，不能靠 DataCopyPad 的 32B dummy 自动满足；\n- predicate 按 bit 计，并按 32B 分配；\n- Select 模式1/2需计入 8KB UB API 临时区；\n- int32 仅支持 EQ Compare，Select 仅 half/float，故该方法不能直接覆盖 case 13，更不能覆盖 int64。\n\n这不是笼统的“API 未知”，而是已知的具体准备成本。结合本轮 int8 域的 134M 元素、三次 Cast 删除及无新热循环准备工作，我选择 int8 链收缩先试。**若后续有效分阶段时间表明上述广播 Scalar 路径主导整个评测，广播方案优先级应提高；当前没有时间权重足以断言哪一个更快。**"
+          },
+          "source_evidence": [
+            "evaluation/sources/maximum/scripts/cases.py:13",
+            "evaluation/sources/maximum/op_kernel/maximum_kernel.asc:136"
+          ]
+        },
+        {
+          "key": "po_substantive_use",
+          "label": "P/O正文实质采用",
+          "score": 2,
+          "reason": "P连续/广播与O Cast/Compare/Select/数值/生命周期正文均对应具体判断和本次不采用的方法。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-77a9a43cb4/answer.md",
+            "start_line": 353,
+            "end_line": 362,
+            "quote": "## 5.4 P/O 正文怎样实际影响了选择\n\n- **P `elementwise/templates/continuous.md`**：要求分区与 tile 分开计数、按真实物理槽和转换区计字节；因此保留现有 owner 和 T，不夹带增核或双槽。\n- **P `broadcast.md`**：使广播替代按真实零 stride、源块和展开块分别建账；拒绝将 513 元素源简单 padding 后冒充合法 axis=0 原始 shape。\n- **O `vector-api/recipes/cast.md`**：只允许删除经值域证明不承担可见舍入的转换；因此选 int8 全域精确链，不删 BF16 的 float 路径，也不把 int64 转 float。\n- **O `precision-boundaries/numeric.md`**：Max 与三元选择不能按名字互换；因此广播替代计入 NaN、相等值和符号零的专门核验，而不是承诺一次 GT+Select 已完整等价。\n- **O `compare-select-tail.md`**：256B Compare、模式2 predicate 和 8KB 临时区进入了替代方案成本，直接影响本轮排序。\n- **O `buffer-lifetime/reuse.md` 与 fallback**：独立分配不会因逻辑生存期结束自动共享；因此本轮使用独立 half 区，不虚报 alias 节省。\n- **O `valid-length.md`、`bounds.md`、搬运正文**：保持有效 count、对齐存储和 DMA 字节各自计数，禁止通过补齐 GM 范围减少尾处理。\n- **流水正文及历史案例**：支持未来比较物理双槽，但不允许借 sigmoid/exp 的历史倍率推断 maximum 收益；本轮不叠加无必要依赖的流水变换。"
+          },
+          "source_evidence": [
+            "skill-libs/graph-base/1.3.0/skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/cast.md:1"
+          ]
+        },
+        {
+          "key": "scope_unknown_attribution_external_rounds",
+          "label": "范围/unknown/归因/外部轮次",
+          "score": 2,
+          "reason": "一轮范围、R0未验、完整int8域证明与全20case回归/残余明确；没有用未测否决方法或制造正式通过。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-77a9a43cb4/answer.md",
+            "start_line": 370,
+            "end_line": 381,
+            "quote": "## 当前状态\n\n- 授权范围：一轮、只读纸面分析；禁止工具、修改、编译和硬件测试。\n- 保留实现：输入原始源码，baseline 仅为 assumed，未证明正确或性能。\n- 选定方案 `R1-S1`：同形 int8 精确 half Max 链；计划 `R1-P1`，一个 `action.coalesce_cast` 实例。\n- 结果：**not_measured / not_implemented**；没有候选 binary、正确性结果、加速比或正式接纳。\n\n## 已尝试路线\n\n- 仅完成静态比较及 C2/C3 交接，没有实际 patch 或运行 attempt。\n- 静态预测：case 6 每元素六次 Cast 降为三次；可见 UB 69,632B→36,864B；必要 GM 字节不变。\n- 未回答：目标 SDK 合法性、完整资源、编译后指令变化及净 Task 收益。"
+          },
+          "source_evidence": [
+            "evaluation/sources/maximum/scripts/verify_result.py:18"
+          ]
+        }
+      ],
+      "score": 10,
+      "out_of": 10,
+      "knowledge_documents": [
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+          "use": "adopted",
+          "effect": "按原owner、tile和真实转换区资源建立计划。"
+        },
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/broadcast.md",
+          "use": "referenced",
+          "effect": "连续短行/广播原形状与展开域进入替代成本。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/cast.md",
+          "use": "adopted",
+          "effect": "完整int8域精确half表示，保留两次扩位与一次缩位。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+          "use": "adopted",
+          "effect": "三元选择/Max、NaN与数值替换分开。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/compare-select-tail.md",
+          "use": "referenced",
+          "effect": "FP32比较补齐、predicate、Select 8KiB影响广播替代。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+          "use": "referenced",
+          "effect": "独立half区，不将逻辑生存期自动转为物理复用。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/recipes/valid-length.md",
+          "use": "adopted",
+          "effect": "有效count和GM字节、物理对齐分开。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/bounds.md",
+          "use": "adopted",
+          "effect": "空owner不调用，尾count/地址范围闭合。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+          "use": "rejected",
+          "effect": "本轮不叠加无必要依赖的双物理槽。"
+        }
+      ],
+      "gaps": [
+        {
+          "kind": "implementation_prerequisite",
+          "blocking_implementation": true,
+          "finding": "SDK half Max/Cast支持和V内依赖、UB隐含预留与最终完整oracle待核验；条件方案范围准确。",
+          "evidence_lines": [
+            213,
+            220,
+            253,
+            308
+          ]
+        },
+        {
+          "kind": "inherited_source_boundary",
+          "blocking_implementation": false,
+          "finding": "通用half广播和浮点三元选择的既有问题未被int8优化掩盖。",
+          "evidence_lines": [
+            77,
+            79,
+            388
+          ]
+        }
+      ],
+      "explicit_failures": [],
+      "engineering_status": "paper_only; no build, correctness or hardware-performance admission"
+    },
+    {
+      "anonymous_id": "answer-a3f44151bb",
+      "operator": "reduction_sum",
+      "answer_sha256": "sha256:51fbace7939eef97041b4c83b297d0853f1203f23a5f37327fbff7c75036d845",
+      "plan": "保留单核AR全载，基础ReduceSum仅作为有具体API缺项的强替代",
+      "action_count_is_not_a_scoring_factor": true,
+      "actions": [],
+      "problem_mentions": [
+        {
+          "id": "problem.reduction_strategy_mismatch",
+          "use": "referenced",
+          "effect": "短R全载不能仅凭一核认定失配。"
+        },
+        {
+          "id": "problem.underused_task_parallelism",
+          "use": "referenced",
+          "effect": "三行独立与每行只有128B同时比较。"
+        },
+        {
+          "id": "problem.tiny_transfer_setup_amplification",
+          "use": "rejected",
+          "effect": "一次全载无可合并碎片。"
+        },
+        {
+          "id": "problem.pipeline_serialization",
+          "use": "rejected",
+          "effect": "单批真依赖不自动是错误串行。"
+        }
+      ],
+      "dimensions": [
+        {
+          "key": "source_hardware_facts",
+          "label": "源码与硬件事实",
+          "score": 2,
+          "reason": "准确恢复3×32 FP32、1block、按值tiling、独立scratch；特别识别5个padding为原oracle可见零值。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-a3f44151bb/answer.md",
+            "start_line": 19,
+            "end_line": 26,
+            "quote": "- 输入：连续 ND、FP32、物理形状 `[3,32]`，共 **96 元素、384B**。\n- 输出：物理 **8 个 FP32、32B**；前 3 个是行和，后 5 个由 golden 定义为零。\n- golden 使用相邻元素递归二分求和，计算中间值仍是 FP32。  \n  来源：`scripts/gen_data.py:18–39,46–63`。\n- 原比较器检查全部 8 个元素，不只是有效的 3 个。判错条件是绝对误差和相对误差均超过 `1e-4`。  \n  来源：`sum.asc:175–187`。\n\n生成器输入是 `[-100,99]` 内的整数转 FP32。对这一**生成值域**，任一局部和的绝对值不超过 3200，整数求和在 FP32 中可精确表示；因此不同纯加法树有较强的等价依据。但这不能外推到任意 FP32、NaN/Inf 或大动态范围输入，也不能据 `fixed_sample=true` 硬编码输出：源码没有固定随机种子，当前输入文件内容也未提供。"
+          },
+          "source_evidence": [
+            "evaluation/sources/reduction_sum/sum.asc:178",
+            "evaluation/sources/reduction_sum/scripts/gen_data.py:60"
+          ]
+        },
+        {
+          "key": "complete_scheme_dependencies",
+          "label": "完整方案及必要依赖",
+          "score": 2,
+          "reason": "零Action有具体保留理由，不制造重复搬运/拆核/高阶API碎片化；C2/C3完整提取原结构。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-a3f44151bb/answer.md",
+            "start_line": 155,
+            "end_line": 173,
+            "quote": "### 正式选择\n\n**新增 Action 实例：0。**\n\n原因是本轮选择不改变实现，没有可诚实绑定的优化干预：\n\n- 不把已经存在的批量搬运重新注册为 `coalesce_contiguous_transfers`；\n- 不把单核启动直接注册为“需要动态分核”；\n- 不把基础归约 API 的可能替换硬塞成 `batch_vector_api_calls`——它反而可能将一次高阶调用展开为三次；\n- 不把任意 API 特化称为 `hoist_invariant_control`。\n\n### 尚未选中的意图缺口\n\n“保持同一 owner、同一全载结构，仅降低高阶归约 API 开销”需要进一步确认实际变化：\n\n- 若真正改变行分组、局部归约分解或合并方式，可重新审查 `action.restructure_reduction`；\n- 若仅替换同语义 primitive、分解和合并均未变，当前目录没有明确的独立“归约 API lowering”意图，不能借旧 Action 放宽范围。\n\n它目前是**未选机会/注册意图待澄清项**，不是已注册、可直接实施的成员。"
+          },
+          "source_evidence": [
+            "evaluation/sources/reduction_sum/sum.asc:91"
+          ]
+        },
+        {
+          "key": "work_coverage_cost_selection",
+          "label": "工作/覆盖/代价影响选择",
+          "score": 2,
+          "reason": "比较一次Sum与三次基础ReduceSum、按行增核、partial写读24S字节和微小任务固定代价，未把调用名当指令数。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-a3f44151bb/answer.md",
+            "start_line": 115,
+            "end_line": 129,
+            "quote": "| 方案 | 可能减少的工作 | 新增或保留的工作、约束 | 本轮判断 |\n|---|---|---|---|\n| **同一核改用基础 `ReduceSum` 逐行归约** | 可能绕开高阶 `Sum` 的通用参数与内部调度 | 至少 3 次基础归约调用；需合法安放 3 个标量结果、保持尾 5 个零；FP32 scratch 大小与 alias 契约必须独立确认 | **最强改变候选，暂不实施**。可能更快，不能因未测否决；但当前没有明确的联合工作减少证据 |\n| **三行分别交给三个 block** | 每核归约从 3 行降至 1 行 | 输入搬入由 1 次变 3 次；各核独立初始化和 scratch；紧凑输出需要短写及 padding 所有者 | 对总共 96 元素的任务，新增固定工作明确。暂不优先，但不声称实测更慢 |\n| **沿 R=32 分核产生 partial 再归并** | 缩短每个 producer 的局部归约 | 增加 partial 写读、完成协议、merge、可能第二次 launch，改变归约树 | 不选。没有容量需求，归约已经很短 |\n| **拆成多 tile、增加双缓冲** | 可能重叠不同 tile | 原来只有一轮，必须先增加搬运/计算片段，再增加槽和收尾 | 不选。不能为使用流水制造额外 tile |\n| **仅局部控制/初始化微调** | 可能减少少量参数构造或被覆盖的清零 | 结构体只有 5 个字段、无用户热循环；可能已被编译器消除；尾清零有调用与对齐代价 | 不因改动容易就优先 |\n\n对 R 分片，若每行分成 `S` 份 FP32 partial，仅状态有效写读的理论下界就增加：\n\n\\[\n2\\times3\\times S\\times4=24S\\ {\\rm B}\n\\]\n\n实际还需槽对齐和同步。必要输入仍为 384B，完整纯加法归约的总数学工作并不因此减少。"
+          },
+          "source_evidence": [
+            "evaluation/sources/reduction_sum/sum.asc:116",
+            "evaluation/sources/reduction_sum/sum.asc:157"
+          ]
+        },
+        {
+          "key": "po_substantive_use",
+          "label": "P/O正文实质采用",
+          "score": 2,
+          "reason": "P FullLoad的AR/h=3、scratch与有效/物理长度，O生命周期/搬运/流水适用边界实际决定保留；基础ReduceSum四参数与结果安放缺口具体。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-a3f44151bb/answer.md",
+            "start_line": 261,
+            "end_line": 276,
+            "quote": "FullLoad 正文给出的基础调用是：\n\n```cpp\nAscendC::ReduceSum<float>(\n    resultLocal, xFp32[row * rAlign], tmpFloat,\n    static_cast<int32_t>(rValid));\n```\n\n它是**四参数**基础接口，第四项是有效 count；不能添加来自其他接口的第五个 `false`。当前各行 `rValid=rAlign=32`，输入切片起点为 0、32、64 个 FP32，分别相距 128B。\n\n但仍有两个会阻止直接替换的具体缺项：\n\n1. **scratch 规则缺失。** 给定正文要求 `tmpFloat` 满足基础 API 空间和别名要求，却未给出当前调用的完整尺寸规则；不能沿用 `Sum` 的 `minValue`。\n2. **紧凑标量输出安放未闭合。** 不能未经该基础 API 对目的地址的约束核验，直接假定 `dst[0]、dst[1]、dst[2]` 都能作为归约目的。若需分散到对齐槽后再打包，必须增加相应 UB、打包调用和同步账。\n\n这是地址/API 合法性缺项，不是“缺 profile”。如果上述条件由后续材料补齐，即使仍无性能测量，也可以据高阶开销假设形成条件试验。"
+          },
+          "source_evidence": [
+            "skill-libs/graph-base/1.3.0/skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/fullload.md:1"
+          ]
+        },
+        {
+          "key": "scope_unknown_attribution_external_rounds",
+          "label": "范围/unknown/归因/外部轮次",
+          "score": 2,
+          "reason": "摘要保留R0、未测/未构建、候选缺失与剩余机会；不把保留实现伪装为正式P_KEEP/NOOP。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-a3f44151bb/answer.md",
+            "start_line": 210,
+            "end_line": 218,
+            "quote": "### 4.3 KEEP 的准确表述\n\n- 工程选择是 **保留 R0**。\n- 输入没有正式、有效、带身份的既有 `parallel_plan`，因此不能声称已获得机器意义的 `P_KEEP`。\n- 若后续要编码成旧契约产物，本次应记为 **`P_CHANGE：提取已有计划`**，明确“算法和并行结构无实际改变”。\n- 没有 Action 成员，故无逐成员 O 路由结果；也不伪造“所有成员 O_KEEP”的回执。\n- 本轮是保留决策，不冒充一个已经完成 handoff 校验的正式 NOOP episode。\n\n超出上述 shape、dtype、行跨度，或改变 owner、归约树、scratch 所有权、核数和 dispatch 域，都需新的 C2。当前源码虽使用参数化 tiling 结构，并不构成任意 shape 的支持证明。"
+          },
+          "source_evidence": [
+            "evaluation/sources/reduction_sum/sum.asc:250"
+          ]
+        }
+      ],
+      "score": 10,
+      "out_of": 10,
+      "knowledge_documents": [
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/fullload.md",
+          "use": "adopted",
+          "effect": "解释当前AR全载h=3；容量包含输入/输出/scratch及预留。"
+        },
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/split.md",
+          "use": "rejected",
+          "effect": "R=32的partial/merge新增工作不支持本轮采用。"
+        },
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/fallback.md",
+          "use": "referenced",
+          "effect": "未经验证父entry不冒称已验证fallback。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+          "use": "referenced",
+          "effect": "确认输入输出已各一次，无可再次登记的合并收益。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+          "use": "rejected",
+          "effect": "单tile无独立next tile，拒绝为流水制造片段。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+          "use": "referenced",
+          "effect": "Sum时输入/输出/scratch均参与，不可未经alias证明重叠。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/tilingdata-access.md",
+          "use": "rejected",
+          "effect": "20B按值tiling无用户热循环，不套GM指针外提。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+          "use": "adopted",
+          "effect": "生成整数域不外推任意FP32/特殊值。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/bounds.md",
+          "use": "adopted",
+          "effect": "全部8个物理输出及padding约束保留。"
+        }
+      ],
+      "gaps": [
+        {
+          "kind": "alternative_prerequisite",
+          "blocking_implementation": false,
+          "finding": "保留R0不需强制新增候选。若重开ReduceSum，scratch、目的地址/打包和注册意图仍需明确；这些缺项阻止替代方案直接实施，不否决知识。",
+          "evidence_lines": [
+            168,
+            171,
+            273,
+            274
+          ]
+        },
+        {
+          "kind": "inherited_oracle_boundary",
+          "blocking_implementation": false,
+          "finding": "输入短文件、未检查ACL返回值、比较失败仍exit0等限制已明确，未来验收不能只看退出码。",
+          "evidence_lines": [
+            95,
+            316
+          ]
+        }
+      ],
+      "explicit_failures": [],
+      "engineering_status": "paper_only; no build, correctness or hardware-performance admission"
+    },
+    {
+      "anonymous_id": "answer-a8d96b5afc",
+      "operator": "transpose",
+      "answer_sha256": "sha256:f8a39b6bb1e2466c4e27a4171025570743e1899000da9944116e51e1bf8c5deb",
+      "plan": "双端连续轴矩形/条带任务，DMA+原始整数Scalar UB重排，通用回退",
+      "action_count_is_not_a_scoring_factor": true,
+      "actions": [
+        {
+          "id": "action.reorder_contiguous_access",
+          "use": "adopted",
+          "instance_count": 1
+        }
+      ],
+      "problem_mentions": [
+        {
+          "id": "problem.insufficient_input_reuse",
+          "use": "rejected",
+          "effect": "双射一次消费不满足重复原输入读取。"
+        },
+        {
+          "id": "problem.cache_policy_mismatch",
+          "use": "referenced",
+          "effect": "一次性读取不自动证明bypass更好。"
+        },
+        {
+          "id": "problem.tail_slow_path",
+          "use": "rejected",
+          "effect": "全域Scalar不是仅尾慢分支。"
+        }
+      ],
+      "dimensions": [
+        {
+          "key": "source_hardware_facts",
+          "label": "源码与硬件事实",
+          "score": 2,
+          "reason": "准确恢复Raw位模式、每元素rank解码、4096为选核目标而非UBtile及20case结构。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-a8d96b5afc/answer.md",
+            "start_line": 64,
+            "end_line": 83,
+            "quote": "这里 `4096` 是**选核工作量目标**，不是 UB tile 长度，也不是已证明的最优粒度。\n\n## 1.3 核内真正做了什么\n\n`transpose_kernel.asc:7–22` 对每个输出元素：\n\n1. 从输出线性下标开始。\n2. 从最后一维到第一维执行 `% outputShape[d]`、`/ outputShape[d]`。\n3. 累加该坐标对应的输入 stride。\n4. 执行一次原始整数 GM 读取、一次 GM 写入。\n\n按源码表达，每元素进行 \\(r\\) 次轴解码，整体约为：\n\n- \\(N r\\) 次取模和 \\(N r\\) 次整数除法；\n- \\(N r\\) 次 stride 项累加；\n- \\(N\\) 次元素读取、\\(N\\) 次元素写入。\n\n这些是**逻辑源码工作量**，不等于编译后独立指令数；编译器是否合并除模、缓存字段，当前未知。\n\n入口虽然标为 `aiv`，但源码没有 Vector 计算、DataCopy、UB 分配、TQue 或核内事件。不能把它描述成“已有 MTE2→Vector→MTE3 转置流水”。实际是 AIV 上的 Scalar 地址计算和原始 GM 元素访问。"
+          },
+          "source_evidence": [
+            "evaluation/sources/transpose/op_kernel/transpose_kernel.asc:16",
+            "evaluation/sources/transpose/op_kernel/transpose_tiling.h:31"
+          ]
+        },
+        {
+          "key": "complete_scheme_dependencies",
+          "label": "完整方案及必要依赖",
+          "score": 2,
+          "reason": "一个访问重组Action配套Host/Kernel ABI、矩形owner、DMA、局部重排与完成边，覆盖一般高rank时固定其余轴而非错误二维reshape。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-a8d96b5afc/answer.md",
+            "start_line": 142,
+            "end_line": 163,
+            "quote": "### 一般矩形子域\n\n不合轴时，令：\n\n- \\(a=r-1\\)：输入最后连续轴；\n- \\(b=P[r-1]\\)：输出最后连续轴；\n- \\(a\\ne b\\)。\n\n固定其他轴坐标，取：\n\n- 输入矩形：沿 \\(b\\) 有 \\(v_b\\) 行，每行沿 \\(a\\) 有 \\(v_a\\) 个连续元素；\n- 输出矩形：沿 \\(a\\) 有 \\(v_a\\) 行，每行沿 \\(b\\) 有 \\(v_b\\) 个连续元素。\n\n局部映射：\n\n\\[\noutLocal[i,j]=inLocal[j,i]\n\\]\n\n元素内部的字节或整数 lane 顺序保持原样。其他轴只影响矩形基址，不在每个元素重新解码。\n\n优先用已证明合法的合轴简化该描述；多个移动轴的 case15/16/20 仍能用“固定其余轴”的一般矩形覆盖。"
+          },
+          "source_evidence": [
+            "evaluation/sources/transpose/docs/transpose/transpose_definition.md:3"
+          ]
+        },
+        {
+          "key": "work_coverage_cost_selection",
+          "label": "工作/覆盖/代价影响选择",
+          "score": 2,
+          "reason": "对比Nr到Kr、2Ns不变、O(N)局部Scalar重排/双区容量和计数器替代，提供具体重选条件。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-a8d96b5afc/answer.md",
+            "start_line": 167,
+            "end_line": 195,
+            "quote": "设矩形任务数为 \\(K\\)。\n\n| 项目 | 当前实现 | S1 |\n|---|---|---|\n| 完整坐标解码 | 每元素，约 \\(Nr\\) 次轴处理 | 每任务/矩形，约 \\(Kr\\)；内部采用有界递增 |\n| GM访问 | 每元素原始读写 | 每矩形通常一条多块搬入、一条多块搬出 |\n| 必要有效GM字节 | \\(2Ns\\) | 仍为 \\(2Ns\\) |\n| 片上数据工作 | 无显式UB | 搬入/搬出UB；一般矩形增加一次局部置换 |\n| 同步与资源 | 无显式UB阶段 | 新增UB、完成边、尾行pitch及字段检查 |\n| 代码与测试 | 单一路径 | 连续条带、一般矩形及显式通用回退 |\n\n**首版局部置换采用原始整数 Scalar UB 重排的条件方案，而不假造 Vector 转置 API。** 它能先消除逐元素 GM 访问和完整解码，但仍保留 \\(O(N)\\) 次局部元素处理。对 int64 若使用两个32位 lane，局部操作数还会增加，必须计入。\n\n预测是访问与解码粒度改善；不保证局部 Scalar 重排、DMA发射和同步的新增成本一定小于节省。\n\n## 2.3 最有竞争力的可落地替代 S2：输出顺序计数器\n\n保留当前核数、输出区间和逐元素 GM 原始复制：\n\n1. 每核只对 `begin` 解码一次。\n2. 用混合进位坐标更新 source。\n3. 热字段按最小作用域缓存。\n\n它覆盖全部置换、没有显式UB，也不需要新转置API。大部分元素可只执行低维增量更新，避免每元素完整除模。\n\n**S2 的优势**：合法性缺项少、实现和验证成本低。  \n**S2 的残余**：仍然逐元素 GM 读写，二维交换的源访问仍跨 stride。\n\n选择 S1 而不是 S2，是因为当前主要工作不仅是元数据读取，还包含全域的逐元素 GM 数据处理；S1 正面处理两者。**若补证发现 UB Scalar 重排的完成协议昂贵，或主要 case 的局部处理成本抵消 DMA 收益，应返回 C1 改选 S2，而不是继续加大 tile。**"
+          },
+          "source_evidence": [
+            "evaluation/sources/transpose/op_kernel/transpose_kernel.asc:14"
+          ]
+        },
+        {
+          "key": "po_substantive_use",
+          "label": "P/O正文实质采用",
+          "score": 2,
+          "reason": "P双端stride/合轴和O多块DMA双端单位、固定pitch、最后消费者均实质进入算法/容量/尾部；未虚构转置API。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-a8d96b5afc/answer.md",
+            "start_line": 390,
+            "end_line": 425,
+            "quote": "### GM→UB\n\n```text\nblockCount = vb\nblockLen   = va * s                         // 有效字节\nsrcStride  = (Xb - va) * s                  // GM字节间隙\ndstStride  = (Lx - AlignUp(va*s,32)) / 32    // UB额外32B块数\n```\n\n### UB→GM\n\n```text\nblockCount = va\nblockLen   = vb * s                         // 有效字节\nsrcStride  = (Ly - AlignUp(vb*s,32)) / 32    // UB额外32B块数\ndstStride  = (Ya - vb) * s                  // GM字节间隙\n```\n\n采用A2/A3 **无 `PaddingMode` 模板参数**的 `DataCopyPad`：\n\n```cpp\nAscendC::DataCopyPad(local, gm[offset], cp, pad); // GM→UB\nAscendC::DataCopyPad(gm[offset], local, cp);      // UB→GM，无pad参数\n```\n\n依据 `memory-transfer/recipes/strided-pad.md`：\n\n- `blockCount` 取正且不超过4095。\n- `blockLen < 2^21`，并为所用类型大小的倍数。\n- GM stride按字节，UB stride按32B块。\n- GM→UB的源GM首址按该文档可1B对齐，但类型视图仍须合法。\n- UB首址32B对齐。\n- stride先用64位计算、检查字段范围，再窄化。\n- `isPad=false` 不保证dummy为零。\n\n本方案只重排有效元素，因此无需为“安全”清零整tile。尾部使用固定UB pitch，不把 `va/vb` 偷换成物理行跨度。"
+          },
+          "source_evidence": [
+            "skill-libs/graph-base/1.3.0/skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/strided-pad.md:98"
+          ]
+        },
+        {
+          "key": "scope_unknown_attribution_external_rounds",
+          "label": "范围/unknown/归因/外部轮次",
+          "score": 2,
+          "reason": "明确Raw DMA与Scalar UB可见性为实施缺项，PIPE_ALL不自动解决；一轮只做条件计划，未造实现/正确性/收益。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-a8d96b5afc/answer.md",
+            "start_line": 440,
+            "end_line": 448,
+            "quote": "实施前必须补齐：\n\n1. **实际SDK中 `DataCopyPad` 对所选原始整数类型、方向和位置的支持表。**  \n   不能由正文中的float示例自动推出uint8/uint16/uint32全部组合合法。\n2. **LocalTensor原始整数Scalar读写的支持及准确同步契约。**  \n   尤其要确认 MTE2→Scalar读取、Scalar写UB→MTE3读取，以及区间复用的完成边。\n3. **实际用户可用UB与API额外资源。**\n\n材料证明 `PipeBarrier<PIPE_ALL>()` 能等待本核先前提交接口完成，可用于保守DMA完成点；但这**不能代替尚未给出的Scalar写UB可见性契约**。C3不得仅插一个barrier便宣布该缺项消失。"
+          },
+          "source_evidence": [
+            "evaluation/sources/transpose/scripts/verify_result.py:6"
+          ]
+        }
+      ],
+      "score": 10,
+      "out_of": 10,
+      "knowledge_documents": [
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md",
+          "use": "adopted",
+          "effect": "选择输出owner与双端连续轴矩形，合法合轴、高rank保留外轴映射。"
+        },
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/fallback.md",
+          "use": "referenced",
+          "effect": "保留一般Raw映射，不把未经验证父实现叫正确fallback。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+          "use": "adopted",
+          "effect": "连续条带可直接批量复制。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/strided-pad.md",
+          "use": "adopted",
+          "effect": "GM字节间隙、UB32B块间隙与固定pitch公式。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/recipes/valid-length.md",
+          "use": "adopted",
+          "effect": "有效va/vb与物理Lx/Ly不混用。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/bounds.md",
+          "use": "adopted",
+          "effect": "字段窄化/最后GM地址及尾部检查。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+          "use": "referenced",
+          "effect": "局部置换期间双区同时存活，不取max。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+          "use": "referenced",
+          "effect": "初版浅单槽，不宣称预取/流水收益。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+          "use": "referenced",
+          "effect": "输出计数器S2作为无UB替代。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+          "use": "adopted",
+          "effect": "按原始整数lane/字节复制，不做浮点算术转换。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+          "use": "rejected",
+          "effect": "count/mask信息不能外推为通用Vector转置能力。"
+        }
+      ],
+      "gaps": [
+        {
+          "kind": "implementation_prerequisite",
+          "blocking_implementation": true,
+          "finding": "原始整数DMA支持、Scalar UB访问与DMA交接可见性、实际UB预算未闭合；这是一份有准确公式和映射的条件方案，不是可直接执行候选。",
+          "evidence_lines": [
+            442,
+            448,
+            512
+          ]
+        },
+        {
+          "kind": "conditional_physical_boundary",
+          "blocking_implementation": true,
+          "finding": "相邻矩形/跨核短行物理写入契约须确认；若需要共同物理owner会返回C2，没有声称逻辑不重叠已证明安全。",
+          "evidence_lines": [
+            454,
+            456
+          ]
+        }
+      ],
+      "explicit_failures": [],
+      "engineering_status": "paper_only; no build, correctness or hardware-performance admission"
+    },
+    {
+      "anonymous_id": "answer-c4844129d1",
+      "operator": "grid_sampler_3d",
+      "answer_sha256": "sha256:7bfea4fdca70540ef6843fcf83f3c1a8ade59e1ec478bf0f34903d8a8ac03b75",
+      "plan": "原owner及几何/取数不变，bilinear算术批量Vector，T∈256/512/1024",
+      "action_count_is_not_a_scoring_factor": true,
+      "actions": [
+        {
+          "id": "action.vectorize_scalar_loop",
+          "use": "adopted",
+          "instance_count": 1
+        }
+      ],
+      "problem_mentions": [
+        {
+          "id": "problem.control_metadata_overhead",
+          "use": "referenced",
+          "effect": "地址解码替代并非默认优先。"
+        },
+        {
+          "id": "problem.fragmented_writeback",
+          "use": "referenced",
+          "effect": "FP32块写回为Vector结果配套步骤，不重复计成员。"
+        },
+        {
+          "id": "problem.noncontiguous_access",
+          "use": "referenced",
+          "effect": "不以输出连续推出X连续。"
+        },
+        {
+          "id": "problem.redundant_cast",
+          "use": "rejected",
+          "effect": "输入扩位/最终缩位承担数值边界。"
+        }
+      ],
+      "dimensions": [
+        {
+          "key": "source_hardware_facts",
+          "label": "源码与硬件事实",
+          "score": 2,
+          "reason": "区分Scalar主体与末端Cast、64B输出分区、14bilinear/6nearest和非有限grid继承缺口。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-c4844129d1/answer.md",
+            "start_line": 75,
+            "end_line": 91,
+            "quote": "| FP32 | 每个输出调用 `GridSampler3DOne<float>`，标量 GM 读 grid、标量随机读 X、标量计算、直接标量 GM 写 Y，kernel `:138–148` |\n| FP16 | 每 tile 最多 1024 输出，仍逐元素标量调用 `GridSampler3DOne<half>`；FP32 结果逐个 `SetValue` 到 UB，再 Vector Cast、DataCopyPad 写回，`:151–188` |\n\nFP16 显式用户 UB 数据区为：\n\n\\[\n1024\\times4+1024\\times2=6144\\text{ B}\n\\]\n\n它不是“计算已经向量化”：**Vector 只承担最终 Cast，三线性主体仍是 Scalar。**\n\nFP16 每 tile 有三次 `PipeBarrier<PIPE_ALL>()`：\n- Scalar 写 FP32 UB → Cast；\n- Cast → MTE3 写出；\n- MTE3 读完输出槽 → 下一轮复用。\n\n见 `:170–177`。源码没有双物理 buffer 或预取。"
+          },
+          "source_evidence": [
+            "evaluation/sources/grid_sampler_3d/op_kernel/grid_sampler_3d_kernel.asc:151",
+            "evaluation/sources/grid_sampler_3d/op_kernel/grid_sampler_3d_kernel.asc:173"
+          ]
+        },
+        {
+          "key": "complete_scheme_dependencies",
+          "label": "完整方案及必要依赖",
+          "score": 2,
+          "reason": "一个Action完整组织14路Scalar输入、原八项运算图、FP16转换/有效写回和最后消费者，不添加无必要成员。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-c4844129d1/answer.md",
+            "start_line": 217,
+            "end_line": 223,
+            "quote": "**必要依赖不是其他 Action，而是实现步骤保证：**\n1. 原样坐标/读数阶段为每个有效 lane 定义全部 14 路输入；\n2. Scalar 写 UB 完成后才能启动 Vector；\n3. 完整八项累加完成后才能转换/写出；\n4. MTE3 最后读取完成后才能覆盖输出区。\n\n性能 `scalar_hot`、收益大小、实际 bubble 均保持未知。注册目录是本轮条件依据；Problem 正文中的历史 profile 前提不能重新加回，也不能伪造为 true。"
+          },
+          "source_evidence": [
+            "evaluation/sources/grid_sampler_3d/op_kernel/grid_sampler_3d_kernel.asc:125"
+          ]
+        },
+        {
+          "key": "work_coverage_cost_selection",
+          "label": "工作/覆盖/代价影响选择",
+          "score": 2,
+          "reason": "同时计24M+8M Scalar发射、15路新增Scalar暂存、65,536/67,584B区以及原始随机取数/几何残余，给出替代和重开条件。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-c4844129d1/answer.md",
+            "start_line": 137,
+            "end_line": 146,
+            "quote": "| 项目 | 原实现 | 候选 |\n|---|---|---|\n| 三线性数据算术 | Scalar 24\\(M_b\\) 次乘、8\\(M_b\\) 次加 | 每 tile 24 次 Vector Mul、8 次 Vector Add，内部有效算术量不变 |\n| grid/X 逻辑读取 | 每输出 3 个 grid 值、最多 8 个 X 值 | 不变 |\n| UB 暂存写入 | FP16 每输出写一次结果；FP32 无此暂存 | 每输出写 8 个样本、6 个轴权重，另初始化累加值 |\n| 输出写入 | FP32 逐元素；FP16 已批量 | 两 dtype 均按连续有效段写出 |\n| 转换 | FP16 标量扩位、末端批量缩位 | 保留，不宣称消除 Cast |\n\n**预测**：显著减少三线性数据算术的 Scalar 发射工作，并减少 FP32 输出标量 store。  \n**竞争代价**：增加大量 Scalar→UB 写入、UB 本地读写、Vector 调用与依赖屏障；随机源读取和坐标处理完全保留。净收益未知。"
+          },
+          "source_evidence": [
+            "evaluation/sources/grid_sampler_3d/op_kernel/grid_sampler_3d_kernel.asc:125",
+            "evaluation/sources/grid_sampler_3d/op_kernel/grid_sampler_3d_kernel.asc:159"
+          ]
+        },
+        {
+          "key": "po_substantive_use",
+          "label": "P/O正文实质采用",
+          "score": 2,
+          "reason": "P独立几何骨架与派生状态Action缺口改变选择，O count/Cast/Compare/有效搬出及别名资源具体影响方法。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-c4844129d1/answer.md",
+            "start_line": 437,
+            "end_line": 450,
+            "quote": "1. **`coordinate_neighborhood.md`**  \n   使跨 c 几何复用进入强替代比较，但其“派生状态不等于原输入驻留”限制阻止错误套用 Action；本轮采用不共享几何的连续输出骨架。\n\n2. **`vector-api/batch.md`、`cast.md`**  \n   决定优先使用连续 count 接口，保留 FP16 最终舍入边界，不把当前一次 1024 元素 Cast 误诊为 Vector 碎片化。\n\n3. **`compare-select-tail.md`**  \n   A3 Compare 的完整 256B 执行域、Select 模式及 8KB 临时区表明：若连 padding/clamp 也向量化，会新增明确工作和容量。本轮不顺手加入 Compare/Select；保留原标量边界函数。\n\n4. **`memory-transfer/coalesce.md`、`strided-pad.md`**  \n   前者支持连续输出批量写回；后者明确规则 stride 不能表达任意 X gather，故不将随机读伪装成多块 DMA。\n\n5. **`buffer-lifetime/reuse.md`、`pipeline-sync/pipeline.md`**  \n   决定按物理分配和最后消费者记账，初版保留独立区及保守完成边；不将“变量不再使用”当作 DMA 已结束。"
+          },
+          "source_evidence": [
+            "skill-libs/graph-base/1.3.0/skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/coordinate_neighborhood.md:1"
+          ]
+        },
+        {
+          "key": "scope_unknown_attribution_external_rounds",
+          "label": "范围/unknown/归因/外部轮次",
+          "score": 2,
+          "reason": "三部分摘要保留一轮权限、R0、未实现未测与残余；独立核验SDK模式/alias而不将性能unknown设为安全门禁。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-c4844129d1/answer.md",
+            "start_line": 463,
+            "end_line": 477,
+            "quote": "- 外部授权：一轮只读方案分析及 C2/C3 纸面交接；禁止工具、改工程、编译和硬件。\n- 原始基线保持不变；没有候选源码、二进制或通过正确性的探索父本。\n- 目标 910C/dav-2201 来自任务约束。实际 SDK、编译目标、可用 UB/核数未探测。\n- 本文选定 `GS3D-R1-trilinear-vector`，状态 `conditional_plan`；正确性、性能均 `not_measured`。\n\n## 已尝试路线\n\n| 路线 | 本轮实际完成 | 限制 |\n|---|---|---|\n| 三线性 Scalar 算术向量化 | 源码工作量比较、单 Action 绑定、C2 资源/owner 计划、C3 API 与数值交接 | 未写代码、未审查编译产物、未验证正确性或收益 |\n| 跨通道几何复用 | 确认几何不依赖 c，形成有工作量公式的强替代 | 缺准确注册意图；没有冒充输入驻留或控制外提 |\n\n## 剩余机会\n\n- **先补实施合法性**：SDK 支持与 alias 契约、实际 UB 预算、Scalar/Vector 浮点模式；然后才可实施本轮方案。"
+          },
+          "source_evidence": [
+            "evaluation/sources/grid_sampler_3d/scripts/verify_result.py:35"
+          ]
+        }
+      ],
+      "score": 10,
+      "out_of": 10,
+      "knowledge_documents": [
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/coordinate_neighborhood.md",
+          "use": "adopted",
+          "effect": "采用不共享几何的输出连续块；跨c派生几何需明确注册意图。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+          "use": "adopted",
+          "effect": "逐tile count Mul/Add发射，保留运算图。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/cast.md",
+          "use": "adopted",
+          "effect": "保持FP16实际最终CAST_NONE路径。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+          "use": "adopted",
+          "effect": "保留三乘与八次顺序累加、Inf×0等特殊值，FTZ/FMA待核验。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+          "use": "adopted",
+          "effect": "FP32输出从Scalarstore改有效块搬出。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/strided-pad.md",
+          "use": "referenced",
+          "effect": "规则DMA不能表达随机X gather，拒绝源窗口自动连续假设。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/recipes/valid-length.md",
+          "use": "adopted",
+          "effect": "尾有效字节不向GM补齐。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+          "use": "referenced",
+          "effect": "term/acc/样本/权重共同存活，独立分配不做alias。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+          "use": "referenced",
+          "effect": "保守单槽完成边，不进行本轮流水变换。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/compare-select-tail.md",
+          "use": "rejected",
+          "effect": "坐标clamp向量化会新增比较补齐与8KiB，不夹带。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+          "use": "referenced",
+          "effect": "地址解码是低资源替代，字段CSE需编译证据。"
+        }
+      ],
+      "gaps": [
+        {
+          "kind": "implementation_prerequisite",
+          "blocking_implementation": true,
+          "finding": "实际SDK Mul/Add精确alias、Scalar/Vector浮点模式、UB/预留尚未闭合，最终源码与全oracle未执行；回答准确保留conditional_plan。",
+          "evidence_lines": [
+            209,
+            210,
+            366,
+            431,
+            477
+          ]
+        },
+        {
+          "kind": "residual",
+          "blocking_implementation": false,
+          "finding": "nearest、几何重算、随机X读取及FP16标量扩位保留；跨c几何状态有注册意图缺口。",
+          "evidence_lines": [
+            164,
+            172,
+            478
+          ]
+        }
+      ],
+      "explicit_failures": [],
+      "engineering_status": "paper_only; no build, correctness or hardware-performance admission"
+    },
+    {
+      "anonymous_id": "answer-f57f8ae4c2",
+      "operator": "reduction_sum",
+      "answer_sha256": "sha256:85d11c36e114d0be548fd9636613a9f11e5a98510f8db42cb47328bb288b9638",
+      "plan": "保留现有单核AR全载；基础ReduceSum、增核/流水均作具体成本比较",
+      "action_count_is_not_a_scoring_factor": true,
+      "actions": [],
+      "problem_mentions": [
+        {
+          "id": "problem.underused_task_parallelism",
+          "use": "referenced",
+          "effect": "独立行只有128B，要联合考虑固定成本。"
+        },
+        {
+          "id": "problem.tiny_transfer_setup_amplification",
+          "use": "rejected",
+          "effect": "一次全载不等于存在可合并碎片。"
+        },
+        {
+          "id": "problem.fragmented_writeback",
+          "use": "rejected",
+          "effect": "单次32B写回不等于碎片化。"
+        },
+        {
+          "id": "problem.pipeline_serialization",
+          "use": "rejected",
+          "effect": "单tile真依赖不支持自动添加双缓冲。"
+        }
+      ],
+      "dimensions": [
+        {
+          "key": "source_hardware_facts",
+          "label": "源码与硬件事实",
+          "score": 2,
+          "reason": "准确恢复3×32FP32、8个物理输出与5个零、96/8元素搬运、单核无偏移及独立scratch。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-f57f8ae4c2/answer.md",
+            "start_line": 23,
+            "end_line": 32,
+            "quote": "- `sum.asc:151–153` 固定实例化 `float`。\n- `sum.asc:78–81,114–116` 设置 `SumParams` 并调用 `AscendC::Sum`。\n- `gen_data.py:46–63` 生成 float32 的 `[3,32]` 输入，参考结果按行递归二分求和。\n- 输出物理长度为 8 个 float；前三个是归约结果，后五个 golden 为零。**这五个位置也被比较，不能把它们当作无需维护的不可见区域。**\n\n生成器的输入是 `[-100,99]` 内整数转换为 FP32。对这一生成值域，任意子集和绝对值不超过 3200，远小于 FP32 连续整数精确表示范围，因此仅改变加法树不会产生整数舍入误差。不过：\n\n- 这不是任意 float32 输入的等价证明；\n- `fixed_sample=true` 不是输出常量化许可；\n- 本次没有提供实际二进制输入内容，不能声称冻结了具体数值。"
+          },
+          "source_evidence": [
+            "evaluation/sources/reduction_sum/sum.asc:151",
+            "evaluation/sources/reduction_sum/sum.asc:178",
+            "evaluation/sources/reduction_sum/scripts/gen_data.py:60"
+          ]
+        },
+        {
+          "key": "complete_scheme_dependencies",
+          "label": "完整方案及必要依赖",
+          "score": 2,
+          "reason": "零Action保留判断不造假的优化/KEEP回执，C2完整提取既有owner/通路与C3零改动范围。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-f57f8ae4c2/answer.md",
+            "start_line": 169,
+            "end_line": 188,
+            "quote": "## 3. 注册 Action 实例与依赖\n\n### 本轮正式拟采用实例：**零个**\n\n本轮选择保留，因此不为了填交接表制造实例：\n\n- 不把固定一核写成已确认的 `fixed_or_undersubscribed_tasking` 性能机制；\n- 不把短 R 的高阶 Sum 自动写成 `reduction_strategy_mismatch=true`；\n- 不把一次小写回写成 `fragmented_writeback=true`；\n- 不把初始化前三个有效结果的位置写成可消除 GM 流量。\n\n**注册意图边界：** 单纯“在相同全载、owner 和归约结构下，把 Sum 换成基础 ReduceSum”主要是局部计算原语替换。现有 `restructure_reduction` 更直接描述全载/切分及合并结构，`batch_vector_api_calls` 也不能准确描述“一次变三次”。若后续只有 API 替换而不改变分解，应明确补充意图归属，而不是借现有 Action 名称夹带实施。\n\n没有成员间依赖。后续若重开基础 ReduceSum，必要依赖为：\n\n1. 明确合法 Action 意图；\n2. 目标 SDK 的基础 ReduceSum scratch、地址、别名和完成语义；\n3. 三个结果到完整 8 元素输出的合法布局；\n4. C2 明确许可归约实现及数值顺序变化；\n5. 容量闭合后，才进入实际 C3。"
+          },
+          "source_evidence": [
+            "evaluation/sources/reduction_sum/sum.asc:91"
+          ]
+        },
+        {
+          "key": "work_coverage_cost_selection",
+          "label": "工作/覆盖/代价影响选择",
+          "score": 2,
+          "reason": "四参数ReduceSum候选从1调用变3调用、scratch/目的布局/打包和同步完整比较，未凭高阶名字认定更慢。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-f57f8ae4c2/answer.md",
+            "start_line": 135,
+            "end_line": 148,
+            "quote": "| 项目 | 当前 Sum | 基础 ReduceSum 替代 |\n|---|---|---|\n| 输入搬运 | 一次，384B | 可保持一次，384B |\n| 显式归约调用 | 一次，包含三行 | 三次，每次 count=32 |\n| 必要求和工作 | 三行归约 | 相同 |\n| 临时区 | 当前查询的 `uint8_t` 区 | `LocalTensor<float>`，空间规则待核验 |\n| 结果布局 | 当前直接生成输出布局 | 须证明结果目的地址约束及三结果紧凑打包 |\n| 输出 | 一次，32B | 可以保持一次，但须维护五个零 |\n| 可能收益 | — | 避免高阶通用参数/内部调度成本 |\n| 新增风险 | — | 更多 API 发射、打包、局部完成边、不同归约实现 |\n\n**暂不采用的理由不是收益未知，而是净工作变化尚不占优。** “高阶 API 较通用”只支持性能假设，不能推出三次基础调用更便宜。尤其不能直接假设 `resultLocal=dstLocal[row]` 对所有 row 都满足基础归约的目的地址约束。\n\n未来若目标 SDK 正文和编译产物证明：基础接口可直接合法形成紧凑输出，且确实消除了显著的高阶固定工作，这个方向应重开。"
+          },
+          "source_evidence": [
+            "evaluation/sources/reduction_sum/sum.asc:116"
+          ]
+        },
+        {
+          "key": "po_substantive_use",
+          "label": "P/O正文实质采用",
+          "score": 2,
+          "reason": "P FullLoad/Split与O搬运/单tile流水/生命周期/物理输出边界改变保留决定，精确点名替代API合法性缺项。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-f57f8ae4c2/answer.md",
+            "start_line": 220,
+            "end_line": 235,
+            "quote": "### 4.2 P/O 正文采用关系\n\n- **P：`reduction/templates/fullload.md`**  \n  采用其 AR 行所有权、全载容量方程和有效/对齐长度分离原则。它使本任务归入“完整行能否容纳及 owner 是否合理”的判断，而非见到一核就 Split-R。\n- **P：`reduction/templates/split.md`**  \n  用其完整 partial→merge 成本排除本轮跨 R 拆分，不采用其执行结构。\n- **O：`memory-transfer/recipes/coalesce.md`**  \n  用其合法连续区间和调用计数核对，确认当前已有一次连续输入与一次输出，未发现合并余量。\n- **O：`pipeline-sync/recipes/pipeline.md`**  \n  用其单 tile 边界保留浅路径，而非追加两槽。\n- **O：`precision-boundaries/recipes/{numeric,bounds}.md`**  \n  保留有效 count、五个零输出、dtype、原容差与所有地址边界。\n- **O：`buffer-lifetime/recipes/reuse.md`**  \n  按独立静态分配计账，不以逻辑存活期推算出不存在的物理复用。\n\n这是正文对当前选择的实际影响，不是声称执行了 router 命中或采用了所有变换。"
+          },
+          "source_evidence": [
+            "skill-libs/graph-base/1.3.0/skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/fullload.md:1"
+          ]
+        },
+        {
+          "key": "scope_unknown_attribution_external_rounds",
+          "label": "范围/unknown/归因/外部轮次",
+          "score": 2,
+          "reason": "原oracle全8元素/NaN/exit0/短文件限制与一轮未测状态分开；不宣称正式NOOP或未来实施授权。",
+          "answer_evidence": {
+            "path": "review/subjects/answer-f57f8ae4c2/answer.md",
+            "start_line": 278,
+            "end_line": 288,
+            "quote": "### 5.3 原始 oracle 和工程信任限制\n\n后续验证需保留原 oracle，同时留意：\n\n- `CompareResult` 比较全部 8 元素，判错条件为 `ae>1e-4 && re>1e-4`，不是单一绝对误差。\n- NaN 可能绕过该比较条件；不能据现有比较器声称特殊值已验证。\n- `ReadFile` 允许文件短于 buffer，并改写传入的 `fileSize`；Host 未检查输入读取返回值。后续应确认输入恰为 384B、golden 恰为 32B，并保存内容身份，避免短文件被误当候选错误或正确结果。\n- 程序即使比较失败也返回 0，见 `sum.asc:250–255`；不能只凭退出码判定正确性。\n- 这些是验收接入限制，本轮不把 I/O、验证器修改混入性能方案。\n\n以后获得运行授权，应先完成目标构建/API 审查和完整输出正确性，再做同源 A/B；Task 时间与 Host 初始化、文件 I/O 时间分开。具体计时协议正文本次未提供，不补造采样数、异常阈值或加速门槛。"
+          },
+          "source_evidence": [
+            "evaluation/sources/reduction_sum/sum.asc:178",
+            "evaluation/sources/reduction_sum/sum.asc:250"
+          ]
+        }
+      ],
+      "score": 10,
+      "out_of": 10,
+      "knowledge_documents": [
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/fullload.md",
+          "use": "adopted",
+          "effect": "当前AR全载h=3、容量及有效/对齐长度原则。"
+        },
+        {
+          "owner": "parallel-planning",
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/split.md",
+          "use": "rejected",
+          "effect": "短R的partial/merge新增成本阻止本轮采用。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+          "use": "referenced",
+          "effect": "当前读/写各一次，不能再登记合并收益。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+          "use": "rejected",
+          "effect": "没有next tile，不为流水制造分块。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+          "use": "adopted",
+          "effect": "保留原FP32数值/归约范围，不外推生成小整数域。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/bounds.md",
+          "use": "adopted",
+          "effect": "保持8个可见输出和5个padding零。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+          "use": "referenced",
+          "effect": "Sum时各区有用途，不能按逻辑生存期伪造物理复用。"
+        },
+        {
+          "owner": "optimization",
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/tilingdata-access.md",
+          "use": "rejected",
+          "effect": "按值5字段无热循环，不套GM字段缓存。"
+        }
+      ],
+      "gaps": [
+        {
+          "kind": "alternative_prerequisite",
+          "blocking_implementation": false,
+          "finding": "若后续重开基础ReduceSum，需scratch、目的地址/布局、三结果打包与意图归属；本次保留选择不要求强行试验。",
+          "evidence_lines": [
+            180,
+            185,
+            276
+          ]
+        },
+        {
+          "kind": "inherited_oracle_boundary",
+          "blocking_implementation": false,
+          "finding": "全部8输出、NaN比较、短输入/未检返回值/比较失败exit0均单列，后继验收不能以原exit0当正确性。",
+          "evidence_lines": [
+            282,
+            286
+          ]
+        }
+      ],
+      "explicit_failures": [],
+      "engineering_status": "paper_only; no build, correctness or hardware-performance admission"
+    }
+  ],
+  "aggregate": {
+    "answers": 8,
+    "score_sum": 80,
+    "max_score_sum": 80,
+    "explicit_failure_count": 0,
+    "interpretation": "在允许条件方案与保留实现的冻结静态标准下，八答均达到五维充分档；不代表实施已就绪、硬件通过或已证实总体改进。"
+  }
+}

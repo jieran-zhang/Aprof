@@ -1,0 +1,1441 @@
+{
+  "schema_version": "aprof.action-decision/v2",
+  "task_id": "autonomy-c-15",
+  "context_hash": "sha256:77110f93949acddabcb2b64a988621e2cfc31e2a01236def81da08c2604fd13f",
+  "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/ec82d8f535262a6e43869d71bce0e77d91aa71040c5f7f87a8e56f5adfd6f1e8.json",
+    "sha256": "sha256:fde21372195004f2ae06c2a295edd3ca726b0f00da220aa64ef8f1c0bc6507e2"
+  },
+  "current_parent_ref": {
+    "path": "parent-source.json",
+    "sha256": "sha256:fcb0d77a61aaf35951472db008f465738d7571ca41fef303e49b8f35a0594704"
+  },
+  "opportunities": [
+    {
+      "id": "primary",
+      "hypothesis_id": "H-primary",
+      "action_id": "action.vectorize_scalar_loop",
+      "action_instance_id": "I-primary",
+      "case_ids": [
+        "1",
+        "10",
+        "14",
+        "17",
+        "2",
+        "8",
+        "11",
+        "15",
+        "20",
+        "3",
+        "6",
+        "9",
+        "12",
+        "16",
+        "4",
+        "7",
+        "18",
+        "5",
+        "13",
+        "19"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "source.workload"
+      ],
+      "cost_mechanism": "将每点四项加权的Scalar乘加及B16逐点SetValue改为St点批量Vector计算；地址生成与四邻域收集作为明确残余，不把derived geometry当原输入",
+      "predictions": [
+        {
+          "id": "primary-work",
+          "kind": "source_work",
+          "statement": "将每点四项加权的Scalar乘加及B16逐点SetValue改为St点批量Vector计算；地址生成与四邻域收集作为明确残余，不把derived geometry当原输入",
+          "check_method": "修改前后工作计数及地址序列审查，当前未实施",
+          "on_support": "保留减少工作假设；另验证新增代价",
+          "on_refute": "重新比较最强替代"
+        },
+        {
+          "id": "primary-time",
+          "kind": "performance",
+          "statement": "减少上述工作是否抵消四邻域FP32数组及输出至少5*A(4*St)，另加索引/权重/转换/原始暂存；Scalar gather→UB新增存储和同步，需比较St及原float直接写",
+          "check_method": "完整correctness后统一Task timing，按语义域比较",
+          "on_support": "仅支持工程收益，不自动证明主瓶颈",
+          "on_refute": "检查编译消除、新增发射与残余，再决定缩参数或改方法"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_scalar_hot",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "primary-time",
+          "unknown_id": "primary-perf-0",
+          "reason": "源码工作模型是待检验预测，未把未测性能置真。"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "primary-time",
+          "unknown_id": "primary-perf-1",
+          "reason": "源码工作模型是待检验预测，未把未测性能置真。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "primary-safe-1",
+          "kind": "implementation_safety",
+          "fact": "constraint.semantic_equivalence",
+          "expected_state": true,
+          "statement": "constraint.semantic_equivalence：需对具体参数/计划完成证明；源码机制支持不能代替最终实例合法性",
+          "affects": "固定nc的连续空间St片生成原坐标/合法邻居，再收集四路值，按原a*ah*aw+b*ah*dw+c*dh*aw+d*dh*dw顺序批量Mul/Add，保持FP32路径和B16回写舍入，输出统一有效DMA；不修改align/clip/Floor。",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "primary-safe-2",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "constraint.capacity：需对具体参数/计划完成证明；源码机制支持不能代替最终实例合法性",
+          "affects": "四邻域FP32数组及输出至少5*A(4*St)，另加索引/权重/转换/原始暂存；Scalar gather→UB新增存储和同步，需比较St及原float直接写",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "primary-perf-0",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "旧条件 symptom.profile.scalar_hot 的期望状态为 true。Scalar热点证据提高试验优先级，但不是等价逐元素向量化的安全前提。；当前compiled成本与Task关键路径占比未知",
+          "affects": "收益大小及主替代优先级，不阻止有来源的条件规划",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "primary-perf-1",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "合法向量化可能减少逐元素Scalar处理与发射，但Gather/转换、UB暂存和精度路径可成为新成本。；当前compiled成本与Task关键路径占比未知",
+          "affects": "收益大小及主替代优先级，不阻止有来源的条件规划",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "alternative",
+      "comparison": "局部输入窗口驻留可减少上采样重读，但下采样邻域稀疏时加载未消费间隙，halo重读和UB局部gather增加代价；不能把跨channel坐标相同当相同输入值。",
+      "disposition": "selected",
+      "reason": "固定nc的连续空间St片生成原坐标/合法邻居，再收集四路值，按原a*ah*aw+b*ah*dw+c*dh*aw+d*dh*dw顺序批量Mul/Add，保持FP32路径和B16回写舍入，输出统一有效DMA；不修改align/clip/Floor。",
+      "analysis": {
+        "intent_gap": null,
+        "work_delta": [
+          {
+            "id": "primary-reduced",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "downsample-or-mixed-float16",
+              "downsample-or-mixed-float32",
+              "downsample-or-mixed-bfloat16",
+              "upsample-float16",
+              "upsample-float32",
+              "upsample-bfloat16"
+            ],
+            "change": "reduced",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "11*N",
+              "unit": "scalar weighted arithmetic operations replaced (eight multiplies, three additions)",
+              "symbols": [
+                {
+                  "name": "N",
+                  "meaning": "输出元素数",
+                  "unit": "elements"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload"
+              ]
+            },
+            "explanation": "逻辑工作变化预测；不对应确定时延或编译指令数。"
+          },
+          {
+            "id": "primary-retained",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "downsample-or-mixed-float16",
+              "downsample-or-mixed-float32",
+              "downsample-or-mixed-bfloat16",
+              "upsample-float16",
+              "upsample-float32",
+              "upsample-bfloat16"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "qualitative",
+              "expression": "坐标生成、Floor和间接读取仍逐输出；几何跨NC相同可减少派生计算但需独立意图，不能塞进reuse_input_tiles或控制字段缓存。",
+              "unit": "logical work",
+              "symbols": [],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload"
+              ]
+            },
+            "explanation": "未覆盖计算/搬运明确保留。"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "primary-cov-downsample-or-mixed-float16",
+            "domain_id": "downsample-or-mixed-float16",
+            "status": "partial",
+            "region": "仅计划指定阶段减少；其它工作保留。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "primary-cov-downsample-or-mixed-float32",
+            "domain_id": "downsample-or-mixed-float32",
+            "status": "partial",
+            "region": "仅计划指定阶段减少；其它工作保留。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "primary-cov-downsample-or-mixed-bfloat16",
+            "domain_id": "downsample-or-mixed-bfloat16",
+            "status": "partial",
+            "region": "仅计划指定阶段减少；其它工作保留。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "primary-cov-upsample-float16",
+            "domain_id": "upsample-float16",
+            "status": "partial",
+            "region": "仅计划指定阶段减少；其它工作保留。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "primary-cov-upsample-float32",
+            "domain_id": "upsample-float32",
+            "status": "partial",
+            "region": "仅计划指定阶段减少；其它工作保留。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "primary-cov-upsample-bfloat16",
+            "domain_id": "upsample-bfloat16",
+            "status": "partial",
+            "region": "仅计划指定阶段减少；其它工作保留。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "primary-cost",
+            "domain_ids": [
+              "downsample-or-mixed-float16",
+              "downsample-or-mixed-float32",
+              "downsample-or-mixed-bfloat16",
+              "upsample-float16",
+              "upsample-float32",
+              "upsample-bfloat16"
+            ],
+            "dimension": "UB bytes / API issue / task / synchronization, separately accounted",
+            "change": {
+              "mode": "symbolic",
+              "expression": "5*A(4*St)+Bindex+Bweight+Bcast+Btmp",
+              "unit": "bytes",
+              "symbols": [
+                {
+                  "name": "Bcast",
+                  "meaning": "转换独立分配",
+                  "unit": "bytes"
+                },
+                {
+                  "name": "Btmp",
+                  "meaning": "API临时分配",
+                  "unit": "bytes"
+                },
+                {
+                  "name": "Bindex",
+                  "meaning": "索引分配",
+                  "unit": "bytes"
+                },
+                {
+                  "name": "Bweight",
+                  "meaning": "权重分配",
+                  "unit": "bytes"
+                },
+                {
+                  "name": "St",
+                  "meaning": "连续空间片点数",
+                  "unit": "elements"
+                },
+                {
+                  "name": "A",
+                  "meaning": "A(x)=ceil(x/32)*32，字节对齐函数",
+                  "unit": "bytes"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload"
+              ]
+            },
+            "consequence": "局部输入窗口驻留可减少上采样重读，但下采样邻域稀疏时加载未消费间隙，halo重读和UB局部gather增加代价；不能把跨channel坐标相同当相同输入值。"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "primary-residual",
+            "domain_ids": [
+              "downsample-or-mixed-float16",
+              "downsample-or-mixed-float32",
+              "downsample-or-mixed-bfloat16",
+              "upsample-float16",
+              "upsample-float32",
+              "upsample-bfloat16"
+            ],
+            "remaining_work": "坐标生成、Floor和间接读取仍逐输出；几何跨NC相同可减少派生计算但需独立意图，不能塞进reuse_input_tiles或控制字段缓存。 ResizeToFloat原输入逐点位解码/转换也仍需单独审查，不计为本轮已消除。",
+            "next_step": "保留fallback并在后续独立候选比较；不把部分减少当整个算子解决。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          }
+        ],
+        "no_alternative_reason": null
+      }
+    },
+    {
+      "id": "alternative",
+      "hypothesis_id": "H-alternative",
+      "action_id": "action.reuse_input_tiles",
+      "action_instance_id": "I-alternative",
+      "case_ids": [
+        "1",
+        "10",
+        "14",
+        "17",
+        "2",
+        "8",
+        "11",
+        "15",
+        "20",
+        "3",
+        "6",
+        "9",
+        "12",
+        "16",
+        "4",
+        "7",
+        "18",
+        "5",
+        "13",
+        "19"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "source.workload"
+      ],
+      "cost_mechanism": "窗口内重复地址请求由4*St降为unique_neighbor_count；仅保存本nc原输入，跨nc不能共用输入值",
+      "predictions": [
+        {
+          "id": "alternative-work",
+          "kind": "source_work",
+          "statement": "窗口内重复地址请求由4*St降为unique_neighbor_count；仅保存本nc原输入，跨nc不能共用输入值",
+          "check_method": "修改前后工作计数及地址序列审查，当前未实施",
+          "on_support": "保留减少工作假设；另验证新增代价",
+          "on_refute": "重新比较最强替代"
+        },
+        {
+          "id": "alternative-time",
+          "kind": "performance",
+          "statement": "减少上述工作是否抵消Bwindow=windowH*aligned(windowW*s)，另有halo、索引和转换；downsampling可能Bwindow>4*St*s，窗口并非总能省流量",
+          "check_method": "完整correctness后统一Task timing，按语义域比较",
+          "on_support": "仅支持工程收益，不自动证明主瓶颈",
+          "on_refute": "检查编译消除、新增发射与残余，再决定缩参数或改方法"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "alternative-time",
+          "unknown_id": "alternative-perf-0",
+          "reason": "源码工作模型是待检验预测，未把未测性能置真。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "alternative-safe-1",
+          "kind": "implementation_safety",
+          "fact": "constraint.reuse_domain",
+          "expected_state": true,
+          "statement": "constraint.reuse_domain：需对具体参数/计划完成证明；源码机制支持不能代替最终实例合法性",
+          "affects": "固定nc的连续空间St片生成原坐标/合法邻居，再收集四路值，按原a*ah*aw+b*ah*dw+c*dh*aw+d*dh*dw顺序批量Mul/Add，保持FP32路径和B16回写舍入，输出统一有效DMA；不修改align/clip/Floor。",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "alternative-safe-2",
+          "kind": "implementation_safety",
+          "fact": "constraint.semantic_equivalence",
+          "expected_state": true,
+          "statement": "constraint.semantic_equivalence：需对具体参数/计划完成证明；源码机制支持不能代替最终实例合法性",
+          "affects": "固定nc的连续空间St片生成原坐标/合法邻居，再收集四路值，按原a*ah*aw+b*ah*dw+c*dh*aw+d*dh*dw顺序批量Mul/Add，保持FP32路径和B16回写舍入，输出统一有效DMA；不修改align/clip/Floor。",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "alternative-safe-3",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "constraint.capacity：需对具体参数/计划完成证明；源码机制支持不能代替最终实例合法性",
+          "affects": "四邻域FP32数组及输出至少5*A(4*St)，另加索引/权重/转换/原始暂存；Scalar gather→UB新增存储和同步，需比较St及原float直接写",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "alternative-perf-0",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "驻留或改变tile顺序可减少重复装入；代价是更长存活、较小tile/较少流水buffer，L2提示不保证实际驻留。；当前compiled成本与Task关键路径占比未知",
+          "affects": "收益大小及主替代优先级，不阻止有来源的条件规划",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "primary",
+      "comparison": "局部输入窗口驻留可减少上采样重读，但下采样邻域稀疏时加载未消费间隙，halo重读和UB局部gather增加代价；不能把跨channel坐标相同当相同输入值。",
+      "disposition": "deferred",
+      "reason": "局部输入窗口驻留可减少上采样重读，但下采样邻域稀疏时加载未消费间隙，halo重读和UB局部gather增加代价；不能把跨channel坐标相同当相同输入值。",
+      "analysis": {
+        "intent_gap": null,
+        "work_delta": [
+          {
+            "id": "alternative-reduced",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "downsample-or-mixed-float16",
+              "downsample-or-mixed-float32",
+              "downsample-or-mixed-bfloat16",
+              "upsample-float16",
+              "upsample-float32",
+              "upsample-bfloat16"
+            ],
+            "change": "reduced",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "4*St-U",
+              "unit": "source element read requests in one window",
+              "symbols": [
+                {
+                  "name": "St",
+                  "meaning": "连续空间片点数",
+                  "unit": "elements"
+                },
+                {
+                  "name": "U",
+                  "meaning": "窗口实际唯一有效源元素数",
+                  "unit": "elements"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload"
+              ]
+            },
+            "explanation": "逻辑工作变化预测；不对应确定时延或编译指令数。"
+          },
+          {
+            "id": "alternative-retained",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "downsample-or-mixed-float16",
+              "downsample-or-mixed-float32",
+              "downsample-or-mixed-bfloat16",
+              "upsample-float16",
+              "upsample-float32",
+              "upsample-bfloat16"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "qualitative",
+              "expression": "坐标生成、Floor和间接读取仍逐输出；几何跨NC相同可减少派生计算但需独立意图，不能塞进reuse_input_tiles或控制字段缓存。",
+              "unit": "logical work",
+              "symbols": [],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload"
+              ]
+            },
+            "explanation": "未覆盖计算/搬运明确保留。"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "alternative-cov-downsample-or-mixed-float16",
+            "domain_id": "downsample-or-mixed-float16",
+            "status": "partial",
+            "region": "仅计划指定阶段减少；其它工作保留。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "alternative-cov-downsample-or-mixed-float32",
+            "domain_id": "downsample-or-mixed-float32",
+            "status": "partial",
+            "region": "仅计划指定阶段减少；其它工作保留。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "alternative-cov-downsample-or-mixed-bfloat16",
+            "domain_id": "downsample-or-mixed-bfloat16",
+            "status": "partial",
+            "region": "仅计划指定阶段减少；其它工作保留。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "alternative-cov-upsample-float16",
+            "domain_id": "upsample-float16",
+            "status": "partial",
+            "region": "仅计划指定阶段减少；其它工作保留。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "alternative-cov-upsample-float32",
+            "domain_id": "upsample-float32",
+            "status": "partial",
+            "region": "仅计划指定阶段减少；其它工作保留。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "alternative-cov-upsample-bfloat16",
+            "domain_id": "upsample-bfloat16",
+            "status": "partial",
+            "region": "仅计划指定阶段减少；其它工作保留。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "alternative-cost",
+            "domain_ids": [
+              "downsample-or-mixed-float16",
+              "downsample-or-mixed-float32",
+              "downsample-or-mixed-bfloat16",
+              "upsample-float16",
+              "upsample-float32",
+              "upsample-bfloat16"
+            ],
+            "dimension": "UB bytes / API issue / task / synchronization, separately accounted",
+            "change": {
+              "mode": "symbolic",
+              "expression": "windowH*A(windowW*s)+Bother",
+              "unit": "bytes",
+              "symbols": [
+                {
+                  "name": "s",
+                  "meaning": "当前dtype每元素字节",
+                  "unit": "bytes/element"
+                },
+                {
+                  "name": "Bother",
+                  "meaning": "其它同时存活分配",
+                  "unit": "bytes"
+                },
+                {
+                  "name": "windowH",
+                  "meaning": "源窗口行数",
+                  "unit": "rows"
+                },
+                {
+                  "name": "windowW",
+                  "meaning": "源窗口有效列数",
+                  "unit": "elements/row"
+                },
+                {
+                  "name": "A",
+                  "meaning": "A(x)=ceil(x/32)*32，字节对齐函数",
+                  "unit": "bytes"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload"
+              ]
+            },
+            "consequence": "局部输入窗口驻留可减少上采样重读，但下采样邻域稀疏时加载未消费间隙，halo重读和UB局部gather增加代价；不能把跨channel坐标相同当相同输入值。"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "alternative-residual",
+            "domain_ids": [
+              "downsample-or-mixed-float16",
+              "downsample-or-mixed-float32",
+              "downsample-or-mixed-bfloat16",
+              "upsample-float16",
+              "upsample-float32",
+              "upsample-bfloat16"
+            ],
+            "remaining_work": "坐标生成、Floor和间接读取仍逐输出；几何跨NC相同可减少派生计算但需独立意图，不能塞进reuse_input_tiles或控制字段缓存。 ResizeToFloat原输入逐点位解码/转换也仍需单独审查，不计为本轮已消除。",
+            "next_step": "保留fallback并在后续独立候选比较；不把部分减少当整个算子解决。",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          }
+        ],
+        "no_alternative_reason": null
+      }
+    },
+    {
+      "id": "geometry",
+      "hypothesis_id": "H-geometry",
+      "action_id": null,
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "source.workload"
+      ],
+      "cost_mechanism": "将派生几何每输出生成改成每Ct×St组一次",
+      "predictions": [
+        {
+          "id": "geometry-work",
+          "kind": "source_work",
+          "statement": "NC*S几何生成减为ceil(NC/Ct)*S，但原输入仍各plane不同",
+          "check_method": "静态依赖/任务覆盖与同序数值审查",
+          "on_support": "支持向知识提案提交该独立意图",
+          "on_refute": "几何若依赖channel则取消跨channel复用"
+        }
+      ],
+      "performance_hypotheses": [],
+      "unknowns": [],
+      "strongest_alternative_id": "primary",
+      "comparison": "NC大时可减少昂贵坐标派生，代价是活跃记录和更少task；不使用错误Action冒充合法。",
+      "disposition": "considered",
+      "reason": "登记机制和意图缺口，未注册不能作为正式实施选择。",
+      "analysis": {
+        "intent_gap": "现有reuse_input_tiles保存原值；hoist_invariant_control不授权派生插值几何存储/重排。需要注册独立意图及数值/所有权条件。",
+        "work_delta": [
+          {
+            "id": "geometry-reduced",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "downsample-or-mixed-float16",
+              "downsample-or-mixed-float32",
+              "downsample-or-mixed-bfloat16",
+              "upsample-float16",
+              "upsample-float32",
+              "upsample-bfloat16"
+            ],
+            "change": "reduced",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "(NC-ceil(NC/Ct))*S",
+              "unit": "coordinate geometry evaluations",
+              "symbols": [
+                {
+                  "name": "NC",
+                  "meaning": "batch与channel乘积",
+                  "unit": "planes"
+                },
+                {
+                  "name": "S",
+                  "meaning": "Ho*Wo输出空间点数",
+                  "unit": "points"
+                },
+                {
+                  "name": "Ct",
+                  "meaning": "同owner消费几何的plane数",
+                  "unit": "planes"
+                },
+                {
+                  "name": "St",
+                  "meaning": "空间tile点数",
+                  "unit": "points"
+                },
+                {
+                  "name": "bD",
+                  "meaning": "每点几何记录字节",
+                  "unit": "bytes/point"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload"
+              ]
+            },
+            "explanation": "几何生成减少，不减少4NC*S原输入请求。"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "geometry-cov-downsample-or-mixed-float16",
+            "domain_id": "downsample-or-mixed-float16",
+            "status": "partial",
+            "region": "仅坐标/Floor/邻居/权重派生；原输入与加权计算仍逐输出",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "geometry-cov-downsample-or-mixed-float32",
+            "domain_id": "downsample-or-mixed-float32",
+            "status": "partial",
+            "region": "仅坐标/Floor/邻居/权重派生；原输入与加权计算仍逐输出",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "geometry-cov-downsample-or-mixed-bfloat16",
+            "domain_id": "downsample-or-mixed-bfloat16",
+            "status": "partial",
+            "region": "仅坐标/Floor/邻居/权重派生；原输入与加权计算仍逐输出",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "geometry-cov-upsample-float16",
+            "domain_id": "upsample-float16",
+            "status": "partial",
+            "region": "仅坐标/Floor/邻居/权重派生；原输入与加权计算仍逐输出",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "geometry-cov-upsample-float32",
+            "domain_id": "upsample-float32",
+            "status": "partial",
+            "region": "仅坐标/Floor/邻居/权重派生；原输入与加权计算仍逐输出",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          },
+          {
+            "id": "geometry-cov-upsample-bfloat16",
+            "domain_id": "upsample-bfloat16",
+            "status": "partial",
+            "region": "仅坐标/Floor/邻居/权重派生；原输入与加权计算仍逐输出",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "geometry-cost",
+            "domain_ids": [
+              "downsample-or-mixed-float16",
+              "downsample-or-mixed-float32",
+              "downsample-or-mixed-bfloat16",
+              "upsample-float16",
+              "upsample-float32",
+              "upsample-bfloat16"
+            ],
+            "dimension": "live state and task parallelism",
+            "change": {
+              "mode": "symbolic",
+              "expression": "St*bD",
+              "unit": "bytes",
+              "symbols": [
+                {
+                  "name": "NC",
+                  "meaning": "batch与channel乘积",
+                  "unit": "planes"
+                },
+                {
+                  "name": "S",
+                  "meaning": "Ho*Wo输出空间点数",
+                  "unit": "points"
+                },
+                {
+                  "name": "Ct",
+                  "meaning": "同owner消费几何的plane数",
+                  "unit": "planes"
+                },
+                {
+                  "name": "St",
+                  "meaning": "空间tile点数",
+                  "unit": "points"
+                },
+                {
+                  "name": "bD",
+                  "meaning": "每点几何记录字节",
+                  "unit": "bytes/point"
+                }
+              ],
+              "basis": "inference",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "source.workload"
+              ]
+            },
+            "consequence": "另计源/输出/转换；Ct增大降低独立task数，NCHW跨plane stride不连续"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "geometry-residual",
+            "domain_ids": [
+              "downsample-or-mixed-float16",
+              "downsample-or-mixed-float32",
+              "downsample-or-mixed-bfloat16",
+              "upsample-float16",
+              "upsample-float32",
+              "upsample-bfloat16"
+            ],
+            "remaining_work": "四邻域原值读取、加权算术、输出和数值边界仍存在",
+            "next_step": "保持注册Vector加权条件方案，同时提案独立几何意图",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling",
+              "source.workload"
+            ]
+          }
+        ],
+        "no_alternative_reason": null
+      }
+    }
+  ],
+  "evidence_requests": [
+    {
+      "id": "REQ-primary-safe-1",
+      "opportunity_ids": [
+        "primary"
+      ],
+      "unknown_ids": [
+        "primary-safe-1"
+      ],
+      "method": "限定原dtype/owner/有效域，以源码地址映射与原oracle逐项审查；容量按公式，SDK/API支持待授权实现前核验。",
+      "discriminating_results": [
+        {
+          "outcome": "合法性条件闭合",
+          "decision_effect": "可将条件方案推进正式实现"
+        },
+        {
+          "outcome": "条件不成立",
+          "decision_effect": "缩小参数/覆盖或返回C2，不能伪造事实"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本任务只允许静态条件分析，未编译设备。",
+      "defer_reason": "未实施，实际SDK/可用UB未知。"
+    },
+    {
+      "id": "REQ-primary-safe-2",
+      "opportunity_ids": [
+        "primary"
+      ],
+      "unknown_ids": [
+        "primary-safe-2"
+      ],
+      "method": "限定原dtype/owner/有效域，以源码地址映射与原oracle逐项审查；容量按公式，SDK/API支持待授权实现前核验。",
+      "discriminating_results": [
+        {
+          "outcome": "合法性条件闭合",
+          "decision_effect": "可将条件方案推进正式实现"
+        },
+        {
+          "outcome": "条件不成立",
+          "decision_effect": "缩小参数/覆盖或返回C2，不能伪造事实"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本任务只允许静态条件分析，未编译设备。",
+      "defer_reason": "未实施，实际SDK/可用UB未知。"
+    },
+    {
+      "id": "REQ-alternative-safe-1",
+      "opportunity_ids": [
+        "alternative"
+      ],
+      "unknown_ids": [
+        "alternative-safe-1"
+      ],
+      "method": "限定原dtype/owner/有效域，以源码地址映射与原oracle逐项审查；容量按公式，SDK/API支持待授权实现前核验。",
+      "discriminating_results": [
+        {
+          "outcome": "合法性条件闭合",
+          "decision_effect": "可将条件方案推进正式实现"
+        },
+        {
+          "outcome": "条件不成立",
+          "decision_effect": "缩小参数/覆盖或返回C2，不能伪造事实"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本任务只允许静态条件分析，未编译设备。",
+      "defer_reason": "未实施，实际SDK/可用UB未知。"
+    },
+    {
+      "id": "REQ-alternative-safe-2",
+      "opportunity_ids": [
+        "alternative"
+      ],
+      "unknown_ids": [
+        "alternative-safe-2"
+      ],
+      "method": "限定原dtype/owner/有效域，以源码地址映射与原oracle逐项审查；容量按公式，SDK/API支持待授权实现前核验。",
+      "discriminating_results": [
+        {
+          "outcome": "合法性条件闭合",
+          "decision_effect": "可将条件方案推进正式实现"
+        },
+        {
+          "outcome": "条件不成立",
+          "decision_effect": "缩小参数/覆盖或返回C2，不能伪造事实"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本任务只允许静态条件分析，未编译设备。",
+      "defer_reason": "未实施，实际SDK/可用UB未知。"
+    },
+    {
+      "id": "REQ-alternative-safe-3",
+      "opportunity_ids": [
+        "alternative"
+      ],
+      "unknown_ids": [
+        "alternative-safe-3"
+      ],
+      "method": "限定原dtype/owner/有效域，以源码地址映射与原oracle逐项审查；容量按公式，SDK/API支持待授权实现前核验。",
+      "discriminating_results": [
+        {
+          "outcome": "合法性条件闭合",
+          "decision_effect": "可将条件方案推进正式实现"
+        },
+        {
+          "outcome": "条件不成立",
+          "decision_effect": "缩小参数/覆盖或返回C2，不能伪造事实"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本任务只允许静态条件分析，未编译设备。",
+      "defer_reason": "未实施，实际SDK/可用UB未知。"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "primary"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+        "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+      },
+      "locator": "lines:279-334",
+      "effect_kind": "mechanism",
+      "before": "从源码观察到路径但尚未区分成本类别。",
+      "after": "将每点四项加权的Scalar乘加及B16逐点SetValue改为St点批量Vector计算；地址生成与四邻域收集作为明确残余，不把derived geometry当原输入；正文要求把支持预测与实测瓶颈分开。",
+      "applicability": "来源机制原则适用；当前性能不明，不作为实测结论。"
+    },
+    {
+      "opportunity_ids": [
+        "alternative"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.insufficient_input_reuse.md",
+        "sha256": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4"
+      },
+      "locator": "lines:252-307",
+      "effect_kind": "mechanism",
+      "before": "从源码观察到路径但尚未区分成本类别。",
+      "after": "局部输入窗口驻留可减少上采样重读，但下采样邻域稀疏时加载未消费间隙，halo重读和UB局部gather增加代价；不能把跨channel坐标相同当相同输入值。",
+      "applicability": "来源机制原则适用；当前性能不明，不作为实测结论。"
+    },
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative",
+        "geometry"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/coordinate_neighborhood.md",
+        "sha256": "sha256:5e4f96af8fde45ec3d5ea785c96c2243f211dbeeb93cd28c1f4d7e63bdf036fb"
+      },
+      "locator": "lines:110-183",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "将Resize G绑定ResizeCoord、B绑定clip与边界h1/w1、H绑定四点/权重、F绑定原FP32乘加序列。仅部分采用空间块与依赖轴成本；还未证明最终API/容量。确认几何与nc无关而输入值依赖nc，派生表复用必须单列未注册意图，不归reuse_input_tiles。",
+      "applicability": "partial：仅采用容量、有效域、所有权/数值边界原则；未声称整套模板API已验证。"
+    },
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+        "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+      },
+      "locator": "lines:90-131",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "采用A3 memory Vector连续count与合法repeat的地址范围公式，避免950 Reg/VF。数值操作顺序和mask尾部须逐API核验；有Cast不代表主要Scalar算术已向量化。Compare非整256B边界不能从Add的count推合法性。",
+      "applicability": "partial：仅采用容量、有效域、所有权/数值边界原则；未声称整套模板API已验证。"
+    },
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+        "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+      },
+      "locator": "lines:97-264",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "只有原输入同地址同版本才能驻留；保留到最后异步消费者结束，删除copy不自动扣除独立InitBuffer分配。RoPE限同owner trig key窗口；Maximum限broadcast源；Resize限同nc窗口公共原值，几何权重表不是原输入。",
+      "applicability": "partial：仅采用容量、有效域、所有权/数值边界原则；未声称整套模板API已验证。"
+    }
+  ],
+  "selection": {
+    "mode": "conditional_plan",
+    "opportunity_id": "primary",
+    "action_instance_id": "I-primary",
+    "reason": "以主要可减少工作、覆盖和新增代价优先：固定nc的连续空间St片生成原坐标/合法邻居，再收集四路值，按原a*ah*aw+b*ah*dw+c*dh*aw+d*dh*dw顺序批量Mul/Add，保持FP32路径和B16回写舍入，输出统一有效DMA；不修改align/clip/Floor。 派生几何复用作为显式未注册比较项保留；最强当前已注册替代为同nc原输入窗口驻留。",
+    "concrete_plan": "固定nc的连续空间St片生成原坐标/合法邻居，再收集四路值，按原a*ah*aw+b*ah*dw+c*dh*aw+d*dh*dw顺序批量Mul/Add，保持FP32路径和B16回写舍入，输出统一有效DMA；不修改align/clip/Floor。",
+    "stop_reason": null,
+    "comparison_basis": [
+      {
+        "opportunity_id": "primary",
+        "item_ids": [
+          "primary-reduced"
+        ],
+        "role": "benefit",
+        "decision_effect": "将每点四项加权的Scalar乘加及B16逐点SetValue改为St点批量Vector计算；地址生成与四邻域收集作为明确残余，不把derived geometry当原输入",
+        "reversal_condition": "反事实非实测：NC=1且强下采样，几何复用因子1、窗口输入可能膨胀，批量加权或直接Scalar有竞争；NC很大且St相同，几何复用由NC*St降为ceil(NC/Ct)*St，但D表存活及task减少使其未必优于重算。"
+      },
+      {
+        "opportunity_id": "primary",
+        "item_ids": [
+          "primary-cost"
+        ],
+        "role": "cost",
+        "decision_effect": "四邻域FP32数组及输出至少5*A(4*St)，另加索引/权重/转换/原始暂存；Scalar gather→UB新增存储和同步，需比较St及原float直接写",
+        "reversal_condition": "若新增存储/同步或padding抵消工作减少，比较替代而不自动dispatch"
+      },
+      {
+        "opportunity_id": "primary",
+        "item_ids": [
+          "primary-cov-downsample-or-mixed-float16",
+          "primary-cov-downsample-or-mixed-float32",
+          "primary-cov-downsample-or-mixed-bfloat16",
+          "primary-cov-upsample-float16",
+          "primary-cov-upsample-float32",
+          "primary-cov-upsample-bfloat16"
+        ],
+        "role": "coverage",
+        "decision_effect": "覆盖按真实语义域映射，partial不等于全部工作消失",
+        "reversal_condition": "域变为不满足地址/数值映射时保留fallback"
+      },
+      {
+        "opportunity_id": "primary",
+        "item_ids": [
+          "primary-residual"
+        ],
+        "role": "residual",
+        "decision_effect": "坐标生成、Floor和间接读取仍逐输出；几何跨NC相同可减少派生计算但需独立意图，不能塞进reuse_input_tiles或控制字段缓存。",
+        "reversal_condition": "残余成为主要可消除成本则重开C1"
+      },
+      {
+        "opportunity_id": "alternative",
+        "item_ids": [
+          "alternative-reduced",
+          "alternative-cost"
+        ],
+        "role": "alternative",
+        "decision_effect": "局部输入窗口驻留可减少上采样重读，但下采样邻域稀疏时加载未消费间隙，halo重读和UB局部gather增加代价；不能把跨channel坐标相同当相同输入值。",
+        "reversal_condition": "反事实非实测：NC=1且强下采样，几何复用因子1、窗口输入可能膨胀，批量加权或直接Scalar有竞争；NC很大且St相同，几何复用由NC*St降为ceil(NC/Ct)*St，但D表存活及task减少使其未必优于重算。"
+      }
+    ]
+  },
+  "path_overview": {
+    "workload_ref": {
+      "path": "source/matrix-20.json",
+      "sha256": "sha256:df2c5c19e61c7965528e1cb11b5a1d06c25b23b73c80e681b487a5556eaa2e00"
+    },
+    "case_ids": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20"
+    ],
+    "domains": [
+      {
+        "id": "downsample-or-mixed-float16",
+        "case_ids": [
+          "1",
+          "10",
+          "14",
+          "17"
+        ],
+        "predicate": "downsample-or-mixed-float16 determined by actual dtype/layout/broadcast/perm/scale metadata, never by case ID",
+        "supported_scope": "当前20case成员；API合法范围还包括未覆盖shape，未覆盖部分不声明验证。",
+        "fact_ids": [
+          "source.kernel",
+          "source.workload"
+        ]
+      },
+      {
+        "id": "downsample-or-mixed-float32",
+        "case_ids": [
+          "2",
+          "8",
+          "11",
+          "15",
+          "20"
+        ],
+        "predicate": "downsample-or-mixed-float32 determined by actual dtype/layout/broadcast/perm/scale metadata, never by case ID",
+        "supported_scope": "当前20case成员；API合法范围还包括未覆盖shape，未覆盖部分不声明验证。",
+        "fact_ids": [
+          "source.kernel",
+          "source.workload"
+        ]
+      },
+      {
+        "id": "downsample-or-mixed-bfloat16",
+        "case_ids": [
+          "3",
+          "6",
+          "9",
+          "12",
+          "16"
+        ],
+        "predicate": "downsample-or-mixed-bfloat16 determined by actual dtype/layout/broadcast/perm/scale metadata, never by case ID",
+        "supported_scope": "当前20case成员；API合法范围还包括未覆盖shape，未覆盖部分不声明验证。",
+        "fact_ids": [
+          "source.kernel",
+          "source.workload"
+        ]
+      },
+      {
+        "id": "upsample-float16",
+        "case_ids": [
+          "4",
+          "7",
+          "18"
+        ],
+        "predicate": "upsample-float16 determined by actual dtype/layout/broadcast/perm/scale metadata, never by case ID",
+        "supported_scope": "当前20case成员；API合法范围还包括未覆盖shape，未覆盖部分不声明验证。",
+        "fact_ids": [
+          "source.kernel",
+          "source.workload"
+        ]
+      },
+      {
+        "id": "upsample-float32",
+        "case_ids": [
+          "5",
+          "13"
+        ],
+        "predicate": "upsample-float32 determined by actual dtype/layout/broadcast/perm/scale metadata, never by case ID",
+        "supported_scope": "当前20case成员；API合法范围还包括未覆盖shape，未覆盖部分不声明验证。",
+        "fact_ids": [
+          "source.kernel",
+          "source.workload"
+        ]
+      },
+      {
+        "id": "upsample-bfloat16",
+        "case_ids": [
+          "19"
+        ],
+        "predicate": "upsample-bfloat16 determined by actual dtype/layout/broadcast/perm/scale metadata, never by case ID",
+        "supported_scope": "当前20case成员；API合法范围还包括未覆盖shape，未覆盖部分不声明验证。",
+        "fact_ids": [
+          "source.kernel",
+          "source.workload"
+        ]
+      }
+    ],
+    "stages": [
+      {
+        "id": "host",
+        "domain_ids": [
+          "downsample-or-mixed-float16",
+          "downsample-or-mixed-float32",
+          "downsample-or-mixed-bfloat16",
+          "upsample-float16",
+          "upsample-float32",
+          "upsample-bfloat16"
+        ],
+        "fact_ids": [
+          "source.host",
+          "source.tiling"
+        ],
+        "behavior": "分配和H2D准备后按tiling启动kernel；完整调用范围见原host，host输出kernel_us不作性能证据。"
+      },
+      {
+        "id": "kernel",
+        "domain_ids": [
+          "downsample-or-mixed-float16",
+          "downsample-or-mixed-float32",
+          "downsample-or-mixed-bfloat16",
+          "upsample-float16",
+          "upsample-float32",
+          "upsample-bfloat16"
+        ],
+        "fact_ids": [
+          "source.kernel",
+          "source.tiling",
+          "source.workload"
+        ],
+        "behavior": "NCHW输出连续分核；每输出decode nc/oh/ow，两轴ResizeCoord及Floor/clip，四邻居Scalar GM取值和FP32加权；float直接Scalar写，B16先逐点SetValue再按1024 Cast/DMA。"
+      },
+      {
+        "id": "output",
+        "domain_ids": [
+          "downsample-or-mixed-float16",
+          "downsample-or-mixed-float32",
+          "downsample-or-mixed-bfloat16",
+          "upsample-float16",
+          "upsample-float32",
+          "upsample-bfloat16"
+        ],
+        "fact_ids": [
+          "source.host",
+          "source.oracle"
+        ],
+        "behavior": "输出同步D2H和原oracle检验；本次未执行。"
+      }
+    ],
+    "baseline_work": [
+      {
+        "id": "base-host",
+        "stage_id": "host",
+        "domain_ids": [
+          "downsample-or-mixed-float16",
+          "downsample-or-mixed-float32",
+          "downsample-or-mixed-bfloat16",
+          "upsample-float16",
+          "upsample-float32",
+          "upsample-bfloat16"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "qualitative",
+          "expression": "host分配、H2D及按源码完整launch链；不作为已测Task时间",
+          "unit": "logical work",
+          "symbols": [],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.host"
+          ]
+        },
+        "explanation": "设备外准备与kernel执行分开"
+      },
+      {
+        "id": "base-kernel",
+        "stage_id": "kernel",
+        "domain_ids": [
+          "downsample-or-mixed-float16",
+          "downsample-or-mixed-float32",
+          "downsample-or-mixed-bfloat16",
+          "upsample-float16",
+          "upsample-float32",
+          "upsample-bfloat16"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "symbolic",
+          "expression": "5*N*s",
+          "unit": "logical GM requested bytes upper bound",
+          "symbols": [
+            {
+              "name": "N",
+              "meaning": "输出元素数",
+              "unit": "elements"
+            },
+            {
+              "name": "s",
+              "meaning": "当前dtype每元素字节",
+              "unit": "bytes/element"
+            }
+          ],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.kernel",
+            "source.tiling",
+            "source.workload"
+          ]
+        },
+        "explanation": "N=该语义域输出元素数；s=该域dtype字节；R=行数；E=内轴长度；T=候选tile；A为32B向上对齐。单位分别计，不相加评分。"
+      },
+      {
+        "id": "base-output",
+        "stage_id": "output",
+        "domain_ids": [
+          "downsample-or-mixed-float16",
+          "downsample-or-mixed-float32",
+          "downsample-or-mixed-bfloat16",
+          "upsample-float16",
+          "upsample-float32",
+          "upsample-bfloat16"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "qualitative",
+          "expression": "每声明输出一次D2H与oracle全域检查",
+          "unit": "logical work",
+          "symbols": [],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.host",
+            "source.oracle"
+          ]
+        },
+        "explanation": "未执行不能写passed"
+      }
+    ]
+  },
+  "previous_feedback": null,
+  "round": 1,
+  "reasoning_ref": {
+    "path": "reasoning-r1.json",
+    "sha256": "sha256:a1696924e928f9b5a020111eb87a4b230dd4d2204061bdbb1a3014085b96cd15"
+  },
+  "reasoning_hash": "sha256:adb2b71bcda5f36e8c038d1ff3bf8de2821d8bf688adbed6621fe436a45e7a5c"
+}

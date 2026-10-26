@@ -1,0 +1,749 @@
+{
+  "task_id": "raw15-case-03",
+  "units": "bytes and source API counts; not hardware transactions/timings",
+  "matrix_ref": {
+    "path": "source/matrix-20.json",
+    "sha256": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279"
+  },
+  "cases": [
+    {
+      "case_id": "1",
+      "shape": [
+        1024,
+        1024
+      ],
+      "dtype": "float16",
+      "numel": 1048576,
+      "metadata": {
+        "case_id": 1,
+        "shape": [
+          1024,
+          1024
+        ],
+        "x_dtype": "float16",
+        "mask_dtype": "int8",
+        "scale": 1.0,
+        "x_range": [
+          -1,
+          1
+        ],
+        "mask_range": [
+          0,
+          1
+        ]
+      },
+      "baseline_core_count": "runtime query; unknown here",
+      "mask_dtype": "int8",
+      "logical_gm_bytes": 5242880,
+      "baseline_tile": 4096,
+      "baseline_explicit_ub_bytes": 77824,
+      "new_explicit_ub_bytes": 61440,
+      "saved_explicit_bytes": 16384,
+      "tile_count_formula": "sum_core ceil(valid_core_length/T); C=min(runtime_cores,ceil(N/4096)), blockLength=ceil(N/C); SwiGLU adds segment boundary splits"
+    },
+    {
+      "case_id": "2",
+      "shape": [
+        2048,
+        2048
+      ],
+      "dtype": "float32",
+      "numel": 4194304,
+      "metadata": {
+        "case_id": 2,
+        "shape": [
+          2048,
+          2048
+        ],
+        "x_dtype": "float32",
+        "mask_dtype": "uint8",
+        "scale": 1.0,
+        "x_range": [
+          -2,
+          2
+        ],
+        "mask_range": [
+          0,
+          1
+        ]
+      },
+      "baseline_core_count": "runtime query; unknown here",
+      "mask_dtype": "uint8",
+      "logical_gm_bytes": 37748736,
+      "baseline_tile": 4096,
+      "baseline_explicit_ub_bytes": 94208,
+      "new_explicit_ub_bytes": 77824,
+      "saved_explicit_bytes": 16384,
+      "tile_count_formula": "sum_core ceil(valid_core_length/T); C=min(runtime_cores,ceil(N/4096)), blockLength=ceil(N/C); SwiGLU adds segment boundary splits"
+    },
+    {
+      "case_id": "3",
+      "shape": [
+        4096,
+        4096
+      ],
+      "dtype": "bfloat16",
+      "numel": 16777216,
+      "metadata": {
+        "case_id": 3,
+        "shape": [
+          4096,
+          4096
+        ],
+        "x_dtype": "bfloat16",
+        "mask_dtype": "float16",
+        "scale": 1.0,
+        "x_range": [
+          -3,
+          3
+        ],
+        "mask_range": [
+          0,
+          1
+        ]
+      },
+      "baseline_core_count": "runtime query; unknown here",
+      "mask_dtype": "float16",
+      "logical_gm_bytes": 100663296,
+      "baseline_tile": 4096,
+      "baseline_explicit_ub_bytes": 73728,
+      "new_explicit_ub_bytes": 57344,
+      "saved_explicit_bytes": 16384,
+      "tile_count_formula": "sum_core ceil(valid_core_length/T); C=min(runtime_cores,ceil(N/4096)), blockLength=ceil(N/C); SwiGLU adds segment boundary splits"
+    },
+    {
+      "case_id": "4",
+      "shape": [
+        8192,
+        8192
+      ],
+      "dtype": "float16",
+      "numel": 67108864,
+      "metadata": {
+        "case_id": 4,
+        "shape": [
+          8192,
+          8192
+        ],
+        "x_dtype": "float16",
+        "mask_dtype": "float32",
+        "scale": 0.5,
+        "x_range": [
+          -10,
+          10
+        ],
+        "mask_range": [
+          0,
+          1
+        ]
+      },
+      "baseline_core_count": "runtime query; unknown here",
+      "mask_dtype": "float32",
+      "logical_gm_bytes": 536870912,
+      "baseline_tile": 4096,
+      "baseline_explicit_ub_bytes": 81920,
+      "new_explicit_ub_bytes": 65536,
+      "saved_explicit_bytes": 16384,
+      "tile_count_formula": "sum_core ceil(valid_core_length/T); C=min(runtime_cores,ceil(N/4096)), blockLength=ceil(N/C); SwiGLU adds segment boundary splits"
+    },
+    {
+      "case_id": "5",
+      "shape": [
+        8192,
+        8192
+      ],
+      "dtype": "float32",
+      "numel": 67108864,
+      "metadata": {
+        "case_id": 5,
+        "shape": [
+          8192,
+          8192
+        ],
+        "x_dtype": "float32",
+        "mask_dtype": "int8",
+        "scale": 2.0,
+        "x_range": [
+          -100,
+          100
+        ],
+        "mask_range": [
+          0,
+          1
+        ]
+      },
+      "baseline_core_count": "runtime query; unknown here",
+      "mask_dtype": "int8",
+      "logical_gm_bytes": 603979776,
+      "baseline_tile": 4096,
+      "baseline_explicit_ub_bytes": 94208,
+      "new_explicit_ub_bytes": 77824,
+      "saved_explicit_bytes": 16384,
+      "tile_count_formula": "sum_core ceil(valid_core_length/T); C=min(runtime_cores,ceil(N/4096)), blockLength=ceil(N/C); SwiGLU adds segment boundary splits"
+    },
+    {
+      "case_id": "6",
+      "shape": [
+        1023,
+        1023
+      ],
+      "dtype": "bfloat16",
+      "numel": 1046529,
+      "metadata": {
+        "case_id": 6,
+        "shape": [
+          1023,
+          1023
+        ],
+        "x_dtype": "bfloat16",
+        "mask_dtype": "uint8",
+        "scale": -1.0,
+        "x_range": [
+          -0.1,
+          0.1
+        ],
+        "mask_range": [
+          0,
+          1
+        ]
+      },
+      "baseline_core_count": "runtime query; unknown here",
+      "mask_dtype": "uint8",
+      "logical_gm_bytes": 5232645,
+      "baseline_tile": 4096,
+      "baseline_explicit_ub_bytes": 77824,
+      "new_explicit_ub_bytes": 61440,
+      "saved_explicit_bytes": 16384,
+      "tile_count_formula": "sum_core ceil(valid_core_length/T); C=min(runtime_cores,ceil(N/4096)), blockLength=ceil(N/C); SwiGLU adds segment boundary splits"
+    },
+    {
+      "case_id": "7",
+      "shape": [
+        1009,
+        1021
+      ],
+      "dtype": "float16",
+      "numel": 1030189,
+      "metadata": {
+        "case_id": 7,
+        "shape": [
+          1009,
+          1021
+        ],
+        "x_dtype": "float16",
+        "mask_dtype": "int8",
+        "scale": 0.0,
+        "x_range": [
+          -1,
+          2
+        ],
+        "mask_range": [
+          0,
+          127
+        ]
+      },
+      "baseline_core_count": "runtime query; unknown here",
+      "mask_dtype": "int8",
+      "logical_gm_bytes": 5150945,
+      "baseline_tile": 4096,
+      "baseline_explicit_ub_bytes": 77824,
+      "new_explicit_ub_bytes": 61440,
+      "saved_explicit_bytes": 16384,
+      "tile_count_formula": "sum_core ceil(valid_core_length/T); C=min(runtime_cores,ceil(N/4096)), blockLength=ceil(N/C); SwiGLU adds segment boundary splits"
+    },
+    {
+      "case_id": "8",
+      "shape": [
+        1537,
+        769
+      ],
+      "dtype": "float32",
+      "numel": 1181953,
+      "metadata": {
+        "case_id": 8,
+        "shape": [
+          1537,
+          769
+        ],
+        "x_dtype": "float32",
+        "mask_dtype": "float16",
+        "scale": 10.0,
+        "x_range": [
+          -5,
+          10
+        ],
+        "mask_range": [
+          0,
+          1
+        ]
+      },
+      "baseline_core_count": "runtime query; unknown here",
+      "mask_dtype": "float16",
+      "logical_gm_bytes": 11819530,
+      "baseline_tile": 4096,
+      "baseline_explicit_ub_bytes": 90112,
+      "new_explicit_ub_bytes": 73728,
+      "saved_explicit_bytes": 16384,
+      "tile_count_formula": "sum_core ceil(valid_core_length/T); C=min(runtime_cores,ceil(N/4096)), blockLength=ceil(N/C); SwiGLU adds segment boundary splits"
+    },
+    {
+      "case_id": "9",
+      "shape": [
+        363,
+        367,
+        373
+      ],
+      "dtype": "bfloat16",
+      "numel": 49691433,
+      "metadata": {
+        "case_id": 9,
+        "shape": [
+          363,
+          367,
+          373
+        ],
+        "x_dtype": "bfloat16",
+        "mask_dtype": "float32",
+        "scale": 1.5,
+        "x_range": [
+          -50,
+          100
+        ],
+        "mask_range": [
+          0,
+          1
+        ]
+      },
+      "baseline_core_count": "runtime query; unknown here",
+      "mask_dtype": "float32",
+      "logical_gm_bytes": 397531464,
+      "baseline_tile": 4096,
+      "baseline_explicit_ub_bytes": 81920,
+      "new_explicit_ub_bytes": 65536,
+      "saved_explicit_bytes": 16384,
+      "tile_count_formula": "sum_core ceil(valid_core_length/T); C=min(runtime_cores,ceil(N/4096)), blockLength=ceil(N/C); SwiGLU adds segment boundary splits"
+    },
+    {
+      "case_id": "10",
+      "shape": [
+        2049,
+        513
+      ],
+      "dtype": "float16",
+      "numel": 1051137,
+      "metadata": {
+        "case_id": 10,
+        "shape": [
+          2049,
+          513
+        ],
+        "x_dtype": "float16",
+        "mask_dtype": "uint8",
+        "scale": 1.0,
+        "x_range": [
+          -65504,
+          65504
+        ],
+        "mask_range": [
+          0,
+          255
+        ]
+      },
+      "baseline_core_count": "runtime query; unknown here",
+      "mask_dtype": "uint8",
+      "logical_gm_bytes": 5255685,
+      "baseline_tile": 4096,
+      "baseline_explicit_ub_bytes": 77824,
+      "new_explicit_ub_bytes": 61440,
+      "saved_explicit_bytes": 16384,
+      "tile_count_formula": "sum_core ceil(valid_core_length/T); C=min(runtime_cores,ceil(N/4096)), blockLength=ceil(N/C); SwiGLU adds segment boundary splits"
+    },
+    {
+      "case_id": "11",
+      "shape": [
+        3,
+        7,
+        13,
+        4003
+      ],
+      "dtype": "float32",
+      "numel": 1092819,
+      "metadata": {
+        "case_id": 11,
+        "shape": [
+          3,
+          7,
+          13,
+          4003
+        ],
+        "x_dtype": "float32",
+        "mask_dtype": "int8",
+        "scale": 1.0,
+        "x_range": [
+          -88,
+          88
+        ],
+        "mask_range": [
+          0,
+          1
+        ]
+      },
+      "baseline_core_count": "runtime query; unknown here",
+      "mask_dtype": "int8",
+      "logical_gm_bytes": 9835371,
+      "baseline_tile": 4096,
+      "baseline_explicit_ub_bytes": 94208,
+      "new_explicit_ub_bytes": 77824,
+      "saved_explicit_bytes": 16384,
+      "tile_count_formula": "sum_core ceil(valid_core_length/T); C=min(runtime_cores,ceil(N/4096)), blockLength=ceil(N/C); SwiGLU adds segment boundary splits"
+    },
+    {
+      "case_id": "12",
+      "shape": [
+        1000007
+      ],
+      "dtype": "bfloat16",
+      "numel": 1000007,
+      "metadata": {
+        "case_id": 12,
+        "shape": [
+          1000007
+        ],
+        "x_dtype": "bfloat16",
+        "mask_dtype": "bfloat16",
+        "scale": {
+          "$ieee754": "+Infinity"
+        },
+        "x_range": [
+          {
+            "$ieee754": "-Infinity"
+          },
+          {
+            "$ieee754": "+Infinity"
+          }
+        ],
+        "mask_range": [
+          0,
+          1
+        ]
+      },
+      "baseline_core_count": "runtime query; unknown here",
+      "mask_dtype": "bfloat16",
+      "logical_gm_bytes": 6000042,
+      "baseline_tile": 4096,
+      "baseline_explicit_ub_bytes": 73728,
+      "new_explicit_ub_bytes": 57344,
+      "saved_explicit_bytes": 16384,
+      "tile_count_formula": "sum_core ceil(valid_core_length/T); C=min(runtime_cores,ceil(N/4096)), blockLength=ceil(N/C); SwiGLU adds segment boundary splits"
+    },
+    {
+      "case_id": "13",
+      "shape": [
+        11,
+        13,
+        17,
+        67,
+        67
+      ],
+      "dtype": "float32",
+      "numel": 10912759,
+      "metadata": {
+        "case_id": 13,
+        "shape": [
+          11,
+          13,
+          17,
+          67,
+          67
+        ],
+        "x_dtype": "float32",
+        "mask_dtype": "float32",
+        "scale": {
+          "$ieee754": "NaN"
+        },
+        "x_range": [
+          {
+            "$ieee754": "NaN"
+          },
+          {
+            "$ieee754": "NaN"
+          }
+        ],
+        "mask_range": [
+          0,
+          1
+        ]
+      },
+      "baseline_core_count": "runtime query; unknown here",
+      "mask_dtype": "float32",
+      "logical_gm_bytes": 130953108,
+      "baseline_tile": 4096,
+      "baseline_explicit_ub_bytes": 98304,
+      "new_explicit_ub_bytes": 81920,
+      "saved_explicit_bytes": 16384,
+      "tile_count_formula": "sum_core ceil(valid_core_length/T); C=min(runtime_cores,ceil(N/4096)), blockLength=ceil(N/C); SwiGLU adds segment boundary splits"
+    },
+    {
+      "case_id": "14",
+      "shape": [
+        3,
+        7,
+        11,
+        13,
+        1013
+      ],
+      "dtype": "float16",
+      "numel": 3042039,
+      "metadata": {
+        "case_id": 14,
+        "shape": [
+          3,
+          7,
+          11,
+          13,
+          1013
+        ],
+        "x_dtype": "float16",
+        "mask_dtype": "int8",
+        "scale": 1.0,
+        "x_range": [
+          0,
+          0
+        ],
+        "mask_range": [
+          0,
+          1
+        ]
+      },
+      "baseline_core_count": "runtime query; unknown here",
+      "mask_dtype": "int8",
+      "logical_gm_bytes": 15210195,
+      "baseline_tile": 4096,
+      "baseline_explicit_ub_bytes": 77824,
+      "new_explicit_ub_bytes": 61440,
+      "saved_explicit_bytes": 16384,
+      "tile_count_formula": "sum_core ceil(valid_core_length/T); C=min(runtime_cores,ceil(N/4096)), blockLength=ceil(N/C); SwiGLU adds segment boundary splits"
+    },
+    {
+      "case_id": "15",
+      "shape": [
+        512,
+        2049
+      ],
+      "dtype": "float32",
+      "numel": 1049088,
+      "metadata": {
+        "case_id": 15,
+        "shape": [
+          512,
+          2049
+        ],
+        "x_dtype": "float32",
+        "mask_dtype": "uint8",
+        "scale": 1.0,
+        "x_range": [
+          -0.5,
+          0.5
+        ],
+        "mask_range": [
+          0,
+          1
+        ]
+      },
+      "baseline_core_count": "runtime query; unknown here",
+      "mask_dtype": "uint8",
+      "logical_gm_bytes": 9441792,
+      "baseline_tile": 4096,
+      "baseline_explicit_ub_bytes": 94208,
+      "new_explicit_ub_bytes": 77824,
+      "saved_explicit_bytes": 16384,
+      "tile_count_formula": "sum_core ceil(valid_core_length/T); C=min(runtime_cores,ceil(N/4096)), blockLength=ceil(N/C); SwiGLU adds segment boundary splits"
+    },
+    {
+      "case_id": "16",
+      "shape": [
+        255,
+        8193
+      ],
+      "dtype": "bfloat16",
+      "numel": 2089215,
+      "metadata": {
+        "case_id": 16,
+        "shape": [
+          255,
+          8193
+        ],
+        "x_dtype": "bfloat16",
+        "mask_dtype": "int8",
+        "scale": 1.2,
+        "x_range": [
+          -1,
+          3
+        ],
+        "mask_range": [
+          0,
+          1
+        ]
+      },
+      "baseline_core_count": "runtime query; unknown here",
+      "mask_dtype": "int8",
+      "logical_gm_bytes": 10446075,
+      "baseline_tile": 4096,
+      "baseline_explicit_ub_bytes": 77824,
+      "new_explicit_ub_bytes": 61440,
+      "saved_explicit_bytes": 16384,
+      "tile_count_formula": "sum_core ceil(valid_core_length/T); C=min(runtime_cores,ceil(N/4096)), blockLength=ceil(N/C); SwiGLU adds segment boundary splits"
+    },
+    {
+      "case_id": "17",
+      "shape": [
+        4097,
+        511
+      ],
+      "dtype": "float16",
+      "numel": 2093567,
+      "metadata": {
+        "case_id": 17,
+        "shape": [
+          4097,
+          511
+        ],
+        "x_dtype": "float16",
+        "mask_dtype": "uint8",
+        "scale": -0.5,
+        "x_range": [
+          -1000,
+          1000
+        ],
+        "mask_range": [
+          0,
+          1
+        ]
+      },
+      "baseline_core_count": "runtime query; unknown here",
+      "mask_dtype": "uint8",
+      "logical_gm_bytes": 10467835,
+      "baseline_tile": 4096,
+      "baseline_explicit_ub_bytes": 77824,
+      "new_explicit_ub_bytes": 61440,
+      "saved_explicit_bytes": 16384,
+      "tile_count_formula": "sum_core ceil(valid_core_length/T); C=min(runtime_cores,ceil(N/4096)), blockLength=ceil(N/C); SwiGLU adds segment boundary splits"
+    },
+    {
+      "case_id": "18",
+      "shape": [
+        2,
+        511,
+        2049
+      ],
+      "dtype": "float32",
+      "numel": 2094078,
+      "metadata": {
+        "case_id": 18,
+        "shape": [
+          2,
+          511,
+          2049
+        ],
+        "x_dtype": "float32",
+        "mask_dtype": "float16",
+        "scale": 0.75,
+        "x_range": [
+          -0.2,
+          0.2
+        ],
+        "mask_range": [
+          0,
+          1
+        ]
+      },
+      "baseline_core_count": "runtime query; unknown here",
+      "mask_dtype": "float16",
+      "logical_gm_bytes": 20940780,
+      "baseline_tile": 4096,
+      "baseline_explicit_ub_bytes": 90112,
+      "new_explicit_ub_bytes": 73728,
+      "saved_explicit_bytes": 16384,
+      "tile_count_formula": "sum_core ceil(valid_core_length/T); C=min(runtime_cores,ceil(N/4096)), blockLength=ceil(N/C); SwiGLU adds segment boundary splits"
+    },
+    {
+      "case_id": "19",
+      "shape": [
+        4,
+        255,
+        2049
+      ],
+      "dtype": "bfloat16",
+      "numel": 2089980,
+      "metadata": {
+        "case_id": 19,
+        "shape": [
+          4,
+          255,
+          2049
+        ],
+        "x_dtype": "bfloat16",
+        "mask_dtype": "float32",
+        "scale": 3.0,
+        "x_range": [
+          -3,
+          6
+        ],
+        "mask_range": [
+          0,
+          1
+        ]
+      },
+      "baseline_core_count": "runtime query; unknown here",
+      "mask_dtype": "float32",
+      "logical_gm_bytes": 16719840,
+      "baseline_tile": 4096,
+      "baseline_explicit_ub_bytes": 81920,
+      "new_explicit_ub_bytes": 65536,
+      "saved_explicit_bytes": 16384,
+      "tile_count_formula": "sum_core ceil(valid_core_length/T); C=min(runtime_cores,ceil(N/4096)), blockLength=ceil(N/C); SwiGLU adds segment boundary splits"
+    },
+    {
+      "case_id": "20",
+      "shape": [
+        2,
+        3,
+        17,
+        1024,
+        101
+      ],
+      "dtype": "float32",
+      "numel": 10549248,
+      "metadata": {
+        "case_id": 20,
+        "shape": [
+          2,
+          3,
+          17,
+          1024,
+          101
+        ],
+        "x_dtype": "float32",
+        "mask_dtype": "int8",
+        "scale": 1.0,
+        "x_range": [
+          -20,
+          40
+        ],
+        "mask_range": [
+          0,
+          1
+        ]
+      },
+      "baseline_core_count": "runtime query; unknown here",
+      "mask_dtype": "int8",
+      "logical_gm_bytes": 94943232,
+      "baseline_tile": 4096,
+      "baseline_explicit_ub_bytes": 94208,
+      "new_explicit_ub_bytes": 77824,
+      "saved_explicit_bytes": 16384,
+      "tile_count_formula": "sum_core ceil(valid_core_length/T); C=min(runtime_cores,ceil(N/4096)), blockLength=ceil(N/C); SwiGLU adds segment boundary splits"
+    }
+  ],
+  "core_and_ub": "symbolic; no device query performed"
+}

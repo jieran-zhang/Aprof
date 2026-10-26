@@ -58,3 +58,7 @@ python3 -m pytest scaffolding/tests/test_learning_records.py -q
 `--root` 是所有新引用的共同根；校验器只读，不执行记录中的命令。检查通过表示格式、文件 hash、角色、候选覆盖和版本关联可用，**不代表硬件证据已重放或知识可以晋升**。Teacher 的验证职责见 [学习门槛](skills/aprof-train-knowledge/references/admission.md)。
 
 1.1.0 runtime 0.2.6 已纳入 [original_python_v1](../skill-libs/graph-base/1.1.0/skills/ascendc-aprof-profiling/references/original-oracle.md)，通过冻结原程序保留 exp / sigmoid 的 BF16 和自定义误差规则；完整配置能力预检与实际输出验证仍是独立步骤。1.2.0 新任务使用软目标与本地工作区，版本边界及执行入口见 [维护说明](../MAINTENANCE-1.2.0.md)。旧演练和归档的缺项状态不因源码更新而改变。
+
+## 1.3.1 开发材料归档
+
+七组回归、评测和维护材料及两个离线回放入口已移至[开发归档](curation/graph-base-1.3.1-development/README.md)。运行时保留在独立的 graph-base 1.3.1 包中；归档不参与日常加载。

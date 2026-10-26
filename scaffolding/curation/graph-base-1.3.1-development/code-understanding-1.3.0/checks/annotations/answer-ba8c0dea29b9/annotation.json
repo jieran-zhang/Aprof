@@ -1,0 +1,67 @@
+{
+  "answer_id": "answer-ba8c0dea29b9",
+  "case": "case-01",
+  "facts": [
+    {
+      "id": "CU01.A01",
+      "status": "correct",
+      "rationale": "完整说明正底数的对数变换、非正底数的自然指数路径，shift 同样乘以 log(base)，并正确给出本题公式及三个理想值。",
+      "answer_span": "该程序实现连续一维张量的逐元素指数变换，输出长度、顺序和存储类型与输入相同。依据 source/op_kernel/exp_tiling.h 的 ComputeExpTiling，令 L=log(base)（base>0），否则 L=1，host 预先计算 multiplier=scale×L、shift'=shift×L；kernel 计算 y[i]=exp(x[i]×multiplier+shift')。因此正底数时数学目标是 base^(scale×x[i]+shift)，非正底数走自然指数路径。本题为 y[i]=2^(0.5x[i]−1)，代表输入 −2、0、2 的数学结果分别为 0.25、0.5、1。"
+    },
+    {
+      "id": "CU01.A02",
+      "status": "correct",
+      "rationale": "答案明确 BF16 存储及搬运类型，说明转为 float 后执行乘、加、指数，再以 CAST_RINT 转回 BF16，未将存储类型误作全程算术类型。",
+      "answer_span": "Compute 先将输入出队并分配输出。此次 T=bfloat16_t，输入通过 Cast(...,CAST_NONE,count) 转入 fpIn_ 的 float 张量 fi，再依次执行 Muls(fo,fi,multiplier,count)、Adds(fo,fo,shift',count)、Exp(fo,fo,count)，最后以 CAST_RINT 转回 bfloat16 输出。"
+    },
+    {
+      "id": "CU01.A03",
+      "status": "correct",
+      "rationale": "结合前文明确列出的 Muls/Adds/Exp 和 BF16 CAST_RINT，答案完整区分 FP32 直接计算、两种16位类型使用 FP32 中间量及 FP16 CAST_NONE；另明确逐元素、无需归约且没有 Cube 运算。",
+      "answer_span": "源码还支持 float16 和 float32。float16 与 bfloat16 一样先扩展为 float 完成三步计算，最后转 half 时使用 CAST_NONE；Cast.md 说明发生精度损失时该模式表示 CAST_RINT，因此此处也不能解释成“完全不舍入”。float32 分支直接在输入、输出队列张量上计算，省去两次 Cast 和两个 float 临时区。"
+    },
+    {
+      "id": "CU01.E01",
+      "status": "correct",
+      "rationale": "完整描述 host 查询向量核数、计算 tiling、向设备拷贝 tiling 并按 blockNum 启动；正确算出 blockNum=3、blockLength=8340、tileElements=4096。",
+      "answer_span": "source/op_host/exp.asc 的 main 将 bfloat16 映射为 dtype=2，每元素占2字节，故输入、输出各为25019×2=50038字节。它初始化设备，查询向量核数（题面固定为3），计算 tiling，创建 stream，分配 host、device 输入输出及 device tiling。data_utils.h 的 ReadFile 按二进制读取指定字节数，不进行文本解析或类型转换；文件不足会失败，也没有要求文件恰好在该处结束。输入和 tiling 拷入设备后，main 以 tiling.blockNum 启动 exp_kernel；等待 stream 完成，再将50038字节结果拷回并由 WriteFile 写入文件，最后释放资源。输出文件没有形状或类型头信息，需按调用时的 dtype 解释。\n\nComputeExpTiling 先算 useful=max(1,ceil(25019/4096))=7，再得到 blockNum=max(1,min(3,7))=3、blockLength=ceil(25019/3)=8340，tileElements 固定为4096。"
+    },
+    {
+      "id": "CU01.E02",
+      "status": "correct",
+      "rationale": "左闭右开区间完整给出三个元素起点、对应长度8340/8340/8339和 BF16 字节起点；后文明确无遗漏或重复，终点为元素25019。",
+      "answer_span": "source/op_kernel/exp_kernel.asc 的 KernelExp<T>::Init 用 GetBlockIdx()×blockLength 得到元素偏移，再将本核长度截为 min(blockLength,totalLength−offset)。下表区间均为左闭右开，字节地址相对各自输入或输出 GM 基址：\n\n|逻辑核|元素区间|字节区间|各 tile 的有效元素数|\n|---|---|---|---|\n|0|[0,8340)|[0,16680)|4096、4096、148|\n|1|[8340,16680)|[16680,33360)|4096、4096、148|\n|2|[16680,25019)|[33360,50038)|4096、4096、147|"
+    },
+    {
+      "id": "CU01.E03",
+      "status": "correct",
+      "rationale": "表格逐核列出三次迭代的有效计数，正文明确 CopyIn→Compute→CopyOut 顺序及尾部296/296/294字节；Compute 段说明仅计算 count 个有效元素。",
+      "answer_span": "Process 中 off 按元素递增4096，每轮执行 CopyIn、Compute、CopyOut。GM 字节起点为2×(核号×8340+off)，三核分别是0/8192/16384、16680/24872/33064、33360/41552/49744。总计9个 tile，其中6个完整 tile、3个尾 tile；有效计数为6×4096+148+148+147=25019，无遗漏或重复，最后一次写回结束于字节50038。\n\nCopyIn 为输入队列分配 LocalTensor，构造 DataCopyExtParams{1,count×sizeof(T),0,0,0}，随后调用 GM→UB 的 DataCopyPad 并入队。这里1是连续搬运块数，blockLen 的单位是字节；入方向 srcStride 单位为字节、dstStride 单位为32字节块，二者均为0且只有一块。完整 tile 的 blockLen=8192，尾 tile 为296、296、294字节。"
+    },
+    {
+      "id": "CU01.H01",
+      "status": "correct",
+      "rationale": "正确列出 BF16 两个8192字节队列槽、两个16384字节临时区及49152字节总量，也完整说明 FP32 的32768字节分配和运行时开销边界。",
+      "answer_span": "资源方面，Init 为 inQ_、outQ_ 各分配1块完整 tile 大小的缓冲区，TQue 模板深度也均为1。bfloat16/half 每块8192字节，两个 VECCALC TBuf 各4096×4=16384字节，合计每核显式申请49152字节，即48KiB；尾 tile 仍复用这些完整缓冲区。float32 两个队列各16384字节、不分配临时区，合计32KiB。这是张量缓冲区申请量，不等于全部运行时资源占用。VECIN、VECOUT、VECCALC 在此均对应 UB 中的逻辑用途，并非三种独立物理内存。"
+    },
+    {
+      "id": "CU01.H02",
+      "status": "correct",
+      "rationale": "完整解释输入输出的分配、入队、出队、释放生命周期，以及 TPipe/TQue 对搬入后计算、计算后搬出和安全复用的同步依赖；资源段另明确完整缓冲区在尾迭代中复用。",
+      "answer_span": "队列生命周期是输入 Alloc→搬入→EnQue→DeQue→计算消费→Free，输出 Alloc→计算生产→EnQue→DeQue→搬出→Free。依据核内同步概述，TPipe/TQue 框架提供自动同步，表达 MTE2完成后 Vector 才能消费、Vector完成后 MTE3 才能搬出，以及缓冲区安全复用的依赖；FreeTensor 也不能被理解为此刻所有硬件均已停下。"
+    },
+    {
+      "id": "CU01.H03",
+      "status": "correct",
+      "rationale": "明确两个方向各只有一个槽、num=1 未开启双缓冲，并保留实际流水重叠程度的证据边界，没有从队列存在推出重叠。",
+      "answer_span": "两个队列的 InitBuffer num 都是1，按其文档未开启 double buffer；每个方向没有两块缓冲交替处理相邻 tile，但输入输出缓冲独立，且硬件流水异步，不能由函数调用顺序断言三条流水全程串行或必然充分重叠。"
+    },
+    {
+      "id": "CU01.H04",
+      "status": "correct",
+      "rationale": "正确对应 MTE2、Vector、MTE3 数据路径，说明尾部 UB 对齐 dummy 不扩大有效 GM 写回或计算计数；结尾明确缺少性能和实际执行证据，未推断带宽、利用率或速度。",
+      "answer_span": "GM→UB 由 MTE2 承担，float 运算由 Vector 承担，UB→GM 由 MTE3 承担。CopyOut 将输出出队，以同样的有效 blockLen 调用 DataCopyPad 后释放张量；DataCopyPad_UBToGM.md 规定搬出时丢弃对齐 dummy，故尾块不会将320字节全写入 GM。三核主数据逻辑上各读写一次，总读、总写各50038字节；这不等于实际总线事务量。"
+    }
+  ],
+  "critical_errors": []
+}

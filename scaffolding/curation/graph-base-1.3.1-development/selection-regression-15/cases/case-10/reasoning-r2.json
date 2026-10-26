@@ -1,0 +1,579 @@
+{
+  "schema_version": "aprof.diagnosis-reasoning/v1",
+  "task_id": "case-10",
+  "context_hash": "sha256:48f30c86a92d1bc028ee87c088fc62fa368ffa3478bc9f2a1ec42b99cdd17d27",
+  "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+  "source_context_ref": {
+    "path": "context-origin.json",
+    "sha256": "sha256:f1d8e927bd10c25893ac1d8c06883d283f4b49fd259333b50059a28e63aeee8e"
+  },
+  "context_snapshot": {
+    "schema_version": "aprof.evidence/v1",
+    "task_id": "case-10",
+    "source_context_ref": {
+      "path": "context-origin.json",
+      "sha256": "sha256:f1d8e927bd10c25893ac1d8c06883d283f4b49fd259333b50059a28e63aeee8e"
+    },
+    "attributes": {
+      "family": [
+        "elementwise"
+      ],
+      "dtype": [
+        "bfloat16",
+        "float16",
+        "float32"
+      ],
+      "features": [
+        "scalar-control",
+        "memory-transfer",
+        "vector-api",
+        "tiling-tail",
+        "pipeline-sync",
+        "buffer-lifetime",
+        "precision-boundaries"
+      ],
+      "platform": "dav-2201"
+    },
+    "facts": {
+      "source.r2": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": "source.r2",
+        "ref": {
+          "path": "source/op_kernel/sigmoid_kernel.asc",
+          "sha256": "sha256:573454c8cb2a67641706f5d94b42dc97fc0f4a7656fbf2b95c8e9859dc1f6c28",
+          "locator": "whole-file"
+        },
+        "view": "source"
+      }
+    }
+  },
+  "current": {
+    "implementation_ref": {
+      "path": "source-identity.json",
+      "sha256": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27"
+    },
+    "workload_ref": {
+      "path": "source/matrix-20.json",
+      "sha256": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380"
+    },
+    "objects": [
+      {
+        "object_id": "kernel-path",
+        "kind": "object",
+        "description": "Host展平后按ceil(N/4096)限制有效核数，tile4096。FP32直接Sigmoid，half/bf16先Cast FP32再算再Cast；深度1物理输入/输出槽，CopyIn Compute CopyOut顺序发射。"
+      },
+      {
+        "object_id": "stage",
+        "kind": "stage",
+        "description": "host->tiling->kernel完整路径"
+      },
+      {
+        "object_id": "workload",
+        "kind": "workload",
+        "description": "完整matrix20与未覆盖API域分开"
+      },
+      {
+        "object_id": "implementation",
+        "kind": "implementation",
+        "description": "原始源码manifest"
+      }
+    ],
+    "scope": {
+      "task_id": "case-10",
+      "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+      "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+      "target_ids": [
+        "kernel-path"
+      ],
+      "stage": "kernel"
+    }
+  },
+  "facts": {
+    "source.kernel": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.kernel",
+      "ref": {
+        "path": "source/op_kernel/sigmoid_kernel.asc",
+        "sha256": "sha256:573454c8cb2a67641706f5d94b42dc97fc0f4a7656fbf2b95c8e9859dc1f6c28",
+        "locator": "whole-file"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "source.tiling": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.tiling",
+      "ref": {
+        "path": "source/op_kernel/sigmoid_tiling.h",
+        "sha256": "sha256:29536d3cc5c507fc72c61736a69ad5ba9ab8ca39b86002e1f5ae121039c4734f",
+        "locator": "whole-file"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "source.host": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.host",
+      "ref": {
+        "path": "source/op_host/sigmoid.asc",
+        "sha256": "sha256:a46866ea3da206ea2d1aab87e4540258d448367d3dd088b48ff3baab6918580a",
+        "locator": "whole-file"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "workload.matrix": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "workload.matrix",
+      "ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "locator": "cases"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      },
+      "view": "workload"
+    },
+    "source.oracle": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.oracle",
+      "ref": {
+        "path": "source/scripts/verify_result.py",
+        "sha256": "sha256:7eccbc8d1c725320b70efb1c63ce8488a2049151cf97d85bc4be72a87c4f64d8",
+        "locator": "whole-file"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "source.metrics": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [
+        "source.host",
+        "source.tiling",
+        "workload.matrix"
+      ],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      },
+      "view": "workload"
+    },
+    "constraint.target": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "constraint.target",
+      "ref": {
+        "path": "target-constraint.json",
+        "sha256": "sha256:2b71123ae87ce003983a25cd1d75eb661f8df37b27e564dce2096757ae3e9914",
+        "locator": "target"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      },
+      "view": "constraint"
+    },
+    "constraint.semantic_equivalence": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "constraint.semantic_equivalence",
+      "ref": {
+        "path": "source/op_kernel/sigmoid_kernel.asc",
+        "sha256": "sha256:573454c8cb2a67641706f5d94b42dc97fc0f4a7656fbf2b95c8e9859dc1f6c28",
+        "locator": "same per-element formula / storage bits; proposed re-grouping only"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      },
+      "view": "constraint"
+    },
+    "source.r2": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [
+        "source.kernel",
+        "source.host",
+        "source.tiling",
+        "workload.matrix"
+      ],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order.component_1": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.serial_queue_or_event_order.component_1",
+      "ref": {
+        "path": "source/op_kernel/sigmoid_kernel.asc",
+        "sha256": "sha256:573454c8cb2a67641706f5d94b42dc97fc0f4a7656fbf2b95c8e9859dc1f6c28",
+        "locator": "当前逐tile的队列/事件顺序使下一阶段或下一tile在已有等待边界之后发射"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order.component_2": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.serial_queue_or_event_order.component_2",
+      "ref": {
+        "path": "source/op_kernel/sigmoid_kernel.asc",
+        "sha256": "sha256:573454c8cb2a67641706f5d94b42dc97fc0f4a7656fbf2b95c8e9859dc1f6c28",
+        "locator": "当前buffer及Set/Wait或EnQue/DeQue生产消费关系具有源码引用"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order.component_3": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.serial_queue_or_event_order.component_3",
+      "ref": {
+        "path": "source/op_kernel/sigmoid_kernel.asc",
+        "sha256": "sha256:573454c8cb2a67641706f5d94b42dc97fc0f4a7656fbf2b95c8e9859dc1f6c28",
+        "locator": "当前循环次数、首次事件、释放和高阶API内部流水已知范围已注明；不要求先证明可重叠或完成软件流水"
+      },
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [
+        "symptom.source.serial_queue_or_event_order.component_1",
+        "symptom.source.serial_queue_or_event_order.component_2",
+        "symptom.source.serial_queue_or_event_order.component_3"
+      ],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      },
+      "view": "source",
+      "components": [
+        "symptom.source.serial_queue_or_event_order.component_1",
+        "symptom.source.serial_queue_or_event_order.component_2",
+        "symptom.source.serial_queue_or_event_order.component_3"
+      ]
+    },
+    "constraint.capacity": {
+      "state": "unknown",
+      "kind": "raw",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      },
+      "view": "constraint"
+    },
+    "constraint.dependency_lifetime": {
+      "state": "unknown",
+      "kind": "raw",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      },
+      "view": "constraint"
+    },
+    "constraint.vector_batch_compatibility": {
+      "state": "unknown",
+      "kind": "raw",
+      "evidence_id": null,
+      "ref": null,
+      "derived_from": [],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      },
+      "view": "constraint"
+    }
+  },
+  "candidates": [
+    {
+      "hypothesis_id": "h-pipeline",
+      "problem_id": "problem.pipeline_serialization",
+      "mechanism": "建立2份输入/输出物理槽的预取/消费/排空，FP32 cast工作区不跨tile重叠写；保持Sigmoid与原Cast舍入。",
+      "targets": [
+        "kernel-path"
+      ],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      },
+      "support": [
+        "source.kernel",
+        "source.tiling",
+        "workload.matrix"
+      ],
+      "counter": [],
+      "unknown": [],
+      "alternatives": [
+        "h-batch"
+      ],
+      "checks": [
+        "若双槽被迫把T减半且发射/同步成本超过隐藏搬运，较大单槽batch更优",
+        "只核对源码逻辑工作，不从逻辑量推出加速比"
+      ],
+      "status": "plausible",
+      "reason": "建立2份输入/输出物理槽的预取/消费/排空，FP32 cast工作区不跨tile重叠写；保持Sigmoid与原Cast舍入。；单tile与短片没有稳态，Sigmoid内部计算吞吐及Cast成本保留",
+      "excluded_by": [],
+      "independent_evidence_groups": []
+    },
+    {
+      "hypothesis_id": "h-batch",
+      "problem_id": "problem.vector_api_fragmentation",
+      "mechanism": "保留单槽，T4096扩大到合法更大T以减少Sigmoid/Cast和DMA发射次数。",
+      "targets": [
+        "kernel-path"
+      ],
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      },
+      "support": [
+        "source.kernel",
+        "source.tiling",
+        "workload.matrix"
+      ],
+      "counter": [],
+      "unknown": [],
+      "alternatives": [
+        "h-pipeline"
+      ],
+      "checks": [
+        "长L、API setup明显且双槽需要缩T时，batch可能更优",
+        "只核对源码逻辑工作，不从逻辑量推出加速比"
+      ],
+      "status": "plausible",
+      "reason": "保留单槽，T4096扩大到合法更大T以减少Sigmoid/Cast和DMA发射次数。；原4096已非很短调用，进一步减发射可能小；slot依赖未改",
+      "excluded_by": [],
+      "independent_evidence_groups": []
+    }
+  ],
+  "action_instances": [
+    {
+      "instance_id": "pipeline-r2",
+      "action_id": "action.software_pipeline_stages",
+      "template_hash": "sha256:6ba7dbcc167b4de02ba7faf6f9c86afff8b457fb2af57b5114486880788fcbe0",
+      "hypothesis_id": "h-pipeline",
+      "targets": {
+        "target": "kernel-path",
+        "stage": "stage",
+        "workload": "workload",
+        "implementation": "implementation"
+      },
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      },
+      "parameters": {
+        "method": "建立2份输入/输出物理槽的预取/消费/排空，FP32 cast工作区不跨tile重叠写；保持Sigmoid与原Cast舍入。",
+        "resource_bound": "FP32两槽显式16*T、半精度16*T字节（raw双槽8*T+FP32工作8*T），另加API_tmp/F；事件及首尾控制增多",
+        "paper_only": true
+      },
+      "evidence_bindings": {
+        "symptom.source.serial_queue_or_event_order": "symptom.source.serial_queue_or_event_order",
+        "constraint.semantic_equivalence": "constraint.semantic_equivalence",
+        "constraint.capacity": "constraint.capacity",
+        "constraint.dependency_lifetime": "constraint.dependency_lifetime"
+      },
+      "unknowns": [
+        "constraint.capacity",
+        "constraint.dependency_lifetime"
+      ],
+      "status": "conditional",
+      "reason": "仅条件方案：建立2份输入/输出物理槽的预取/消费/排空，FP32 cast工作区不跨tile重叠写；保持Sigmoid与原Cast舍入。",
+      "parent_plan_hash": null
+    },
+    {
+      "instance_id": "batch-r2",
+      "action_id": "action.batch_vector_api_calls",
+      "template_hash": "sha256:c0dde469c17c214c96e691cb10cac5cc267b59003a80cb6498f4cbd138a6d6e9",
+      "hypothesis_id": "h-batch",
+      "targets": {
+        "target": "kernel-path",
+        "stage": "stage",
+        "workload": "workload",
+        "implementation": "implementation"
+      },
+      "scope": {
+        "task_id": "case-10",
+        "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+        "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      },
+      "parameters": {
+        "method": "保留单槽，T4096扩大到合法更大T以减少Sigmoid/Cast和DMA发射次数。",
+        "resource_bound": "FP328*T、half12*T显式字节+API_tmp/F；API最大count和长生存期需证明",
+        "paper_only": true
+      },
+      "evidence_bindings": {
+        "constraint.semantic_equivalence": "constraint.semantic_equivalence",
+        "constraint.capacity": "constraint.capacity",
+        "constraint.vector_batch_compatibility": "constraint.vector_batch_compatibility"
+      },
+      "unknowns": [
+        "constraint.capacity",
+        "constraint.vector_batch_compatibility"
+      ],
+      "status": "conditional",
+      "reason": "仅条件方案：保留单槽，T4096扩大到合法更大T以减少Sigmoid/Cast和DMA发射次数。",
+      "parent_plan_hash": null
+    }
+  ],
+  "predecessor_ref": {
+    "path": "reasoning-r1.json",
+    "sha256": "sha256:7ef32f5f517313badfbc4fa15db8845e966a4acc2e2cee1c884581fc1963b8fd"
+  }
+}

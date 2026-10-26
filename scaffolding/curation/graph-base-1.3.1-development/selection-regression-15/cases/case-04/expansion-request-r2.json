@@ -1,0 +1,54 @@
+{
+  "task_id": "case-04",
+  "context_hash": "sha256:93cb4c7b9bc514e5dae25efce988d82c844d6c461c7a109f0b8fb0a2c77e75f2",
+  "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+  "graph_version": "v0006",
+  "source_context_ref": {
+    "path": "authority-v2.json",
+    "sha256": "sha256:485b97e07df5543820a5cfdae10b8c65d713db9b44a4760b37da3625044f1e5f"
+  },
+  "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+  "retrieval_hash": "sha256:5a9e6756b3d335da390dc79a5f2ce59842175dcf5fb3af1bdf2e6cb7a9680c62",
+  "selections": [
+    {
+      "problem_id": "problem.tiny_transfer_setup_amplification",
+      "reason": "新增静态证据后复核：从全部shape/dim计算S发现存在S远大于4096的连续域与短S域；批量方法只改善短S，长S不得标全覆盖。奇数S行padding需按A=ceil(S*s/32)*32/s预算：若批量Vector读取padding，应显式初始化h*(A-S)元素而不清零有效区；输出用每行S有效元素的多段DataCopyPad丢弃dummy。A3无mode重载输入srcStride=S*s字节、dstStride=0，输出srcStride=0 DataBlock、dstStride=0字节，blockCount=h<=4095；待目标SDK确认。禁止把输入两半连读为同一operand。",
+      "trigger": "followup_check",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.path",
+        "source.host"
+      ]
+    },
+    {
+      "problem_id": "problem.pipeline_serialization",
+      "reason": "新增静态证据后复核：从全部shape/dim计算S发现存在S远大于4096的连续域与短S域；批量方法只改善短S，长S不得标全覆盖。奇数S行padding需按A=ceil(S*s/32)*32/s预算：若批量Vector读取padding，应显式初始化h*(A-S)元素而不清零有效区；输出用每行S有效元素的多段DataCopyPad丢弃dummy。A3无mode重载输入srcStride=S*s字节、dstStride=0，输出srcStride=0 DataBlock、dstStride=0字节，blockCount=h<=4095；待目标SDK确认。禁止把输入两半连读为同一operand。",
+      "trigger": "followup_check",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.path",
+        "source.host"
+      ]
+    },
+    {
+      "problem_id": "problem.vector_api_fragmentation",
+      "reason": "新增静态证据后复核：从全部shape/dim计算S发现存在S远大于4096的连续域与短S域；批量方法只改善短S，长S不得标全覆盖。奇数S行padding需按A=ceil(S*s/32)*32/s预算：若批量Vector读取padding，应显式初始化h*(A-S)元素而不清零有效区；输出用每行S有效元素的多段DataCopyPad丢弃dummy。A3无mode重载输入srcStride=S*s字节、dstStride=0，输出srcStride=0 DataBlock、dstStride=0字节，blockCount=h<=4095；待目标SDK确认。禁止把输入两半连读为同一operand。",
+      "trigger": "followup_check",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.path",
+        "source.host"
+      ]
+    },
+    {
+      "problem_id": "problem.noncontiguous_access",
+      "reason": "新增静态证据后复核：从全部shape/dim计算S发现存在S远大于4096的连续域与短S域；批量方法只改善短S，长S不得标全覆盖。奇数S行padding需按A=ceil(S*s/32)*32/s预算：若批量Vector读取padding，应显式初始化h*(A-S)元素而不清零有效区；输出用每行S有效元素的多段DataCopyPad丢弃dummy。A3无mode重载输入srcStride=S*s字节、dstStride=0，输出srcStride=0 DataBlock、dstStride=0字节，blockCount=h<=4095；待目标SDK确认。禁止把输入两半连读为同一operand。",
+      "trigger": "followup_check",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.path",
+        "source.host"
+      ]
+    }
+  ]
+}

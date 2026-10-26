@@ -1,0 +1,2551 @@
+{
+  "valid": true,
+  "schema": "aprof.selection-regression-replay/v1",
+  "tasks": [
+    {
+      "case": "case-01",
+      "operator": "exp",
+      "rounds": [
+        {
+          "round": 1,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "case-01",
+            "decision_hash": "sha256:1083344249d980f4658388f0a87881029b412f17000214d6166f5c2f5fe0f0c7",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity",
+              "constraint.dependency_lifetime",
+              "constraint.dependency_lifetime"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "check-pipe-safe-0",
+              "check-pipe-safe-1"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.pipeline_serialization",
+            "problem.tiny_transfer_setup_amplification",
+            "problem.control_metadata_overhead",
+            "problem.onchip_capacity_pressure"
+          ],
+          "action": "action.software_pipeline_stages",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+              "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+              "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.tiny_transfer_setup_amplification.md",
+              "sha256": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+              "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+              "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.buffer-lifetime.arch22-bank-layout",
+              "implementation.buffer-lifetime.reuse",
+              "implementation.memory-transfer.cache-hint",
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.input-tile-residency",
+              "implementation.memory-transfer.l2-reuse-order",
+              "implementation.memory-transfer.strided-pad",
+              "implementation.pipeline-sync.pipeline",
+              "implementation.pipeline-sync.slots",
+              "implementation.tiling-tail.dispatch",
+              "implementation.tiling-tail.valid-length",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.cast",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.pipeline-sync.pipeline",
+              "implementation.pipeline-sync.slots"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        },
+        {
+          "round": 2,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "case-01",
+            "decision_hash": "sha256:94586e1faa9d91b1b5f2ed0db3b78b5625ef9d1794e68069d18f851f41ff8ef9",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity",
+              "constraint.dependency_lifetime",
+              "constraint.dependency_lifetime"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "check-pipe-safe-0",
+              "check-pipe-safe-1"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.pipeline_serialization",
+            "problem.tiny_transfer_setup_amplification",
+            "problem.control_metadata_overhead",
+            "problem.onchip_capacity_pressure"
+          ],
+          "action": "action.software_pipeline_stages",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+              "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+              "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.tiny_transfer_setup_amplification.md",
+              "sha256": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+              "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+              "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.buffer-lifetime.arch22-bank-layout",
+              "implementation.buffer-lifetime.reuse",
+              "implementation.memory-transfer.cache-hint",
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.input-tile-residency",
+              "implementation.memory-transfer.l2-reuse-order",
+              "implementation.memory-transfer.strided-pad",
+              "implementation.pipeline-sync.pipeline",
+              "implementation.pipeline-sync.slots",
+              "implementation.tiling-tail.dispatch",
+              "implementation.tiling-tail.valid-length",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.cast",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.pipeline-sync.pipeline",
+              "implementation.pipeline-sync.slots"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        }
+      ]
+    },
+    {
+      "case": "case-02",
+      "operator": "mish",
+      "rounds": [
+        {
+          "round": 1,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "case-02",
+            "decision_hash": "sha256:2f6c40dd54fc87c4bfc9197639963bb2767154aee93a4105410513192b91a704",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "check-merge-safe-0"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.tiny_transfer_setup_amplification",
+            "problem.pipeline_serialization",
+            "problem.redundant_cast",
+            "problem.onchip_capacity_pressure"
+          ],
+          "action": "action.coalesce_contiguous_transfers",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.tiny_transfer_setup_amplification.md",
+              "sha256": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+              "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+              "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+              "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+              "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.buffer-lifetime.arch22-bank-layout",
+              "implementation.buffer-lifetime.reuse",
+              "implementation.memory-transfer.cache-hint",
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.input-tile-residency",
+              "implementation.memory-transfer.l2-reuse-order",
+              "implementation.memory-transfer.strided-pad",
+              "implementation.pipeline-sync.pipeline",
+              "implementation.pipeline-sync.slots",
+              "implementation.tiling-tail.dispatch",
+              "implementation.tiling-tail.valid-length",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.cast",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.strided-pad"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        },
+        {
+          "round": 2,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "case-02",
+            "decision_hash": "sha256:f1c3f34ae5af5813e006d37c8a84d9c1f2122ff6e7b5eea4e5937193d3a732d8",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "check-merge-safe-0"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.tiny_transfer_setup_amplification",
+            "problem.pipeline_serialization",
+            "problem.redundant_cast",
+            "problem.onchip_capacity_pressure"
+          ],
+          "action": "action.coalesce_contiguous_transfers",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.tiny_transfer_setup_amplification.md",
+              "sha256": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+              "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+              "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+              "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+              "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.buffer-lifetime.arch22-bank-layout",
+              "implementation.buffer-lifetime.reuse",
+              "implementation.memory-transfer.cache-hint",
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.input-tile-residency",
+              "implementation.memory-transfer.l2-reuse-order",
+              "implementation.memory-transfer.strided-pad",
+              "implementation.pipeline-sync.pipeline",
+              "implementation.pipeline-sync.slots",
+              "implementation.tiling-tail.dispatch",
+              "implementation.tiling-tail.valid-length",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.cast",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.strided-pad"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        }
+      ]
+    },
+    {
+      "case": "case-03",
+      "operator": "masked_scale",
+      "rounds": [
+        {
+          "round": 1,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "case-03",
+            "decision_hash": "sha256:d21726d4fff571a9e3e44a28fa93fa7fdad1e5d75ec300a2fdbf853357225a56",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity",
+              "constraint.dependency_lifetime",
+              "constraint.dependency_lifetime"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "check-pipe-safe-0",
+              "check-pipe-safe-1"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.pipeline_serialization",
+            "problem.tiny_transfer_setup_amplification",
+            "problem.redundant_cast",
+            "problem.onchip_capacity_pressure"
+          ],
+          "action": "action.software_pipeline_stages",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+              "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+              "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.tiny_transfer_setup_amplification.md",
+              "sha256": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+              "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+              "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.buffer-lifetime.arch22-bank-layout",
+              "implementation.buffer-lifetime.reuse",
+              "implementation.memory-transfer.cache-hint",
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.input-tile-residency",
+              "implementation.memory-transfer.l2-reuse-order",
+              "implementation.memory-transfer.strided-pad",
+              "implementation.pipeline-sync.pipeline",
+              "implementation.pipeline-sync.slots",
+              "implementation.tiling-tail.dispatch",
+              "implementation.tiling-tail.valid-length",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.cast",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.pipeline-sync.pipeline",
+              "implementation.pipeline-sync.slots"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        },
+        {
+          "round": 2,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "case-03",
+            "decision_hash": "sha256:2403bd1041693eb6fd61f84629408539580aa0901a433913ef5e8cde868e7467",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity",
+              "constraint.dependency_lifetime",
+              "constraint.dependency_lifetime"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "check-pipe-safe-0",
+              "check-pipe-safe-1"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.pipeline_serialization",
+            "problem.tiny_transfer_setup_amplification",
+            "problem.redundant_cast",
+            "problem.onchip_capacity_pressure"
+          ],
+          "action": "action.software_pipeline_stages",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+              "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+              "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.tiny_transfer_setup_amplification.md",
+              "sha256": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+              "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+              "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.buffer-lifetime.arch22-bank-layout",
+              "implementation.buffer-lifetime.reuse",
+              "implementation.memory-transfer.cache-hint",
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.input-tile-residency",
+              "implementation.memory-transfer.l2-reuse-order",
+              "implementation.memory-transfer.strided-pad",
+              "implementation.pipeline-sync.pipeline",
+              "implementation.pipeline-sync.slots",
+              "implementation.tiling-tail.dispatch",
+              "implementation.tiling-tail.valid-length",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.cast",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.pipeline-sync.pipeline",
+              "implementation.pipeline-sync.slots"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        }
+      ]
+    },
+    {
+      "case": "case-04",
+      "operator": "swi_glu",
+      "rounds": [
+        {
+          "round": 1,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "case-04",
+            "decision_hash": "sha256:ecc8dbaa9b245c9c78f0d84c26489e24ca0e2529d64aca2f072d04cf18d0e96d",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "check-merge-safe-0"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.tiny_transfer_setup_amplification",
+            "problem.pipeline_serialization",
+            "problem.vector_api_fragmentation",
+            "problem.noncontiguous_access"
+          ],
+          "action": "action.coalesce_contiguous_transfers",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.tiny_transfer_setup_amplification.md",
+              "sha256": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+              "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+              "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+              "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+              "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.buffer-lifetime.arch22-bank-layout",
+              "implementation.buffer-lifetime.reuse",
+              "implementation.memory-transfer.cache-hint",
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.input-tile-residency",
+              "implementation.memory-transfer.l2-reuse-order",
+              "implementation.memory-transfer.strided-pad",
+              "implementation.pipeline-sync.pipeline",
+              "implementation.pipeline-sync.slots",
+              "implementation.tiling-tail.dispatch",
+              "implementation.tiling-tail.valid-length",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.cast",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.strided-pad"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        },
+        {
+          "round": 2,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "case-04",
+            "decision_hash": "sha256:55df3696a8c61c1e45586c6b160c40f6cc8ffdeb5ca067d558e0170aad31127f",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "check-merge-safe-0"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.tiny_transfer_setup_amplification",
+            "problem.pipeline_serialization",
+            "problem.vector_api_fragmentation",
+            "problem.noncontiguous_access"
+          ],
+          "action": "action.coalesce_contiguous_transfers",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.tiny_transfer_setup_amplification.md",
+              "sha256": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+              "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+              "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+              "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+              "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/strided-pad.md",
+              "sha256": "sha256:dbd61eaa8bb85b89b10ae445f1cff983baaaf8aa7a707b07900c18ac60262403"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.buffer-lifetime.arch22-bank-layout",
+              "implementation.buffer-lifetime.reuse",
+              "implementation.memory-transfer.cache-hint",
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.input-tile-residency",
+              "implementation.memory-transfer.l2-reuse-order",
+              "implementation.memory-transfer.strided-pad",
+              "implementation.pipeline-sync.pipeline",
+              "implementation.pipeline-sync.slots",
+              "implementation.tiling-tail.dispatch",
+              "implementation.tiling-tail.valid-length",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.cast",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.strided-pad"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        }
+      ]
+    },
+    {
+      "case": "case-05",
+      "operator": "apply_adam_w",
+      "rounds": [
+        {
+          "round": 1,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "case-05",
+            "decision_hash": "sha256:2e84911c91644ffeb5c4a54013eda03ca599592f4e2e2a1a4d12faceaa8c4956",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity",
+              "constraint.dependency_lifetime",
+              "constraint.dependency_lifetime"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "check-reuse-safe-0",
+              "check-reuse-safe-1"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.onchip_capacity_pressure",
+            "problem.pipeline_serialization",
+            "problem.control_metadata_overhead"
+          ],
+          "action": "action.reuse_disjoint_onchip_buffers",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+              "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+              "sha256": "sha256:956301b3e9b43f9f4e8fd8074811f5723f43478b3b82c3591af1aef8aafabce4"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+              "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+              "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+              "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.buffer-lifetime.arch22-bank-layout",
+              "implementation.buffer-lifetime.reuse",
+              "implementation.memory-transfer.cache-hint",
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.input-tile-residency",
+              "implementation.memory-transfer.l2-reuse-order",
+              "implementation.memory-transfer.strided-pad",
+              "implementation.pipeline-sync.pipeline",
+              "implementation.pipeline-sync.slots",
+              "implementation.tiling-tail.dispatch",
+              "implementation.tiling-tail.valid-length",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.cast",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.buffer-lifetime.reuse"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        },
+        {
+          "round": 2,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "case-05",
+            "decision_hash": "sha256:011889e91a30bf518efdedabed3be83a2c42ceca113931545c797e8dbd3c07e8",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity",
+              "constraint.dependency_lifetime",
+              "constraint.dependency_lifetime"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "check-reuse-safe-0",
+              "check-reuse-safe-1"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.onchip_capacity_pressure",
+            "problem.pipeline_serialization",
+            "problem.control_metadata_overhead"
+          ],
+          "action": "action.reuse_disjoint_onchip_buffers",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+              "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+              "sha256": "sha256:956301b3e9b43f9f4e8fd8074811f5723f43478b3b82c3591af1aef8aafabce4"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+              "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+              "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+              "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.buffer-lifetime.arch22-bank-layout",
+              "implementation.buffer-lifetime.reuse",
+              "implementation.memory-transfer.cache-hint",
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.input-tile-residency",
+              "implementation.memory-transfer.l2-reuse-order",
+              "implementation.memory-transfer.strided-pad",
+              "implementation.pipeline-sync.pipeline",
+              "implementation.pipeline-sync.slots",
+              "implementation.tiling-tail.dispatch",
+              "implementation.tiling-tail.valid-length",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.cast",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.buffer-lifetime.reuse"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        }
+      ]
+    },
+    {
+      "case": "case-06",
+      "operator": "gather",
+      "rounds": [
+        {
+          "round": 1,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "case-06",
+            "decision_hash": "sha256:b3f3ca2f6b9a4236dcda1a8ee804070a29cf0551a81d721c2598cd8bfa531f0f",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "request-address-constraint.capacity"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.control_metadata_overhead",
+            "problem.scalar_control_hot_loop",
+            "problem.noncontiguous_access"
+          ],
+          "action": "action.hoist_invariant_control",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+              "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+              "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+              "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+              "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+              "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+              "sha256": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.indexing.coordinate_neighborhood",
+              "planning.indexing.gather_output_owned",
+              "planning.indexing.indexed_write_reduce",
+              "planning.layout.transpose"
+            ],
+            "optimization": [
+              "implementation.scalar-control.constant_lifetime",
+              "implementation.scalar-control.hot_loop_address",
+              "implementation.scalar-control.tilingdata_access",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.layout.transpose",
+              "planning.indexing.coordinate_neighborhood",
+              "planning.indexing.gather_output_owned",
+              "planning.indexing.indexed_write_reduce"
+            ],
+            "optimization": [
+              "implementation.scalar-control.constant_lifetime",
+              "implementation.scalar-control.hot_loop_address",
+              "implementation.scalar-control.tilingdata_access"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        },
+        {
+          "round": 2,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "case-06",
+            "decision_hash": "sha256:3cad2127611ec1d3744e07a58d9c0bd5ebd1ff3d3b6ef940a1d113a3f1d91568",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "request-address-constraint.capacity"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.control_metadata_overhead",
+            "problem.scalar_control_hot_loop",
+            "problem.noncontiguous_access"
+          ],
+          "action": "action.hoist_invariant_control",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+              "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+              "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+              "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+              "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+              "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+              "sha256": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.indexing.coordinate_neighborhood",
+              "planning.indexing.gather_output_owned",
+              "planning.indexing.indexed_write_reduce",
+              "planning.layout.transpose"
+            ],
+            "optimization": [
+              "implementation.scalar-control.constant_lifetime",
+              "implementation.scalar-control.hot_loop_address",
+              "implementation.scalar-control.tilingdata_access",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.layout.transpose",
+              "planning.indexing.coordinate_neighborhood",
+              "planning.indexing.gather_output_owned",
+              "planning.indexing.indexed_write_reduce"
+            ],
+            "optimization": [
+              "implementation.scalar-control.constant_lifetime",
+              "implementation.scalar-control.hot_loop_address",
+              "implementation.scalar-control.tilingdata_access"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        }
+      ]
+    },
+    {
+      "case": "case-07",
+      "operator": "strided_slice",
+      "rounds": [
+        {
+          "round": 1,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "case-07",
+            "decision_hash": "sha256:c2801adff7debbc626fa7409520c459f9c0432de4ad976db7097cd92d834e121",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.api_legality",
+              "constraint.capacity",
+              "constraint.capacity"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "request-batch-api",
+              "request-batch-constraint.capacity"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.scalar_control_hot_loop",
+            "problem.control_metadata_overhead",
+            "problem.noncontiguous_access"
+          ],
+          "action": "action.vectorize_scalar_loop",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+              "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/strided-pad.md",
+              "sha256": "sha256:dbd61eaa8bb85b89b10ae445f1cff983baaaf8aa7a707b07900c18ac60262403"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+              "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+              "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+              "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+              "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+              "sha256": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.indexing.coordinate_neighborhood",
+              "planning.indexing.gather_output_owned",
+              "planning.indexing.indexed_write_reduce",
+              "planning.layout.transpose"
+            ],
+            "optimization": [
+              "implementation.scalar-control.constant_lifetime",
+              "implementation.scalar-control.hot_loop_address",
+              "implementation.scalar-control.tilingdata_access",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.layout.transpose",
+              "planning.indexing.coordinate_neighborhood",
+              "planning.indexing.gather_output_owned",
+              "planning.indexing.indexed_write_reduce"
+            ],
+            "optimization": [
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        },
+        {
+          "round": 2,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "case-07",
+            "decision_hash": "sha256:cca18250c9ece85821d06f03d35c6cf7e218cee2d85e88d6b127d712b687fe4c",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.api_legality",
+              "constraint.capacity",
+              "constraint.capacity"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "request-batch-api",
+              "request-batch-constraint.capacity"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.scalar_control_hot_loop",
+            "problem.control_metadata_overhead",
+            "problem.noncontiguous_access"
+          ],
+          "action": "action.vectorize_scalar_loop",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+              "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/strided-pad.md",
+              "sha256": "sha256:dbd61eaa8bb85b89b10ae445f1cff983baaaf8aa7a707b07900c18ac60262403"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+              "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+              "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+              "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+              "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+              "sha256": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.indexing.coordinate_neighborhood",
+              "planning.indexing.gather_output_owned",
+              "planning.indexing.indexed_write_reduce",
+              "planning.layout.transpose"
+            ],
+            "optimization": [
+              "implementation.scalar-control.constant_lifetime",
+              "implementation.scalar-control.hot_loop_address",
+              "implementation.scalar-control.tilingdata_access",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.layout.transpose",
+              "planning.indexing.coordinate_neighborhood",
+              "planning.indexing.gather_output_owned",
+              "planning.indexing.indexed_write_reduce"
+            ],
+            "optimization": [
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        }
+      ]
+    },
+    {
+      "case": "case-08",
+      "operator": "grid_sampler_3d",
+      "rounds": [
+        {
+          "round": 1,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "case-08",
+            "decision_hash": "sha256:724de6f0b10acdcb1b1922abe8a7be5566850b6a916b9a3797c074b1df04a2ae",
+            "selection_mode": "collect_evidence",
+            "opportunity_count": 3,
+            "status": "conditional",
+            "missing_safety": [],
+            "failed_safety": [],
+            "pending_required_evidence": [],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.insufficient_input_reuse",
+            "problem.scalar_control_hot_loop",
+            "problem.control_metadata_overhead"
+          ],
+          "action": null,
+          "selection_mode": "collect_evidence",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/coordinate_neighborhood.md",
+              "sha256": "sha256:5e4f96af8fde45ec3d5ea785c96c2243f211dbeeb93cd28c1f4d7e63bdf036fb"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+              "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+              "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.insufficient_input_reuse.md",
+              "sha256": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+              "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+              "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.indexing.coordinate_neighborhood",
+              "planning.indexing.gather_output_owned",
+              "planning.indexing.indexed_write_reduce",
+              "planning.layout.transpose"
+            ],
+            "optimization": [
+              "implementation.memory-transfer.cache-hint",
+              "implementation.memory-transfer.input-tile-residency",
+              "implementation.memory-transfer.l2-reuse-order",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {},
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        },
+        {
+          "round": 2,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "case-08",
+            "decision_hash": "sha256:2c6859f85e2828103a3a9492b1031983c421dc09b65d559156d45a225a90babb",
+            "selection_mode": "collect_evidence",
+            "opportunity_count": 3,
+            "status": "conditional",
+            "missing_safety": [],
+            "failed_safety": [],
+            "pending_required_evidence": [],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.insufficient_input_reuse",
+            "problem.scalar_control_hot_loop",
+            "problem.control_metadata_overhead"
+          ],
+          "action": null,
+          "selection_mode": "collect_evidence",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/coordinate_neighborhood.md",
+              "sha256": "sha256:5e4f96af8fde45ec3d5ea785c96c2243f211dbeeb93cd28c1f4d7e63bdf036fb"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+              "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+              "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.insufficient_input_reuse.md",
+              "sha256": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+              "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+              "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.indexing.coordinate_neighborhood",
+              "planning.indexing.gather_output_owned",
+              "planning.indexing.indexed_write_reduce",
+              "planning.layout.transpose"
+            ],
+            "optimization": [
+              "implementation.memory-transfer.cache-hint",
+              "implementation.memory-transfer.input-tile-residency",
+              "implementation.memory-transfer.l2-reuse-order",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {},
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        }
+      ]
+    },
+    {
+      "case": "case-09",
+      "operator": "gelu",
+      "rounds": [
+        {
+          "round": 1,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "case-09",
+            "decision_hash": "sha256:0609044e50788b3265641d1f94c00882c37f36558937f22e99cb370ffad65e2e",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity",
+              "constraint.vector_batch_compatibility",
+              "constraint.vector_batch_compatibility"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "request-batch-constraint.capacity",
+              "request-batch-constraint.vector_batch_compatibility"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.vector_api_fragmentation",
+            "problem.pipeline_serialization",
+            "problem.onchip_capacity_pressure"
+          ],
+          "action": "action.batch_vector_api_calls",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+              "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+              "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+              "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/compare-select-tail.md",
+              "sha256": "sha256:e0cf231e0bd3c6f821342c3d96c262230f009a68e19fc86e0136bf75e2885d62"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.vector_api_fragmentation.md",
+              "sha256": "sha256:e5c0882f45cb270a9fd555e570428ba6f942efbb8c888972f3aadb655c09a34a"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+              "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+              "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.pipeline-sync.pipeline",
+              "implementation.pipeline-sync.slots",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        },
+        {
+          "round": 2,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "case-09",
+            "decision_hash": "sha256:83e7624aa11d57ee931bcb025cf102712e0437d615597a7ed6abb1915804af9e",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity",
+              "constraint.vector_batch_compatibility",
+              "constraint.vector_batch_compatibility"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "request-batch-constraint.capacity",
+              "request-batch-constraint.vector_batch_compatibility"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.vector_api_fragmentation",
+            "problem.pipeline_serialization",
+            "problem.onchip_capacity_pressure"
+          ],
+          "action": "action.batch_vector_api_calls",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+              "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+              "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+              "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/compare-select-tail.md",
+              "sha256": "sha256:e0cf231e0bd3c6f821342c3d96c262230f009a68e19fc86e0136bf75e2885d62"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.vector_api_fragmentation.md",
+              "sha256": "sha256:e5c0882f45cb270a9fd555e570428ba6f942efbb8c888972f3aadb655c09a34a"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+              "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+              "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.pipeline-sync.pipeline",
+              "implementation.pipeline-sync.slots",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        }
+      ]
+    },
+    {
+      "case": "case-10",
+      "operator": "sigmoid",
+      "rounds": [
+        {
+          "round": 1,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "case-10",
+            "decision_hash": "sha256:2a4e5dfb46f2a8e8d5862e918aba291a13441dc85b8498bd692d258606e45456",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity",
+              "constraint.dependency_lifetime",
+              "constraint.dependency_lifetime"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "request-pipeline-constraint.capacity",
+              "request-pipeline-constraint.dependency_lifetime"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.pipeline_serialization",
+            "problem.vector_api_fragmentation",
+            "problem.redundant_cast"
+          ],
+          "action": "action.software_pipeline_stages",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+              "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+              "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+              "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/cast.md",
+              "sha256": "sha256:61a09c55c6f9139ee767c6dde221cacfbadca53cbbb483d4ced76d0421c7f464"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+              "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.vector_api_fragmentation.md",
+              "sha256": "sha256:e5c0882f45cb270a9fd555e570428ba6f942efbb8c888972f3aadb655c09a34a"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.redundant_cast.md",
+              "sha256": "sha256:c7f8ace396cc0a0f53f4bc0a5b9f0883cbd8b439d45dce74edc1e4f50b1b326d"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.pipeline-sync.pipeline",
+              "implementation.pipeline-sync.slots",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.pipeline-sync.pipeline",
+              "implementation.pipeline-sync.slots"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        },
+        {
+          "round": 2,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "case-10",
+            "decision_hash": "sha256:f503dd0eb1379c5a4b20328dd508badcd1165c718981d3d38650f0a0c4d41194",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity",
+              "constraint.dependency_lifetime",
+              "constraint.dependency_lifetime"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "request-pipeline-constraint.capacity",
+              "request-pipeline-constraint.dependency_lifetime"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.pipeline_serialization",
+            "problem.vector_api_fragmentation",
+            "problem.redundant_cast"
+          ],
+          "action": "action.software_pipeline_stages",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+              "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+              "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+              "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/cast.md",
+              "sha256": "sha256:61a09c55c6f9139ee767c6dde221cacfbadca53cbbb483d4ced76d0421c7f464"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+              "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.vector_api_fragmentation.md",
+              "sha256": "sha256:e5c0882f45cb270a9fd555e570428ba6f942efbb8c888972f3aadb655c09a34a"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.redundant_cast.md",
+              "sha256": "sha256:c7f8ace396cc0a0f53f4bc0a5b9f0883cbd8b439d45dce74edc1e4f50b1b326d"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.pipeline-sync.pipeline",
+              "implementation.pipeline-sync.slots",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.pipeline-sync.pipeline",
+              "implementation.pipeline-sync.slots"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        }
+      ]
+    },
+    {
+      "case": "case-11",
+      "operator": "foreach_addcdiv_scalar",
+      "rounds": [
+        {
+          "round": 1,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "autonomy-c-11",
+            "decision_hash": "sha256:ad10b1b79a82db8591506e3ae437b2fd66e7f094158f22d76898a0a329ab10a9",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity",
+              "constraint.semantic_equivalence",
+              "constraint.semantic_equivalence"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "REQ-primary-safe-1",
+              "REQ-primary-safe-2"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.pipeline_serialization",
+            "problem.tiny_transfer_setup_amplification",
+            "problem.redundant_cast"
+          ],
+          "action": "action.coalesce_contiguous_transfers",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.tiny_transfer_setup_amplification.md",
+              "sha256": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+              "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+              "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+              "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+              "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.strided-pad"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.strided-pad"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        },
+        {
+          "round": 2,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "autonomy-c-11",
+            "decision_hash": "sha256:17cdb6573298da01f79ca9edb9f7f641fbe9311ee72499379679341cbb9d4f02",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity",
+              "constraint.semantic_equivalence",
+              "constraint.semantic_equivalence"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "REQ-primary-safe-1",
+              "REQ-primary-safe-2"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.pipeline_serialization",
+            "problem.tiny_transfer_setup_amplification",
+            "problem.redundant_cast"
+          ],
+          "action": "action.coalesce_contiguous_transfers",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.tiny_transfer_setup_amplification.md",
+              "sha256": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+              "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+              "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+              "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+              "sha256": "sha256:44a68a5b982eb4107ad17d4a133a9b4786646609ef41484c0dd68e7533124b01"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.strided-pad"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.strided-pad"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        }
+      ]
+    },
+    {
+      "case": "case-12",
+      "operator": "maximum",
+      "rounds": [
+        {
+          "round": 1,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "autonomy-c-12",
+            "decision_hash": "sha256:156b49cf57c2968b4b7f50d70fa31c8d75de0dd4e953db2aac544b6b13085c96",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.broadcast_semantics",
+              "constraint.broadcast_semantics",
+              "constraint.capacity",
+              "constraint.capacity",
+              "constraint.semantic_equivalence",
+              "constraint.semantic_equivalence"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "REQ-primary-safe-1",
+              "REQ-primary-safe-2",
+              "REQ-primary-safe-3"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.scalar_control_hot_loop",
+            "problem.broadcast_strategy_mismatch",
+            "problem.insufficient_input_reuse"
+          ],
+          "action": "action.restructure_broadcast",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.broadcast_strategy_mismatch.md",
+              "sha256": "sha256:1b2609ac77d163bda7a1992cd1e36fbc698fac4bfd4b1140afc3298472a38fb1"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+              "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/broadcast.md",
+              "sha256": "sha256:485c6aec11ef4e73458f85be904d0692bf7ed6b97db0ecd88d7694b039c505f0"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+              "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+              "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+              "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/compare-select-tail.md",
+              "sha256": "sha256:e0cf231e0bd3c6f821342c3d96c262230f009a68e19fc86e0136bf75e2885d62"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.broadcast",
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.memory-transfer.strided-pad",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous",
+              "planning.elementwise.broadcast"
+            ],
+            "optimization": [
+              "implementation.vector-api.batch",
+              "implementation.memory-transfer.strided-pad",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        },
+        {
+          "round": 2,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "autonomy-c-12",
+            "decision_hash": "sha256:fdad2c0df7afa7391b005c7d8bc96f1c43615ab2dd98400ad05110268c56c63d",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.broadcast_semantics",
+              "constraint.broadcast_semantics",
+              "constraint.capacity",
+              "constraint.capacity",
+              "constraint.semantic_equivalence",
+              "constraint.semantic_equivalence"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "REQ-primary-safe-1",
+              "REQ-primary-safe-2",
+              "REQ-primary-safe-3"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.scalar_control_hot_loop",
+            "problem.broadcast_strategy_mismatch",
+            "problem.insufficient_input_reuse"
+          ],
+          "action": "action.restructure_broadcast",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.broadcast_strategy_mismatch.md",
+              "sha256": "sha256:1b2609ac77d163bda7a1992cd1e36fbc698fac4bfd4b1140afc3298472a38fb1"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+              "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/broadcast.md",
+              "sha256": "sha256:485c6aec11ef4e73458f85be904d0692bf7ed6b97db0ecd88d7694b039c505f0"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+              "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+              "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+              "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/compare-select-tail.md",
+              "sha256": "sha256:e0cf231e0bd3c6f821342c3d96c262230f009a68e19fc86e0136bf75e2885d62"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.broadcast",
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.memory-transfer.strided-pad",
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous",
+              "planning.elementwise.broadcast"
+            ],
+            "optimization": [
+              "implementation.vector-api.batch",
+              "implementation.memory-transfer.strided-pad",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        }
+      ]
+    },
+    {
+      "case": "case-13",
+      "operator": "apply_rotary_pos_emb",
+      "rounds": [
+        {
+          "round": 1,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "autonomy-c-13",
+            "decision_hash": "sha256:870f6b3f38d384e1d0b3b72f23778a3250faa12abb8bff3a0d8ef23120923230",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity",
+              "constraint.semantic_equivalence",
+              "constraint.semantic_equivalence"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "REQ-primary-safe-1",
+              "REQ-primary-safe-2"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.scalar_control_hot_loop",
+            "problem.insufficient_input_reuse",
+            "problem.excessive_sync_scope"
+          ],
+          "action": "action.vectorize_scalar_loop",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+              "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.insufficient_input_reuse.md",
+              "sha256": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+              "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+              "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+              "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        },
+        {
+          "round": 2,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "autonomy-c-13",
+            "decision_hash": "sha256:2f96ba94a41f7ec1a8c91b66fd541d62d9da0a6ad81fdab44e78ce7474c7baf9",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity",
+              "constraint.semantic_equivalence",
+              "constraint.semantic_equivalence"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "REQ-primary-safe-1",
+              "REQ-primary-safe-2"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.scalar_control_hot_loop",
+            "problem.insufficient_input_reuse",
+            "problem.excessive_sync_scope"
+          ],
+          "action": "action.vectorize_scalar_loop",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+              "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.insufficient_input_reuse.md",
+              "sha256": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+              "sha256": "sha256:0a602958e66a719ea6d7a959a6d447ac684f2ef53a22fc1fe3dc838bde06edd4"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+              "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+              "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous"
+            ],
+            "optimization": [
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        }
+      ]
+    },
+    {
+      "case": "case-14",
+      "operator": "transpose",
+      "rounds": [
+        {
+          "round": 1,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "autonomy-c-14",
+            "decision_hash": "sha256:4421b364ac4c1b85ddada99144530457b23c34916c7d15373c72c40d8b341162",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity",
+              "constraint.layout_semantics",
+              "constraint.layout_semantics",
+              "constraint.semantic_equivalence",
+              "constraint.semantic_equivalence"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "REQ-primary-safe-1",
+              "REQ-primary-safe-2",
+              "REQ-primary-safe-3"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.noncontiguous_access",
+            "problem.scalar_control_hot_loop",
+            "problem.control_metadata_overhead"
+          ],
+          "action": "action.reorder_contiguous_access",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+              "sha256": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+              "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md",
+              "sha256": "sha256:9b830c4ea01484b8a7e2d89e8c44d4d8087a821a2b887f3bd28c1e2172c53d49"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/strided-pad.md",
+              "sha256": "sha256:dbd61eaa8bb85b89b10ae445f1cff983baaaf8aa7a707b07900c18ac60262403"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+              "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.layout.transpose"
+            ],
+            "optimization": [
+              "implementation.memory-transfer.cache-hint",
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.input-tile-residency",
+              "implementation.memory-transfer.l2-reuse-order",
+              "implementation.memory-transfer.strided-pad",
+              "implementation.scalar-control.hot_loop_address"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.layout.transpose"
+            ],
+            "optimization": [
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.cache-hint",
+              "implementation.memory-transfer.input-tile-residency",
+              "implementation.memory-transfer.l2-reuse-order",
+              "implementation.memory-transfer.strided-pad",
+              "implementation.scalar-control.hot_loop_address"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        },
+        {
+          "round": 2,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "autonomy-c-14",
+            "decision_hash": "sha256:2dbee4143be0f52a2d7ad3f6545448e531be3f0a2f5a83271c392905b825158a",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 2,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity",
+              "constraint.layout_semantics",
+              "constraint.layout_semantics",
+              "constraint.semantic_equivalence",
+              "constraint.semantic_equivalence"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "REQ-primary-safe-1",
+              "REQ-primary-safe-2",
+              "REQ-primary-safe-3"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.noncontiguous_access",
+            "problem.scalar_control_hot_loop",
+            "problem.control_metadata_overhead"
+          ],
+          "action": "action.reorder_contiguous_access",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+              "sha256": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+              "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/layout/templates/transpose.md",
+              "sha256": "sha256:9b830c4ea01484b8a7e2d89e8c44d4d8087a821a2b887f3bd28c1e2172c53d49"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/strided-pad.md",
+              "sha256": "sha256:dbd61eaa8bb85b89b10ae445f1cff983baaaf8aa7a707b07900c18ac60262403"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+              "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.layout.transpose"
+            ],
+            "optimization": [
+              "implementation.memory-transfer.cache-hint",
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.input-tile-residency",
+              "implementation.memory-transfer.l2-reuse-order",
+              "implementation.memory-transfer.strided-pad",
+              "implementation.scalar-control.hot_loop_address"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.layout.transpose"
+            ],
+            "optimization": [
+              "implementation.memory-transfer.coalesce",
+              "implementation.memory-transfer.cache-hint",
+              "implementation.memory-transfer.input-tile-residency",
+              "implementation.memory-transfer.l2-reuse-order",
+              "implementation.memory-transfer.strided-pad",
+              "implementation.scalar-control.hot_loop_address"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        }
+      ]
+    },
+    {
+      "case": "case-15",
+      "operator": "resize_bilinear",
+      "rounds": [
+        {
+          "round": 1,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "autonomy-c-15",
+            "decision_hash": "sha256:9453274ba9c96b9d1d83223767253773521da338c371bd17828e27a18f0ae211",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 3,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity",
+              "constraint.semantic_equivalence",
+              "constraint.semantic_equivalence"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "REQ-primary-safe-1",
+              "REQ-primary-safe-2"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.scalar_control_hot_loop",
+            "problem.insufficient_input_reuse",
+            "problem.control_metadata_overhead"
+          ],
+          "action": "action.vectorize_scalar_loop",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+              "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.insufficient_input_reuse.md",
+              "sha256": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/coordinate_neighborhood.md",
+              "sha256": "sha256:5e4f96af8fde45ec3d5ea785c96c2243f211dbeeb93cd28c1f4d7e63bdf036fb"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+              "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+              "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.continuous",
+              "planning.indexing.coordinate_neighborhood",
+              "planning.indexing.gather_output_owned",
+              "planning.indexing.indexed_write_reduce"
+            ],
+            "optimization": [
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous",
+              "planning.indexing.coordinate_neighborhood",
+              "planning.indexing.gather_output_owned",
+              "planning.indexing.indexed_write_reduce"
+            ],
+            "optimization": [
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        },
+        {
+          "round": 2,
+          "validation": {
+            "schema_version": "aprof.action-decision-validation/v2",
+            "task_id": "autonomy-c-15",
+            "decision_hash": "sha256:e916ea566025a28dbd5691ad389388f116d6077e7e807cf496660c589e7febb1",
+            "selection_mode": "conditional_plan",
+            "opportunity_count": 3,
+            "status": "conditional",
+            "missing_safety": [
+              "constraint.capacity",
+              "constraint.capacity",
+              "constraint.semantic_equivalence",
+              "constraint.semantic_equivalence"
+            ],
+            "failed_safety": [],
+            "pending_required_evidence": [
+              "REQ-primary-safe-1",
+              "REQ-primary-safe-2"
+            ],
+            "performance_claim": false,
+            "semantic_review_required": true
+          },
+          "expanded_problems": [
+            "problem.scalar_control_hot_loop",
+            "problem.insufficient_input_reuse",
+            "problem.control_metadata_overhead"
+          ],
+          "action": "action.vectorize_scalar_loop",
+          "selection_mode": "conditional_plan",
+          "knowledge_documents": [
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+              "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+            },
+            {
+              "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.insufficient_input_reuse.md",
+              "sha256": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4"
+            },
+            {
+              "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/coordinate_neighborhood.md",
+              "sha256": "sha256:5e4f96af8fde45ec3d5ea785c96c2243f211dbeeb93cd28c1f4d7e63bdf036fb"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+              "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+            },
+            {
+              "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+              "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+            }
+          ],
+          "consultation": {
+            "parallel-planning": [
+              "planning.elementwise.continuous",
+              "planning.indexing.coordinate_neighborhood",
+              "planning.indexing.gather_output_owned",
+              "planning.indexing.indexed_write_reduce"
+            ],
+            "optimization": [
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "action_route_candidates": {
+            "parallel-planning": [
+              "planning.elementwise.continuous",
+              "planning.indexing.coordinate_neighborhood",
+              "planning.indexing.gather_output_owned",
+              "planning.indexing.indexed_write_reduce"
+            ],
+            "optimization": [
+              "implementation.vector-api.batch",
+              "implementation.vector-api.compare_select_tail"
+            ]
+          },
+          "formal_C2_C3_selection": false,
+          "hardware": false
+        }
+      ]
+    }
+  ],
+  "limit": "保存记录和实际router回放；不是重新执行Agent判断、硬件验证或性能证明。"
+}

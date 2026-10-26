@@ -1,0 +1,289 @@
+{
+  "scope": "input reuse documentation review; no SDK compilation or NPU experiment",
+  "decision": "new_primary_recipe_needed",
+  "new_id": "implementation.memory-transfer.input-tile-residency",
+  "draft": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+  "draft_sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8",
+  "public_files_modified_by_this_agent": false,
+  "existing_documents": [
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/ROUTER.md",
+      "id": "implementation.memory-transfer",
+      "sha256": "sha256:bf7152319e4404734dc65ba08a26290b6fe8835783be55656f01b8286139cca5",
+      "body_sha256": "sha256:6d5bc984c8b63d7a8764ec82e930ac726c517d3f8d2e4c230d0a243fe5b55531",
+      "role": "reviewed_existing_knowledge"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/examples/tile-amortization.md",
+      "id": "implementation.memory-transfer.example.tile-amortization",
+      "sha256": "sha256:38053f6d3174d627e938f8bc8fd810fa5cc62aa5e14b55fd32276ba82031abb5",
+      "body_sha256": "sha256:cd1a61ccf6164815c337a20bbfa45c72c9f03b092a91cafc184dcb691db22df7",
+      "role": "reviewed_existing_knowledge"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/fallback.md",
+      "id": "implementation.memory-transfer.fallback",
+      "sha256": "sha256:5ae1ee22f6ea03a5f75b395c720682dc3911524cd154eaa7857ac7e09186c411",
+      "body_sha256": "sha256:b0400aea2d1ad993ca4560a671b3fb755cdc62f1cef70c21ccba465133b10b1e",
+      "role": "reviewed_existing_knowledge"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/cache-hint.md",
+      "id": "implementation.memory-transfer.cache-hint",
+      "sha256": "sha256:917ba83e82ae17f958af90e99f4aee304575f7f6687d7863a7d24a2a0467b0d4",
+      "body_sha256": "sha256:c1a5e5fee2d2a81f8707884bb37349c381b12c7ba982a4a667b1833e8cc22395",
+      "role": "reviewed_existing_knowledge"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/coalesce.md",
+      "id": "implementation.memory-transfer.coalesce",
+      "sha256": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c",
+      "body_sha256": "sha256:64ee83718e6cac345bf5586bedc0959fe093b24350f3b25c526fcfa3b1820a46",
+      "role": "reviewed_existing_knowledge"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/l2-reuse-order.md",
+      "id": "implementation.memory-transfer.l2-reuse-order",
+      "sha256": "sha256:393c78c5713b524d882441c5af3a0d4d4122a8e4a11442c0207ec45fc5137aba",
+      "body_sha256": "sha256:98680cee1f3d24b194d123557c5f9a894279d8347e6cbdb2ad1111139476fb69",
+      "role": "reviewed_existing_knowledge"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/strided-pad.md",
+      "id": "implementation.memory-transfer.strided-pad",
+      "sha256": "sha256:0cf5e1f574a9785c650f54919fd7aed3a3cb1d03027994972fce15eb1082d924",
+      "body_sha256": "sha256:e4d70b3aa02376bf5e81f9b4b670f3a82b3d6aca7bb238ccddbb5f10e7336d62",
+      "role": "reviewed_existing_knowledge"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/ROUTER.md",
+      "id": "implementation.buffer-lifetime",
+      "sha256": "sha256:06e047447fafb3c18cb83719ae91347e2796ed1e8dd74d14e851c2a71e269fc6",
+      "body_sha256": "sha256:f5e846f3f9bac1a155b4be086ad3df8076493b7074e7f1fae5d1222867c0b33b",
+      "role": "reviewed_existing_knowledge"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/examples/ub-accumulator.md",
+      "id": "implementation.buffer-lifetime.example.ub-accumulator",
+      "sha256": "sha256:57ea4938f0e85fd86dd71f98ca84b877f09ef08bf316cf403b7d8ff3dfc8b119",
+      "body_sha256": "sha256:aaad5950193807a732d38fe9e5c458b9c7a68f09710a8282ba839213c87b08f0",
+      "role": "reviewed_existing_knowledge"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/fallback.md",
+      "id": "implementation.buffer-lifetime.fallback",
+      "sha256": "sha256:90cc63b0369d6cdb0952c9a35af71759807879d33e5153e91631e93089f887b8",
+      "body_sha256": "sha256:951f8e2bce5ef48e636703790ecba892532a03776ee5f89297e6bec3ad70b1f6",
+      "role": "reviewed_existing_knowledge"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/arch22-bank-layout.md",
+      "id": "implementation.buffer-lifetime.arch22-bank-layout",
+      "sha256": "sha256:3f6cecbb98c85f9ef189d84c3eb039c21722676ae49526d06e98734ddfd6e1c7",
+      "body_sha256": "sha256:e82e5082a88b235cce3ff72c57d185dc4596564addc189dcab3f474cef6ca44a",
+      "role": "reviewed_existing_knowledge"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+      "id": "implementation.buffer-lifetime.reuse",
+      "sha256": "sha256:04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483",
+      "body_sha256": "sha256:956da9e2eb839378dddf9d75630c1bec5a9abe93321144736c82464161e06812",
+      "role": "reviewed_existing_knowledge"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/branches/fusion-composition/ROUTER.md",
+      "id": "implementation.fusion-composition",
+      "sha256": "sha256:8b2c5b24afee07e65155755e1f86cdf98fff04a462ba90af64f3be741817845b",
+      "body_sha256": "sha256:dbe166f323b7eee74428a9ed92d89c1897f025423a8dc4b42b8ecd102569f65c",
+      "role": "reviewed_existing_knowledge"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/branches/fusion-composition/fallback.md",
+      "id": "implementation.fusion-composition.fallback",
+      "sha256": "sha256:0f997603071df2b3c6d1a2e5d58013cfdb459b40c9f09516c62dfd17ab91a341",
+      "body_sha256": "sha256:a5bd6417fa9bc832b24ecac4e8912fecf57dab8c5c3d5635aef2ad312e2bc53f",
+      "role": "reviewed_existing_knowledge"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/branches/fusion-composition/recipes/cube-vector-epilogue.md",
+      "id": "implementation.fusion-composition.cube_vector_epilogue",
+      "sha256": "sha256:6bcae05d55803de2ba0b10a631193ef1b84509081d6d5688aeba6a64c1fd7efc",
+      "body_sha256": "sha256:7350dfbb5b8596c8689a44828619e843c191fe4ec0a1af2b80e76b800c74bdd8",
+      "role": "reviewed_existing_knowledge"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/branches/fusion-composition/recipes/cv-multistage-handoff.md",
+      "id": "implementation.fusion-composition.cv_multistage_handoff",
+      "sha256": "sha256:c25852a64e0b205d6b13b0e5feefe75dcc1772f7947888dfe23cdfa2848464bf",
+      "body_sha256": "sha256:d21bce6a7a74ceed61b33943bfa201856e03c051ad3014005d3ff6fa59bae4cb",
+      "role": "reviewed_existing_knowledge"
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/branches/fusion-composition/recipes/vector-chain-residency.md",
+      "id": "implementation.fusion-composition.vector_chain_residency",
+      "sha256": "sha256:cd2c56bde414154fea1df76bf0426397e0ea4b846995ac84e225062beffff234",
+      "body_sha256": "sha256:7fd2f8f5a8a447b7e43536ca737592ccc94984de3dc43bafe3fd2b2d782846eb",
+      "role": "reviewed_existing_knowledge"
+    },
+    {
+      "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+      "id": "planning.elementwise.continuous",
+      "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d",
+      "body_sha256": "sha256:d69b157312909f2031f11f5027e9b672e581573d51c386d6ebb7050ae2ac60f0",
+      "role": "reviewed_existing_planning"
+    },
+    {
+      "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/broadcast.md",
+      "id": "planning.elementwise.broadcast",
+      "sha256": "sha256:e9656ff1eb44e019b72c4199f8a993f084e587f92b65b1c740d23fd4912d5cee",
+      "body_sha256": "sha256:0f632fb2b9f6c00d31d682809d21cc1d5c83486692cac7442707cf8a91fffa88",
+      "role": "reviewed_existing_planning"
+    },
+    {
+      "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/templates/chain.md",
+      "id": "planning.under-fusion.chain",
+      "sha256": "sha256:13c01d7f32534de051ae9b0a159c8757ae3b66937f35915f123d3501c56596c3",
+      "body_sha256": "sha256:0b4b9d1d3a07a0ba07cdda791035dfd0585c1a37d71494e0f7b99b85a304b92b",
+      "role": "reviewed_existing_planning"
+    },
+    {
+      "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/under-fusion/templates/reduce_broadcast.md",
+      "id": "planning.under-fusion.reduce_broadcast",
+      "sha256": "sha256:2bf58443f1cfc35b9177e7ba184c4ad222cd3313244a32cfc366e465864ba8f4",
+      "body_sha256": "sha256:b206ec602c94a3f1a23b41bf27597624f42b86fbca4c329efafeb082207b9a80",
+      "role": "reviewed_existing_planning"
+    },
+    {
+      "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/matmul/templates/resident.md",
+      "id": "planning.matmul.resident",
+      "sha256": "sha256:bfa23fa5500b960c252cc2a66a5aade8435c9df3b378c74c01769774743be52f",
+      "body_sha256": "sha256:50e64e8b8cac5c8493b541ade31e8d9ce9d9a7ee915a8a6c06e22e23c21dc196",
+      "role": "reviewed_existing_planning"
+    }
+  ],
+  "source_checks": [
+    {
+      "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/00_introduction/01_add/add_tpipe_tque/add_tpipe_tque.asc",
+      "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+      "lines": [
+        20,
+        98
+      ],
+      "sha256": "sha256:3fd854a223214eec19b03eebf4be3397c81358ebd526d07b17202a5fd522b654",
+      "excerpt_sha256": "sha256:2e8f3388725eee71af0c28ccc76c2e01fc7ba01c7b3ca06cf7f89c473efec085",
+      "already_archived": true,
+      "hash_verified": true
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/resource_management/TPipe/InitBuffer.md",
+      "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+      "lines": [
+        34,
+        220
+      ],
+      "sha256": "sha256:36da88132f7d5f62484bc98896bd99577bcce25d71a84e21220731a557aea34d",
+      "excerpt_sha256": "sha256:70619eed307e130c5d64b3936d3c609e096c608ba0b6bba136e773385fe5bd2d",
+      "already_archived": true,
+      "hash_verified": true
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/resource_management/TBuf/Get.md",
+      "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+      "lines": [
+        34,
+        98
+      ],
+      "sha256": "sha256:23ef70d79cf63af9b179082dc436f6fc80c6441a050e3a7600838af3cd94617a",
+      "excerpt_sha256": "sha256:7ddd61b3e98c4e594924b5e620a362b82b9ad4fe81310f3956d9afcacd73dded",
+      "already_archived": true,
+      "hash_verified": true
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB.md",
+      "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+      "lines": [
+        3,
+        325
+      ],
+      "sha256": "sha256:8fd9166a39e7ab163695f1d965ad633725afa1c60cff08708b439f58f2a646ee",
+      "excerpt_sha256": "sha256:1de0688ad7d6af2b7498f280b3138e462c600af310d93a8008a703dec31ebc55",
+      "already_archived": true,
+      "hash_verified": true
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_UBToGM.md",
+      "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+      "lines": [
+        3,
+        194
+      ],
+      "sha256": "sha256:23e9b37e62ff5c2fed4b142ad65b346f8987aa6be527e291dae63466dc88f315",
+      "excerpt_sha256": "sha256:03dfe694e7045a7cfe836089d6448b60f7811fded4d4f6a8d6fad6021b119fc8",
+      "already_archived": true,
+      "hash_verified": true
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/03_fusion_compute/matmul_gelu_high_performance/mmad_gelu.asc",
+      "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+      "lines": [
+        21,
+        746
+      ],
+      "sha256": "sha256:2fb232c81805420c88755d9bc41ea3561c3f4107946306425d1a43b48c31dd1d",
+      "excerpt_sha256": "sha256:a430742ce4ff9786a78aaf637c1c34b666d95bbe612208a901710fca16e894f7",
+      "already_archived": true,
+      "hash_verified": true
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/data_structures/GlobalTensor/SetL2CacheHint.md",
+      "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+      "lines": [
+        3,
+        112
+      ],
+      "sha256": "sha256:62807570650c1a69ab2bf0ba2bce606a4a3141d5d9d976fdbf3bdaf1d4df1092",
+      "excerpt_sha256": "sha256:8b3a062e7527c371f256ed15a82ae19d75e97d7d618d7381aa07605d627ce6ee",
+      "already_archived": true,
+      "hash_verified": true
+    },
+    {
+      "path": "skills/ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/sync_control/intra_core_sync/PipeBarrier_ISASI.md",
+      "revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+      "lines": [
+        3,
+        97
+      ],
+      "sha256": "sha256:730571f5039906830624ccba76cff76d318305831f96538d7821be7c7c737773",
+      "excerpt_sha256": "sha256:a81403695033181d574bb850bc5da90c4c1099460919737daea43003df73a38b",
+      "already_archived": false,
+      "hash_verified": true
+    }
+  ],
+  "method_gates": [
+    "constraint.semantic_equivalence",
+    "constraint.capacity",
+    "constraint.plan_freedom",
+    "constraint.reuse_domain",
+    "constraint.dependency_lifetime",
+    "constraint.output_ownership",
+    "constraint.same_input_region",
+    "constraint.input_value_preserved"
+  ],
+  "conflicts": [
+    {
+      "source": "mmad_gelu.asc",
+      "locator": "arch2201 xUB at lines54-57; DataCopyPad at574-581",
+      "conflict": "manual VECCALC view with DataCopyPad disagrees with fixed API GM→VECCALC support scope",
+      "resolution": "Use only the source read-use/lifetime fact; new code uses documented VECIN/VECOUT path."
+    }
+  ],
+  "new_archived_source_count": 1,
+  "checks": {
+    "record_schema": "pass",
+    "full_and_excerpt_hashes": "pass",
+    "fixed_revision": "d378849769f9ee610af9d0ac38db2b3b6bed3209",
+    "SDK_compilation": "not_run",
+    "hardware": "not_run"
+  },
+  "review_context": "existing_documents hashes record the reviewed active Markdown at review time; unchanged leaf facts retain identity, later router edits are recorded in the migration report"
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aprof.local/schemas/candidate-episode.schema.json",
+  "title": "AProf CandidateEpisode 1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "episode_id", "context", "graph_snapshot", "graph_hash", "behavior_policy_checkpoint", "policy_checkpoint_hash", "gate_request", "draft", "evidence", "outcome", "finalized_at", "runtime_build", "episode_hash"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "episode_id": {"type": "string"},
+    "context": {"$ref": "context.schema.json"},
+    "graph_snapshot": {"type": "object"},
+    "graph_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "behavior_policy_checkpoint": {
+      "anyOf": [
+        {"$ref": "policy-checkpoint.schema.json"},
+        {"type": "null"}
+      ]
+    },
+    "policy_checkpoint_hash": {
+      "type": ["string", "null"],
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "gate_request": {"$ref": "gate-request.schema.json"},
+    "draft": {"$ref": "candidate-draft.schema.json"},
+    "evidence": {"$ref": "gate-request.schema.json#/$defs/evidence"},
+    "outcome": {"$ref": "gate-outcome.schema.json"},
+    "finalized_at": {"type": "string"},
+    "runtime_build": {"type": "string"},
+    "episode_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

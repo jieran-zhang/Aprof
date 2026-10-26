@@ -1,0 +1,67 @@
+{
+  "answer_id": "answer-4d62aab26e94",
+  "case": "case-01",
+  "facts": [
+    {
+      "id": "CU01.A01",
+      "status": "correct",
+      "rationale": "明确给出正base时对乘项和偏移同时乘ln(base)、非正base时采用自然指数；另给出本题公式及三个正确的理想输出，并保留浮点误差边界。",
+      "answer_span": "令a=base>0时的ln(base)，否则a=1，则目标为y[i]=exp(x[i]·scale·a+shift·a)。因此正base对应base^(scale·x[i]+shift)，非正base统一采用自然指数，并非计算负数底数的幂。"
+    },
+    {
+      "id": "CU01.A02",
+      "status": "correct",
+      "rationale": "结合按T搬运及BF16字节长度的说明，正确区分BF16存储和FP32计算；明确先转float、执行乘加和Exp，再以CAST_RINT转回BF16。",
+      "answer_span": "此次bfloat16输入先Cast为float32的fi，再依次执行fo=fi×multiplier、fo=fo+shift、fo=exp(fo)，最后Cast回bfloat16输出。两个中间缓冲均以float存储，Adds和Exp原地更新fo。"
+    },
+    {
+      "id": "CU01.A03",
+      "status": "correct",
+      "rationale": "完整说明FP32直接在输出Tensor完成乘加和Exp、FP16/BF16使用FP32中间量，以及两种输出Cast模式；另明确逐元素、无归约和Cube运算。",
+      "answer_span": "float16也采用相同的float32中间计算；float32分支直接从输入队列读入float，在输出队列Tensor上完成乘、加、Exp，不分配转换缓冲。\n\n固定Cast.md的A3类型表支持上述转换：half/bfloat16→float使用CAST_NONE，扩大表示范围时不需要舍入；float→bfloat16显式使用CAST_RINT，即最近值、中点取偶数；float→half使用CAST_NONE，按文档在发生精度损失时同样表示CAST_RINT，不能解释成截断。"
+    },
+    {
+      "id": "CU01.E01",
+      "status": "correct",
+      "rationale": "说明host查询向量核数、调用ComputeExpTiling、复制tiling到GM并按tiling.blockNum启动；本题blockNum=3、blockLength=8340、tileElements=4096均正确。",
+      "answer_span": "分核采用元素单位。ComputeExpTiling得到useful=max(1,ceil(25019/4096))=7；查询返回值按题面固定为3，因此blockNum=3，blockLength=ceil(25019/3)=8340，tileElements固定为4096，dtype=2。"
+    },
+    {
+      "id": "CU01.E02",
+      "status": "correct",
+      "rationale": "表中完整给出三个元素起点、有效长度及BF16字节起点；正确说明覆盖连续、互不重叠，并以25019为右开端点。",
+      "answer_span": "| 0 | [0,8340) | [0,16680) | 4096、4096、148 |\n| 1 | [8340,16680) | [16680,33360) | 4096、4096、148 |\n| 2 | [16680,25019) | [33360,50038) | 4096、4096、147 |\n\n三个范围连续且互不重叠，合计25019元素；每核循环中的off依次为0、4096、8192。"
+    },
+    {
+      "id": "CU01.E03",
+      "status": "correct",
+      "rationale": "表中逐核列出三轮有效元素数，正文说明每轮CopyIn→Compute→CopyOut、尾搬运296/296/294字节，以及计算仅使用148或147个有效元素。",
+      "answer_span": "本次三个尾tile的起始字节偏移分别为16384、33064、49744，有效长度分别为296、296、294字节。总共执行9轮tile，其中6轮完整、3轮尾部；不存在核间结果合并。\n\n每轮Process严格按CopyIn、Compute、CopyOut组织（exp_kernel.asc:26–73）。"
+    },
+    {
+      "id": "CU01.H01",
+      "status": "correct",
+      "rationale": "正确计算BF16两个8192字节槽及两个16384字节scratch，总计49152字节；FP32仅两个16384字节槽，总计32768字节。另明确这些是显式缓冲量，不含编译器或框架预留。",
+      "answer_span": "对bfloat16/float16，每个队列槽为4096×2=8192字节，fpIn和fpOut各4096×4=16384字节，显式UB合计49152字节，即48 KiB；float32只分配两个16384字节队列槽，共32 KiB。"
+    },
+    {
+      "id": "CU01.H02",
+      "status": "correct",
+      "rationale": "完整说明输入输出队列的分配、入队、出队和释放，以及搬入后计算、计算后搬出的同步依赖和scratch复用。对具体生成同步指令保留证据边界，没有否认框架同步协议。",
+      "answer_span": "输入EnQue/DeQue协调MTE2生产与Vector消费，输出队列协调Vector生产与MTE3消费；FreeTensor及后续AllocTensor对应槽位释放、再次使用。下一轮覆盖输入前须保证本轮Vector已读完，覆盖输出前须保证本轮MTE3已读完；fi、fo的连续复用及乘→加→Exp→转换也存在Vector内部依赖。"
+    },
+    {
+      "id": "CU01.H03",
+      "status": "correct",
+      "rationale": "明确InitBuffer为每个队列分配一个物理槽、没有第二组地址轮换；结合三阶段循环及后文不能由队列存在证明重叠的说明，完整支持单缓冲和重叠证据边界。",
+      "answer_span": "资源分配见exp_kernel.asc:16–23、76–82：inQ和outQ的模板深度均为1，InitBuffer又分别明确分配1个物理槽。"
+    },
+    {
+      "id": "CU01.H04",
+      "status": "correct",
+      "rationale": "正确说明MTE2→Vector→MTE3路径；另明确尾块在UB补齐到320字节，但计算和GM写回仍取实际有效长度。对实际流水时间线和重叠保留未知，未据静态源码推断带宽、利用率或运行速度。",
+      "answer_span": "Scalar处理索引、循环及指令发射，MTE2执行GM→UB，Vector执行转换、乘加和指数，MTE3执行UB→GM。"
+    }
+  ],
+  "critical_errors": []
+}

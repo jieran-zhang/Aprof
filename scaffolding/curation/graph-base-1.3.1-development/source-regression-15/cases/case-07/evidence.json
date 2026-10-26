@@ -1,0 +1,148 @@
+{
+  "schema_version": "aprof.evidence/v1",
+  "task_id": "case-07",
+  "source_context_ref": {
+    "path": "authority.json",
+    "sha256": "sha256:fd66b0309930ea002aa2f2c59663c977070cc0095db0c3ce20d341f2b86f1b18"
+  },
+  "attributes": {
+    "family": [
+      "layout"
+    ],
+    "dtype": [
+      "bfloat16",
+      "float16",
+      "float32",
+      "int32",
+      "int64"
+    ],
+    "features": [
+      "memory-transfer",
+      "scalar-control",
+      "tiling-tail"
+    ],
+    "platform": "dav-2201"
+  },
+  "facts": {
+    "source.kernel": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.kernel",
+      "ref": {
+        "path": "source/op_kernel/strided_slice_kernel.asc",
+        "sha256": "sha256:46080207eb1e6dada5df620d8a255ec92707356d763d631194f53c4533b48206",
+        "locator": "lines:1-34"
+      }
+    },
+    "source.tiling": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.tiling",
+      "ref": {
+        "path": "source/op_kernel/strided_slice_tiling.h",
+        "sha256": "sha256:a038f2dc047926c24f3c86ad64e2812010e1123b7217dffe3f49150606d6c16b",
+        "locator": "lines:1-107"
+      }
+    },
+    "source.host": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.host",
+      "ref": {
+        "path": "source/op_host/strided_slice.asc",
+        "sha256": "sha256:2e6d82ce5b6b4e15200ddebb952322f3b932b9134818786e646a14b405438166",
+        "locator": "lines:1-88"
+      }
+    },
+    "source.matrix": {
+      "state": true,
+      "kind": "source_review",
+      "view": "workload",
+      "evidence_id": "source.matrix",
+      "ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:dcba2d99e38017f94d5e163c0b96532a4801c012acaf6d98486499597649c58c",
+        "locator": "lines:1-639"
+      }
+    },
+    "source.oracle": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.oracle",
+      "ref": {
+        "path": "source/scripts/verify_result.py",
+        "sha256": "sha256:c2db195f474dc3c563d92d01c0e0e0f97f3796cf6143fcadd2d131bbbd26286b",
+        "locator": "lines:1-25"
+      }
+    },
+    "symptom.source.noncontiguous_access.component_1": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.kernel",
+      "ref": {
+        "path": "source/op_kernel/strided_slice_kernel.asc",
+        "sha256": "sha256:46080207eb1e6dada5df620d8a255ec92707356d763d631194f53c4533b48206",
+        "locator": "lines:1-34"
+      }
+    },
+    "symptom.source.noncontiguous_access.component_2": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.tiling",
+      "ref": {
+        "path": "source/op_kernel/strided_slice_tiling.h",
+        "sha256": "sha256:a038f2dc047926c24f3c86ad64e2812010e1123b7217dffe3f49150606d6c16b",
+        "locator": "lines:1-107"
+      }
+    },
+    "symptom.source.noncontiguous_access.component_3": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.host",
+      "ref": {
+        "path": "source/op_host/strided_slice.asc",
+        "sha256": "sha256:2e6d82ce5b6b4e15200ddebb952322f3b932b9134818786e646a14b405438166",
+        "locator": "lines:1-88"
+      }
+    },
+    "constraint.semantic_equivalence": {
+      "state": true,
+      "kind": "source_proof",
+      "view": "constraint",
+      "evidence_id": "semantic-proof",
+      "ref": {
+        "path": "source-analysis-R1.md",
+        "sha256": "sha256:b34de3aa7e4d6c54191700229ae3eca825e2f62e1abc9d8e6b4444d1a5d0af28",
+        "locator": "lines:1-24"
+      }
+    },
+    "constraint.layout_semantics": {
+      "state": true,
+      "kind": "source_proof",
+      "view": "constraint",
+      "evidence_id": "semantic-proof",
+      "ref": {
+        "path": "source-analysis-R1.md",
+        "sha256": "sha256:b34de3aa7e4d6c54191700229ae3eca825e2f62e1abc9d8e6b4444d1a5d0af28",
+        "locator": "lines:1-24"
+      }
+    },
+    "constraint.capacity": {
+      "state": "unknown",
+      "kind": "not_observed",
+      "view": "constraint"
+    },
+    "constraint.target_api": {
+      "state": "unknown",
+      "kind": "not_observed",
+      "view": "constraint"
+    }
+  }
+}

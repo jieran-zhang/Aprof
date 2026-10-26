@@ -1,0 +1,195 @@
+{
+  "schema_version": "aprof.evidence/v1",
+  "task_id": "case-03",
+  "source_context_ref": {
+    "path": "authority-v2.json",
+    "sha256": "sha256:4b904472f99754e4f42f52667388bf16a707c07cd8545d4b51a6d200ce290bd8"
+  },
+  "attributes": {
+    "family": "elementwise",
+    "dtype": [
+      "bfloat16",
+      "float16",
+      "float32"
+    ],
+    "platform": "dav-2201",
+    "features": [
+      "continuous",
+      "tiling-tail",
+      "memory-transfer",
+      "pipeline-sync",
+      "vector-api",
+      "buffer-lifetime"
+    ]
+  },
+  "facts": {
+    "source.path": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.path",
+      "ref": {
+        "path": "source/op_kernel/masked_scale_kernel.asc",
+        "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3",
+        "locator": "lines:1-140"
+      },
+      "view": "source"
+    },
+    "source.host": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.host",
+      "ref": {
+        "path": "source/op_host/masked_scale.asc",
+        "sha256": "sha256:e09aa9781ad5c6c851fee91441e673b860cee51c4a64d639269f424182f8f28c",
+        "locator": "lines:1-90"
+      },
+      "view": "source"
+    },
+    "source.matrix": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.matrix",
+      "ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279",
+        "locator": "lines:1-394"
+      },
+      "view": "workload"
+    },
+    "source.analysis": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.analysis",
+      "ref": {
+        "path": "analysis-r1.md",
+        "sha256": "sha256:c40f143e462dc7e0c5e543bf1ccf2c40d1cf36beb4350d4e6b33e47ba0c5e935",
+        "locator": "lines:1-13"
+      },
+      "view": "source"
+    },
+    "constraint.semantic_equivalence": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "semantic-plan",
+      "ref": {
+        "path": "analysis-r1.md",
+        "sha256": "sha256:c40f143e462dc7e0c5e543bf1ccf2c40d1cf36beb4350d4e6b33e47ba0c5e935",
+        "locator": "lines:1-13"
+      },
+      "view": "constraint"
+    },
+    "constraint.capacity": {
+      "state": "unknown",
+      "kind": "raw",
+      "evidence_id": null,
+      "ref": null,
+      "view": "constraint"
+    },
+    "constraint.dependency_lifetime": {
+      "state": "unknown",
+      "kind": "raw",
+      "evidence_id": null,
+      "ref": null,
+      "view": "constraint"
+    },
+    "symptom.source.serial_queue_or_event_order.component_1": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.serial_queue_or_event_order.component_1",
+      "ref": {
+        "path": "source/op_kernel/masked_scale_kernel.asc",
+        "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3",
+        "locator": "lines:1-140"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order.component_2": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.serial_queue_or_event_order.component_2",
+      "ref": {
+        "path": "source/op_kernel/masked_scale_kernel.asc",
+        "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3",
+        "locator": "lines:1-140"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order.component_3": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.serial_queue_or_event_order.component_3",
+      "ref": {
+        "path": "analysis-r1.md",
+        "sha256": "sha256:c40f143e462dc7e0c5e543bf1ccf2c40d1cf36beb4350d4e6b33e47ba0c5e935",
+        "locator": "lines:1-13"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": "symptom.source.serial_queue_or_event_order",
+      "ref": {
+        "path": "source/op_kernel/masked_scale_kernel.asc",
+        "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3",
+        "locator": "lines:1-140"
+      },
+      "view": "source"
+    },
+    "symptom.source.inner_loop_copy.component_1": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.inner_loop_copy.component_1",
+      "ref": {
+        "path": "source/op_kernel/masked_scale_kernel.asc",
+        "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3",
+        "locator": "lines:1-140"
+      },
+      "view": "source"
+    },
+    "symptom.source.inner_loop_copy.component_2": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.inner_loop_copy.component_2",
+      "ref": {
+        "path": "source/op_kernel/masked_scale_kernel.asc",
+        "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3",
+        "locator": "lines:1-140"
+      },
+      "view": "source"
+    },
+    "symptom.source.inner_loop_copy.component_3": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.inner_loop_copy.component_3",
+      "ref": {
+        "path": "analysis-r1.md",
+        "sha256": "sha256:c40f143e462dc7e0c5e543bf1ccf2c40d1cf36beb4350d4e6b33e47ba0c5e935",
+        "locator": "lines:1-13"
+      },
+      "view": "source"
+    },
+    "symptom.source.inner_loop_copy": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": "symptom.source.inner_loop_copy",
+      "ref": {
+        "path": "source/op_kernel/masked_scale_kernel.asc",
+        "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3",
+        "locator": "lines:1-140"
+      },
+      "view": "source"
+    },
+    "source.r2": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "static-r2",
+      "ref": {
+        "path": "static-r2.json",
+        "sha256": "sha256:cf814e5ca43d25c80ca3c5b3a62fb976345c023f204a676d952d33690550786f",
+        "locator": "finding,rows"
+      },
+      "view": "source"
+    }
+  }
+}

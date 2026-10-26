@@ -1,0 +1,1101 @@
+{
+  "schema_version": "aprof.action-decision/v2",
+  "task_id": "case-06",
+  "context_hash": "sha256:dd3ecc3b359aeeb687ca154251c5c3a2712d114a00329b2069b6de1c67b1696c",
+  "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+  "reasoning_ref": {
+    "path": "reasoning-r1.json",
+    "sha256": "sha256:0dff311646b559f5018b01340348246df5baf61cf3d61f0caa98fb04053bd2fa"
+  },
+  "reasoning_hash": "sha256:cc0462c058620054dd54cb52c7bba1e1d905e2512e83b49f4c34c25359b05d12",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/ec82d8f535262a6e43869d71bce0e77d91aa71040c5f7f87a8e56f5adfd6f1e8.json",
+    "sha256": "sha256:fde21372195004f2ae06c2a295edd3ca726b0f00da220aa64ef8f1c0bc6507e2"
+  },
+  "round": 1,
+  "current_parent_ref": {
+    "path": "source-identity.json",
+    "sha256": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb"
+  },
+  "opportunities": [
+    {
+      "id": "address",
+      "hypothesis_id": "h-address",
+      "action_id": "action.hoist_invariant_control",
+      "action_instance_id": "address-r1",
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "8",
+        "9",
+        "11",
+        "16",
+        "17",
+        "18",
+        "7",
+        "20",
+        "10",
+        "12",
+        "14",
+        "15",
+        "19",
+        "13"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "workload.matrix"
+      ],
+      "cost_mechanism": "按最内轴段初始化一次非gather坐标前缀，段内地址递增；gatherIndex*源stride仍逐元素计算，不把index视为共享行索引。",
+      "predictions": [
+        {
+          "id": "address-work",
+          "kind": "source_work",
+          "statement": "2*N*d 个除模降至至多2*R*d个段起点解码；每元素保留index乘法，非gather尾轴增加一次递增",
+          "check_method": "逐域静态计数并核对原地址/运算次序；实施后再对照差异",
+          "on_support": "支持该工作减少预测，尚不证明时间收益",
+          "on_refute": "若工作已被编译消除或新增代价抵消，重开比较"
+        },
+        {
+          "id": "address-time",
+          "kind": "performance",
+          "statement": "在合法完整正确性后检验 按最内轴段初始化一次非gather坐标前缀，段内地址递增；gatherIndex*源stride仍逐元素计算，不把index视为共享行索引。 是否降低同协议Task时间",
+          "check_method": "本轮禁止硬件；将来完整matrix20按统一Task协议测量，分域观察",
+          "on_support": "工程收益证据仍与机制归因分开",
+          "on_refute": "若编译器已强度削减全部除模，或合法尾轴整行UB Gather可摊销整行加载，批量取数更优"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "address-time",
+          "unknown_id": "address-perf-cost_reduction",
+          "reason": "源码支持结构假设，编译器/关键路径和实际时间未测；不作为实施门禁"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "address-constraint.capacity",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "O(d)坐标状态和段边界控制；无新UB；编译寄存器和spill未知；实际可用UB、API tmp及保留区尚未查询，只有公式不授权容量。",
+          "affects": "implementation_legality",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "address-perf-cost_reduction",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "尚未测量 按最内轴段初始化一次非gather坐标前缀，段内地址递增；gatherIndex*源stride仍逐元素计算，不把index视为共享行索引。 的实际指令/等待减少是否超过 O(d)坐标状态和段边界控制；无新UB；编译寄存器和spill未知",
+          "affects": "benefit_magnitude and priority",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "vector",
+      "comparison": "2*N*d 个除模降至至多2*R*d个段起点解码；每元素保留index乘法，非gather尾轴增加一次递增；付出 O(d)坐标状态和段边界控制；无新UB；编译寄存器和spill未知；替代敏感条件：若编译器已强度削减全部除模，或合法尾轴整行UB Gather可摊销整行加载，批量取数更优",
+      "disposition": "selected",
+      "reason": "按最内轴段初始化一次非gather坐标前缀，段内地址递增；gatherIndex*源stride仍逐元素计算，不把index视为共享行索引。；若编译器已强度削减全部除模，或合法尾轴整行UB Gather可摊销整行加载，批量取数更优",
+      "analysis": {
+        "intent_gap": null,
+        "work_delta": [
+          {
+            "id": "address-reduced",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "nonlast_rank2",
+              "last_axis",
+              "nonlast_highrank",
+              "rank1"
+            ],
+            "change": "reduced",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "max(2*N*d-2*R*d,0)",
+              "unit": "removed division_or_modulo operation/invocation",
+              "symbols": [
+                {
+                  "name": "N",
+                  "meaning": "输出元素数",
+                  "unit": "element"
+                },
+                {
+                  "name": "d",
+                  "meaning": "当前输出或index rank",
+                  "unit": "axis"
+                },
+                {
+                  "name": "R",
+                  "meaning": "与每核owner边界相交后的最内轴段数",
+                  "unit": "segment"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "按最内轴段初始化一次非gather坐标前缀，段内地址递增；gatherIndex*源stride仍逐元素计算，不把index视为共享行索引。"
+          },
+          {
+            "id": "address-retained",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "nonlast_rank2",
+              "last_axis",
+              "nonlast_highrank",
+              "rank1"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "qualitative",
+              "expression": "随机源GM读取、逐元素guard与标量存储保留；rank1减法空间小",
+              "unit": "separate logical operations/bytes",
+              "symbols": [],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "保留项不能消失在整体覆盖声明中"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "address-coverage-nonlast_rank2",
+            "domain_id": "nonlast_rank2",
+            "status": "partial",
+            "region": "按最内轴段初始化一次非gather坐标前缀，段内地址递增；gatherIndex*源stride仍逐元素计算，不把index视为共享行索引。；域=nonlast_rank2",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "address-coverage-last_axis",
+            "domain_id": "last_axis",
+            "status": "partial",
+            "region": "按最内轴段初始化一次非gather坐标前缀，段内地址递增；gatherIndex*源stride仍逐元素计算，不把index视为共享行索引。；域=last_axis",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "address-coverage-nonlast_highrank",
+            "domain_id": "nonlast_highrank",
+            "status": "partial",
+            "region": "按最内轴段初始化一次非gather坐标前缀，段内地址递增；gatherIndex*源stride仍逐元素计算，不把index视为共享行索引。；域=nonlast_highrank",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "address-coverage-rank1",
+            "domain_id": "rank1",
+            "status": "partial",
+            "region": "rank1仅可去无意义坐标解码，收益有限；仍按原index读取",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "address-cost",
+            "domain_ids": [
+              "nonlast_rank2",
+              "last_axis",
+              "nonlast_highrank",
+              "rank1"
+            ],
+            "dimension": "resource_access_sync",
+            "change": {
+              "mode": "symbolic",
+              "expression": "8*d",
+              "unit": "logical coordinate state byte (not physical registers)",
+              "symbols": [
+                {
+                  "name": "d",
+                  "meaning": "当前输出或index rank",
+                  "unit": "axis"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "consequence": "若编译器已强度削减全部除模，或合法尾轴整行UB Gather可摊销整行加载，批量取数更优"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "address-residual",
+            "domain_ids": [
+              "nonlast_rank2",
+              "last_axis",
+              "nonlast_highrank",
+              "rank1"
+            ],
+            "remaining_work": "随机源GM读取、逐元素guard与标量存储保留；rank1减法空间小",
+            "next_step": "若编译器已强度削减全部除模，或合法尾轴整行UB Gather可摊销整行加载，批量取数更优",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling"
+            ]
+          }
+        ],
+        "no_alternative_reason": null
+      }
+    },
+    {
+      "id": "vector",
+      "hypothesis_id": "h-vector",
+      "action_id": "action.vectorize_scalar_loop",
+      "action_instance_id": "vector-r1",
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "8",
+        "9",
+        "11",
+        "16",
+        "17",
+        "18",
+        "7",
+        "20",
+        "10",
+        "12",
+        "14",
+        "15",
+        "19",
+        "13"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "workload.matrix"
+      ],
+      "cost_mechanism": "尾轴源行能放入UB时搬源行和index片，在UB作按位Gather；非尾轴保留标量源读取，仅批量index和输出，不引入转置workspace。",
+      "predictions": [
+        {
+          "id": "vector-work",
+          "kind": "source_work",
+          "statement": "尾轴把N次标量源load/output store改为片级搬运和UB Gather；非尾轴仍N次源load",
+          "check_method": "逐域静态计数并核对原地址/运算次序；实施后再对照差异",
+          "on_support": "支持该工作减少预测，尚不证明时间收益",
+          "on_refute": "若工作已被编译消除或新增代价抵消，重开比较"
+        },
+        {
+          "id": "vector-time",
+          "kind": "performance",
+          "statement": "在合法完整正确性后检验 尾轴源行能放入UB时搬源行和index片，在UB作按位Gather；非尾轴保留标量源读取，仅批量index和输出，不引入转置workspace。 是否降低同协议Task时间",
+          "check_method": "本轮禁止硬件；将来完整matrix20按统一Task协议测量，分域观察",
+          "on_support": "工程收益证据仍与机制归因分开",
+          "on_refute": "G很大或N很小时整源行加载浪费压倒收益，地址分段更优"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_scalar_hot",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "vector-time",
+          "unknown_id": "vector-perf-legacy_symptom_profile_scalar_hot",
+          "reason": "源码支持结构假设，编译器/关键路径和实际时间未测；不作为实施门禁"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "vector-time",
+          "unknown_id": "vector-perf-cost_reduction",
+          "reason": "源码支持结构假设，编译器/关键路径和实际时间未测；不作为实施门禁"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "vector-constraint.capacity",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "UB=A(G*b)+A(T*i)+A(T*b)+A(T*offsetBytes)+Tmp+F；源行按索引片重读，非尾轴转置被暂缓；实际可用UB、API tmp及保留区尚未查询，只有公式不授权容量。",
+          "affects": "implementation_legality",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "vector-perf-legacy_symptom_profile_scalar_hot",
+          "kind": "performance",
+          "fact": "symptom.profile.scalar_hot",
+          "expected_state": null,
+          "statement": "尚未测量 尾轴源行能放入UB时搬源行和index片，在UB作按位Gather；非尾轴保留标量源读取，仅批量index和输出，不引入转置workspace。 的实际指令/等待减少是否超过 UB=A(G*b)+A(T*i)+A(T*b)+A(T*offsetBytes)+Tmp+F；源行按索引片重读，非尾轴转置被暂缓",
+          "affects": "benefit_magnitude and priority",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "vector-perf-cost_reduction",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "尚未测量 尾轴源行能放入UB时搬源行和index片，在UB作按位Gather；非尾轴保留标量源读取，仅批量index和输出，不引入转置workspace。 的实际指令/等待减少是否超过 UB=A(G*b)+A(T*i)+A(T*b)+A(T*offsetBytes)+Tmp+F；源行按索引片重读，非尾轴转置被暂缓",
+          "affects": "benefit_magnitude and priority",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "vector-api",
+          "kind": "implementation_safety",
+          "fact": "constraint.api_legality",
+          "expected_state": true,
+          "statement": "目标910C/A3 SDK的具体同宽UB Gather、offset范围及dtype支持尚未核验；不使用950 GM Gather。",
+          "affects": "implementation_legality",
+          "resolution": "check_before_implementation"
+        }
+      ],
+      "strongest_alternative_id": "address",
+      "comparison": "尾轴把N次标量源load/output store改为片级搬运和UB Gather；非尾轴仍N次源load；付出 UB=A(G*b)+A(T*i)+A(T*b)+A(T*offsetBytes)+Tmp+F；源行按索引片重读，非尾轴转置被暂缓；替代敏感条件：G很大或N很小时整源行加载浪费压倒收益，地址分段更优",
+      "disposition": "deferred",
+      "reason": "尾轴源行能放入UB时搬源行和index片，在UB作按位Gather；非尾轴保留标量源读取，仅批量index和输出，不引入转置workspace。；G很大或N很小时整源行加载浪费压倒收益，地址分段更优",
+      "analysis": {
+        "intent_gap": null,
+        "work_delta": [
+          {
+            "id": "vector-reduced",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "nonlast_rank2",
+              "last_axis",
+              "nonlast_highrank",
+              "rank1"
+            ],
+            "change": "reduced",
+            "quantity": {
+              "mode": "symbolic",
+              "expression": "N",
+              "unit": "scalar output store eligible for replacement/invocation",
+              "symbols": [
+                {
+                  "name": "N",
+                  "meaning": "输出元素数",
+                  "unit": "element"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "尾轴源行能放入UB时搬源行和index片，在UB作按位Gather；非尾轴保留标量源读取，仅批量index和输出，不引入转置workspace。"
+          },
+          {
+            "id": "vector-retained",
+            "stage_id": "kernel",
+            "domain_ids": [
+              "nonlast_rank2",
+              "last_axis",
+              "nonlast_highrank",
+              "rank1"
+            ],
+            "change": "retained",
+            "quantity": {
+              "mode": "qualitative",
+              "expression": "非尾轴随机访问与精确64位/整数bit-copy API仍需处理",
+              "unit": "separate logical operations/bytes",
+              "symbols": [],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "explanation": "保留项不能消失在整体覆盖声明中"
+          }
+        ],
+        "coverage": [
+          {
+            "id": "vector-coverage-nonlast_rank2",
+            "domain_id": "nonlast_rank2",
+            "status": "partial",
+            "region": "尾轴源行能放入UB时搬源行和index片，在UB作按位Gather；非尾轴保留标量源读取，仅批量index和输出，不引入转置workspace。；域=nonlast_rank2",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "vector-coverage-last_axis",
+            "domain_id": "last_axis",
+            "status": "partial",
+            "region": "尾轴源行能放入UB时搬源行和index片，在UB作按位Gather；非尾轴保留标量源读取，仅批量index和输出，不引入转置workspace。；域=last_axis",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "vector-coverage-nonlast_highrank",
+            "domain_id": "nonlast_highrank",
+            "status": "partial",
+            "region": "尾轴源行能放入UB时搬源行和index片，在UB作按位Gather；非尾轴保留标量源读取，仅批量index和输出，不引入转置workspace。；域=nonlast_highrank",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          },
+          {
+            "id": "vector-coverage-rank1",
+            "domain_id": "rank1",
+            "status": "partial",
+            "region": "尾轴源行能放入UB时搬源行和index片，在UB作按位Gather；非尾轴保留标量源读取，仅批量index和输出，不引入转置workspace。；域=rank1",
+            "fact_ids": [
+              "source.kernel",
+              "source.metrics"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "id": "vector-cost",
+            "domain_ids": [
+              "nonlast_rank2",
+              "last_axis",
+              "nonlast_highrank",
+              "rank1"
+            ],
+            "dimension": "resource_access_sync",
+            "change": {
+              "mode": "symbolic",
+              "expression": "A(G*b)+A(T*bi)+A(T*b)+A(T*bo)+Tmp+F",
+              "unit": "UB allocation byte",
+              "symbols": [
+                {
+                  "name": "A",
+                  "meaning": "按已核验API字节对齐的向上取整函数",
+                  "unit": "byte->byte"
+                },
+                {
+                  "name": "G",
+                  "meaning": "源Gather轴长度",
+                  "unit": "element"
+                },
+                {
+                  "name": "b",
+                  "meaning": "输入输出存储宽",
+                  "unit": "byte/element"
+                },
+                {
+                  "name": "T",
+                  "meaning": "候选tile有效元素上限",
+                  "unit": "element"
+                },
+                {
+                  "name": "bi",
+                  "meaning": "index存储宽",
+                  "unit": "byte/element"
+                },
+                {
+                  "name": "bo",
+                  "meaning": "UB偏移字段宽",
+                  "unit": "byte/element"
+                },
+                {
+                  "name": "Tmp",
+                  "meaning": "目标SDK/API要求的临时区",
+                  "unit": "byte"
+                },
+                {
+                  "name": "F",
+                  "meaning": "对齐外固定保留区",
+                  "unit": "byte"
+                }
+              ],
+              "basis": "source_logical",
+              "fact_ids": [
+                "source.kernel",
+                "source.tiling",
+                "workload.matrix"
+              ]
+            },
+            "consequence": "G很大或N很小时整源行加载浪费压倒收益，地址分段更优"
+          }
+        ],
+        "residuals": [
+          {
+            "id": "vector-residual",
+            "domain_ids": [
+              "nonlast_rank2",
+              "last_axis",
+              "nonlast_highrank",
+              "rank1"
+            ],
+            "remaining_work": "非尾轴随机访问与精确64位/整数bit-copy API仍需处理",
+            "next_step": "G很大或N很小时整源行加载浪费压倒收益，地址分段更优",
+            "fact_ids": [
+              "source.kernel",
+              "source.tiling"
+            ]
+          }
+        ],
+        "no_alternative_reason": null
+      }
+    }
+  ],
+  "evidence_requests": [
+    {
+      "id": "request-address-constraint.capacity",
+      "opportunity_ids": [
+        "address"
+      ],
+      "unknown_ids": [
+        "address-constraint.capacity"
+      ],
+      "method": "O(d)坐标状态和段边界控制；无新UB；编译寄存器和spill未知；实际可用UB、API tmp及保留区尚未查询，只有公式不授权容量。",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "若编译器已强度削减全部除模，或合法尾轴整行UB Gather可摊销整行加载，批量取数更优"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-address-perf-cost_reduction",
+      "opportunity_ids": [
+        "address"
+      ],
+      "unknown_ids": [
+        "address-perf-cost_reduction"
+      ],
+      "method": "尚未测量 按最内轴段初始化一次非gather坐标前缀，段内地址递增；gatherIndex*源stride仍逐元素计算，不把index视为共享行索引。 的实际指令/等待减少是否超过 O(d)坐标状态和段边界控制；无新UB；编译寄存器和spill未知",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "若编译器已强度削减全部除模，或合法尾轴整行UB Gather可摊销整行加载，批量取数更优"
+        }
+      ],
+      "required_before_implementation": false,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-vector-constraint.capacity",
+      "opportunity_ids": [
+        "vector"
+      ],
+      "unknown_ids": [
+        "vector-constraint.capacity"
+      ],
+      "method": "UB=A(G*b)+A(T*i)+A(T*b)+A(T*offsetBytes)+Tmp+F；源行按索引片重读，非尾轴转置被暂缓；实际可用UB、API tmp及保留区尚未查询，只有公式不授权容量。",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "G很大或N很小时整源行加载浪费压倒收益，地址分段更优"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-vector-perf-legacy_symptom_profile_scalar_hot",
+      "opportunity_ids": [
+        "vector"
+      ],
+      "unknown_ids": [
+        "vector-perf-legacy_symptom_profile_scalar_hot"
+      ],
+      "method": "尚未测量 尾轴源行能放入UB时搬源行和index片，在UB作按位Gather；非尾轴保留标量源读取，仅批量index和输出，不引入转置workspace。 的实际指令/等待减少是否超过 UB=A(G*b)+A(T*i)+A(T*b)+A(T*offsetBytes)+Tmp+F；源行按索引片重读，非尾轴转置被暂缓",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "G很大或N很小时整源行加载浪费压倒收益，地址分段更优"
+        }
+      ],
+      "required_before_implementation": false,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-vector-perf-cost_reduction",
+      "opportunity_ids": [
+        "vector"
+      ],
+      "unknown_ids": [
+        "vector-perf-cost_reduction"
+      ],
+      "method": "尚未测量 尾轴源行能放入UB时搬源行和index片，在UB作按位Gather；非尾轴保留标量源读取，仅批量index和输出，不引入转置workspace。 的实际指令/等待减少是否超过 UB=A(G*b)+A(T*i)+A(T*b)+A(T*offsetBytes)+Tmp+F；源行按索引片重读，非尾轴转置被暂缓",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "G很大或N很小时整源行加载浪费压倒收益，地址分段更优"
+        }
+      ],
+      "required_before_implementation": false,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    },
+    {
+      "id": "request-vector-api",
+      "opportunity_ids": [
+        "vector"
+      ],
+      "unknown_ids": [
+        "vector-api"
+      ],
+      "method": "目标910C/A3 SDK的具体同宽UB Gather、offset范围及dtype支持尚未核验；不使用950 GM Gather。",
+      "discriminating_results": [
+        {
+          "outcome": "满足所列具体条件",
+          "decision_effect": "该方案进入合法参数域，收益仍待检验"
+        },
+        {
+          "outcome": "不满足或代价超出",
+          "decision_effect": "G很大或N很小时整源行加载浪费压倒收益，地址分段更优"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行",
+      "defer_reason": "本轮只做静态选择，不编译SDK/运行设备/实施；保留具体条件与方案。"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "address",
+        "vector"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+        "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+      },
+      "locator": "lines:85-126",
+      "effect_kind": "plan",
+      "before": "从原源码识别 Host验证同rank/非gather轴上界与index取值；按线性输出分核，逐输出读取index，rank轴除模得到源地址，再按存储位宽读取源/写出。",
+      "after": "非gather轴长度可能不等，不能直接用P/Q当X跨度；保留按输出owner与尾轴/非尾轴不同成本",
+      "applicability": "partial：该模板完整Gather语义匹配，当前只采用scalar/尾轴方案，拒绝未预算的transpose workspace"
+    },
+    {
+      "opportunity_ids": [
+        "address"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+        "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+      },
+      "locator": "lines:57-107",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host验证同rank/非gather轴上界与index取值；按线性输出分核，逐输出读取index，rank轴除模得到源地址，再按存储位宽读取源/写出。",
+      "after": "把公共前缀放到最小段外层并保留原访问序列，不只复制tiling大结构",
+      "applicability": "full：规则最内轴段地址控制；动态index部分不外提"
+    },
+    {
+      "opportunity_ids": [
+        "vector"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+        "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+      },
+      "locator": "lines:90-131",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host验证同rank/非gather轴上界与index取值；按线性输出分核，逐输出读取index，rank轴除模得到源地址，再按存储位宽读取源/写出。",
+      "after": "批量vector仍需同宽offset和API范围，不能以连续输出推断连续source",
+      "applicability": "partial：UB侧批量原则；不提供通用GM Gather"
+    },
+    {
+      "opportunity_ids": [
+        "address"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+        "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+      },
+      "locator": "lines:297-432",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host验证同rank/非gather轴上界与index取值；按线性输出分核，逐输出读取index，rank轴除模得到源地址，再按存储位宽读取源/写出。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；循环不变字段或公共地址前缀在每轮重复加载/计算",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    },
+    {
+      "opportunity_ids": [
+        "vector"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+        "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+      },
+      "locator": "lines:279-414",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host验证同rank/非gather轴上界与index取值；按线性输出分核，逐输出读取index，rank轴除模得到源地址，再按存储位宽读取源/写出。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；本可按向量表达的元素处理使用逐元素Scalar访存或算术",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    },
+    {
+      "opportunity_ids": [
+        "address"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+        "sha256": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db"
+      },
+      "locator": "lines:316-458",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host验证同rank/非gather轴上界与index取值；按线性输出分核，逐输出读取index，rank轴除模得到源地址，再按存储位宽读取源/写出。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；切分或遍历轴跨过物理连续内轴",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    }
+  ],
+  "selection": {
+    "mode": "conditional_plan",
+    "opportunity_id": "address",
+    "action_instance_id": "address-r1",
+    "reason": "2*N*d 个除模降至至多2*R*d个段起点解码；每元素保留index乘法，非gather尾轴增加一次递增；付出 O(d)坐标状态和段边界控制；无新UB；编译寄存器和spill未知；替代敏感条件：若编译器已强度削减全部除模，或合法尾轴整行UB Gather可摊销整行加载，批量取数更优",
+    "concrete_plan": "不改变现有owner边界；每owner按最内轴合法剩余长度切段，首点用原rank公式建立前缀，其后保持索引读取及guard、存储位模式完全一致。先用源码地址序列证明，再核对编译spill；不只缓存字段。",
+    "stop_reason": null,
+    "comparison_basis": [
+      {
+        "opportunity_id": "address",
+        "item_ids": [
+          "address-reduced"
+        ],
+        "role": "benefit",
+        "decision_effect": "2*N*d 个除模降至至多2*R*d个段起点解码；每元素保留index乘法，非gather尾轴增加一次递增",
+        "reversal_condition": "若编译器已强度削减全部除模，或合法尾轴整行UB Gather可摊销整行加载，批量取数更优"
+      },
+      {
+        "opportunity_id": "address",
+        "item_ids": [
+          "address-cost"
+        ],
+        "role": "cost",
+        "decision_effect": "O(d)坐标状态和段边界控制；无新UB；编译寄存器和spill未知",
+        "reversal_condition": "若编译器已强度削减全部除模，或合法尾轴整行UB Gather可摊销整行加载，批量取数更优"
+      },
+      {
+        "opportunity_id": "address",
+        "item_ids": [
+          "address-coverage-nonlast_rank2",
+          "address-coverage-last_axis",
+          "address-coverage-nonlast_highrank",
+          "address-coverage-rank1"
+        ],
+        "role": "coverage",
+        "decision_effect": "按上述语义域部分覆盖，未改变的主要工作明确保留；不以case数自动胜出",
+        "reversal_condition": "若编译器已强度削减全部除模，或合法尾轴整行UB Gather可摊销整行加载，批量取数更优"
+      },
+      {
+        "opportunity_id": "address",
+        "item_ids": [
+          "address-residual"
+        ],
+        "role": "residual",
+        "decision_effect": "随机源GM读取、逐元素guard与标量存储保留；rank1减法空间小",
+        "reversal_condition": "若编译器已强度削减全部除模，或合法尾轴整行UB Gather可摊销整行加载，批量取数更优"
+      },
+      {
+        "opportunity_id": "vector",
+        "item_ids": [
+          "vector-reduced",
+          "vector-cost"
+        ],
+        "role": "alternative",
+        "decision_effect": "最强替代：尾轴把N次标量源load/output store改为片级搬运和UB Gather；非尾轴仍N次源load；付出 UB=A(G*b)+A(T*i)+A(T*b)+A(T*offsetBytes)+Tmp+F；源行按索引片重读，非尾轴转置被暂缓；替代敏感条件：G很大或N很小时整源行加载浪费压倒收益，地址分段更优",
+        "reversal_condition": "G很大或N很小时整源行加载浪费压倒收益，地址分段更优"
+      }
+    ]
+  },
+  "previous_feedback": null,
+  "path_overview": {
+    "workload_ref": {
+      "path": "source/matrix-20.json",
+      "sha256": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1"
+    },
+    "case_ids": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20"
+    ],
+    "domains": [
+      {
+        "id": "nonlast_rank2",
+        "case_ids": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "8",
+          "9",
+          "11",
+          "16",
+          "17",
+          "18"
+        ],
+        "predicate": "nonlast_rank2（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      },
+      {
+        "id": "last_axis",
+        "case_ids": [
+          "7",
+          "20"
+        ],
+        "predicate": "last_axis（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      },
+      {
+        "id": "nonlast_highrank",
+        "case_ids": [
+          "10",
+          "12",
+          "14",
+          "15",
+          "19"
+        ],
+        "predicate": "nonlast_highrank（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      },
+      {
+        "id": "rank1",
+        "case_ids": [
+          "13"
+        ],
+        "predicate": "rank1（具体dtype/mode/rank/stride定义见case-metrics-r1.rows）",
+        "supported_scope": "完整matrix成员；host还支持未测shape/边界，收益与API不自动外推",
+        "fact_ids": [
+          "workload.matrix",
+          "source.metrics"
+        ]
+      }
+    ],
+    "stages": [
+      {
+        "id": "host",
+        "domain_ids": [
+          "nonlast_rank2",
+          "last_axis",
+          "nonlast_highrank",
+          "rank1"
+        ],
+        "fact_ids": [
+          "source.host",
+          "source.tiling"
+        ],
+        "behavior": "参数验证、shape/stride/分核与tiling；分配/H2D和输出D2H在kernel外"
+      },
+      {
+        "id": "kernel",
+        "domain_ids": [
+          "nonlast_rank2",
+          "last_axis",
+          "nonlast_highrank",
+          "rank1"
+        ],
+        "fact_ids": [
+          "source.kernel"
+        ],
+        "behavior": "Host验证同rank/非gather轴上界与index取值；按线性输出分核，逐输出读取index，rank轴除模得到源地址，再按存储位宽读取源/写出。"
+      },
+      {
+        "id": "oracle",
+        "domain_ids": [
+          "nonlast_rank2",
+          "last_axis",
+          "nonlast_highrank",
+          "rank1"
+        ],
+        "fact_ids": [
+          "source.oracle"
+        ],
+        "behavior": "读取全输出，保留原精度/特殊值/按位契约，本轮不运行"
+      }
+    ],
+    "baseline_work": [
+      {
+        "id": "base-host",
+        "stage_id": "host",
+        "domain_ids": [
+          "nonlast_rank2",
+          "last_axis",
+          "nonlast_highrank",
+          "rank1"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "qualitative",
+          "expression": "每次调用一次host tiling与kernel launch；设备核心数动态查询但本轮未查询",
+          "unit": "separate logical operations/bytes",
+          "symbols": [],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.kernel",
+            "source.tiling",
+            "workload.matrix"
+          ]
+        },
+        "explanation": "不把host墙钟当kernel热点"
+      },
+      {
+        "id": "base-kernel",
+        "stage_id": "kernel",
+        "domain_ids": [
+          "nonlast_rank2",
+          "last_axis",
+          "nonlast_highrank",
+          "rank1"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "symbolic",
+          "expression": "2*N*d",
+          "unit": "division_or_modulo operation/invocation",
+          "symbols": [
+            {
+              "name": "N",
+              "meaning": "输出元素数",
+              "unit": "element"
+            },
+            {
+              "name": "d",
+              "meaning": "当前输出或index rank",
+              "unit": "axis"
+            }
+          ],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.kernel",
+            "source.tiling",
+            "workload.matrix"
+          ]
+        },
+        "explanation": "各域具体N/d/stride/C/K与已分配字节由metrics列出，逻辑工作非时间占比"
+      },
+      {
+        "id": "base-oracle",
+        "stage_id": "oracle",
+        "domain_ids": [
+          "nonlast_rank2",
+          "last_axis",
+          "nonlast_highrank",
+          "rank1"
+        ],
+        "change": "baseline",
+        "quantity": {
+          "mode": "qualitative",
+          "expression": "完整输出元素比对；不参与目标Task时间",
+          "unit": "separate logical operations/bytes",
+          "symbols": [],
+          "basis": "source_logical",
+          "fact_ids": [
+            "source.kernel",
+            "source.tiling",
+            "workload.matrix"
+          ]
+        },
+        "explanation": "未实施未测试，不伪造passed"
+      }
+    ]
+  }
+}

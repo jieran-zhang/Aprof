@@ -1,0 +1,103 @@
+# 代码理解说明
+
+以下行号除另注外均指 `source/matmul_leakyrelu_basic_api.asc`。这是静态源码分析，无编译、运行或性能测量结果。
+
+## 1. 整体算法与数值语义
+
+输入是连续 ND 的 half 矩阵 \(A[512,128]\)、\(B[128,128]\)，输出是连续 ND 的 half 矩阵 \(C[512,128]\)。逻辑上计算无转置矩阵乘，再做 LeakyReLU；没有 bias、残差或其他缩放。
+
+但数值语义不是“FP32 激活后统一转 half”。根据 `Mmad`、`Fixpipe` 和 `LeakyRelu`（L115–127、166），应分阶段理解：
+\[
+S_{ij}=\operatorname{Mmad}_{FP32}(A_{i,:},B_{:,j}),\quad
+H_{ij}=\operatorname{half}(S_{ij}),
+\]
+\[
+C_{ij}=\operatorname{LeakyRelu}_{half}(H_{ij},\alpha),\qquad
+\alpha=\operatorname{half}(0.001).
+\]
+对通常有限值，非负值保留，负值乘 half 表示的斜率。L0C 为 float，先经 `F322F16` 转成 half 写入 GM，随后向量侧以 half 原地激活。因此中间 half 舍入及斜率量化会影响结果；不能视为对精确矩阵乘直接应用实数斜率 0.001。具体乘加归约顺序、舍入细节及 NaN、非正规数等特殊值行为，源码未充分定义。
+
+## 2. Host 调用与实际任务划分
+
+`main` 将全部维度作为编译期模板参数传入，无运行时 tiling 数据或 workspace（L197–243）。文件输入、H2D、kernel、流同步、D2H 和输出文件依次执行（L223–247）。
+
+分配大小为：
+- A：65536 个 half，131072 B，即 128 KiB；
+- B：16384 个 half，32768 B，即 32 KiB；
+- C：65536 个 half，128 KiB。
+
+`numBlocks=(512/256)*(128/128)=2`（L215）。入口 `mmad_vec_custom` 使用 `__mix__(1,2)`（L188），结合本题平台/API模型及源码注释，形成 **2 个 AIC 任务、4 个 AIV 任务**，每个 Cube 对应两个 Vector；这不是启动 6 个独立 grid block，也不表示占满整片芯片。
+
+`Init` 的 GlobalTensor 偏移以 **half 元素**为单位（L33–44）：
+
+| 分支及本类核索引 | 输入/输出范围 |
+|---|---|
+| AIC 0 | A 行 0–255；生成 C 行 0–255 |
+| AIC 1 | A 行 256–511；生成 C 行 256–511 |
+| AIV 0、1 | 分别激活 C 行 0–127、128–255 |
+| AIV 2、3 | 分别激活 C 行 256–383、384–511 |
+
+所有任务均覆盖全部 128 列。两 AIC 的 A、C 基址偏移分别为 0、32768 half，即 0、65536 B；B 不偏移，每个 AIC 都读取完整 B。AIV 先用 `GetBlockIdx()/2` 选 Cube 输出，再以奇偶索引选择半块（L44、150）。最终全局偏移是 0、16384、32768、49152 half，对应字节偏移 0、32768、65536、98304。
+
+本 workload 下单核尺寸等于 base tile，K 也恰好全部覆盖，因此每个 AIC 只算一个 \(256\times128\) 输出块，每个 AIV 只处理一个 \(128\times128\) 半块；无外层 M/N/K tile 循环，也无尾块。
+
+## 3. 搬运、排布与计算路径
+
+### AIC：ND → NZ → Cube 输入 → FP32 累加 → half ND
+
+L52–61 每个 AIC 独立申请：
+
+| 存储 | 类型、元素数与容量 | 排布/用途 |
+|---|---|---|
+| L1 A | half，32768，64 KiB | NZ |
+| L1 B | half，16384，32 KiB | NZ |
+| L0A | half，32768，64 KiB | 2201 上 Zz |
+| L0B | half，16384，32 KiB | Zn |
+| L0C | float，32768，128 KiB | 矩阵累加布局，Fixpipe 按 NZ 转出 |
+
+这些是各存储空间的局部张量，不是同一块内存复用。L1 合计申请 96 KiB；源码为单份缓冲，无显式双缓冲。
+
+1. **GM→L1**（L65、68）：两次 `DataCopy + Nd2NzParams` 分别读 A 的 `[256,128]` 和 B 的 `[128,128]`，源行距均为 128 个 half，转为 NZ。ND 输入并非已经按 Cube 块预排布。
+
+2. **L1→L0，实际采用 2201 分支**（L75–91）：
+   - A 循环 `baseM/16=16` 次，每次 `repeatTimes=8`、`srcStride=16`，不转置。第 i 次源偏移 `i*512/sizeof(half)=i*256` 个 half，即 i×512 B；目的偏移 `i*128*16=i*2048` 个 half，即 i×4096 B。每次装载八个 16×16 块，最终形成 Zz。
+   - B 循环 `baseK/16=8` 次，每次重复 8 次、源步长 8，转置标志为 true；源、目的偏移分别同样按 i×512 B、i×4096 B 递增，形成 Zn。
+
+   `LoadData` 的 repeat/stride 按接口的矩阵块单位解释，不是逐元素步长。B 的转置标志服务于 L0B 物理布局转换，不意味着逻辑上计算 \(AB^T\)。
+
+3. **矩阵计算**（L115）：每 AIC 发出一次 `Mmad(256,128,128,...)`，half 输入、float 累加。`cmatrixInitVal=true` 表示此次从初始化累加值开始，不依赖旧 L0C；虽然注释写“K方向累加”，源码没有分段 K 循环，完整 K=128 由一次接口调用覆盖。
+
+4. **L0C→GM**（L125–127）：`Fixpipe` 的 `nSize=128,mSize=256,srcStride=256,dstStride=128`，关闭 ReLU，以 `F322F16` 同时转换类型及 NZ→ND 布局，写出 64 KiB half 中间结果。
+
+### AIV：GM → UB → 激活 → 原址 GM
+
+每 AIV 在 UB 申请 16384 个 half，即 32 KiB（L133–138）。`LeakyReluCompute` 的 `mIndex=nIndex=0`，`tileLen=16384`。
+
+L146–158 中：
+- `blockLen=128*sizeof(half)=256 B`；
+- `blockCount=128` 行；
+- GM 行间额外间隔 `(N-baseN)*2=0 B`，UB 侧间隔也为 0。
+
+所以每次搬运实际覆盖连续 32 KiB，无行洞。虽设置 `isPad=true`，左右 padding 都为 0，本次没有额外填充值。激活在 UB 原地执行，再按同样行参数写回原 C 区间（L166–176）。两 AIV 写区互不重叠，不需要原子操作。
+
+## 4. 依赖与 910C 执行行为
+
+按平台/API知识，搬运、Cube、Vector 分属不同流水，不能只用 C++ 调用先后替代跨流水依赖。源码建立了完整链路：
+
+1. `MTE2_MTE1`（L72–73）：A/B 的 GM→L1 完成后，MTE1 才读取 L1。
+2. `MTE1_M`（L110–111）：L0A/L0B 装载完成后，矩阵流水读取输入。
+3. `M_FIX`（L119–120）：Mmad 完成后，FIX 才读取 L0C。
+4. `CrossCoreSetFlag<0x2,PIPE_FIX>(0)` 与 AIV 的 `CrossCoreWaitFlag<0x2>(0)`（L129、136）：按混合核配对机制，使对应两个 AIV 等到该 Cube 的 Fixpipe 写回后再读取 C。它不是所有核的全局屏障。
+5. `MTE2_V`（L162–163）：GM→UB 完成后开始向量激活。
+6. `V_MTE3`（L170–171）：激活完成后写回 GM。
+7. kernel 末尾 `PipeBarrier<PIPE_ALL>()` 收束本核流水（L194）；host 的 `aclrtSynchronizeStream` 完成后才 D2H（L244–246）。
+
+各 HardEvent 虽使用同一个 `EVENT_ID0`，但事件类别不同且成对使用。AIC 写回与 AIV 原址覆盖由跨核事件隔开；不同 Cube 和不同 AIV 的输出区域不相交。
+
+因此在 910C 上，这是利用 MTE2/MTE1、Cube、FIX、Vector、MTE3 协作的混合核实现，**不是结果一直驻留片上的融合**：矩阵结果必须先写 GM，再由 AIV 读入 UB，最后再次写 GM。各任务之间实际重叠、缓存命中、流水利用率及耗时瓶颈，不能仅凭源码确认。
+
+## 5. 适用边界与非活动分支
+
+- 实际 device 宏为 `__NPU_ARCH__=2201`，执行上述两组 `LoadData2DParams` 循环。L92–106 的 3510/V2 分支只是非活动源码对照，不能用于解释本次 L0A 排布或调用次数；host 代码没有相应 `NPU_ARCH` 分派。
+- 当前维度全部满足 16 对齐且整除，代码没有掩码、越界判断或尾块路径。模板参数不意味着一般矩阵均被支持：核偏移只沿 M，`singleCoreK` 未参与计算，且无完整的多 tile 调度。
+- `data_utils.h:L25–61` 检查文件非空且不超过缓冲区，但不保证大小恰好等于预期；main 也未检查文件及 ACL 调用返回值。上述完整输入输出语义以文件尺寸正确、运行时调用成功为前提。

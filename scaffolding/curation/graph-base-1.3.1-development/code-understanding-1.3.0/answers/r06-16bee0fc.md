@@ -1,0 +1,23 @@
+> 阅读副本：只将临时源码链接改为包内位置，正文判断未改。[保留原文](r06-16bee0fc.txt)。本题[源码与任务](../checks/sources/evaluation/public/case-04/workload/task.md)。
+
+该实现计算矩阵乘后接 LeakyRelu：A 为 half、连续 ND 的 [512,128]，B 为 half、连续 ND 的 [128,128]，输出 C 为 half、连续 ND 的 [512,128]。数学目标是 S[m,n]=Σₖ₌₀¹²⁷A[m,k]B[k,n]，再对 S 的非负值保持不变、负值乘以 0.001。实际数值路径更具体：Cube 用 half 输入、float 累加；Fixpipe 先以 F322F16（CAST_RINT）将结果转成 half；Vector 再对这个 half 中间结果执行 LeakyRelu，斜率也是 `(half)0.001`。因此存在激活前的 half 舍入，不能直接视为全程 float 计算后仅在末尾转 half。依据为 `source/matmul_leakyrelu_basic_api.asc:115、125—127、166`，以及 shared/rawdocs 中的 `Mmad.md`、`Fixpipe_L0CToGM.md` 表4和 `LeakyRelu.md`。
+
+host、参数和 kernel 都在这个 .asc 文件中，没有独立的运行时 tiling 结构。main 的九个 constexpr 参数通过模板实例化进入 kernel：singleCoreM=baseM=256，singleCoreK=baseK=128，singleCoreN=baseN=128。启动数为 (512/256)×(128/128)=2；`__mix__(1,2)` 表示每个组合包含一个 AIC、两个 AIV，所以本次使用两个 Cube 核、四个 Vector 核（源码:188、200—215、242—243）。这不是芯片物理总核数。`singleCoreK` 没有参与实际地址或循环，`singleCoreN` 参与启动数计算；实现没有遍历多个 M/N/K tile，每个 AIC 只执行一次完整 K=128 的 Mmad。
+
+AIC 逻辑编号 p=0、1，各负责输出行 [256p,256p+255]、全部128列。Init 将 A 和 C 的基址分别偏移 p×256×128 个 half，即 p×32768 元素或 p×65536字节，B 基址不变。因此两核分别读取 A 的前后半部，各自读取完整 B，输出区域独立，既不沿 K 拆分，也无需核间归约。AIV 的 GetBlockIdx 返回逻辑编号 q=0…3，不能与组合内共享的底层 block_idx 混淆；固定文档 `simd_builtin_keywords.md:479—502` 给出了这种映射。AIV 先按 q/2 定位所属 Cube 输出，再按 q%2 选择其中128行。最终四核分别处理行0—127、128—255、256—383、384—511；相对整个 C 的起点为0、16384、32768、49152个 half，即0、32768、65536、98304字节（源码:37—45、150）。
+
+AIC 的数据流是 GM→L1→L0A/L0B→Cube→L0C→GM。LocalMemAllocator 的 Alloc 参数按元素计：a1Local 和 a2Local 各32768个 half，占65536字节；b1Local 和 b2Local 各16384个 half，占32768字节；cLocal 为32768个 float，占131072字节。a1、b1 按申请顺序占同一个 L1 的不同区域，合计98304字节；L0A、L0B、L0C 则是不同物理存储。这是源码显式申请量，不包含未展示的框架预留，也没有双缓冲或队列轮转（源码:52—61；API `Alloc.md`）。
+
+两次 DataCopy 用 Nd2NzParams 完成 GM ND→L1 NZ。A 参数为 `{1,256,128,0,128,256,1,0}`，B 为 `{1,128,128,0,128,128,1,0}`：各搬一个矩阵，GM 行跨度都是128元素；目的相邻16列条带起点距离分别为256×32=8192字节、128×32=4096字节，条带内相邻行距离32字节。这里 dstNzC0Stride、dstNzNStride 的单位是32字节，而 srcDValue 是元素数。所有维度均为16的倍数，不需要补齐有效矩阵。按16×16分形描述，A 的 L1 NZ 为 [8,16,16,16]，B 为 [8,8,16,16]；每个 half 分形256元素、512字节（源码:65—68；API `DataCopy_GMToL1_ND2NZ.md`）。
+
+本题选择2201的 LoadData 分支（源码:75—91）。A 循环16次，第 i 次从 a1 的 i×256元素处开始，重复8次，源起点步长16×512=8192字节；目的从 a2 的 i×2048元素处开始连续放置8个分形。它把分形顺序从“先 K 块、后 M 块”改成“先 M 块、后 K 块”，得到 L0A 的 ZZ [16,8,16,16]，分形内部不转置。B 循环8次，第 i 次从 b1 的 i×256元素处开始，重复8次，源起点步长8×512=4096字节，目的从 b2 的 i×2048元素处连续写入。其 ifTranspose=true 转置每个16×16分形，得到 L0B 的 ZN；这改变物理排布，不把数学运算变成 A×Bᵀ。LoadData 的 srcStride 是分形起点间距，dstGap=0 则表示目的分形连续，二者含义不同（API `LoadData_2D.md`）。
+
+Mmad 参数 `{256,128,128,0,false,true}` 对这两个局部矩阵执行一次乘法；cmatrixInitVal=true 将累加初值置零，cmatrixSource=false 不引入 BT Buffer 偏置，因此无需读取旧 C。结果是 L0C 中的 float NZ，按16×16分形为 [8,16,16,16]，每个分形1024字节。随后 Fixpipe 将整个256×128结果转换为 GM half ND。其 srcStride=256 的单位是16×sizeof(float)=64字节，故相邻16列条带起点相隔16384字节；dstStride=128 在 NZ2ND 路径中按目的元素计，故 GM 行跨度256字节。ndNum=1，两个矩阵间 stride 均不生效；reluEn=false 保留负值供后续 LeakyRelu 使用。Mmad 和 Fixpipe 的 unitFlag 都为0，未启用分形级细粒度协作（源码:115—129；API `Mmad.md`、`Fixpipe_L0CToGM.md`）。
+
+每个 AIV 仅申请一个16384元素、32768字节的 half UB tensor。LeakyReluCompute 的 mIndex=nIndex=0，tileLen=16384。GM→UB 的 DataCopyPad 参数是 blockCount=128、blockLen=128×2=256字节、srcStride=(128−128)×2=0字节、dstStride=0个32字节块，恰好搬128行、32768字节。虽然 isPad=true，但左右 padding 都为0，且每行256字节已经对齐，不增加额外数据。Vector 在这个 UB 上原地激活，再以同样128块、每块256字节写回原 GM 区域；回写时 srcStride 按 UB 的32字节块计，dstStride 按 GM 字节计，本次均为0。因此 C 同时充当跨核中间结果区和最终输出，不另设 workspace（源码:133—176；API 两份 `DataCopyPad` 方向文档）。
+
+依赖链由显式同步建立。AIC 的 MTE2_MTE1 事件保证两次 GM→L1 搬运完成后才执行 LoadData；MTE1_M 保证 L0A/L0B 就绪后才进行矩阵计算；M_FIX 保证 L0C 结果完成后 FIX 才读取。随后 `CrossCoreSetFlag<2,PIPE_FIX>(0)` 在当前 AIC 前序 FIX 写回完成后通知同组两个 AIV。两者均先执行 `CrossCoreWaitFlag<2>(0)`，再读取 GM，因而不会读到尚未写完的中间结果。mode 2 是组内 AIC/AIV 同步，不要求两个 AIC 全局互等；A3 上 Wait 的模板参数不作为硬件指令输入，它阻塞全部流水后续指令下发（API `CrossCoreSetFlag_ISASI.md`、`CrossCoreWaitFlag_ISASI.md` 的 A3 分区）。AIV 内再以 MTE2_V 保护读入→激活，以 V_MTE3 保护激活→写回。每块只处理一次，没有下一轮覆盖局部 buffer，也没有 AIC 再次覆盖已交给 AIV 的 GM tile，因此这里没有反向通知。入口最后的 PIPE_ALL 屏障收束本核流水；host 的流同步保证 kernel 完成后才复制最终结果（源码:72—73、110—120、129—171、194、244—247）。
+
+910C/Atlas A3 的2201模型中 AIC 与 AIV 分离，各自执行控制和计算，通过 GM 交接本例中间值；不能把 L0C 和 AIV UB 当成共享片上内存。以上路径分别由 MTE2、MTE1、M、FIX，以及 AIV 的 MTE2、V、MTE3 执行。源码3510分支使用 LoadData2DParamsV2，且其 A 布局注释为 NZ，只作其他平台实现对照，本次不执行，不能混入2201布局解释。流水具备异步执行能力，但本材料只能证明依赖关系，不能证明实际重叠比例或耗时。
+
+host 为 A、B、C 分别申请131072、32768、131072字节，从两个输入文件复制到设备，最终写出 output.bin，并释放资源（源码:212—258）。这些结论以题面完整合法输入、资源与 API 调用成功为前提；`data_utils.h:25—61` 的 ReadFile 会接受短文件并改写 fileSize，而 main 未检查返回值，因此代码本身并未完整校验输入契约。材料未提供具体输入值、编译产物或设备观测，不能据此给出实际输出数值、浮点逐位结果或性能结论；其覆盖范围也依赖本题给定的整除关系，不能从模板形式推定已支持任意形状。

@@ -1,0 +1,56 @@
+{
+  "reviewed_at_utc": "2026-10-21T04:20:54.612297+00:00",
+  "scope": "15 source-only cases; no hardware/history fixtures/network/build",
+  "open_blocking_defects": 0,
+  "fixed_blocking_defects": 1,
+  "important_limitations_open_at_review": 3,
+  "issues": [
+    {
+      "id": "R1",
+      "priority": 1,
+      "category": "blocking_defect",
+      "status": "fixed_and_independently_reverified",
+      "title": "性能预测kind可绕过not_measured反馈保护",
+      "file": "runtime/src/aprof_runtime/action_decision.py",
+      "line": 105,
+      "repro": "原case13临时副本：o1-perf.kind改source_work，性能假设仍引用o1-perf；R2 supported引用静态证据。旧代码接受。修复后当前/前轮双改与仅前轮修改均拒绝，原R2仍conditional。"
+    },
+    {
+      "id": "R2",
+      "priority": 2,
+      "category": "important_limitation",
+      "status": "open_at_review",
+      "title": "C组true constraint的证据locator指向标题",
+      "file": "/tmp/aprof-raw15-autonomous-c/case-13/R2-reasoning.json",
+      "line": 349,
+      "fields": [
+        "facts.constraint.semantic_equivalence.ref.locator",
+        "facts.constraint.output_ownership.ref.locator"
+      ],
+      "scope": "case11-15 R1/R2和内嵌evidence同类",
+      "repro": "按lines:1读取R1-analysis.md，只有文档标题；证明位于后续正文/condition-audit，需精确绑定。"
+    },
+    {
+      "id": "R3",
+      "priority": 2,
+      "category": "important_limitation",
+      "status": "open_at_review",
+      "title": "Transpose矩形输出逻辑独占尚未证明物理写独占",
+      "file": "/tmp/aprof-raw15-autonomous-c/case-14/R1-analysis.md",
+      "line": 21,
+      "repro": "原case7 1023x1023 fp16，行宽2046B；16或32列矩形边界不会天然满足目标物理写粒度。transpose正文53行明确要求边界物理块独占。当前unknown仅指局部Transpose/Gather，需补搬出/owner合法性。"
+    },
+    {
+      "id": "R4",
+      "priority": 2,
+      "category": "important_limitation",
+      "status": "open_at_review",
+      "title": "RoPE/Resize完整semantic_equivalence true与numeric_order unknown不一致",
+      "file": "/tmp/aprof-raw15-autonomous-c/case-13/condition-audit.json",
+      "line": 5,
+      "scope": "case13与case15",
+      "repro": "condition-audit明确只证表达式映射且数值舍入/特殊值仍unknown，policy完整semantic_equivalence含这些性质。建议完整谓词unknown，保留已证地址/运算序列事实。"
+    }
+  ],
+  "review_sha256": "ff118aad4ac373c3d17be644bcac5a6111cd4807d4da30df07c0e961b00f0b8b"
+}

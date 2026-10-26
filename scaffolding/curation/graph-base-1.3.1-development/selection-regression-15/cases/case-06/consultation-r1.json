@@ -1,0 +1,172 @@
+{
+  "task_id": "case-06",
+  "round": 1,
+  "consultations": [
+    {
+      "instance_id": "address-r1",
+      "owner": "parallel-planning",
+      "route_ref": {
+        "path": "address-r1-parallel-planning-route.json",
+        "sha256": "sha256:d9d0b55fa4abf1e2395ebfe0cee5d7d8a048ffa573f195750143966d5e480a38"
+      },
+      "mode": "conditional_consultation",
+      "consulted_document_refs": [
+        {
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+          "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+        }
+      ],
+      "consultation_limits": "正文用于机会比较与条件方案；只有route_ref内的可路由候选可进入该实例正式选择；partial适用见knowledge_use。本轮无P/O叶子正式采用或实现。",
+      "plan_status": "extract_existing_or_replan; no prior confirmed plan; no KEEP",
+      "implementation": "not_implemented"
+    },
+    {
+      "instance_id": "address-r1",
+      "owner": "optimization",
+      "route_ref": {
+        "path": "address-r1-optimization-route.json",
+        "sha256": "sha256:500b91109e3c02feae15e0ef0c80bb4bd95c29b655d50616853428d5e09f502a"
+      },
+      "mode": "conditional_consultation",
+      "consulted_document_refs": [
+        {
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+          "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+        }
+      ],
+      "consultation_limits": "正文用于机会比较与条件方案；只有route_ref内的可路由候选可进入该实例正式选择；partial适用见knowledge_use。本轮无P/O叶子正式采用或实现。",
+      "plan_status": "extract_existing_or_replan; no prior confirmed plan; no KEEP",
+      "implementation": "not_implemented"
+    },
+    {
+      "instance_id": "vector-r1",
+      "owner": "parallel-planning",
+      "route_ref": {
+        "path": "vector-r1-parallel-planning-route.json",
+        "sha256": "sha256:d9d0b55fa4abf1e2395ebfe0cee5d7d8a048ffa573f195750143966d5e480a38"
+      },
+      "mode": "conditional_consultation",
+      "consulted_document_refs": [
+        {
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+          "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+        }
+      ],
+      "consultation_limits": "正文用于机会比较与条件方案；只有route_ref内的可路由候选可进入该实例正式选择；partial适用见knowledge_use。本轮无P/O叶子正式采用或实现。",
+      "plan_status": "extract_existing_or_replan; no prior confirmed plan; no KEEP",
+      "implementation": "not_implemented"
+    },
+    {
+      "instance_id": "vector-r1",
+      "owner": "optimization",
+      "route_ref": {
+        "path": "vector-r1-optimization-route.json",
+        "sha256": "sha256:5c031491fa717184985aaa1b9f88ea8b53eebf86dfa5856c3c3b0e0ddf099936"
+      },
+      "mode": "conditional_consultation",
+      "consulted_document_refs": [
+        {
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+          "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+        }
+      ],
+      "consultation_limits": "正文用于机会比较与条件方案；只有route_ref内的可路由候选可进入该实例正式选择；partial适用见knowledge_use。本轮无P/O叶子正式采用或实现。",
+      "plan_status": "extract_existing_or_replan; no prior confirmed plan; no KEEP",
+      "implementation": "not_implemented"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "address",
+        "vector"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+        "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+      },
+      "locator": "lines:85-126",
+      "effect_kind": "plan",
+      "before": "从原源码识别 Host验证同rank/非gather轴上界与index取值；按线性输出分核，逐输出读取index，rank轴除模得到源地址，再按存储位宽读取源/写出。",
+      "after": "非gather轴长度可能不等，不能直接用P/Q当X跨度；保留按输出owner与尾轴/非尾轴不同成本",
+      "applicability": "partial：该模板完整Gather语义匹配，当前只采用scalar/尾轴方案，拒绝未预算的transpose workspace"
+    },
+    {
+      "opportunity_ids": [
+        "address"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+        "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+      },
+      "locator": "lines:57-107",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host验证同rank/非gather轴上界与index取值；按线性输出分核，逐输出读取index，rank轴除模得到源地址，再按存储位宽读取源/写出。",
+      "after": "把公共前缀放到最小段外层并保留原访问序列，不只复制tiling大结构",
+      "applicability": "full：规则最内轴段地址控制；动态index部分不外提"
+    },
+    {
+      "opportunity_ids": [
+        "vector"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+        "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+      },
+      "locator": "lines:90-131",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host验证同rank/非gather轴上界与index取值；按线性输出分核，逐输出读取index，rank轴除模得到源地址，再按存储位宽读取源/写出。",
+      "after": "批量vector仍需同宽offset和API范围，不能以连续输出推断连续source",
+      "applicability": "partial：UB侧批量原则；不提供通用GM Gather"
+    },
+    {
+      "opportunity_ids": [
+        "address"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+        "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+      },
+      "locator": "lines:297-432",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host验证同rank/非gather轴上界与index取值；按线性输出分核，逐输出读取index，rank轴除模得到源地址，再按存储位宽读取源/写出。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；循环不变字段或公共地址前缀在每轮重复加载/计算",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    },
+    {
+      "opportunity_ids": [
+        "vector"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+        "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+      },
+      "locator": "lines:279-414",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host验证同rank/非gather轴上界与index取值；按线性输出分核，逐输出读取index，rank轴除模得到源地址，再按存储位宽读取源/写出。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；本可按向量表达的元素处理使用逐元素Scalar访存或算术",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    },
+    {
+      "opportunity_ids": [
+        "address"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.noncontiguous_access.md",
+        "sha256": "sha256:89cd601e45b350d46f05b9f8387abe0e9e91ecbc264e2c6a5e365ddb509b34db"
+      },
+      "locator": "lines:316-458",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host验证同rank/非gather轴上界与index取值；按线性输出分核，逐输出读取index，rank轴除模得到源地址，再按存储位宽读取源/写出。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；切分或遍历轴跨过物理连续内轴",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    }
+  ],
+  "selected_intent_gap": null
+}

@@ -1,0 +1,290 @@
+{
+  "schema": "aprof.code-understanding-gold/v1",
+  "case": "case-03",
+  "title_private": "Dispatch and broadcast: logical tiling versus actual FP16 address route",
+  "max_score": 30,
+  "dimensions": {
+    "algorithm_strategy": 10,
+    "execution": 10,
+    "hardware": 10
+  },
+  "facts": [
+    {
+      "id": "CU03.A01",
+      "dimension": "algorithm_strategy",
+      "points": 4,
+      "expected": "The requested operation is elementwise maximum with right-aligned broadcast. For P/Q, intended x2 indices are [0,0,0,1,1,1] and the mathematical finite-value result is [3,4,8,7,7,9]. R repeats [3,7,6] across rows and its ideal result is [3,7,8,3,7,9]. Semantic broadcast alone does not prove the selected implementation.",
+      "sources": [
+        {
+          "file": "case-03/source/op_kernel/maximum_tiling.h",
+          "line_start": 40,
+          "line_end": 51,
+          "sha256": "f697d7fc66e5feeec035befd329429a896fb1538f3434f2ede13baa3118b362e"
+        },
+        {
+          "file": "case-03/source/op_kernel/maximum_kernel.asc",
+          "line_start": 136,
+          "line_end": 140,
+          "sha256": "069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU03.A02",
+      "dimension": "algorithm_strategy",
+      "points": 3,
+      "expected": "P and R dispatch to KernelMaximumHalfLastAxisBroadcast because dtype is half and sameShape is false. Q dispatches to MaximumScalar<float>. The FP16 dispatch does not validate that only an innermost contiguous x2 row is broadcast.",
+      "sources": [
+        {
+          "file": "case-03/source/op_kernel/maximum_kernel.asc",
+          "line_start": 156,
+          "line_end": 157,
+          "sha256": "069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e"
+        },
+        {
+          "file": "case-03/source/op_kernel/maximum_kernel.asc",
+          "line_start": 158,
+          "line_end": 162,
+          "sha256": "069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU03.A03",
+      "dimension": "algorithm_strategy",
+      "points": 3,
+      "expected": "Same-shape types except int64 use vector KernelMaximumSame. BF16 uses FP32 cast/max/cast; int8 stages through half and float. Int64 always uses scalar, including same shape. Other non-half broadcasts use the stride-based scalar path.",
+      "sources": [
+        {
+          "file": "case-03/source/op_kernel/maximum_kernel.asc",
+          "line_start": 44,
+          "line_end": 61,
+          "sha256": "069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e"
+        },
+        {
+          "file": "case-03/source/op_kernel/maximum_kernel.asc",
+          "line_start": 156,
+          "line_end": 173,
+          "sha256": "069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU03.E01",
+      "dimension": "execution",
+      "points": 4,
+      "expected": "All three tilings have output shape [2,3], rank=2, totalLength=6, sameShape=0, blockNum=1, blockLength=6, tileElements=4096. x1Stride=[3,1]; P/Q x2Stride=[1,0]; R x2Stride=[0,1]. Host allocations use actual input element products.",
+      "sources": [
+        {
+          "file": "case-03/source/op_kernel/maximum_tiling.h",
+          "line_start": 47,
+          "line_end": 48,
+          "sha256": "f697d7fc66e5feeec035befd329429a896fb1538f3434f2ede13baa3118b362e"
+        },
+        {
+          "file": "case-03/source/op_kernel/maximum_tiling.h",
+          "line_start": 51,
+          "line_end": 55,
+          "sha256": "f697d7fc66e5feeec035befd329429a896fb1538f3434f2ede13baa3118b362e"
+        },
+        {
+          "file": "case-03/source/op_host/maximum.asc",
+          "line_start": 44,
+          "line_end": 48,
+          "sha256": "ec9a6b580b6b9623132633a700dd63398757a46da2fd8fceb7da65e5ecdda05f"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU03.E02",
+      "dimension": "execution",
+      "points": 4,
+      "expected": "P specialized path sets row_=3, processes off=0 then 3, and copies count=3 half elements from x2_[off%3]=x2_[0] both times. Actual x2 addresses are indices [0,1,2] per row, not the logical stride mapping. The third half is beyond the 2-element (4-byte) host allocation: requested read [0,6) includes bytes [4,6) outside the allocation.",
+      "sources": [
+        {
+          "file": "case-03/source/op_kernel/maximum_kernel.asc",
+          "line_start": 90,
+          "line_end": 92,
+          "sha256": "069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e"
+        },
+        {
+          "file": "case-03/source/op_kernel/maximum_kernel.asc",
+          "line_start": 103,
+          "line_end": 110,
+          "sha256": "069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e"
+        },
+        {
+          "file": "case-03/source/op_host/maximum.asc",
+          "line_start": 44,
+          "line_end": 44,
+          "sha256": "ec9a6b580b6b9623132633a700dd63398757a46da2fd8fceb7da65e5ecdda05f"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "half=2 bytes; x2 read index 2 is outside its physical allocation."
+    },
+    {
+      "id": "CU03.E03",
+      "dimension": "execution",
+      "points": 2,
+      "expected": "Q reconstructs output coordinates with outShape and zero broadcast strides, obtaining the intended P/Q mapping. R specialized copying [0,1,2] each row fits the actual 3-element x2 allocation and agrees with the supplied finite-value semantic result.",
+      "sources": [
+        {
+          "file": "case-03/source/op_kernel/maximum_kernel.asc",
+          "line_start": 134,
+          "line_end": 142,
+          "sha256": "069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e"
+        },
+        {
+          "file": "case-03/source/op_kernel/maximum_kernel.asc",
+          "line_start": 110,
+          "line_end": 110,
+          "sha256": "069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU03.H01",
+      "dimension": "hardware",
+      "points": 3,
+      "expected": "P/R explicitly copy GM->UB on MTE2, use vector Max on V, then copy UB->GM on MTE3 through queues. Q uses scalar index arithmetic and scalar GM loads/comparison/store in this source; it does not invoke vector Max for the broadcast.",
+      "sources": [
+        {
+          "file": "case-03/source/op_kernel/maximum_kernel.asc",
+          "line_start": 82,
+          "line_end": 117,
+          "sha256": "069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e"
+        },
+        {
+          "file": "case-03/source/op_kernel/maximum_kernel.asc",
+          "line_start": 142,
+          "line_end": 148,
+          "sha256": "069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU03.H02",
+      "dimension": "hardware",
+      "points": 3,
+      "expected": "SetGlobalBuffer(x2,row_=3) is a tensor view/length assignment, not a host allocation or a broadcast materialization. The current P mismatch is established by concrete requested copy addresses and host bytes, independent of whether a particular device visibly errors.",
+      "sources": [
+        {
+          "file": "case-03/source/op_kernel/maximum_kernel.asc",
+          "line_start": 92,
+          "line_end": 92,
+          "sha256": "069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e"
+        },
+        {
+          "file": "case-03/source/op_host/maximum.asc",
+          "line_start": 44,
+          "line_end": 44,
+          "sha256": "ec9a6b580b6b9623132633a700dd63398757a46da2fd8fceb7da65e5ecdda05f"
+        },
+        {
+          "file": "case-03/source/op_host/maximum.asc",
+          "line_start": 52,
+          "line_end": 52,
+          "sha256": "ec9a6b580b6b9623132633a700dd63398757a46da2fd8fceb7da65e5ecdda05f"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU03.H03",
+      "dimension": "hardware",
+      "points": 2,
+      "expected": "P/R allocate three half queue slots, 4096*2 bytes each, explicit total 24576 bytes. They operate only count=3 per row; queue storage/tail padding does not enlarge GM x2 allocation or fix broadcast semantics.",
+      "sources": [
+        {
+          "file": "case-03/source/op_kernel/maximum_kernel.asc",
+          "line_start": 95,
+          "line_end": 97,
+          "sha256": "069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB.md",
+          "line_start": 131,
+          "line_end": 131,
+          "sha256": "8fd9166a39e7ab163695f1d965ad633725afa1c60cff08708b439f58f2a646ee"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU03.H04",
+      "dimension": "hardware",
+      "points": 2,
+      "expected": "No single defined complete P hardware output is supported after the out-of-allocation request. A source-level wrong/missing broadcast guarantee and invalid address range can be concluded; actual exception, hang, adjacent memory content or numerical output requires evidence not present.",
+      "sources": [
+        {
+          "file": "case-03/source/op_kernel/maximum_kernel.asc",
+          "line_start": 110,
+          "line_end": 110,
+          "sha256": "069fb4d2e2a15a547d35afa4a55a6ca70ffa5db4427bae80f7a209bfa58f1e9e"
+        },
+        {
+          "file": "case-03/source/op_host/maximum.asc",
+          "line_start": 44,
+          "line_end": 44,
+          "sha256": "ec9a6b580b6b9623132633a700dd63398757a46da2fd8fceb7da65e5ecdda05f"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    }
+  ],
+  "critical_errors": [
+    {
+      "id": "CU03.C01",
+      "dimension": "algorithm_strategy",
+      "cap": 2,
+      "explicit_claim_trigger": "Claims P is correct because NumPy broadcasting or host strides are correct, without tracing the selected half path.",
+      "omission_does_not_trigger": true
+    },
+    {
+      "id": "CU03.C02",
+      "dimension": "execution",
+      "cap": 2,
+      "explicit_claim_trigger": "Claims P x2 actually repeats each row scalar [0,0,0,1,1,1].",
+      "omission_does_not_trigger": true
+    },
+    {
+      "id": "CU03.C03",
+      "dimension": "hardware",
+      "cap": 2,
+      "explicit_claim_trigger": "Invents a deterministic complete P output or asserts a measured device crash/hang without runtime evidence.",
+      "omission_does_not_trigger": true
+    }
+  ],
+  "acceptable_unknowns": [
+    "The OOB read may or may not produce a visible hardware fault; no outcome is prescribed.",
+    "NaN/tie/signed-zero semantics beyond these finite inputs are not required.",
+    "May state a specialized precondition mismatch without proposing a fix."
+  ],
+  "grading": "Use private/GRADING_PROTOCOL.md; do not infer unsupported measurements or penalize brevity."
+}

@@ -1,0 +1,67 @@
+{
+  "answer_id": "answer-5c8e4f431110",
+  "case": "case-04",
+  "facts": [
+    {
+      "id": "CU04.A01",
+      "status": "correct",
+      "rationale": "完整说明矩阵乘后接斜率约0.001的LeakyReLU，以及half输入、float L0C累加、Fixpipe先转half、half激活的实际顺序；后文明确没有bias。与冻结事实一致。",
+      "answer_span": "该程序计算矩阵乘后接 LeakyReLU。输入 A、B 均为连续 ND 的 half，形状分别为 [512,128]、[128,128]，输出 Y 为 [512,128] 的 half ND。数学目标为 S[m,n]=ΣₖA[m,k]B[k,n]，非负结果保持，负结果乘以 0.001。实际数值顺序更具体：Cube 以 half 输入、float 累加得到 S，Fixpipe 先按 CAST_RINT 转成 half 中间值 T，再由 half LeakyRelu 处理 T，最终输出 half。因此激活判断和乘法发生在第一次 half 转换之后；斜率也先转换成 half，约为 0.00100040436，不能将其等同于在完整 float 结果上激活后只转换一次。"
+    },
+    {
+      "id": "CU04.A02",
+      "status": "correct",
+      "rationale": "明确__mix__(1,2)对应两个AIC和四个AIV，两个AIC沿M处理互不重叠的256×128输出块并使用完整K；后文说明每个对应AIV处理半块。",
+      "answer_span": "启动数为 (512/256)×(128/128)=2，kernel 声明 __mix__(1,2)（188行），所以对应2个 AIC 和4个 AIV，而不是总共两个执行核。本地 simd_builtin_keywords.md 规定混合场景下 GetBlockIdx 返回逻辑编号：AIC 为 b=0、1，AIV 为 v=0、1、2、3，后者对应组合编号 floor(v/2) 和组合内编号 v%2。Init（31—45行）据此让 AIC 沿 M 分工：b=0 读取 A 的0—255行并生成输出0—255行，b=1 读取256—511行并生成输出256—511行；A 和 C 的起点均为 b×32768 个 half，即 b×65536 B。两个 AIC 都读取完整 B，未沿 K 切分，也不交换部分和。"
+    },
+    {
+      "id": "CU04.A03",
+      "status": "correct",
+      "rationale": "明确每个AIC只有一个输出tile、K=128一次完成且没有K块循环；另明确Mmad的cmatrixInitVal=true从零初始化float L0C，并将UB用途限定为后续激活。",
+      "answer_span": "每个 AIC 只处理一个 256×128 输出 tile，K=128 一次完成；当前 singleCoreM=baseM、singleCoreK=baseK=K、singleCoreN=baseN=N。代码没有遍历输出 tile 或 K 块的循环，模板参数名不能证明它支持任意形状。"
+    },
+    {
+      "id": "CU04.E01",
+      "status": "correct",
+      "rationale": "启动规模为两个AIC、四个AIV；AIC的A和C偏移均为b×32768个half，每个覆盖256个完整输出行，B由两个AIC完整共用。",
+      "answer_span": "启动数为 (512/256)×(128/128)=2，kernel 声明 __mix__(1,2)（188行），所以对应2个 AIC 和4个 AIV，而不是总共两个执行核。本地 simd_builtin_keywords.md 规定混合场景下 GetBlockIdx 返回逻辑编号：AIC 为 b=0、1，AIV 为 v=0、1、2、3，后者对应组合编号 floor(v/2) 和组合内编号 v%2。Init（31—45行）据此让 AIC 沿 M 分工：b=0 读取 A 的0—255行并生成输出0—255行，b=1 读取256—511行并生成输出256—511行；A 和 C 的起点均为 b×32768 个 half，即 b×65536 B。两个 AIC 都读取完整 B，未沿 K 切分，也不交换部分和。"
+    },
+    {
+      "id": "CU04.E02",
+      "status": "correct",
+      "rationale": "明确所属AIC映射和组合内半块偏移，每个AIV处理128×128个half。给出的字节起点等价于[0,16384,32768,49152]个half，四段无重叠覆盖全部65536个元素。",
+      "answer_span": "每个 AIV 在自己的 UB 分配 (256/2)×128=16384个 half，即32 KiB。其 cGM 先指向所属 AIC 的输出块，再通过 gmOffset=(v%2)×16384 个 half 定位上下半块（131—176行）。所以 v=0、1、2、3 分别处理全局行0—127、128—255、256—383、384—511，起点分别为0、32768、65536、98304 B，四段覆盖完整输出且互不重叠。"
+    },
+    {
+      "id": "CU04.E03",
+      "status": "correct",
+      "rationale": "A、B、C的形状和类型，以及L1、L0A、L0B、L0C容量均正确；另明确每个AIV的UB为32768字节，搬运128行、每行256字节，GM和UB行间隙均为零。",
+      "answer_span": "AIC 的静态分配见52—61行，Alloc 的参数单位是元素：L1 中 A 占32768个 half=64 KiB，B 占16384个 half=32 KiB，合计96 KiB；二者来自同一 L1 allocator 的连续分配。L0A 占64 KiB，L0B 占32 KiB，L0C 保存32768个 float，占128 KiB。它们属于不同物理存储，不能把 L0C 的 float 数据量按 half 计算。"
+    },
+    {
+      "id": "CU04.H01",
+      "status": "correct",
+      "rationale": "完整说明2201上的GM ND→L1 NZ、A到L0A Zz、B经分形内转置到L0B Zn、Mmad写float NZ L0C、Fixpipe转half ND到GM，以及Vector经UB处理的路径。未声称L0C直接到UB。",
+      "answer_span": "910C/2201 的 Cube 与 Vector 分属 AIC/AIV，片上存储独立，本实现通过 GM 中间结果协作：AIC 走 GM→L1→L0A/B→Cube→L0C→FIX→GM，AIV 走 GM→UB→V→UB→GM；没有直接共享 L0C 或 UB。"
+    },
+    {
+      "id": "CU04.H02",
+      "status": "correct",
+      "rationale": "逐项说明全部生产者与消费者依赖，包括MTE2→MTE1、MTE1→M、M→FIX、PIPE_FIX模式2/flag0核间通知及GM读取前等待、MTE2→V和V→MTE3。",
+      "answer_span": "关键依赖由显式同步贯通：72—73行 MTE2_MTE1 保证两份 L1 输入就绪后才能 LoadData；110—111行 MTE1_M 保证 L0A/B 就绪后才能矩阵乘；119—120行 M_FIX 保证 L0C 计算完成后才能 Fixpipe。129行 CrossCoreSetFlag<2,PIPE_FIX>(0) 在所属 AIC 的 FIX 前序写回完成后通知两个 AIV，136行等待该通知后才发出 GM→UB 读取。CrossCoreSetFlag/WaitFlag_ISASI.md 的模式2契约限定这一组合内的 AIC/AIV 协作，不是两个 AIC 之间的全局屏障；A3 上 Wait 的模板参数不直接决定硬件指令功能。162—163行 MTE2_V 保护 UB 输入就绪，170—171行 V_MTE3 保护激活结果就绪。"
+    },
+    {
+      "id": "CU04.H03",
+      "status": "correct",
+      "rationale": "明确GM是Cube与Vector之间的中间存储，AIV将结果写回原GM区域；核间通知用于排序AIC写入与AIV读取，且明确片上存储独立、不共享UB。",
+      "answer_span": "910C/2201 的 Cube 与 Vector 分属 AIC/AIV，片上存储独立，本实现通过 GM 中间结果协作：AIC 走 GM→L1→L0A/B→Cube→L0C→FIX→GM，AIV 走 GM→UB→V→UB→GM；没有直接共享 L0C 或 UB。"
+    },
+    {
+      "id": "CU04.H04",
+      "status": "correct",
+      "rationale": "明确实际选择2201，3510是使用LoadData2DParamsV2和NZ L0A布局的另一条件编译分支；同时保留缺乏编译产物及性能证据的边界，没有据分支存在推断跨平台可用性。",
+      "answer_span": "源码92—106行的3510分支使用 LoadData2DParamsV2，并将 L0A 按 NZ 组织，本题不执行，不能混用其布局契约。以上是题面、源码与固定 SDK 文档支持的静态行为；材料没有编译产物、设备结果或时间线，无法据此确认实际流水重叠、性能或逐位数值一致性，启动规模也不代表芯片总核数。"
+    }
+  ],
+  "critical_errors": []
+}

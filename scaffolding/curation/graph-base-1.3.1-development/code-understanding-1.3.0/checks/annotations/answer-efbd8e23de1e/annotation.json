@@ -1,0 +1,67 @@
+{
+  "answer_id": "answer-efbd8e23de1e",
+  "case": "case-05",
+  "facts": [
+    {
+      "id": "CU05.A01",
+      "status": "correct",
+      "rationale": "完整说明了矩阵乘法语义、B的转置存储与IS_B_TRANSPOSE含义、half输入输出、float累加及无激活；另明确SCENARIO_NUM=1。",
+      "answer_span": "本题计算C[m,n]=ΣₖA[m,k]·Bfile[n,k]，M=N=K=8192。A按[M,K]、B文件按[N,K]连续存储，后者是逻辑B[K,N]的转置存储；代码IS_B_TRANSPOSE=true与之匹配。输入和输出均为half，Cube中以float累加，最后转回half，无偏置或激活。"
+    },
+    {
+      "id": "CU05.A02",
+      "status": "correct",
+      "rationale": "完整给出2201/scenario1的矩阵尺寸、单核覆盖尺寸、基础tile尺寸、24个block映射、最后N分区宽度及M/N/K循环次数。",
+      "answer_span": "分核由InitComputeParams（273行起）确定：block号b对应p=b%4、q=b/4，覆盖行起点2048p、列起点1536q，完整归约全部8192个K。启动24个block，构成4×6个输出区域；q=0…4宽1536，q=5从7680列开始、宽512。每核M方向16个128行tile，N方向分别6或2个256列tile，循环顺序为N→M→K。每个输出tile为128×256，K按64分成128轮；共20×96+4×32=2048个输出tile、262144次Mmad。"
+    },
+    {
+      "id": "CU05.A03",
+      "status": "correct",
+      "rationale": "通过包尺寸及槽公式说明L1的A/B分别分组8/4轮、L0每轮处理64个K；完整解释首次初始化、后续累加及Mmad/Fixpipe的UnitFlag协议。末段对计算方向配置的保留有文档依据，没有将缺少M_FIX判为已证实错误。",
+      "answer_span": "j=0清零L0C，后127轮累加。前127轮unitFlag=2保留L0C可累加状态，末轮=3置为可读；CopyOut的Fixpipe以unitFlag=3读取后恢复可写，保护下一输出tile对同一L0C的复用。"
+    },
+    {
+      "id": "CU05.E01",
+      "status": "correct",
+      "rationale": "解盲前独立抽审与主 Agent 裁决：完整给出共享 L1 四槽大小/范围、128 次 K 迭代与 A/B 包覆盖8/4次及周期公式，直接确定 128/8=16、128/4=32；按冻结协议接受语义等价表达，不要求重复列数值。",
+      "answer_span": "分核由InitComputeParams（273行起）确定：block号b对应p=b%4、q=b/4，覆盖行起点2048p、列起点1536q，完整归约全部8192个K。启动24个block，构成4×6个输出区域；q=0…4宽1536，q=5从7680列开始、宽512。每核M方向16个128行tile，N方向分别6或2个256列tile，循环顺序为N→M→K。每个输出tile为128×256，K按64分成128轮；共20×96+4×32=2048个输出tile、262144次Mmad。所有尺寸整除，当前输入没有实际尾tile或K补齐。24是启动block数，不能据此断言物理核数。\n\n令输出tile左上角为(m₀,n₀)=(2048p+128u,1536q+256v)。第j轮读取A的[m₀:m₀+128,64j:64j+64]和Bfile的[n₀:n₀+256,64j:64j+64]。GM中A、B包首地址分别为m₀×8192+64t、n₀×8192+64t，t是包起始K轮号；这些偏移以half元素计，换字节乘2。C写回首偏移m₀×8192+n₀，各行跨度8192个half，即16384字节。\n\nDataCopyInA/B（340行起）经MTE2执行GM→L1的ND2NZ转换：A每包128×(64×8)，Bfile每包256×(64×4)，各65536个half、128KiB。srcDValue=8192是GM行跨度；dstNzC0Stride分别128、256，单位是32字节，因而相邻K方向16列带的起点分别相差4096、8192字节。dstNzNStride=1表示相邻行片段相距32字节。每个输出tile重新装包，不跨输出tile保留A/B的复用。\n\nProcess（43行起）用静态LocalTensor描述固定地址，构造地址以字节计、长度以元素计，并非队列分配。A1/B1共同位于L1：A Ping/Pong分别占[0,128)、[128,256)KiB，B分别占[256,384)、[384,512)KiB。A2属于独立L0A，两个槽起点0、32KiB，各有效16KiB；B2属于独立L0B，起点同为0、32KiB，各32KiB。相同数值地址不表示A2/B2别名。CO1是L0C，起点0，128×256个float占128KiB，仅一份累加区。\n\n选block0的首个输出tile，即C[0:128,0:256]。以下为前10轮读取切片的物理起点，统一以KiB计；L0列分别适用于L0A和L0B，L0C始终为0。P/Q表示Ping/Pong。\n\n|j|K范围|A1槽/起点|B1槽/起点|A2、B2起点|\n|---|---|---|---|---|\n|0|0–63|P/0|P/256|0|\n|1|64–127|P/16|P/288|32|\n|2|128–191|P/32|P/320|0|\n|3|192–255|P/48|P/352|32|\n|4|256–319|P/64|Q/384|0|\n|5|320–383|P/80|Q/416|32|\n|6|384–447|P/96|Q/448|0|\n|7|448–511|P/112|Q/480|32|\n|8|512–575|Q/128|P/256|0|\n|9|576–639|Q/144|P/288|32|\n\n其推导为：A槽=floor(j/8)%2，槽内偏移(j%8)×128×64×2字节；B槽=floor(j/4)%2，偏移(j%4)×256×64×2字节；L0槽=j%2。DataLoadA（395行起）在2201使用LoadData3DParamsV2，l1H=1、l1W=128、channelSize=kExtension=64、mExtension=128，将A的NZ切片组织成L0A的ZZ布局。DataLoadB使用2D搬运、不转置：每轮执行4次LoadData，每次repeatTimes=16，每次搬16×512=8192字节，源和目的起点均递增4096个half，合计32KiB，形成逻辑[K,N]的L0B ZN布局。B的转置存储已由索引和布局解释，不能再把它理解为额外改变数学乘法。"
+    },
+    {
+      "id": "CU05.E02",
+      "status": "correct",
+      "rationale": "起点加有效长度与冻结的L0A/L0B字节区间完全等价，并明确两者物理独立、不因同偏移别名；L0C的float容量也正确。",
+      "answer_span": "A2属于独立L0A，两个槽起点0、32KiB，各有效16KiB；B2属于独立L0B，起点同为0、32KiB，各32KiB。相同数值地址不表示A2/B2别名。CO1是L0C，起点0，128×256个float占128KiB，仅一份累加区。"
+    },
+    {
+      "id": "CU05.E03",
+      "status": "correct",
+      "rationale": "前10轮表格及槽公式完整给出A1、B1和L0的槽序列；后文明确j=0后预取Pong、j=3释放B Ping、j=7释放A Ping和B Pong，以及A使用ID0/1、B使用ID2/3。",
+      "answer_span": "其推导为：A槽=floor(j/8)%2，槽内偏移(j%8)×128×64×2字节；B槽=floor(j/4)%2，偏移(j%4)×256×64×2字节；L0槽=j%2。"
+    },
+    {
+      "id": "CU05.H01",
+      "status": "correct",
+      "rationale": "明确MTE2_MTE1只在包首次消费时等待就绪，MTE1_M保证L0装入后才能计算；结合对反向事件和variant的解释，清楚区分就绪与未来覆盖许可。",
+      "answer_span": "反方向MTE2_MTE1在装包后Set，仅在该包首次消费时Wait。因此前10轮的就绪等待为j=0的A0/B2、j=4的B3、j=8的A1/B2；释放发生在j=3的B2、j=7的A0/B3。"
+    },
+    {
+      "id": "CU05.H02",
+      "status": "correct",
+      "rationale": "完整解释MTE1_MTE2等待最后一次L1读取后才允许覆盖，以及M_MTE1等待此前Mmad消费L0；说明初始可写标志和最终排空，区分两种生命周期依赖。",
+      "answer_span": "事件按方向和ID共同区分。MTE1_MTE2的ID0/1保护A两槽、ID2/3保护B两槽：首次预置可写状态，每次GM搬入前Wait；一个包最后一次L1→L0读取完成后Set，允许MTE2覆盖。"
+    },
+    {
+      "id": "CU05.H03",
+      "status": "correct",
+      "rationale": "准确识别删除的循环内M_MTE1等待，说明丢失Compute(j)到Load(j+2)的同槽复用保证；给出可能提前覆盖的异步情形，并指出保留的正向同步不能修复该依赖。",
+      "answer_span": "variant仅删除209行的M_MTE1等待。它仍保留L1就绪/复用保护、本轮MTE1→M就绪同步和L0C单元标志，却失去L0同槽读后写依赖：j=2可能覆盖j=0仍在使用的输入。"
+    },
+    {
+      "id": "CU05.H04",
+      "status": "correct",
+      "rationale": "正确指出未消费标志时重复Set的配对及单比特生命周期问题，同时将文档中的卡死情形与本题实测结论区分；没有声称已观察到硬件故障、确定错误值或性能变化。",
+      "answer_span": "固定SetFlag_WaitFlag_ISASI.md明确事件必须配对，未经消耗重复Set属于未定义行为，并列有随后PIPE_ALL卡死的情形。事件是标志位而非累计计数，末尾两个Wait不能补回中途等待。因此不能把variant描述成只减少等待且执行仍有保证，也不能由静态材料断言某次运行必定产生特定错误值或必定超时。"
+    }
+  ],
+  "critical_errors": []
+}

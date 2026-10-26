@@ -1,0 +1,474 @@
+{
+  "schema_version": "aprof.action-decision/v1",
+  "task_id": "raw15-case-03",
+  "context_hash": "sha256:fcc70e688c07c9017155d002cee20218aa8e45fd3a534e945ccdb50465b6f4a5",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "reasoning_ref": {
+    "path": "R1-reasoning.json",
+    "sha256": "sha256:8f031e066471ff3b99c90e403057fa3009e1dc04bce810328b73baafd4bf1008"
+  },
+  "reasoning_hash": "sha256:3d86074b31d93e290efdacd25d1b1f6c7055924a4f6f5743948c66cd19da6027",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/f3a6d55be57ea647180e624b4fffe6a25b55beea2b35d140d50fe71108f4232d.json",
+    "sha256": "sha256:02d64ca8cc4efafae4665940ea3cfd6bf955b40e79d76125906445f4337450a4"
+  },
+  "round": 1,
+  "current_parent_ref": {
+    "path": "source-refs.json",
+    "sha256": "sha256:82f0183326cf41596c74711b44fb2b23b2e36a18b24d278774efe2e7f2a74212"
+  },
+  "opportunities": [
+    {
+      "id": "storage",
+      "hypothesis_id": "storage",
+      "action_id": "action.reuse_disjoint_onchip_buffers",
+      "action_instance_id": "selected-intent",
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel_structure",
+        "source.host_dispatch",
+        "workload.matrix",
+        "derived.source_cost"
+      ],
+      "cost_mechanism": "xf只用于Mul(of,xf,mf)，随后不再读旧xf；of后续仅Muls及FromFloat。因此目标完全alias xf可删outFp_一片。",
+      "predictions": [
+        {
+          "id": "storage.source",
+          "kind": "source_work",
+          "statement": "UB系数从2sx+sm+12+2Ibyte下降为2sx+sm+8+2Ibyte，T4096减少16384字节。",
+          "check_method": "源码/整数公式及R2-static-evidence.json；后续候选需对照真实patch",
+          "on_support": "保留此结构候选并满足API/容量域",
+          "on_refute": "修正字节/生命周期/地址模型后重新比较"
+        },
+        {
+          "id": "storage.time",
+          "kind": "performance",
+          "statement": "此结构变化可能降低所列case的Task时间；当前没有测得改善。",
+          "check_method": "后继完整原20case正确性后按包统一协议测试，区分大小/尾/特殊值组",
+          "on_support": "按同scope结果确认适用域，不能直接授予因果归因",
+          "on_refute": "检查预测是否落实以及额外shuffle/小tile/同步成本，回退或再规划"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_source_ub_live_bytes_near_capacity",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "storage.time",
+          "unknown_id": "storage.legacy_symptom_source_ub_live_bytes_near_capacity",
+          "reason": "来源机制与当前结构支持比较；未将源码次数推导为测得时延。"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "storage.time",
+          "unknown_id": "storage.cost_reduction",
+          "reason": "来源机制与当前结构支持比较；未将源码次数推导为测得时延。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "storage.legacy_symptom_source_ub_live_bytes_near_capacity",
+          "kind": "performance",
+          "fact": "symptom.source.ub_live_bytes_near_capacity",
+          "expected_state": null,
+          "statement": "当前真实容量占比未知；物理分配减少已单独推导，是否释放关键资源/能提高T仍需目标B。每种X/M dtype都可减少4T静态字节并扩大tile域；相对直接删int8→half→float转换，不依赖未核验的直接Cast支持，也不改精度。",
+          "affects": "旧条件 symptom.source.ub_live_bytes_near_capacity 的期望状态为 true。接近容量上限影响收益与选择，不决定不重叠buffer复用是否合法；安全由生命周期、容量和语义约束负责。",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "storage.cost_reduction",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "当前同scope硬件阶段重叠/发射与关键路径成本未测；每种X/M dtype都可减少4T静态字节并扩大tile域；相对直接删int8→half→float转换，不依赖未核验的直接Cast支持，也不改精度。",
+          "affects": "复用可降低物理峰值，并可能使更合适tile或流水深度可行；若释放容量无用途，时延可能不变。",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "storage.constraint.capacity",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "需确认目标Mul完整dst=src0别名及依赖完成规则，实际B与CopyPad/API字段上限。整型mask两段Cast的支持不能推断为直接转换支持。",
+          "affects": "具体T/物理槽或alias/shuffle的实施合法性",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "storage.constraint.target_api_support",
+          "kind": "implementation_safety",
+          "fact": "constraint.target_api_support",
+          "expected_state": true,
+          "statement": "需确认目标Mul完整dst=src0别名及依赖完成规则，实际B与CopyPad/API字段上限。整型mask两段Cast的支持不能推断为直接转换支持。",
+          "affects": "具体T/物理槽或alias/shuffle的实施合法性",
+          "resolution": "check_before_implementation"
+        }
+      ],
+      "strongest_alternative_id": "casts",
+      "comparison": "每种X/M dtype都可减少4T静态字节并扩大tile域；相对直接删int8→half→float转换，不依赖未核验的直接Cast支持，也不改精度。",
+      "disposition": "selected",
+      "reason": "每种X/M dtype都可减少4T静态字节并扩大tile域；相对直接删int8→half→float转换，不依赖未核验的直接Cast支持，也不改精度。"
+    },
+    {
+      "id": "casts",
+      "hypothesis_id": "casts",
+      "action_id": "action.coalesce_cast",
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "2",
+        "5",
+        "6",
+        "7",
+        "10",
+        "11",
+        "14",
+        "15",
+        "16",
+        "17",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel_structure",
+        "source.host_dispatch",
+        "workload.matrix",
+        "derived.source_cost"
+      ],
+      "cost_mechanism": "int8/uint8先转half再转float，整型值范围可在half精确表示；直接int8→float若目标支持可省一次Cast与half缓冲。",
+      "predictions": [
+        {
+          "id": "casts.source",
+          "kind": "source_work",
+          "statement": "若支持直接Cast，则每tile减少一个转换和2T中间区；否则保持两段。",
+          "check_method": "源码/整数公式及R2-static-evidence.json；后续候选需对照真实patch",
+          "on_support": "保留此结构候选并满足API/容量域",
+          "on_refute": "修正字节/生命周期/地址模型后重新比较"
+        },
+        {
+          "id": "casts.time",
+          "kind": "performance",
+          "statement": "此结构变化可能降低所列case的Task时间；当前没有测得改善。",
+          "check_method": "后继完整原20case正确性后按包统一协议测试，区分大小/尾/特殊值组",
+          "on_support": "按同scope结果确认适用域，不能直接授予因果归因",
+          "on_refute": "检查预测是否落实以及额外shuffle/小tile/同步成本，回退或再规划"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "casts.time",
+          "unknown_id": "casts.cost_reduction",
+          "reason": "来源机制与当前结构支持比较；未将源码次数推导为测得时延。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "casts.cost_reduction",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "当前同scope硬件阶段重叠/发射与关键路径成本未测；数值域可静态证明，但实际目标SDK直接Cast是否支持未读到已验证平台，暂缓；不把int8→half→float当成必然冗余性能瓶颈。",
+          "affects": "合法减少转换可能减少指令与临时区，但更宽中间值、不同指令路径或寄存器压力可抵消。",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "storage",
+      "comparison": "数值域可静态证明，但实际目标SDK直接Cast是否支持未读到已验证平台，暂缓；不把int8→half→float当成必然冗余性能瓶颈。",
+      "disposition": "deferred",
+      "reason": "数值域可静态证明，但实际目标SDK直接Cast是否支持未读到已验证平台，暂缓；不把int8→half→float当成必然冗余性能瓶颈。"
+    },
+    {
+      "id": "pipeline",
+      "hypothesis_id": "pipeline",
+      "action_id": "action.software_pipeline_stages",
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel_structure",
+        "source.host_dispatch",
+        "workload.matrix",
+        "derived.source_cost"
+      ],
+      "cost_mechanism": "两路CopyIn及一路CopyOut使用单槽，Compute含转换及两个乘法。",
+      "predictions": [
+        {
+          "id": "pipeline.source",
+          "kind": "source_work",
+          "statement": "输入搬运可与前tile计算重叠，逻辑GM字节(2sx+sm)N不变。",
+          "check_method": "源码/整数公式及R2-static-evidence.json；后续候选需对照真实patch",
+          "on_support": "保留此结构候选并满足API/容量域",
+          "on_refute": "修正字节/生命周期/地址模型后重新比较"
+        },
+        {
+          "id": "pipeline.time",
+          "kind": "performance",
+          "statement": "此结构变化可能降低所列case的Task时间；当前没有测得改善。",
+          "check_method": "后继完整原20case正确性后按包统一协议测试，区分大小/尾/特殊值组",
+          "on_support": "按同scope结果确认适用域，不能直接授予因果归因",
+          "on_refute": "检查预测是否落实以及额外shuffle/小tile/同步成本，回退或再规划"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_overlap_low",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "pipeline.time",
+          "unknown_id": "pipeline.legacy_symptom_profile_overlap_low",
+          "reason": "来源机制与当前结构支持比较；未将源码次数推导为测得时延。"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "pipeline.time",
+          "unknown_id": "pipeline.cost_reduction",
+          "reason": "来源机制与当前结构支持比较；未将源码次数推导为测得时延。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "pipeline.legacy_symptom_profile_overlap_low",
+          "kind": "performance",
+          "fact": "symptom.profile.overlap_low",
+          "expected_state": null,
+          "statement": "当前同scope硬件阶段重叠/发射与关键路径成本未测；能打开搬运重叠但多dtype槽宽不同，增槽压缩T；先用确定生命周期减少物理分配再决定双缓冲。",
+          "affects": "旧条件 symptom.profile.overlap_low 的期望状态为 true。低重叠是性能假设/判别依据，依赖及生命周期正确才是重排的实施安全条件。",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "pipeline.cost_reduction",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "当前同scope硬件阶段重叠/发射与关键路径成本未测；能打开搬运重叠但多dtype槽宽不同，增槽压缩T；先用确定生命周期减少物理分配再决定双缓冲。",
+          "affects": "合法预取/计算/写回重排可能缩短稳态关键路径；短任务、单tile、最慢阶段不变或额外buffer成本会限制收益。",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "storage",
+      "comparison": "能打开搬运重叠但多dtype槽宽不同，增槽压缩T；先用确定生命周期减少物理分配再决定双缓冲。",
+      "disposition": "deferred",
+      "reason": "能打开搬运重叠但多dtype槽宽不同，增槽压缩T；先用确定生命周期减少物理分配再决定双缓冲。"
+    }
+  ],
+  "evidence_requests": [
+    {
+      "id": "check.constraint.capacity",
+      "opportunity_ids": [
+        "storage"
+      ],
+      "unknown_ids": [
+        "storage.constraint.capacity"
+      ],
+      "method": "由后继获准的实际设备/SDK资料核验 constraint.capacity；以本报告公式和全部20case有效域查参数，当前不调用硬件。",
+      "discriminating_results": [
+        {
+          "outcome": "目标支持且公式≤真实B",
+          "decision_effect": "冻结合法T/槽/alias参数，构建并做原20case正确性后试验"
+        },
+        {
+          "outcome": "某参数超容量或API不支持",
+          "decision_effect": "减T/保留原独立buffer或原segment fallback，不改精度与输入域"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本次只允许源码与CPU分析",
+      "defer_reason": "需确认目标Mul完整dst=src0别名及依赖完成规则，实际B与CopyPad/API字段上限。整型mask两段Cast的支持不能推断为直接转换支持。"
+    },
+    {
+      "id": "check.constraint.target_api_support",
+      "opportunity_ids": [
+        "storage"
+      ],
+      "unknown_ids": [
+        "storage.constraint.target_api_support"
+      ],
+      "method": "由后继获准的实际设备/SDK资料核验 constraint.target_api_support；以本报告公式和全部20case有效域查参数，当前不调用硬件。",
+      "discriminating_results": [
+        {
+          "outcome": "目标支持且公式≤真实B",
+          "decision_effect": "冻结合法T/槽/alias参数，构建并做原20case正确性后试验"
+        },
+        {
+          "outcome": "某参数超容量或API不支持",
+          "decision_effect": "减T/保留原独立buffer或原segment fallback，不改精度与输入域"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本次只允许源码与CPU分析",
+      "defer_reason": "需确认目标Mul完整dst=src0别名及依赖完成规则，实际B与CopyPad/API字段上限。整型mask两段Cast的支持不能推断为直接转换支持。"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "storage"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+        "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+      },
+      "locator": "lines:308-351",
+      "effect_kind": "mechanism",
+      "before": "当前源码结构：xf只用于Mul(of,xf,mf)，随后不再读旧xf；of后续仅Muls及FromFloat。因此目标完全alias xf可删outFp_一片。",
+      "after": "正文机制/边界确认：每种X/M dtype都可减少4T静态字节并扩大tile域；相对直接删int8→half→float转换，不依赖未核验的直接Cast支持，也不改精度。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "casts"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.redundant_cast.md",
+        "sha256": "sha256:c7f8ace396cc0a0f53f4bc0a5b9f0883cbd8b439d45dce74edc1e4f50b1b326d"
+      },
+      "locator": "lines:290-334",
+      "effect_kind": "mechanism",
+      "before": "当前源码结构：int8/uint8先转half再转float，整型值范围可在half精确表示；直接int8→float若目标支持可省一次Cast与half缓冲。",
+      "after": "正文机制/边界确认：数值域可静态证明，但实际目标SDK直接Cast是否支持未读到已验证平台，暂缓；不把int8→half→float当成必然冗余性能瓶颈。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+        "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+      },
+      "locator": "lines:272-316",
+      "effect_kind": "mechanism",
+      "before": "当前源码结构：两路CopyIn及一路CopyOut使用单槽，Compute含转换及两个乘法。",
+      "after": "正文机制/边界确认：能打开搬运重叠但多dtype槽宽不同，增槽压缩T；先用确定生命周期减少物理分配再决定双缓冲。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "storage"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+      },
+      "locator": "lines:72-108",
+      "effect_kind": "plan",
+      "before": "有元素总数与原始块长，但尚未明确新方案的owner/存储范围。",
+      "after": "保留每核独占输出与原逐元素数学链，T和物理槽分别计入字节公式；已有分区提取不算新并行优化。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "storage"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+        "sha256": "sha256:04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483"
+      },
+      "locator": "lines:74-119",
+      "effect_kind": "parameters",
+      "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+      "after": "删除outFp_，令of=xf，以Mul(xf,xf,mf)后Muls(xf,xf,scale)保持原先先乘mask再乘scale；FromFloat(yLocal,xf)保留原RoundMode。T=64k，第一候选4096；后续T≤floor64((UB原预算-API预留)/(2sx+sm+8+2Ibyte))，Ibyte表示int8/uint8 mask。输入输出所有权、每个有效count和半精度输出路径保持原定义；不把scale0或mask0替换成常数以规避Inf/NaN。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "storage"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+        "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+      },
+      "locator": "lines:75-110",
+      "effect_kind": "parameters",
+      "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+      "after": "保留输入/输出Cast、原算术顺序、NaN/Inf及±0；没有把值域case当公共输入保证。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "storage"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/fallback.md",
+        "sha256": "sha256:5c0be5bd2438407b7fafcda246add02711250c3cbfdf946224b2fba04f40a52c"
+      },
+      "locator": "lines:62-70",
+      "effect_kind": "parameters",
+      "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+      "after": "具体目标API/重叠/stride证据不全，保留原实现fallback并写明参数补项，而非借另一ISA能力。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    }
+  ],
+  "selection": {
+    "mode": "conditional_plan",
+    "opportunity_id": "storage",
+    "action_instance_id": "selected-intent",
+    "reason": "每种X/M dtype都可减少4T静态字节并扩大tile域；相对直接删int8→half→float转换，不依赖未核验的直接Cast支持，也不改精度。",
+    "concrete_plan": "删除outFp_，令of=xf，以Mul(xf,xf,mf)后Muls(xf,xf,scale)保持原先先乘mask再乘scale；FromFloat(yLocal,xf)保留原RoundMode。T=64k，第一候选4096；后续T≤floor64((UB原预算-API预留)/(2sx+sm+8+2Ibyte))，Ibyte表示int8/uint8 mask。输入输出所有权、每个有效count和半精度输出路径保持原定义；不把scale0或mask0替换成常数以规避Inf/NaN。",
+    "stop_reason": null
+  },
+  "previous_feedback": null
+}

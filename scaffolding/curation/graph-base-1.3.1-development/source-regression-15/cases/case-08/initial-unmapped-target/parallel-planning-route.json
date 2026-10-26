@@ -1,0 +1,218 @@
+{
+  "schema_version": "aprof.knowledge-route/v1",
+  "owner": "parallel-planning",
+  "version": "v0002",
+  "knowledge_hash": "sha256:512f5d852cbf7d437b8ad9b127e3dd59d111168c8c57d4bd4c3ceef12baad6d6",
+  "context_hash": "sha256:f0ddaf0f5ea7bee0d6eb905a57cc421e5a53945a496433dabb5ecf4e80309deb",
+  "task_id": "case-08",
+  "override_hash": null,
+  "selection_mode": "deterministic",
+  "evidence": {},
+  "context_snapshot": {
+    "schema_version": "aprof.evidence/v1",
+    "task_id": "case-08",
+    "source_context_ref": {
+      "path": "authority.json",
+      "sha256": "sha256:42b81b92faa11bd9d98b84c9dda473f292faa3c4d598da5f30de2002afc4faa8"
+    },
+    "attributes": {
+      "family": [
+        "indexing"
+      ],
+      "dtype": [
+        "float16",
+        "float32"
+      ],
+      "features": [
+        "scalar-control",
+        "memory-transfer",
+        "buffer-lifetime",
+        "precision-boundaries"
+      ]
+    },
+    "facts": {}
+  },
+  "matches": [
+    {
+      "id": "planning.indexing.indexed_write_reduce",
+      "version": "1.0.0",
+      "path": [
+        "planning.root",
+        "planning.indexing",
+        "planning.indexing.indexed_write_reduce"
+      ],
+      "score": 5,
+      "missing": [
+        "constraint.capacity",
+        "constraint.duplicate_index_semantics",
+        "constraint.precision",
+        "constraint.semantic_equivalence",
+        "constraint.task_ownership"
+      ],
+      "status": "needs_evidence",
+      "snapshot": {
+        "body": "# 索引写与重复目标归约：先定义冲突再分区\n\n## 语义模型\n\n将每个更新记为 `e=(target,source_order,value)`。冻结初始输出、target 地址映射、覆盖/add/mul/min/max 语义、累加 dtype、cast/scale/舍入位置、整数溢出与重复目标顺序。若重复目标使用覆盖，必须定义胜者（例如最后合法 source_order），无序并发写无法提供“最后写”语义。若重复目标使用浮点归约，原子仅保证单次更新不可分割，不保证顺序与结合方式；固定树合并只保证该树可复现，不自动逐位等价于原顺序。\n\n先确认唯一性：需要的是最终物理目标地址不冲突，而非 index 数值在某个局部片唯一。不同外轴、广播/stride、非对齐写回和别名都应纳入冲突图。index 唯一时，可以按 source 分区直接写出；仍须初始化所有要求保留而未命中的输出位置。index 重复时，比较以下分解。\n\n## 候选及完整所有权\n\n目标 owner：按输出目标块分核，读初始值，在 UB 内筛选所有落入此块的更新，按合法源顺序读改写，最后批量写回。每个物理输出块只有一个 owner，避免跨核原子；代价可能是各 owner 重复扫描索引。可建立命中表或分桶来减少重复扫描，但构建及读取成本、最坏热点容量也计入。\n\n直接原子：按 source 分核并发更新目标。仅在目标 dtype/API 支持该归约且精度/确定性契约允许时选用；输出初始化必须先全部完成，原子模式必须覆盖所有合法更新且结束后恢复，不能混入非原子普通写。热点竞争可能主导成本；原子加不能实现有序覆盖。\n\n分组再归约：将更新按 `(target,source_order)` 稳定组织，目标 owner 读取完整等 target run，按契约次序归约后写一次。若 source_order 本身就是稳定排序输入顺序，可以按 target 稳定排序；不能只按 target 不稳定聚合。run 跨 tile/核边界时指定完整 run 的 owner，或保存 partial 后按允许的固定顺序合并；不能让两个边界核分别读初始 y、各自覆盖结果。分组排序复用 `planning.sort-topk.merge`，归约状态/合并复用 `planning.reduction.split`，本条不另造通用排序或归约算法。\n\n热点拆分：仅当契约允许重结合时，多个 task 处理同一热点的 source 子区间，partial 唯一写到 workspace，最终 target owner 按固定规则合并并加入初始 y 一次。若必须严格 source_order，保留顺序链或完整 run owner；热点并行不能成为放松数值语义的理由。\n\n## 来源实例与平台范围\n\nops-nn 的 ScatterAddWithSorted 浮点分支输入 sorted_index 与 pos：前者组织目标 run，后者取回原更新位置。核首读取前一个 index，若与前一核同 run，当前核跳过开头的重复段；run 的首 owner 在自己名义分区结束后继续向后读取同目标，直到 run 结束才写回。该“名义索引区间+边界延伸”的规则保证等目标只由一个 owner 归约；不能删掉边界扫描后只保留均匀分区。\n\n该源的 half/bf16 值先转 float 累加，回写以其 CAST_RINT 转换，float 分支按代码逐项 Add；这是具体算子实现语义，不是所有 ScatterReduce 的通用精度政策。README 参数描述存在示例与字段文字不一致，规划以 host/kernel 的 target、pos、输入布局和当前接口 oracle 联合核验，不猜测缺项。本条 scope all 只描述跨平台算法候选；源码分支 API、arch35 路径和收益均未取得当前硬件资格。\n\n## 容量、分布与同步\n\n设 U 为更新数，D 为唯一目标数，B 为当前 owner 的输出元素数，b_y/b_u/b_t/b_s 为输出计算值、更新值、目标索引、源顺序字节宽，a 为字节对齐，`A(z)=ceil(z/a)*a`。目标 owner 保守 UB 为 `A(B*b_y)+q_u*A(t*b_u)+q_i*A(t*b_t)+U_hit+U_cast+Tmp+F`，t 为更新批长；输出 dtype 与累加 dtype 不同需同时计原值/转换值。分组元组 workspace 至少 `A(U*(b_t+b_s+b_u))`，外部排序还需第二代和 API 元数据；若只保存索引则扣去 value 项并计后续随机 gather。partial 路径为 `W_partial=Σ_target P_target*b_state` 再加对齐、元数据和最终结果。\n\n比较成本 `索引读取+目标筛选/分组+更新搬运+临时写读+归约+最终写回+同步/启动`，并记录 U、D、每目标更新数和最热目标、顺序/随机/热点分布。GM 元数据发布前要完成数据写入，复用前要等消费者；只用标量轮询不能推定新值可见，缓存/同步须按架构证明。独占输出路径通常无需跨核写同步，partial 或分组阶段仍需完成依赖。\n\n```text\n初始化结果语义并建立最终 target 冲突图\nif target 唯一：source owner 直接写唯一目标\nelif 原子满足 dtype/数值/顺序契约：初始化完成后 source owner 原子归约\nelse：按 target 分区，或按(target,source_order)稳定分组\n      完整 run 的唯一 owner 从初始值开始按合法顺序归约并写回\n      若允许热点 partial：先等待全部 partial，再由最终 owner 合并一次\n```\n\n验证无命中输出、唯一目标、全重复、热点跨核/跨 tile、非对齐物理块、覆盖胜者、混合正负大数、溢出与每 dtype 的 cast。读索引 Gather 无写冲突，见 `planning.indexing.gather_output_owned`。本条没有 NPU 性能验证，不继承来源性能数字或固定阈值。",
+        "evidence_status": "source_reviewed_not_benchmarked",
+        "id": "planning.indexing.indexed_write_reduce",
+        "kind": "template",
+        "learning": {},
+        "parent": "planning.indexing",
+        "references": [
+          "planning.sort-topk.merge",
+          "planning.reduction.split",
+          "planning.indexing.gather_output_owned"
+        ],
+        "schema_version": "aprof.knowledge-record/v1",
+        "scope": {
+          "dtypes": [
+            "all"
+          ],
+          "platforms": [
+            "all"
+          ],
+          "workloads": [
+            "all"
+          ]
+        },
+        "seed_reason": "固定开源修订审读并以中文提炼；未做性能训练或硬件收益验证。",
+        "source_hash": "sha256:d7590b4d193bb0adc9c1e88793f9d9909f7ec4dc1788d9ed17885c0a1d8f8c46",
+        "source_path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/indexed_write_reduce.md",
+        "sources": [
+          {
+            "excerpt_sha256": "sha256:c8b2bdb82a5ca27c192ffdf6ecdf76a9424ae1c0daa0396e6ddb42775fe6b7ae",
+            "lines": [
+              1,
+              30
+            ],
+            "original_path": "ops/ascendc-performance-best-practices/references/common/indexed_write_reduction.md",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/indexed_write_reduction.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:c8b2bdb82a5ca27c192ffdf6ecdf76a9424ae1c0daa0396e6ddb42775fe6b7ae"
+          },
+          {
+            "excerpt_sha256": "sha256:b67ec969c55ab5d7b8a763a69fb71c5c1588d91fc07e23f7645688f9bcb1a74c",
+            "lines": [
+              1,
+              199
+            ],
+            "original_path": "ops/ascendc-tiling-design/references/index/patterns.md",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/index/patterns.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:b67ec969c55ab5d7b8a763a69fb71c5c1588d91fc07e23f7645688f9bcb1a74c"
+          },
+          {
+            "excerpt_sha256": "sha256:43653d54e243ddcd8e7aac142af45db506f26f59fd9be2b10928a9d5c98b6953",
+            "lines": [
+              1,
+              341
+            ],
+            "original_path": "ops/ascendc-tiling-design/references/index/scatter.md",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/index/scatter.md",
+            "revision": "41377d0a442cd5b1c2356874873a3dda591c6633",
+            "sha256": "sha256:43653d54e243ddcd8e7aac142af45db506f26f59fd9be2b10928a9d5c98b6953"
+          },
+          {
+            "excerpt_sha256": "sha256:f832694b1a824d5656fe58a7b6961bd22ed0cbd84b7acdc34cf8d00a4ed0ad30",
+            "lines": [
+              1,
+              317
+            ],
+            "original_path": "index/scatter_add_with_sorted/op_kernel/scatter_add_float_with_sorted.h",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/scatter_add_with_sorted/op_kernel/scatter_add_float_with_sorted.h",
+            "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+            "sha256": "sha256:f832694b1a824d5656fe58a7b6961bd22ed0cbd84b7acdc34cf8d00a4ed0ad30"
+          },
+          {
+            "excerpt_sha256": "sha256:ca5a2bf244f7f9cb1bb8f7f6b081e26bffba7d8b21d7aeadc6194a4335bb1f70",
+            "lines": [
+              1,
+              96
+            ],
+            "original_path": "index/scatter_add_with_sorted/README.md",
+            "path": "skills/ascendc-aprof-parallel-planning/knowledge/sources/ops-nn/8b42e125134fa9abf1e42a67e6b2792f78c26be5/index/scatter_add_with_sorted/README.md",
+            "revision": "8b42e125134fa9abf1e42a67e6b2792f78c26be5",
+            "sha256": "sha256:ca5a2bf244f7f9cb1bb8f7f6b081e26bffba7d8b21d7aeadc6194a4335bb1f70"
+          }
+        ],
+        "status": "active",
+        "tags": [
+          "scatter",
+          "index-add",
+          "indexed-write",
+          "duplicate-target",
+          "ownership"
+        ],
+        "title": "索引写与重复目标：目标所有权、原子和分组归约",
+        "version": "1.0.0"
+      }
+    }
+  ],
+  "considered": [
+    {
+      "router": "planning.root",
+      "target": "planning.elementwise",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "planning.root",
+      "target": "planning.reduction",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "planning.root",
+      "target": "planning.matmul",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "planning.root",
+      "target": "planning.under-fusion",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "planning.root",
+      "target": "planning.flash-attention",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "planning.root",
+      "target": "planning.sort-topk",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "planning.root",
+      "target": "planning.layout",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "planning.root",
+      "target": "planning.indexing",
+      "matched": true,
+      "prior_score": 3
+    },
+    {
+      "router": "planning.root",
+      "target": "planning.moe-routing",
+      "matched": false,
+      "prior_score": 3
+    },
+    {
+      "router": "planning.indexing",
+      "target": "planning.indexing.gather_output_owned",
+      "matched": false,
+      "prior_score": 2
+    },
+    {
+      "router": "planning.indexing",
+      "target": "planning.indexing.indexed_write_reduce",
+      "matched": true,
+      "prior_score": 2
+    }
+  ]
+}

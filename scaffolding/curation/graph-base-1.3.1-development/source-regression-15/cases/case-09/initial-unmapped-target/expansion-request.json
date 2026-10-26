@@ -1,0 +1,41 @@
+{
+  "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+  "task_id": "case-09",
+  "context_hash": "sha256:1a12678968bdaaae416c1883e32a1f675770282c174cf5ef2ea3be872e134491",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "graph_version": "v0005",
+  "source_context_ref": {
+    "path": "authority.json",
+    "sha256": "sha256:fc7edc18bf4c3c88320f9d0ff2766dfd2cb904a085caf67207032974879e7004"
+  },
+  "retrieval_hash": "sha256:0807734e7e968b1fec8499f15a4a1d89e0d89099018397be61718b58b8f19a3b",
+  "selections": [
+    {
+      "problem_id": "problem.onchip_capacity_pressure",
+      "reason": "tanh从不使用Erfc临时区却保留5个fp32数组；是否只能证明多余分配而非容量瓶颈",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "tanh从不使用Erfc临时区却保留5个fp32数组；是否只能证明多余分配而非容量瓶颈"
+      ]
+    },
+    {
+      "problem_id": "problem.dynamic_shape_mismatch",
+      "reason": "none/tanh使用同一1024tile，按模式预算tile是否值得",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "none/tanh使用同一1024tile，按模式预算tile是否值得"
+      ]
+    },
+    {
+      "problem_id": "problem.redundant_cast",
+      "reason": "保留必要cast/2^-23量化边界，避免错误删除舍入",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "保留必要cast/2^-23量化边界，避免错误删除舍入"
+      ]
+    }
+  ]
+}

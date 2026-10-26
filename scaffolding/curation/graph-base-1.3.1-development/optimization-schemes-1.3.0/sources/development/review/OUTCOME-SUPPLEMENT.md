@@ -1,0 +1,7 @@
+# 旧v3结果关联helper修复复核
+
+OR-001已在静态复核中闭合：knowledge_outcome.py:53–55核对request.operator、measured.operator和确认计划operator三方一致；原source/candidate/protocol检查保留。没有改knowledge.py或旧schema。
+
+测试新增两种错算子输入（请求/结果同时other；仅结果other），均重建合法schema、request引用和decision_hash，避免被更早hash错误偶然挡住。原正常v3与坏decision_hash例保留。
+
+本补充是独立源码/测试审查，未冒称审查者执行helper全链测试。主代理正运行受影响用例；原公开CLI4pass来自修复前，最终结果必须分开写。本记录补充原OUTCOME-ADDENDUM的历史open状态，不改锁定评分或原RUNTIME记录。

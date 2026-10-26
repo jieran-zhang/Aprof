@@ -1,0 +1,195 @@
+{
+  "schema_version": "aprof.evidence/v1",
+  "task_id": "case-02",
+  "source_context_ref": {
+    "path": "authority-v2.json",
+    "sha256": "sha256:6e4de2a8a07ed3e29edb48080b9bc67db0d288f9f4800eb4f3ad49df9a74040c"
+  },
+  "attributes": {
+    "family": "elementwise",
+    "dtype": [
+      "bfloat16",
+      "float16",
+      "float32"
+    ],
+    "platform": "dav-2201",
+    "features": [
+      "continuous",
+      "tiling-tail",
+      "memory-transfer",
+      "pipeline-sync",
+      "vector-api",
+      "buffer-lifetime"
+    ]
+  },
+  "facts": {
+    "source.path": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.path",
+      "ref": {
+        "path": "source/op_kernel/mish_kernel.asc",
+        "sha256": "sha256:7d83b38fe19fb3b69217fcea0966209946be1ac2f60aa4d1f454c63d02da1392",
+        "locator": "lines:1-120"
+      },
+      "view": "source"
+    },
+    "source.host": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.host",
+      "ref": {
+        "path": "source/op_host/mish.asc",
+        "sha256": "sha256:86903394dc6a3da62a4afe48da4008b10274190c4ee1db2cb6b18158f12648ee",
+        "locator": "lines:1-72"
+      },
+      "view": "source"
+    },
+    "source.matrix": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.matrix",
+      "ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:27f63b400e45b3e4a47c5b1504d94a2d5a1bd561f9432a74d6025d4064c7814e",
+        "locator": "lines:1-270"
+      },
+      "view": "workload"
+    },
+    "source.analysis": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "source.analysis",
+      "ref": {
+        "path": "analysis-r1.md",
+        "sha256": "sha256:d83bb63217504cb0a7a946dbbb0323eb3e79153e760a5c4426b174204518b4c2",
+        "locator": "lines:1-13"
+      },
+      "view": "source"
+    },
+    "constraint.semantic_equivalence": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "semantic-plan",
+      "ref": {
+        "path": "analysis-r1.md",
+        "sha256": "sha256:d83bb63217504cb0a7a946dbbb0323eb3e79153e760a5c4426b174204518b4c2",
+        "locator": "lines:1-13"
+      },
+      "view": "constraint"
+    },
+    "constraint.capacity": {
+      "state": "unknown",
+      "kind": "raw",
+      "evidence_id": null,
+      "ref": null,
+      "view": "constraint"
+    },
+    "constraint.dependency_lifetime": {
+      "state": "unknown",
+      "kind": "raw",
+      "evidence_id": null,
+      "ref": null,
+      "view": "constraint"
+    },
+    "symptom.source.serial_queue_or_event_order.component_1": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.serial_queue_or_event_order.component_1",
+      "ref": {
+        "path": "source/op_kernel/mish_kernel.asc",
+        "sha256": "sha256:7d83b38fe19fb3b69217fcea0966209946be1ac2f60aa4d1f454c63d02da1392",
+        "locator": "lines:1-120"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order.component_2": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.serial_queue_or_event_order.component_2",
+      "ref": {
+        "path": "source/op_kernel/mish_kernel.asc",
+        "sha256": "sha256:7d83b38fe19fb3b69217fcea0966209946be1ac2f60aa4d1f454c63d02da1392",
+        "locator": "lines:1-120"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order.component_3": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.serial_queue_or_event_order.component_3",
+      "ref": {
+        "path": "analysis-r1.md",
+        "sha256": "sha256:d83bb63217504cb0a7a946dbbb0323eb3e79153e760a5c4426b174204518b4c2",
+        "locator": "lines:1-13"
+      },
+      "view": "source"
+    },
+    "symptom.source.serial_queue_or_event_order": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": "symptom.source.serial_queue_or_event_order",
+      "ref": {
+        "path": "source/op_kernel/mish_kernel.asc",
+        "sha256": "sha256:7d83b38fe19fb3b69217fcea0966209946be1ac2f60aa4d1f454c63d02da1392",
+        "locator": "lines:1-120"
+      },
+      "view": "source"
+    },
+    "symptom.source.inner_loop_copy.component_1": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.inner_loop_copy.component_1",
+      "ref": {
+        "path": "source/op_kernel/mish_kernel.asc",
+        "sha256": "sha256:7d83b38fe19fb3b69217fcea0966209946be1ac2f60aa4d1f454c63d02da1392",
+        "locator": "lines:1-120"
+      },
+      "view": "source"
+    },
+    "symptom.source.inner_loop_copy.component_2": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.inner_loop_copy.component_2",
+      "ref": {
+        "path": "source/op_kernel/mish_kernel.asc",
+        "sha256": "sha256:7d83b38fe19fb3b69217fcea0966209946be1ac2f60aa4d1f454c63d02da1392",
+        "locator": "lines:1-120"
+      },
+      "view": "source"
+    },
+    "symptom.source.inner_loop_copy.component_3": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "symptom.source.inner_loop_copy.component_3",
+      "ref": {
+        "path": "analysis-r1.md",
+        "sha256": "sha256:d83bb63217504cb0a7a946dbbb0323eb3e79153e760a5c4426b174204518b4c2",
+        "locator": "lines:1-13"
+      },
+      "view": "source"
+    },
+    "symptom.source.inner_loop_copy": {
+      "state": true,
+      "kind": "derived",
+      "evidence_id": "symptom.source.inner_loop_copy",
+      "ref": {
+        "path": "source/op_kernel/mish_kernel.asc",
+        "sha256": "sha256:7d83b38fe19fb3b69217fcea0966209946be1ac2f60aa4d1f454c63d02da1392",
+        "locator": "lines:1-120"
+      },
+      "view": "source"
+    },
+    "source.r2": {
+      "state": true,
+      "kind": "raw",
+      "evidence_id": "static-r2",
+      "ref": {
+        "path": "static-r2.json",
+        "sha256": "sha256:8dbec0aa653d81f5fed4194435138611151489eabf5b81cc5df8f2c146f8bd8e",
+        "locator": "finding,rows"
+      },
+      "view": "source"
+    }
+  }
+}

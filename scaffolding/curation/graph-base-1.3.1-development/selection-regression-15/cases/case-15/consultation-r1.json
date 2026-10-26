@@ -1,0 +1,79 @@
+{
+  "task_id": "autonomy-c-15",
+  "kind": "preselection/internal-router-feasibility-consultation",
+  "round": 1,
+  "parallel_route_ref": {
+    "path": "parallel-planning-consult-route.json",
+    "sha256": "sha256:8dd88633cefddd7555450edf4a050b85904621b712d8a3bc124f4be154ce27f7"
+  },
+  "optimization_route_ref": {
+    "path": "optimization-consult-route.json",
+    "sha256": "sha256:e22ba9218c39593402b6822388ae0d02925f2bf2933990d57a28baad73d71e4b"
+  },
+  "actual_body_readings": [
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative",
+        "geometry"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/coordinate_neighborhood.md",
+        "sha256": "sha256:5e4f96af8fde45ec3d5ea785c96c2243f211dbeeb93cd28c1f4d7e63bdf036fb"
+      },
+      "locator": "lines:110-183",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "将Resize G绑定ResizeCoord、B绑定clip与边界h1/w1、H绑定四点/权重、F绑定原FP32乘加序列。仅部分采用空间块与依赖轴成本；还未证明最终API/容量。确认几何与nc无关而输入值依赖nc，派生表复用必须单列未注册意图，不归reuse_input_tiles。",
+      "applicability": "partial：仅采用容量、有效域、所有权/数值边界原则；未声称整套模板API已验证。"
+    },
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+        "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+      },
+      "locator": "lines:90-131",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "采用A3 memory Vector连续count与合法repeat的地址范围公式，避免950 Reg/VF。数值操作顺序和mask尾部须逐API核验；有Cast不代表主要Scalar算术已向量化。Compare非整256B边界不能从Add的count推合法性。",
+      "applicability": "partial：仅采用容量、有效域、所有权/数值边界原则；未声称整套模板API已验证。"
+    },
+    {
+      "opportunity_ids": [
+        "primary",
+        "alternative"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+        "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+      },
+      "locator": "lines:97-264",
+      "effect_kind": "plan",
+      "before": "尚需判断批量/驻留方法是否适用以及新增代价。",
+      "after": "只有原输入同地址同版本才能驻留；保留到最后异步消费者结束，删除copy不自动扣除独立InitBuffer分配。RoPE限同owner trig key窗口；Maximum限broadcast源；Resize限同nc窗口公共原值，几何权重表不是原输入。",
+      "applicability": "partial：仅采用容量、有效域、所有权/数值边界原则；未声称整套模板API已验证。"
+    }
+  ],
+  "confirmed_C2": false,
+  "P_KEEP": false,
+  "O_KEEP": false,
+  "implementation_authorized": false,
+  "reason": "采用条件骨架和方法咨询，当前未有完整已确认计划，不生成虚构C2/C3。",
+  "action_bound_route_refs": [
+    {
+      "path": "parallel-planning-action-consult-r1.json",
+      "sha256": "sha256:2e23890bfebdca569722402bfa3890d0df3230ee1de0ddecaf36b1c857f58046"
+    },
+    {
+      "path": "optimization-action-consult-r1.json",
+      "sha256": "sha256:b5202276c527b05db537c939d19fb0f37e5c5bbde301db49fd894b1c37c8b3ab"
+    }
+  ]
+}

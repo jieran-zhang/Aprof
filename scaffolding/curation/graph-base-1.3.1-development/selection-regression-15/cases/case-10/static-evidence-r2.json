@@ -1,0 +1,188 @@
+{
+  "task_id": "case-10",
+  "attempt_identity": {
+    "parent_implementation_hash": "sha256:4c4d3eef687963f5a0044acbfacc442954ed0f011aefd355b186f54e8d7c0d27",
+    "implementation_hash": null,
+    "workload_hash": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380"
+  },
+  "source_refs": [
+    {
+      "path": "source/op_kernel/sigmoid_kernel.asc",
+      "sha256": "sha256:573454c8cb2a67641706f5d94b42dc97fc0f4a7656fbf2b95c8e9859dc1f6c28"
+    },
+    {
+      "path": "source/op_kernel/sigmoid_tiling.h",
+      "sha256": "sha256:29536d3cc5c507fc72c61736a69ad5ba9ab8ca39b86002e1f5ae121039c4734f"
+    },
+    {
+      "path": "source/matrix-20.json",
+      "sha256": "sha256:17de09a358d28452cf66dfd19829f3f044dcf4c7ce682c1f9709240266c26380"
+    }
+  ],
+  "finding": "新增按符号核数C_available计算循环条件：源useful=ceil(N/4096)，当C_available≥useful，每核L≤4096、无第二tile，因此不能仅由N很大断言重叠；真实核心数未知。R2将多tile作为pipeline有效域条件，补上FP32与half双槽均16*T显式字节的分账；若目标可用核数导致单tile则batch/原路径优先。",
+  "rows": [
+    {
+      "case_id": "1",
+      "single_tile_if_available_cores_at_least": 256,
+      "double_slot_explicit_bytes_at_4096": 65536,
+      "original_explicit_bytes": 49152,
+      "api_tmp_bytes": "unknown",
+      "multi_tile_note": "at least one active core has L>4096 only if actual partition makes it so; no device query"
+    },
+    {
+      "case_id": "2",
+      "single_tile_if_available_cores_at_least": 1024,
+      "double_slot_explicit_bytes_at_4096": 65536,
+      "original_explicit_bytes": 32768,
+      "api_tmp_bytes": "unknown",
+      "multi_tile_note": "at least one active core has L>4096 only if actual partition makes it so; no device query"
+    },
+    {
+      "case_id": "3",
+      "single_tile_if_available_cores_at_least": 4096,
+      "double_slot_explicit_bytes_at_4096": 65536,
+      "original_explicit_bytes": 49152,
+      "api_tmp_bytes": "unknown",
+      "multi_tile_note": "at least one active core has L>4096 only if actual partition makes it so; no device query"
+    },
+    {
+      "case_id": "4",
+      "single_tile_if_available_cores_at_least": 16384,
+      "double_slot_explicit_bytes_at_4096": 65536,
+      "original_explicit_bytes": 49152,
+      "api_tmp_bytes": "unknown",
+      "multi_tile_note": "at least one active core has L>4096 only if actual partition makes it so; no device query"
+    },
+    {
+      "case_id": "5",
+      "single_tile_if_available_cores_at_least": 16384,
+      "double_slot_explicit_bytes_at_4096": 65536,
+      "original_explicit_bytes": 32768,
+      "api_tmp_bytes": "unknown",
+      "multi_tile_note": "at least one active core has L>4096 only if actual partition makes it so; no device query"
+    },
+    {
+      "case_id": "6",
+      "single_tile_if_available_cores_at_least": 256,
+      "double_slot_explicit_bytes_at_4096": 65536,
+      "original_explicit_bytes": 49152,
+      "api_tmp_bytes": "unknown",
+      "multi_tile_note": "at least one active core has L>4096 only if actual partition makes it so; no device query"
+    },
+    {
+      "case_id": "7",
+      "single_tile_if_available_cores_at_least": 252,
+      "double_slot_explicit_bytes_at_4096": 65536,
+      "original_explicit_bytes": 49152,
+      "api_tmp_bytes": "unknown",
+      "multi_tile_note": "at least one active core has L>4096 only if actual partition makes it so; no device query"
+    },
+    {
+      "case_id": "8",
+      "single_tile_if_available_cores_at_least": 289,
+      "double_slot_explicit_bytes_at_4096": 65536,
+      "original_explicit_bytes": 32768,
+      "api_tmp_bytes": "unknown",
+      "multi_tile_note": "at least one active core has L>4096 only if actual partition makes it so; no device query"
+    },
+    {
+      "case_id": "9",
+      "single_tile_if_available_cores_at_least": 12132,
+      "double_slot_explicit_bytes_at_4096": 65536,
+      "original_explicit_bytes": 49152,
+      "api_tmp_bytes": "unknown",
+      "multi_tile_note": "at least one active core has L>4096 only if actual partition makes it so; no device query"
+    },
+    {
+      "case_id": "10",
+      "single_tile_if_available_cores_at_least": 257,
+      "double_slot_explicit_bytes_at_4096": 65536,
+      "original_explicit_bytes": 49152,
+      "api_tmp_bytes": "unknown",
+      "multi_tile_note": "at least one active core has L>4096 only if actual partition makes it so; no device query"
+    },
+    {
+      "case_id": "11",
+      "single_tile_if_available_cores_at_least": 267,
+      "double_slot_explicit_bytes_at_4096": 65536,
+      "original_explicit_bytes": 32768,
+      "api_tmp_bytes": "unknown",
+      "multi_tile_note": "at least one active core has L>4096 only if actual partition makes it so; no device query"
+    },
+    {
+      "case_id": "12",
+      "single_tile_if_available_cores_at_least": 245,
+      "double_slot_explicit_bytes_at_4096": 65536,
+      "original_explicit_bytes": 49152,
+      "api_tmp_bytes": "unknown",
+      "multi_tile_note": "at least one active core has L>4096 only if actual partition makes it so; no device query"
+    },
+    {
+      "case_id": "13",
+      "single_tile_if_available_cores_at_least": 2665,
+      "double_slot_explicit_bytes_at_4096": 65536,
+      "original_explicit_bytes": 32768,
+      "api_tmp_bytes": "unknown",
+      "multi_tile_note": "at least one active core has L>4096 only if actual partition makes it so; no device query"
+    },
+    {
+      "case_id": "14",
+      "single_tile_if_available_cores_at_least": 740,
+      "double_slot_explicit_bytes_at_4096": 65536,
+      "original_explicit_bytes": 49152,
+      "api_tmp_bytes": "unknown",
+      "multi_tile_note": "at least one active core has L>4096 only if actual partition makes it so; no device query"
+    },
+    {
+      "case_id": "15",
+      "single_tile_if_available_cores_at_least": 257,
+      "double_slot_explicit_bytes_at_4096": 65536,
+      "original_explicit_bytes": 32768,
+      "api_tmp_bytes": "unknown",
+      "multi_tile_note": "at least one active core has L>4096 only if actual partition makes it so; no device query"
+    },
+    {
+      "case_id": "16",
+      "single_tile_if_available_cores_at_least": 511,
+      "double_slot_explicit_bytes_at_4096": 65536,
+      "original_explicit_bytes": 49152,
+      "api_tmp_bytes": "unknown",
+      "multi_tile_note": "at least one active core has L>4096 only if actual partition makes it so; no device query"
+    },
+    {
+      "case_id": "17",
+      "single_tile_if_available_cores_at_least": 512,
+      "double_slot_explicit_bytes_at_4096": 65536,
+      "original_explicit_bytes": 49152,
+      "api_tmp_bytes": "unknown",
+      "multi_tile_note": "at least one active core has L>4096 only if actual partition makes it so; no device query"
+    },
+    {
+      "case_id": "18",
+      "single_tile_if_available_cores_at_least": 512,
+      "double_slot_explicit_bytes_at_4096": 65536,
+      "original_explicit_bytes": 32768,
+      "api_tmp_bytes": "unknown",
+      "multi_tile_note": "at least one active core has L>4096 only if actual partition makes it so; no device query"
+    },
+    {
+      "case_id": "19",
+      "single_tile_if_available_cores_at_least": 511,
+      "double_slot_explicit_bytes_at_4096": 65536,
+      "original_explicit_bytes": 49152,
+      "api_tmp_bytes": "unknown",
+      "multi_tile_note": "at least one active core has L>4096 only if actual partition makes it so; no device query"
+    },
+    {
+      "case_id": "20",
+      "single_tile_if_available_cores_at_least": 2576,
+      "double_slot_explicit_bytes_at_4096": 65536,
+      "original_explicit_bytes": 32768,
+      "api_tmp_bytes": "unknown",
+      "multi_tile_note": "at least one active core has L>4096 only if actual partition makes it so; no device query"
+    }
+  ],
+  "counterfactual_probe": "反事实固定N=8192，C_available=2得到每核单tile，pipeline无稳态；C_available=1得到两tile可比较重叠。若UB不足双槽T4096而需T2048，API/事件约翻倍，可能反转到单槽。case顺序无影响。",
+  "implementation_state": "not_implemented",
+  "measurement": "not_measured"
+}

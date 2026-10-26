@@ -1,0 +1,33 @@
+{
+  "schema": "aprof.independent-outcome-addendum/v1",
+  "reviewed_at_utc": "2026-10-21T12:12:26.316555+00:00",
+  "path": "/mnt/tidalfs-hwwh01/dataset/dots_infra/workspace/jieran/APROF/aprof-maintenance-soft-targets-20261019/skill-libs/graph-base/1.3.0/runtime/src/aprof_runtime/knowledge_outcome.py",
+  "sha256": "sha256:8daa7e6f312d832fdedcea4a502474824423cbd360484080132d4014f682a2a3",
+  "implementation_modified": false,
+  "grades_modified": false,
+  "hardware_used": false,
+  "findings": [
+    {
+      "id": "OR-001",
+      "priority": "P2",
+      "status": "reported_to_parent; awaiting_fix_or_disposition",
+      "title": "旧v3结果关联缺少三方operator身份核对",
+      "line": 53,
+      "detail": "函数核对candidate/protocol以及baseline/candidate source hash，但未要求request.operator、measured.operator与confirmed_plan.parallel_plan.operator相等。同一源码清单可包含多个operator，source hash和candidate ID一致不能替代operator绑定。",
+      "comparison": "bindings_v4.link_result_v4已经核对这三方operator。",
+      "recommendation": "复用v4相同的三方operator检查，新增旧v3 wrong_operator反例；不修改knowledge.py或旧handoff schema。",
+      "validation": "独立静态源码复核；尚未声称完成新helper的独立全链负例运行。"
+    }
+  ],
+  "other_checks": [
+    "仅接受handoff/v3并按routing_config_hash加载冻结bundle，不改latest知识或投影v4。",
+    "真实validate_chain需implemented；NOOP不能关联新候选。",
+    "timing-ref/result/request文件hash、strict schema、decision_hash及候选/协议/父子source逐项检查。",
+    "relative result相对timing-ref，relative request相对result；输出保留causal_claim=false和legacy_episode_eligible=false。"
+  ],
+  "limitations": [
+    "不重复执行timing finalize；原始真实性沿用已有finalize/verify职责。",
+    "多文件inventory与text locator边界仍按最终报告单列。",
+    "原RUNTIME.json与锁定grades.json不回填；本记录为独立补充。"
+  ]
+}

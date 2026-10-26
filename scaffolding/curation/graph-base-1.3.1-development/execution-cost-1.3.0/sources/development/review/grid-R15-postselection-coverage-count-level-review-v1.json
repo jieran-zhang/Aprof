@@ -1,0 +1,117 @@
+{
+  "kind": "independent_selected_after_source_model_count_level_review",
+  "status": "source_model_levels_and_hashes_consistent",
+  "reviewed_monotonic": 29592306.644660313,
+  "candidate": "R15-attempt-01",
+  "actual_parent": "R13-attempt-03",
+  "input_model": {
+    "path": "/dev/shm/aprof-skill130-hw-five-rounds-20261021/scratch/tasks/grid_sampler_3d/artifacts/R15-selected-after-fastpath-coverage.json",
+    "sha256": "sha256:3bf19d888e7e168b75874b7b8922e64d53174a7af2ba3f8aa4ad7cc4fff945b2"
+  },
+  "stage_addendum": {
+    "path": "/dev/shm/aprof-skill130-hw-five-rounds-20261021/scratch/tasks/grid_sampler_3d/reports/stages/R15-selected-after-fastpath-coverage-addendum.md",
+    "sha256": "sha256:3fc89b157466379b58013aac28435c13dee75d75b7bfc43b7c7ba414d5c70c6c"
+  },
+  "actual_source_evidence": [
+    {
+      "role": "actual_parent",
+      "source": {
+        "path": "/dev/shm/aprof-skill130-hw-five-rounds-20261021/scratch/tasks/grid_sampler_3d/rounds/R13/attempt-03/op_kernel/grid_sampler_3d_kernel.asc",
+        "sha256": "sha256:dec0023a4cf475b04043e0350c2e2c6e4b29e32729ff46290b74aa393741d46b"
+      },
+      "start_line": 1150,
+      "source_point_loop": "for(uint32_t p=0;p<count;++p){const uint32_t low=geoIndex.GetValue(p),high=geoIndex.GetValue(7*gTile_+p);const uint64_t rowStride=t_->w>=2?(t_->w-2)*cp_*sizeof(T):0;AscendC::DataCopyPadExtParams<T> pad{false,0,0,static_cast<T>(0)};\n                if(low<i_*sizeof(T) && high<i_*sizeof(T) && t_->w>=2 && rowStride<=0xffffffffULL){AscendC::DataCopyExtParams cp{2,2*cp_*static_cast<uint32_t>(sizeof(T)),static_cast<uint32_t>(rowStride),0,0};AscendC::DataCopyPad(raw[p*8*cp_],x_[(n*(i_+1)+low/sizeof(T))*cp_],cp,pad);AscendC::DataCopyPad(raw[(p*8+4)*cp_],x_[(n*(i_+1)+low/sizeof(T)+t_->h*t_->w)*cp_],cp,pad);}\n                else{AscendC::DataCopyExtParams cp{1,cp_*static_cast<uint32_t>(sizeof(T)),0,0,0};for(uint32_t k=0;k<8;++k){const uint32_t off=geoIndex.GetValue(k*gTile_+p);AscendC::DataCopyPad(raw[(p*8+k)*cp_],x_[(n*(i_+1)+off/sizeof(T))*cp_],cp,pad);}}\n            }",
+      "fast_API_invocations_per_point": 2,
+      "fast_descriptor_blocks_per_invocation": 2,
+      "fast_blockLen_in_CP_items": 2,
+      "boundary_API_invocations_per_point": 8,
+      "boundary_descriptor_blocks_per_invocation": 1
+    },
+    {
+      "role": "candidate",
+      "source": {
+        "path": "/dev/shm/aprof-skill130-hw-five-rounds-20261021/scratch/tasks/grid_sampler_3d/rounds/R15/attempt-01/op_kernel/grid_sampler_3d_kernel.asc",
+        "sha256": "sha256:2d9f2e811b40ecf9314ac34aa9e3511ce4262b6e7ae76526dd165102a0d6fa1d"
+      },
+      "start_line": 1161,
+      "source_point_loop": "for(uint32_t p=0;p<count;++p){const uint32_t low=geoIndex.GetValue(p),high=geoIndex.GetValue(7*gTile_+p);const uint64_t rowStride=t_->w>=2?(t_->w-2)*2*cp_*sizeof(T):0;AscendC::DataCopyPadExtParams<T> pad{false,0,0,static_cast<T>(0)};\n                if(low<i_*sizeof(T) && high<i_*sizeof(T) && t_->w>=2 && rowStride<=0xffffffffULL){AscendC::DataCopyExtParams cp{2,4*cp_*static_cast<uint32_t>(sizeof(T)),static_cast<uint32_t>(rowStride),0,0};AscendC::DataCopyPad(raw[p*8*cp_],x_[(n*(i_+1)+low/sizeof(T))*2*cp_],cp,pad);}\n                else{AscendC::DataCopyExtParams cp{1,cp_*static_cast<uint32_t>(sizeof(T)),0,0,0};for(uint32_t k=0;k<8;++k){const uint32_t off=geoIndex.GetValue(k*gTile_+p),slot=2*(k&3)+(k>>2);AscendC::DataCopyPad(raw[(p*8+slot)*cp_],x_[(n*(i_+1)+off/sizeof(T))*2*cp_],cp,pad);}}\n            }",
+      "fast_API_invocations_per_point": 1,
+      "fast_descriptor_blocks_per_invocation": 2,
+      "fast_blockLen_in_CP_items": 4,
+      "boundary_API_invocations_per_point": 8,
+      "boundary_descriptor_blocks_per_invocation": 1
+    }
+  ],
+  "rows": [
+    {
+      "case_id": 10,
+      "source_point_count_NS": 397535,
+      "fast_points": 397535,
+      "boundary_points": 0,
+      "fast_fraction": 1.0,
+      "parent_source_DataCopyPad_calls_model": 795070,
+      "candidate_source_DataCopyPad_calls_model": 397535,
+      "parent_source_data_blocks_model": 1590140,
+      "candidate_source_data_blocks_model": 795070,
+      "both_source_requested_bytes_model": 1424765440,
+      "additional_Xp_write_bytes_and_live_bytes_model": 178097920
+    },
+    {
+      "case_id": 16,
+      "source_point_count_NS": 127008,
+      "fast_points": 121072,
+      "boundary_points": 5936,
+      "fast_fraction": 0.95326278659612,
+      "parent_source_DataCopyPad_calls_model": 289632,
+      "candidate_source_DataCopyPad_calls_model": 168560,
+      "parent_source_data_blocks_model": 531776,
+      "candidate_source_data_blocks_model": 289632,
+      "both_source_requested_bytes_model": 65028096,
+      "additional_Xp_write_bytes_and_live_bytes_model": 32006144
+    },
+    {
+      "case_id": 17,
+      "source_point_count_NS": 3048381,
+      "fast_points": 3047288,
+      "boundary_points": 1093,
+      "fast_fraction": 0.9996414490183477,
+      "parent_source_DataCopyPad_calls_model": 6103320,
+      "candidate_source_DataCopyPad_calls_model": 3056032,
+      "parent_source_data_blocks_model": 12197896,
+      "candidate_source_data_blocks_model": 6103320,
+      "both_source_requested_bytes_model": 3121542144,
+      "additional_Xp_write_bytes_and_live_bytes_model": 390193152
+    },
+    {
+      "case_id": 20,
+      "source_point_count_NS": 1008126,
+      "fast_points": 1008126,
+      "boundary_points": 0,
+      "fast_fraction": 1.0,
+      "parent_source_DataCopyPad_calls_model": 2016252,
+      "candidate_source_DataCopyPad_calls_model": 1008126,
+      "parent_source_data_blocks_model": 4032504,
+      "candidate_source_data_blocks_model": 2016252,
+      "both_source_requested_bytes_model": 2064642048,
+      "additional_Xp_write_bytes_and_live_bytes_model": 520257536
+    }
+  ],
+  "formulas": {
+    "P": "N*S distinct sample points, each includes all CP channels",
+    "F": "CPU-modeled valid interior points",
+    "B": "P-F",
+    "parent_API_calls": "2*F+8*B",
+    "candidate_API_calls": "F+8*B",
+    "parent_descriptor_blocks": "4*F+8*B",
+    "candidate_descriptor_blocks": "2*F+8*B",
+    "both_requested_packed_source_bytes": "8*P*CP*sizeof(T)"
+  },
+  "count_level": "Only dynamic invocation counts predicted for the source DataCopyPad expressions inside GridSampleChannels p-loop, conditional on the supplied CPU-modeled coordinates; not task count, channel count, all callback API calls, emitted DMA instructions, cache lines or physical HBM transactions.",
+  "case16_coincidence": "parent_API_calls_model=289632 equals candidate_descriptor_blocks_model=289632 numerically; these remain different levels and separate fields.",
+  "independent_scope": "Inspected actual parent/candidate loops and descriptor fields; checked input/source/model hashes and count arithmetic. Did not rerun coordinate model, oracle or device. NumPy source-step applicability remains a CPU model rather than device rounding or observed branch trace.",
+  "selection_time": "Computed after selection and source freeze; frozen C1 remains unchanged. This is not evidence those fractions informed selection.",
+  "cost_boundary": "Eight-neighbor packed-source requested bytes are unchanged. Full second Xp write/live footprint is added regardless of fastpath fraction. Full callback performance is judged only by the unique official R15 series; no isolated mechanism or speedup attribution.",
+  "new_hardware_runs": 0,
+  "new_oracle_invocations": 0,
+  "new_performance_samples": 0
+}

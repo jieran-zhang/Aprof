@@ -1,0 +1,286 @@
+{
+  "schema": "aprof.code-understanding-gold/v1",
+  "case": "case-01",
+  "title_private": "Vector full path, log-base transformation and single-slot queues",
+  "max_score": 30,
+  "dimensions": {
+    "algorithm_strategy": 10,
+    "execution": 10,
+    "hardware": 10
+  },
+  "facts": [
+    {
+      "id": "CU01.A01",
+      "dimension": "algorithm_strategy",
+      "points": 4,
+      "expected": "The mathematical transform is y=exp((scale*x+shift)*log(base)) for base>0, otherwise y=exp(scale*x+shift). Here it is 2^(0.5*x-1); representative ideal values at -2,0,2 are 0.25,0.5,1. No claim of exact transcendental hardware bits is required.",
+      "sources": [
+        {
+          "file": "case-01/source/op_kernel/exp_tiling.h",
+          "line_start": 27,
+          "line_end": 28,
+          "sha256": "411ed60d96b961f9ffd7e6ec883f6ceae760a54b764cad1e8456112a38af0d8f"
+        },
+        {
+          "file": "case-01/source/op_kernel/exp_kernel.asc",
+          "line_start": 58,
+          "line_end": 60,
+          "sha256": "ab81778156f54d348c36dcca5b5831ccc0d159d36e5ee7ef66c9d5699bac869a"
+        }
+      ],
+      "accept": [
+        "Equivalent exp/log expression with explicit shift placement."
+      ],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU01.A02",
+      "dimension": "algorithm_strategy",
+      "points": 3,
+      "expected": "BF16 inputs are copied as BF16, cast to float, multiplied/shifted/exponentiated in FP32 temporaries, then cast back with CAST_RINT. The requested storage dtype does not mean BF16 arithmetic throughout.",
+      "sources": [
+        {
+          "file": "case-01/source/op_kernel/exp_kernel.asc",
+          "line_start": 55,
+          "line_end": 63,
+          "sha256": "ab81778156f54d348c36dcca5b5831ccc0d159d36e5ee7ef66c9d5699bac869a"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU01.A03",
+      "dimension": "algorithm_strategy",
+      "points": 3,
+      "expected": "FP32 uses Muls/Adds/Exp directly in the FP32 output tensor. FP16 and BF16 both use FP32 intermediates; final FP16 cast uses CAST_NONE, BF16 uses CAST_RINT. This is unary elementwise, with no reduction or Cube matmul.",
+      "sources": [
+        {
+          "file": "case-01/source/op_kernel/exp_kernel.asc",
+          "line_start": 50,
+          "line_end": 65,
+          "sha256": "ab81778156f54d348c36dcca5b5831ccc0d159d36e5ee7ef66c9d5699bac869a"
+        },
+        {
+          "file": "case-01/source/op_kernel/exp_kernel.asc",
+          "line_start": 87,
+          "line_end": 92,
+          "sha256": "ab81778156f54d348c36dcca5b5831ccc0d159d36e5ee7ef66c9d5699bac869a"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU01.E01",
+      "dimension": "execution",
+      "points": 4,
+      "expected": "Host queries the vector core count, calls the source tiling function, copies the tiling record to GM, and launches blockNum=3. This input has blockLength=8340 and tileElements=4096.",
+      "sources": [
+        {
+          "file": "case-01/source/op_host/exp.asc",
+          "line_start": 47,
+          "line_end": 49,
+          "sha256": "405597f7fba96c5f76fffedb4d9600a28f9e131561f899b1afa3de383a2c5dee"
+        },
+        {
+          "file": "case-01/source/op_host/exp.asc",
+          "line_start": 58,
+          "line_end": 60,
+          "sha256": "405597f7fba96c5f76fffedb4d9600a28f9e131561f899b1afa3de383a2c5dee"
+        },
+        {
+          "file": "case-01/source/op_kernel/exp_tiling.h",
+          "line_start": 22,
+          "line_end": 25,
+          "sha256": "411ed60d96b961f9ffd7e6ec883f6ceae760a54b764cad1e8456112a38af0d8f"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "n, blockLength and tileElements are elements; blockNum is launched blocks."
+    },
+    {
+      "id": "CU01.E02",
+      "dimension": "execution",
+      "points": 3,
+      "expected": "Block element offsets are [0,8340,16680], valid lengths [8340,8340,8339]. BF16 GM byte starts are [0,16680,33360]. Coverage is contiguous, no overlap, ending at element 25019.",
+      "sources": [
+        {
+          "file": "case-01/source/op_kernel/exp_kernel.asc",
+          "line_start": 11,
+          "line_end": 15,
+          "sha256": "ab81778156f54d348c36dcca5b5831ccc0d159d36e5ee7ef66c9d5699bac869a"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "Offsets before multiplying sizeof(T) are elements; BF16 is 2 bytes."
+    },
+    {
+      "id": "CU01.E03",
+      "dimension": "execution",
+      "points": 3,
+      "expected": "Each block executes three CopyIn->Compute->CopyOut iterations. Counts are [4096,4096,148], [4096,4096,148], [4096,4096,147]. Final transfer blockLen is 296/296/294 bytes; vector arithmetic count remains the valid element count.",
+      "sources": [
+        {
+          "file": "case-01/source/op_kernel/exp_kernel.asc",
+          "line_start": 27,
+          "line_end": 32,
+          "sha256": "ab81778156f54d348c36dcca5b5831ccc0d159d36e5ee7ef66c9d5699bac869a"
+        },
+        {
+          "file": "case-01/source/op_kernel/exp_kernel.asc",
+          "line_start": 39,
+          "line_end": 42,
+          "sha256": "ab81778156f54d348c36dcca5b5831ccc0d159d36e5ee7ef66c9d5699bac869a"
+        },
+        {
+          "file": "case-01/source/op_kernel/exp_kernel.asc",
+          "line_start": 69,
+          "line_end": 73,
+          "sha256": "ab81778156f54d348c36dcca5b5831ccc0d159d36e5ee7ef66c9d5699bac869a"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU01.H01",
+      "dimension": "hardware",
+      "points": 3,
+      "expected": "For BF16, each raw input/output slot is 8192 bytes and each FP32 scratch buffer is 16384 bytes; total explicit requested UB storage is 49152 bytes. FP32 requests only two 16384-byte queue slots, total 32768 bytes. This counts explicit payload allocation, not all runtime overhead.",
+      "sources": [
+        {
+          "file": "case-01/source/op_kernel/exp_kernel.asc",
+          "line_start": 16,
+          "line_end": 22,
+          "sha256": "ab81778156f54d348c36dcca5b5831ccc0d159d36e5ee7ef66c9d5699bac869a"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/resource_management/TPipe/InitBuffer.md",
+          "line_start": 101,
+          "line_end": 101,
+          "sha256": "36da88132f7d5f62484bc98896bd99577bcce25d71a84e21220731a557aea34d"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "bytes, with 1024-byte KiB if used."
+    },
+    {
+      "id": "CU01.H02",
+      "dimension": "hardware",
+      "points": 3,
+      "expected": "Input Alloc/EnQue/DeQue/Free and output Alloc/EnQue/DeQue/Free transfer ownership and synchronize the producer/consumer stages through TPipe/TQue. Input is read by Vector after its copy, and output is copied after Vector compute. FP scratch is reused within iterations.",
+      "sources": [
+        {
+          "file": "case-01/source/op_kernel/exp_kernel.asc",
+          "line_start": 38,
+          "line_end": 42,
+          "sha256": "ab81778156f54d348c36dcca5b5831ccc0d159d36e5ee7ef66c9d5699bac869a"
+        },
+        {
+          "file": "case-01/source/op_kernel/exp_kernel.asc",
+          "line_start": 46,
+          "line_end": 66,
+          "sha256": "ab81778156f54d348c36dcca5b5831ccc0d159d36e5ee7ef66c9d5699bac869a"
+        },
+        {
+          "file": "case-01/source/op_kernel/exp_kernel.asc",
+          "line_start": 70,
+          "line_end": 73,
+          "sha256": "ab81778156f54d348c36dcca5b5831ccc0d159d36e5ee7ef66c9d5699bac869a"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/sync_control/intra_core_sync/TQueSync.md",
+          "line_start": 32,
+          "line_end": 32,
+          "sha256": "be806235d1796f682c3e09d73934ec8510538ddd386f49a2eccb0e9a0575e187"
+        }
+      ],
+      "accept": [
+        "Explains the data dependencies without naming internal event IDs."
+      ],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU01.H03",
+      "dimension": "hardware",
+      "points": 2,
+      "expected": "InitBuffer num=1 and the CopyIn/Compute/CopyOut loop provide one input and one output slot. This source does not enable queue double buffering or prove overlapped DMA and Vector execution just because it uses queues.",
+      "sources": [
+        {
+          "file": "case-01/source/op_kernel/exp_kernel.asc",
+          "line_start": 18,
+          "line_end": 19,
+          "sha256": "ab81778156f54d348c36dcca5b5831ccc0d159d36e5ee7ef66c9d5699bac869a"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/resource_management/TPipe/InitBuffer.md",
+          "line_start": 101,
+          "line_end": 101,
+          "sha256": "36da88132f7d5f62484bc98896bd99577bcce25d71a84e21220731a557aea34d"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    },
+    {
+      "id": "CU01.H04",
+      "dimension": "hardware",
+      "points": 2,
+      "expected": "The relevant path is GM->UB on MTE2, arithmetic/casts on V, then UB->GM on MTE3. One-block DataCopyPad tails may occupy a 32-byte-aligned UB physical block, but GM transfer length and valid compute count are the actual tail. No bandwidth/utilization or runtime speed can be inferred.",
+      "sources": [
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB.md",
+          "line_start": 59,
+          "line_end": 59,
+          "sha256": "8fd9166a39e7ab163695f1d965ad633725afa1c60cff08708b439f58f2a646ee"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_UBToGM.md",
+          "line_start": 68,
+          "line_end": 68,
+          "sha256": "23e9b37e62ff5c2fed4b142ad65b346f8987aa6be527e291dae63466dc88f315"
+        },
+        {
+          "file": "shared/rawdocs/docs/zh/api/SIMD-API/basic_api/sync_control/intra_core_sync/intra_core_sync_overview.md",
+          "line_start": 5,
+          "line_end": 5,
+          "sha256": "66cee5f1be56d2dd0ec45ca748e5f27458d73711e84feb374e5d48246b9d8f73"
+        }
+      ],
+      "accept": [],
+      "reject": [],
+      "units": "as stated in expected fact"
+    }
+  ],
+  "critical_errors": [
+    {
+      "id": "CU01.C01",
+      "dimension": "algorithm_strategy",
+      "cap": 2,
+      "explicit_claim_trigger": "Claims the operation is exp(base*scale*x+shift), base^(scale*x)+shift, or drops the transformed shift.",
+      "omission_does_not_trigger": true
+    },
+    {
+      "id": "CU01.C02",
+      "dimension": "hardware",
+      "cap": 3,
+      "explicit_claim_trigger": "Claims queues enable double buffering here, or that queue depth alone proves asynchronous overlap.",
+      "omission_does_not_trigger": true
+    }
+  ],
+  "acceptable_unknowns": [
+    "Exact Exp approximation/rounding bits and throughput are unmeasured.",
+    "No need to invent cache behavior, compiler schedule, hardware counters, or an optimization action."
+  ],
+  "grading": "Use private/GRADING_PROTOCOL.md; do not infer unsupported measurements or penalize brevity."
+}

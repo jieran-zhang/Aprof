@@ -1,0 +1,91 @@
+{
+  "review_started_at_utc": "2026-10-22T04:11:48.927622+00:00",
+  "facts_lock": "FACTS-LOCK.json",
+  "retry_amendment_frozen_before_formal_grades": true,
+  "rows": [
+    {
+      "run_id": "s1-value-domain-A-1",
+      "scenario": "s1-value-domain",
+      "version": "A",
+      "repeat": 1,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "准确区分a不触发与b全通道扫描命中；极值未采样仍让全部tile走software。",
+        "量化2048输出×8=16384软件FMA；指出普通Mul/Add与fused整数实现舍入不等价，不能以形状推断计算工作。",
+        "比较独立可实施候选和竞争替代，列检测、Gather无效lane、搬入、任务或DMA开销；没有强求唯一Action。",
+        "明确不按输入分布派发/删通用数值路径，保留特殊值、fallback、同步与完整验证限制。"
+      ],
+      "selected_actions": [
+        "action.decompose_tasks_dynamically"
+      ],
+      "semantic_notes": "a完整通道Q=1/tile256，b每通道四空间任务Q=4/tile128；明确相同元数据不能按输入分布派发，保留软件FMA并比较输入重装/任务并行。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance"
+    },
+    {
+      "run_id": "s1-value-domain-A-2",
+      "scenario": "s1-value-domain",
+      "version": "A",
+      "repeat": 2,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "准确区分a不触发与b全通道扫描命中；极值未采样仍让全部tile走software。",
+        "量化2048输出×8=16384软件FMA；指出普通Mul/Add与fused整数实现舍入不等价，不能以形状推断计算工作。",
+        "比较独立可实施候选和竞争替代，列检测、Gather无效lane、搬入、任务或DMA开销；没有强求唯一Action。",
+        "明确不按输入分布派发/删通用数值路径，保留特殊值、fallback、同步与完整验证限制。"
+      ],
+      "selected_actions": [
+        "action.coalesce_contiguous_transfers"
+      ],
+      "semantic_notes": "两例相同16行位模式geometry合并搬入+tile256；比较a的Mul合批、b精确软件FMA向量化能力缺口，拒绝将未采样极值当删修复理由。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance"
+    },
+    {
+      "run_id": "s3-pack-total-cost-A-2",
+      "scenario": "s3-pack-total-cost",
+      "version": "A",
+      "repeat": 2,
+      "selected_attempt": "initial",
+      "scores": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "total": 8,
+      "max": 8,
+      "criteria_review": [
+        "准确计算cp=64、双平面pack读8,257,536B写16,777,728B，并包括geometry、padded output和compact。",
+        "按S区别摊销：a保留packed直接最终写出，b取消全输入pack；列取消pack导致CopyIn次数8→32等新增成本。",
+        "比较完整四阶段与direct NCDHW方案；共同计划计workspace/UB/同步/布局及数值路径，未把内层通道API合批重复记收益。",
+        "两子例有源码成本依据且非按数值分布派发，保留特殊值/边界/fallback；无已测收益断言。"
+      ],
+      "selected_actions": [
+        "action.reduce_memory_traffic",
+        "action.fuse_kernel_chain"
+      ],
+      "semantic_notes": "a因sa=S删compact；b单owner局部几何+按需邻域+紧凑输出。明确输入复用不等于共享派生值，不用reuse_input_tiles冒充派生权重。",
+      "unsupported_speedup_claim": false,
+      "review_method": "Human semantic source comparison; no keyword/regex acceptance"
+    }
+  ],
+  "withdrawn": true,
+  "withdrawn_reason": "All v1 preflight only. Scores cannot enter v2 A/B; all inputs rerun with uniform 20000 budget."
+}

@@ -1,0 +1,116 @@
+{
+  "task_id": "raw-case-14",
+  "known_conditions": [
+    {
+      "predicate": "constraint.semantic_equivalence",
+      "state": true,
+      "basis": "只重排原始1/2/4/8字节元素位；源与输出host独立分配，perm合法；矩形tile不更改值。int64按两个uint32位通道必须成对复原，不通过浮点Cast。",
+      "scope": "本项精确静态证明；没有把尚未核验的API、资源、完整精度或物理写许可默认置true。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/transpose_kernel.asc",
+          "sha256": "sha256:b103972552bd43cc98b15c0daf3b4dfe1b7b2e68a079e98d6b87aac58aa4c0fe",
+          "locator": "lines:7-31"
+        },
+        {
+          "path": "source/scripts/verify_result.py",
+          "sha256": "sha256:e6321455c4b73618afe6af72f5d2b67adb177d60e6b66179f59f5192dac68f84",
+          "locator": "lines:16-19"
+        }
+      ]
+    },
+    {
+      "predicate": "constraint.task_ownership",
+      "state": true,
+      "basis": "当前原scalar实现及候选逻辑tile均能定义唯一逻辑输出任务；perm双射及索引逆映射已证。此处只登记任务域划分，新的DMA物理写许可单独为constraint.output_ownership=unknown。",
+      "scope": "本项精确静态证明；没有把尚未核验的API、资源、完整精度或物理写许可默认置true。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/transpose_kernel.asc",
+          "sha256": "sha256:b103972552bd43cc98b15c0daf3b4dfe1b7b2e68a079e98d6b87aac58aa4c0fe",
+          "locator": "lines:7-31"
+        },
+        {
+          "path": "source/op_kernel/transpose_tiling.h",
+          "sha256": "sha256:6aed36c8122bdb797fb28be0c2af2ae3348224edb21e320e22912fc539db2bc6",
+          "locator": "lines:8-33"
+        },
+        {
+          "path": "source/op_host/transpose.asc",
+          "sha256": "sha256:89474e01d986776a0b4dfba3394f33a68c7535e2603b73b37de4bfd019f0eb0c",
+          "locator": "lines:49-59"
+        }
+      ]
+    },
+    {
+      "predicate": "constraint.valid_lengths",
+      "state": true,
+      "basis": "20case非空；矩形的validRows/validCols及与owner区间交集可按min/max精确定义，索引均在逻辑输出域。该已知长度公式不证明DMA实际写跨度；物理粒度/尾写由output_ownership与target_api缺项独立约束。",
+      "scope": "本项精确静态证明；没有把尚未核验的API、资源、完整精度或物理写许可默认置true。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/transpose_kernel.asc",
+          "sha256": "sha256:b103972552bd43cc98b15c0daf3b4dfe1b7b2e68a079e98d6b87aac58aa4c0fe",
+          "locator": "lines:7-31"
+        },
+        {
+          "path": "source/op_kernel/transpose_tiling.h",
+          "sha256": "sha256:6aed36c8122bdb797fb28be0c2af2ae3348224edb21e320e22912fc539db2bc6",
+          "locator": "lines:8-33"
+        },
+        {
+          "path": "source/op_host/transpose.asc",
+          "sha256": "sha256:89474e01d986776a0b4dfba3394f33a68c7535e2603b73b37de4bfd019f0eb0c",
+          "locator": "lines:49-59"
+        }
+      ]
+    },
+    {
+      "predicate": "constraint.layout_semantics",
+      "state": true,
+      "basis": "源下标=sum(output_coord[j]*inputStride[perm[j]])；perm是双射，因此合法输出坐标逐一对应唯一源。连续suffix仅保持原末轴，二维/合轴组每个输出tile是原域无交分割；R2逐case验证逆映射样本。",
+      "scope": "本项精确静态证明；没有把尚未核验的API、资源、完整精度或物理写许可默认置true。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/transpose_kernel.asc",
+          "sha256": "sha256:b103972552bd43cc98b15c0daf3b4dfe1b7b2e68a079e98d6b87aac58aa4c0fe",
+          "locator": "lines:7-31"
+        },
+        {
+          "path": "source/op_kernel/transpose_tiling.h",
+          "sha256": "sha256:6aed36c8122bdb797fb28be0c2af2ae3348224edb21e320e22912fc539db2bc6",
+          "locator": "lines:8-33"
+        }
+      ]
+    }
+  ],
+  "unknown_action_conditions": [
+    "constraint.capacity"
+  ],
+  "implementation_note": "任何API/容量/numeric unknown未补齐前不得成为C3实施授权。所有true条件逐项有源码或数学依据，未按前提名称默认认定。",
+  "mathematical_facts": [
+    {
+      "predicate": "source.logical_output_partition",
+      "state": true,
+      "basis": "合法perm逆映射与逻辑矩形分割是双射/无交；该数学事实不包含DMA物理写粒度。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/transpose_kernel.asc",
+          "sha256": "sha256:b103972552bd43cc98b15c0daf3b4dfe1b7b2e68a079e98d6b87aac58aa4c0fe",
+          "locator": "lines:7-31"
+        },
+        {
+          "path": "source/op_kernel/transpose_tiling.h",
+          "sha256": "sha256:6aed36c8122bdb797fb28be0c2af2ae3348224edb21e320e22912fc539db2bc6",
+          "locator": "lines:8-33"
+        }
+      ],
+      "limits": "逻辑矩形无交不能证明不同核的DMA物理写块无交。实际A、GM基址对齐、DataCopyPad尾写粒度/可见性和最终短块不越界均未核验；必须按真实物理块同owner并裁切/汇集输出行段，之后才可将constraint.output_ownership设true。"
+    }
+  ],
+  "unknown_condition_details": {
+    "constraint.capacity": "需要UB_available、目标Transpose/Gather临时区以及地址表物理字节。",
+    "constraint.target_api": "实际SDK按1/2/4/8字节位宽的局部转置或Gather支持未知；64位需成对32位重排而不是数值转换。",
+    "constraint.output_ownership": "逻辑矩形无交不能证明不同核的DMA物理写块无交。实际A、GM基址对齐、DataCopyPad尾写粒度/可见性和最终短块不越界均未核验；必须按真实物理块同owner并裁切/汇集输出行段，之后才可将constraint.output_ownership设true。"
+  }
+}

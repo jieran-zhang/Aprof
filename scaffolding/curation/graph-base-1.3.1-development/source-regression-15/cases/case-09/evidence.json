@@ -1,0 +1,147 @@
+{
+  "schema_version": "aprof.evidence/v1",
+  "task_id": "case-09",
+  "source_context_ref": {
+    "path": "authority.json",
+    "sha256": "sha256:caafc0937b91334e658fabeb7407aff8a15f85fabc12cec68384bd80235e9b9f"
+  },
+  "attributes": {
+    "family": [
+      "elementwise"
+    ],
+    "dtype": [
+      "bfloat16",
+      "float16",
+      "float32"
+    ],
+    "features": [
+      "buffer-lifetime",
+      "tiling-tail",
+      "vector-api",
+      "precision-boundaries"
+    ],
+    "platform": "dav-2201"
+  },
+  "facts": {
+    "source.kernel": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.kernel",
+      "ref": {
+        "path": "source/op_kernel/gelu_kernel.asc",
+        "sha256": "sha256:1c2873801f387b221d9d2f38501f45e78038796fb02f579c935f7bcbb20e1a06",
+        "locator": "lines:1-137"
+      }
+    },
+    "source.tiling": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.tiling",
+      "ref": {
+        "path": "source/op_kernel/gelu_tiling.h",
+        "sha256": "sha256:0bbddaad08330ee2ba84f3965e98f602def676a16ea61cb36b8501904d6e72c0",
+        "locator": "lines:1-27"
+      }
+    },
+    "source.host": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.host",
+      "ref": {
+        "path": "source/op_host/gelu.asc",
+        "sha256": "sha256:9daf0d6e8f08b5200a2587cc8460c72b4fb5cbaadb6462fd757050ac50d080e6",
+        "locator": "lines:1-79"
+      }
+    },
+    "source.matrix": {
+      "state": true,
+      "kind": "source_review",
+      "view": "workload",
+      "evidence_id": "source.matrix",
+      "ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:961666f1fa7f7dd4332574c57b81ec380143d61cb9e3d2f41dd7e34a70afebd8",
+        "locator": "lines:1-290"
+      }
+    },
+    "source.oracle": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.oracle",
+      "ref": {
+        "path": "source/scripts/verify_result.py",
+        "sha256": "sha256:220d7b34592de881fc171b5732aad462dd4b1243d6ef036ec6defbd325d92723",
+        "locator": "lines:1-40"
+      }
+    },
+    "symptom.source.dynamic_shape_mismatch.component_1": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.kernel",
+      "ref": {
+        "path": "source/op_kernel/gelu_kernel.asc",
+        "sha256": "sha256:1c2873801f387b221d9d2f38501f45e78038796fb02f579c935f7bcbb20e1a06",
+        "locator": "lines:1-137"
+      }
+    },
+    "symptom.source.dynamic_shape_mismatch.component_2": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.tiling",
+      "ref": {
+        "path": "source/op_kernel/gelu_tiling.h",
+        "sha256": "sha256:0bbddaad08330ee2ba84f3965e98f602def676a16ea61cb36b8501904d6e72c0",
+        "locator": "lines:1-27"
+      }
+    },
+    "symptom.source.dynamic_shape_mismatch.component_3": {
+      "state": true,
+      "kind": "source_review",
+      "view": "source",
+      "evidence_id": "source.host",
+      "ref": {
+        "path": "source/op_host/gelu.asc",
+        "sha256": "sha256:9daf0d6e8f08b5200a2587cc8460c72b4fb5cbaadb6462fd757050ac50d080e6",
+        "locator": "lines:1-79"
+      }
+    },
+    "constraint.semantic_equivalence": {
+      "state": true,
+      "kind": "source_proof",
+      "view": "constraint",
+      "evidence_id": "semantic-proof",
+      "ref": {
+        "path": "source-analysis-R1.md",
+        "sha256": "sha256:9350cdef5a1d62cd796b3f5202d235e27a78b617987bbff100c62cb2d4681686",
+        "locator": "lines:1-24"
+      }
+    },
+    "constraint.dispatch_coverage": {
+      "state": true,
+      "kind": "source_proof",
+      "view": "constraint",
+      "evidence_id": "semantic-proof",
+      "ref": {
+        "path": "source-analysis-R1.md",
+        "sha256": "sha256:9350cdef5a1d62cd796b3f5202d235e27a78b617987bbff100c62cb2d4681686",
+        "locator": "lines:1-24"
+      }
+    },
+    "constraint.capacity": {
+      "state": "unknown",
+      "kind": "not_observed",
+      "view": "constraint"
+    },
+    "constraint.target_api": {
+      "state": "unknown",
+      "kind": "not_observed",
+      "view": "constraint"
+    }
+  }
+}

@@ -1,0 +1,513 @@
+{
+  "schema_version": "aprof.action-decision/v1",
+  "task_id": "raw-case-13",
+  "context_hash": "sha256:9ecdfea2f275d34c449936de80586a3a9f4e9f906df2cb5b58815ae3142c60a5",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "reasoning_ref": {
+    "path": "R1-reasoning.json",
+    "sha256": "sha256:c2cfb51c6c3fbb1e9b8d4be26a37c2180cc6e3d5a7216682d14e509d351a4ad8"
+  },
+  "reasoning_hash": "sha256:34e7fc0a1720352042032cf5dd06549ce859396c034b07b591f2e275ccb7cac7",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/f3a6d55be57ea647180e624b4fffe6a25b55beea2b35d140d50fe71108f4232d.json",
+    "sha256": "sha256:02d64ca8cc4efafae4665940ea3cfd6bf955b40e79d76125906445f4337450a4"
+  },
+  "round": 1,
+  "current_parent_ref": {
+    "path": "source/SOURCE-MANIFEST.json",
+    "sha256": "sha256:48ed849d2623a9ae7c8cb60dd5034b0a4852785f283bff7395d50b3fe12ba4de"
+  },
+  "opportunities": [
+    {
+      "id": "o1",
+      "hypothesis_id": "h1",
+      "action_id": "action.vectorize_scalar_loop",
+      "action_instance_id": "intent-1",
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "7",
+        "8",
+        "9",
+        "11",
+        "13",
+        "14",
+        "15",
+        "16",
+        "18",
+        "19"
+      ],
+      "source_fact_ids": [
+        "source.observation_1"
+      ],
+      "cost_mechanism": "half mode的partner是连续半区，逐元素volatile标量乘加可表达为逐半区Vector，仍保留运算边界。",
+      "predictions": [
+        {
+          "id": "o1-work",
+          "kind": "source_work",
+          "statement": "half mode的partner是连续半区，逐元素volatile标量乘加可表达为逐半区Vector，仍保留运算边界。",
+          "check_method": "源码与完整case形状的逻辑访问/运算量复核；R2静态证据文件",
+          "on_support": "继续具体参数与API合法性核对",
+          "on_refute": "修订目标或保留fallback"
+        },
+        {
+          "id": "o1-perf",
+          "kind": "performance",
+          "statement": "满足合法性并通过完整oracle后，比较本机会对所列case的Task时间；不预设加速比。",
+          "check_method": "未来同协议原20case清L2 Task计时，必要时补指令/timeline；本次不运行",
+          "on_support": "记录同源合法结果并确认是否有回归",
+          "on_refute": "检查新增资源/控制成本，重新比较该机会"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_scalar_hot",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "o1-perf",
+          "unknown_id": "o1-performance",
+          "reason": "改Vector后是否主要受每row短DMA/同步限制；H=32/64的Vector发射数相对Scalar节省是否抵消新增scratch。"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "o1-perf",
+          "unknown_id": "o1-performance",
+          "reason": "改Vector后是否主要受每row短DMA/同步限制；H=32/64的Vector发射数相对Scalar节省是否抵消新增scratch。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "o1-performance",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "改Vector后是否主要受每row短DMA/同步限制；H=32/64的Vector发射数相对Scalar节省是否抵消新增scratch。",
+          "affects": "该机会的收益及优先级，不决定结构合法性",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "o1-safety-0",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "实际UB与Mul临时区/保留未知；R=1..8须按36RD+低精度10RD+Tmp+reserve逐组预算。",
+          "affects": "具体参数/API实施是否合法",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "o1-safety-1",
+          "kind": "implementation_safety",
+          "fact": "constraint.target_api",
+          "expected_state": true,
+          "statement": "目标SDK Mul/Muls/Add count以及alias、尾长度、完成边支持未验证。",
+          "affects": "具体参数/API实施是否合法",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "o1-safety-2",
+          "kind": "implementation_safety",
+          "fact": "constraint.numeric_order",
+          "expected_state": true,
+          "statement": "Vector逐步舍入与原volatile float乘加及bf16 CAST_ROUND须核对；不允许FMA融合或改变特殊值规则。",
+          "affects": "具体参数/API实施是否合法",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "review-semantic_equivalence",
+          "kind": "implementation_safety",
+          "fact": "constraint.semantic_equivalence",
+          "expected_state": true,
+          "statement": "half-mode partner/row映射和目标算术表达式已经静态证明，但目标Vector Mul/Muls/Add是否保留原volatile FP32逐步舍入、正负零、NaN/Inf传播，以及half CAST_NONE和BF16 CAST_ROUND，尚无完整API/编译语义依据。constraint.semantic_equivalence包含这些条件，故保持unknown；不能用数学映射代替全域等价。",
+          "affects": "具体Vector/搬出方案实施合法性；性能未知不因此被否决",
+          "resolution": "check_before_implementation"
+        }
+      ],
+      "strongest_alternative_id": "o2",
+      "comparison": "half-mode Vector覆盖主体逐元素数据算术；cos/sin复用只删trig读且case13 N=1无复用，单独收窄barrier又未消除Scalar算术，因此保留Vector条件方案。",
+      "disposition": "selected",
+      "reason": "half mode的partner是连续半区，逐元素volatile标量乘加可表达为逐半区Vector，仍保留运算边界。"
+    },
+    {
+      "id": "o2",
+      "hypothesis_id": "h2",
+      "action_id": "action.reuse_input_tiles",
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "5",
+        "7",
+        "8",
+        "10",
+        "11",
+        "14",
+        "16",
+        "18",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.observation_2"
+      ],
+      "cost_mechanism": "layout0且N>1同seq重复读取cos/sin，复用可省trig读但不消除大部分逐元素算术；layout1需改任务顺序。",
+      "predictions": [
+        {
+          "id": "o2-work",
+          "kind": "source_work",
+          "statement": "layout0且N>1同seq重复读取cos/sin，复用可省trig读但不消除大部分逐元素算术；layout1需改任务顺序。",
+          "check_method": "源码与完整case形状的逻辑访问/运算量复核；R2静态证据文件",
+          "on_support": "继续具体参数与API合法性核对",
+          "on_refute": "修订目标或保留fallback"
+        },
+        {
+          "id": "o2-perf",
+          "kind": "performance",
+          "statement": "满足合法性并通过完整oracle后，比较本机会对所列case的Task时间；不预设加速比。",
+          "check_method": "未来同协议原20case清L2 Task计时，必要时补指令/timeline；本次不运行",
+          "on_support": "记录同源合法结果并确认是否有回归",
+          "on_refute": "检查新增资源/控制成本，重新比较该机会"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "o2-perf",
+          "unknown_id": "o2-performance",
+          "reason": "layout0且N>1同seq重复读取cos/sin，复用可省trig读但不消除大部分逐元素算术；layout1需改任务顺序。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "o2-performance",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "layout0且N>1同seq重复读取cos/sin，复用可省trig读但不消除大部分逐元素算术；layout1需改任务顺序。 当前源结构可估算，实际主导程度/代价尚未测得。",
+          "affects": "该机会的收益及优先级，不决定结构合法性",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "o1",
+      "comparison": "layout0且N>1同seq重复读取cos/sin，复用可省trig读但不消除大部分逐元素算术；layout1需改任务顺序。 与主方案比较：half mode的partner是连续半区，逐元素volatile标量乘加可表达为逐半区Vector，仍保留运算边界。",
+      "disposition": "deferred",
+      "reason": "layout0且N>1同seq重复读取cos/sin，复用可省trig读但不消除大部分逐元素算术；layout1需改任务顺序。"
+    },
+    {
+      "id": "o3",
+      "hypothesis_id": "h3",
+      "action_id": "action.narrow_sync_scope",
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.observation_4"
+      ],
+      "cost_mechanism": "多次PIPE_ALL可能过宽，但当前V cast→Scalar GetValue与Scalar SetValue→V cast均有跨流水边，不能直接删。",
+      "predictions": [
+        {
+          "id": "o3-work",
+          "kind": "source_work",
+          "statement": "多次PIPE_ALL可能过宽，但当前V cast→Scalar GetValue与Scalar SetValue→V cast均有跨流水边，不能直接删。",
+          "check_method": "源码与完整case形状的逻辑访问/运算量复核；R2静态证据文件",
+          "on_support": "继续具体参数与API合法性核对",
+          "on_refute": "修订目标或保留fallback"
+        },
+        {
+          "id": "o3-perf",
+          "kind": "performance",
+          "statement": "满足合法性并通过完整oracle后，比较本机会对所列case的Task时间；不预设加速比。",
+          "check_method": "未来同协议原20case清L2 Task计时，必要时补指令/timeline；本次不运行",
+          "on_support": "记录同源合法结果并确认是否有回归",
+          "on_refute": "检查新增资源/控制成本，重新比较该机会"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_profile_overlap_low",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "o3-perf",
+          "unknown_id": "o3-performance",
+          "reason": "多次PIPE_ALL可能过宽，但当前V cast→Scalar GetValue与Scalar SetValue→V cast均有跨流水边，不能直接删。"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "o3-perf",
+          "unknown_id": "o3-performance",
+          "reason": "多次PIPE_ALL可能过宽，但当前V cast→Scalar GetValue与Scalar SetValue→V cast均有跨流水边，不能直接删。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "o3-performance",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "多次PIPE_ALL可能过宽，但当前V cast→Scalar GetValue与Scalar SetValue→V cast均有跨流水边，不能直接删。 当前源结构可估算，实际主导程度/代价尚未测得。",
+          "affects": "该机会的收益及优先级，不决定结构合法性",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "o1",
+      "comparison": "多次PIPE_ALL可能过宽，但当前V cast→Scalar GetValue与Scalar SetValue→V cast均有跨流水边，不能直接删。 与主方案比较：half mode的partner是连续半区，逐元素volatile标量乘加可表达为逐半区Vector，仍保留运算边界。",
+      "disposition": "deferred",
+      "reason": "多次PIPE_ALL可能过宽，但当前V cast→Scalar GetValue与Scalar SetValue→V cast均有跨流水边，不能直接删。"
+    }
+  ],
+  "evidence_requests": [
+    {
+      "id": "request-o1-safety-0",
+      "opportunity_ids": [
+        "o1"
+      ],
+      "unknown_ids": [
+        "o1-safety-0"
+      ],
+      "method": "实际UB与Mul临时区/保留未知；R=1..8须按36RD+低精度10RD+Tmp+reserve逐组预算。 核验对象：全部适用case；后续允许设备/SDK只读查询及候选代码审查。",
+      "discriminating_results": [
+        {
+          "outcome": "证据满足计划公式及API/语义条件",
+          "decision_effect": "允许以该参数形成严格C2并隔离实施"
+        },
+        {
+          "outcome": "不满足或未知",
+          "decision_effect": "减tile/缩适用域或保留原fallback，不伪造ready"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本轮仅源码/CPU权限，保留明确参数域。",
+      "defer_reason": "禁止SDK build、native、设备probe；实际architecture缺项不能靠目标名称补齐。"
+    },
+    {
+      "id": "request-o1-safety-1",
+      "opportunity_ids": [
+        "o1"
+      ],
+      "unknown_ids": [
+        "o1-safety-1"
+      ],
+      "method": "目标SDK Mul/Muls/Add count以及alias、尾长度、完成边支持未验证。 核验对象：全部适用case；后续允许设备/SDK只读查询及候选代码审查。",
+      "discriminating_results": [
+        {
+          "outcome": "证据满足计划公式及API/语义条件",
+          "decision_effect": "允许以该参数形成严格C2并隔离实施"
+        },
+        {
+          "outcome": "不满足或未知",
+          "decision_effect": "减tile/缩适用域或保留原fallback，不伪造ready"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本轮仅源码/CPU权限，保留明确参数域。",
+      "defer_reason": "禁止SDK build、native、设备probe；实际architecture缺项不能靠目标名称补齐。"
+    },
+    {
+      "id": "request-o1-safety-2",
+      "opportunity_ids": [
+        "o1"
+      ],
+      "unknown_ids": [
+        "o1-safety-2"
+      ],
+      "method": "Vector逐步舍入与原volatile float乘加及bf16 CAST_ROUND须核对；不允许FMA融合或改变特殊值规则。 核验对象：全部适用case；后续允许设备/SDK只读查询及候选代码审查。",
+      "discriminating_results": [
+        {
+          "outcome": "证据满足计划公式及API/语义条件",
+          "decision_effect": "允许以该参数形成严格C2并隔离实施"
+        },
+        {
+          "outcome": "不满足或未知",
+          "decision_effect": "减tile/缩适用域或保留原fallback，不伪造ready"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "本轮仅源码/CPU权限，保留明确参数域。",
+      "defer_reason": "禁止SDK build、native、设备probe；实际architecture缺项不能靠目标名称补齐。"
+    },
+    {
+      "id": "request-review-semantic_equivalence",
+      "opportunity_ids": [
+        "o1"
+      ],
+      "unknown_ids": [
+        "review-semantic_equivalence"
+      ],
+      "method": "half-mode partner/row映射和目标算术表达式已经静态证明，但目标Vector Mul/Muls/Add是否保留原volatile FP32逐步舍入、正负零、NaN/Inf传播，以及half CAST_NONE和BF16 CAST_ROUND，尚无完整API/编译语义依据。constraint.semantic_equivalence包含这些条件，故保持unknown；不能用数学映射代替全域等价。 核验当前拟采用API完整语义、编译选项、有效域及原oracle全部20case；本轮无此证据。",
+      "discriminating_results": [
+        {
+          "outcome": "完整语义/物理写契约证明覆盖所有适用case",
+          "decision_effect": "将对应谓词建立有来源的true后继，再进入严格C2/隔离实施"
+        },
+        {
+          "outcome": "不满足或仍未知",
+          "decision_effect": "保持Vector/矩形条件方案，缩小适用域或原fallback；不得宣称C3就绪"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "unavailable",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "静态映射成立不足以回答这个完整条件。",
+      "defer_reason": "当前只有源码/CPU分析权限，缺目标SDK/编译语义或真实写粒度契约。"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "o1"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+        "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+      },
+      "locator": "lines:292-304",
+      "effect_kind": "mechanism",
+      "before": "源码显示：Row将q/k/cos/sin搬入UB后，for(d<D)逐d GetValue多次并SetValue两输出，q/k分别先两乘再加。",
+      "after": "half mode的partner是连续半区，逐元素volatile标量乘加可表达为逐半区Vector，仍保留运算边界。",
+      "applicability": "两个输出每一维只读本行q/k及同一trig，不是归约；half mode partner=d±H，独立输出在原owner内；输入输出host分开分配。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+    },
+    {
+      "opportunity_ids": [
+        "o2"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.insufficient_input_reuse.md",
+        "sha256": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4"
+      },
+      "locator": "lines:265-277",
+      "effect_kind": "mechanism",
+      "before": "源码显示：layout0同seq的连续N个head复用trig；layout1相邻row是seq变化，cosBatched属于host参数。",
+      "after": "layout0且N>1同seq重复读取cos/sin，复用可省trig读但不消除大部分逐元素算术；layout1需改任务顺序。",
+      "applicability": "两个输出每一维只读本行q/k及同一trig，不是归约；half mode partner=d±H，独立输出在原owner内；输入输出host分开分配。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+    },
+    {
+      "opportunity_ids": [
+        "o3"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.excessive_sync_scope.md",
+        "sha256": "sha256:398689df25a9f16697480f068a9e9951cefe7e2e53d945a4a65613e76a8e4d19"
+      },
+      "locator": "lines:304-316",
+      "effect_kind": "mechanism",
+      "before": "源码显示：Row在MTE2、Cast后、Scalar SetValue后和输出Cast后调用PIPE_ALL，必须保持原生产消费完成边。",
+      "after": "多次PIPE_ALL可能过宽，但当前V cast→Scalar GetValue与Scalar SetValue→V cast均有跨流水边，不能直接删。",
+      "applicability": "两个输出每一维只读本行q/k及同一trig，不是归约；half mode partner=d±H，独立输出在原owner内；输入输出host分开分配。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+    },
+    {
+      "opportunity_ids": [
+        "o1"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+      },
+      "locator": "lines:78-90",
+      "effect_kind": "parameters",
+      "before": "尚未把源循环转换为有界任务/内存方案。",
+      "after": "连续模板的相同索引前提不能直接套RoPE partner。这里只迁移互斥输出区间原则，task边界固定完整row，两个半区仍在同一owner内，不拆成互相覆盖的原地更新。",
+      "applicability": "两个输出每一维只读本行q/k及同一trig，不是归约；half mode partner=d±H，独立输出在原owner内；输入输出host分开分配。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+    },
+    {
+      "opportunity_ids": [
+        "o1"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+        "sha256": "sha256:d1a2e2eb822d93e4962d5c0198fd3a124e81e5af354c73596b513bd53ee13f08"
+      },
+      "locator": "lines:85-97",
+      "effect_kind": "parameters",
+      "before": "尚未把源循环转换为有界任务/内存方案。",
+      "after": "RoPE half区采用H=32/64连续count，保留逐步乘加和Cast意图；batch正文要求保持原舍入，故完整精度仍须证明，不能仅由partner映射授权。",
+      "applicability": "两个输出每一维只读本行q/k及同一trig，不是归约；half mode partner=d±H，独立输出在原owner内；输入输出host分开分配。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+    },
+    {
+      "opportunity_ids": [
+        "o1",
+        "o2"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+        "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+      },
+      "locator": "lines:121-133",
+      "effect_kind": "alternative",
+      "before": "此前尚未比较该方法的边界。",
+      "after": "只有同seq的cos/sin原值才可共用；layout0且N>1可复用，case13 N=1无收益，layout1相邻row变seq需重定窗口。",
+      "applicability": "两个输出每一维只读本行q/k及同一trig，不是归约；half mode partner=d±H，独立输出在原owner内；输入输出host分开分配。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+    },
+    {
+      "opportunity_ids": [
+        "o1",
+        "o2"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/pipeline-sync/recipes/pipeline.md",
+        "sha256": "sha256:4cb50930c90bc5fabdce5cf9b3506d25e1cff9504f24a902480769a1a884b603"
+      },
+      "locator": "lines:62-74",
+      "effect_kind": "alternative",
+      "before": "此前尚未比较该方法的边界。",
+      "after": "RoPE的MTE2→Cast→Scalar GetValue以及Scalar SetValue→Cast边必须保留；仅将数据算术改Vector不自动授权删除所有PIPE_ALL。",
+      "applicability": "两个输出每一维只读本行q/k及同一trig，不是归约；half mode partner=d±H，独立输出在原owner内；输入输出host分开分配。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+    }
+  ],
+  "selection": {
+    "mode": "conditional_plan",
+    "opportunity_id": "o1",
+    "action_instance_id": "intent-1",
+    "reason": "half mode的partner是连续半区，逐元素volatile标量乘加可表达为逐半区Vector，仍保留运算边界。 数学结构支持该条件方案，完整数值语义仍待证明。",
+    "concrete_plan": "先对half rotary mode按H=D/2两个连续半区使用FP32 Mul/Mul/Add，负半保留sign乘法或经数值审查的Neg，不用FMA；q/k各两半，输出最终Cast保持half CAST_NONE、bf16 CAST_ROUND。按原row owner处理，行批R∈{1,2,4,8}，原5D个FP32元素和低精度5D个raw元素，加双乘积scratch最多4D float：UB≤A(36RD)+I16*A(10RD)+Tmp+reserve。interleaved保持原路径，待SDK确认去交错/重排索引后独立候选。全部20case原路径覆盖。",
+    "stop_reason": null
+  },
+  "previous_feedback": null
+}

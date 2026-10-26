@@ -1,0 +1,44 @@
+{
+  "task_id": "case-05",
+  "context_hash": "sha256:1d55bbaae949bc03292b50eca10df57e3cdc0476a5734e13246a3af3b85d74a5",
+  "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+  "graph_version": "v0006",
+  "source_context_ref": {
+    "path": "authority-v2.json",
+    "sha256": "sha256:99066a8fa8a7c3a90bfccf437c1432484a487ba2f638d38c78311e284932d89f"
+  },
+  "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+  "retrieval_hash": "sha256:f986e5b556ec485f8aba713947b65761984b348381bb9d08787d01f5573cb518",
+  "selections": [
+    {
+      "problem_id": "problem.onchip_capacity_pressure",
+      "reason": "Host查询核数/UB并以20T(float)或30T(16位)+mask+8192+2048预算最大合法64对齐tile；四输入一输出。float原地复用五队列，16位四输入Cast到A-D后释放raw输入，再A-E工作及输出Cast。SafeSqrt/SafeDiv保留异常数处理，weightDecay按属性分支。；据此审查problem.onchip_capacity_pressure的适用与代价",
+      "trigger": "scope_check",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.path",
+        "source.host"
+      ]
+    },
+    {
+      "problem_id": "problem.pipeline_serialization",
+      "reason": "Host查询核数/UB并以20T(float)或30T(16位)+mask+8192+2048预算最大合法64对齐tile；四输入一输出。float原地复用五队列，16位四输入Cast到A-D后释放raw输入，再A-E工作及输出Cast。SafeSqrt/SafeDiv保留异常数处理，weightDecay按属性分支。；据此审查problem.pipeline_serialization的适用与代价",
+      "trigger": "scope_check",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.path",
+        "source.host"
+      ]
+    },
+    {
+      "problem_id": "problem.control_metadata_overhead",
+      "reason": "Host查询核数/UB并以20T(float)或30T(16位)+mask+8192+2048预算最大合法64对齐tile；四输入一输出。float原地复用五队列，16位四输入Cast到A-D后释放raw输入，再A-E工作及输出Cast。SafeSqrt/SafeDiv保留异常数处理，weightDecay按属性分支。；据此审查problem.control_metadata_overhead的适用与代价",
+      "trigger": "scope_check",
+      "related_problem_ids": [],
+      "unexplained_observations": [
+        "source.path",
+        "source.host"
+      ]
+    }
+  ]
+}

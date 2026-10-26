@@ -1,0 +1,26 @@
+{
+  "task_id": "case-07",
+  "status": "conditional_analysis_only",
+  "strict_C2_constructed": false,
+  "selected_P": [
+    "planning.layout.transpose"
+  ],
+  "selected_O": [
+    "implementation.memory-transfer.coalesce",
+    "implementation.tiling-tail.valid-length"
+  ],
+  "plan": "基于归一化metadata合并最长连续尾段：跳过size1轴，要求最后有效axis step=1，继续合轴条件sourceStep[d]=当前run长度。每核仍持有原64B边界输出区间，与run交集切段；每段起点只解码一次，用DataCopyPad按有效字节搬入单独UB槽并搬出同宽位模式。T∈{256,1024,4096}元素，U=2*Align32(T*itemBytes)+API_reserved≤availableUB；不补读GM、不跨不连续行空洞。run=1、负stride、未支持API保留原逐元素路径。",
+  "missing": [
+    "实际device/SKU/hardware_fingerprint及CANN/compiler身份",
+    "真实可见AIV与可用UB及API预留（影响最终核数/tile/槽域）",
+    "有来源的architecture_profile与冻结parallel_plan/dispatch_plan及其能力/容量回执",
+    "新实现真实入口/dispatch源码绑定；本轮只有计划没有C3"
+  ],
+  "not_claimed": [
+    "C2实施就绪",
+    "C3 implemented",
+    "正确性passed",
+    "性能加速比"
+  ],
+  "reason": "不以占位hardware facts或书面参数替代严格计划；target-provenance仅目标适用域。"
+}

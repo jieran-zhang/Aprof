@@ -1,0 +1,1408 @@
+{
+  "package": "graph-base/1.3.0",
+  "status": "passed_with_explicit_scope",
+  "checked_at_utc": "2026-10-20T15:32:00.874736+00:00",
+  "publication_accepted": false,
+  "release_sealed": false,
+  "default_version_changed": false,
+  "scope": "输入复用知识与路由补齐；CPU合成数据的文档激活、条件分析及交接，不是设备正确性/性能/因果验证。",
+  "knowledge_versions": {
+    "diagnosis": "v0004",
+    "parallel-planning": "v0002",
+    "optimization": "v0003"
+  },
+  "routing_version": "v0002",
+  "runtime_version": "0.4.0",
+  "changes": {
+    "new_recipe": "implementation.memory-transfer.input-tile-residency",
+    "new_families": 0,
+    "new_branches": 0,
+    "new_actions": 0,
+    "registered_action_preconditions_unchanged": true,
+    "route_config_preselects_PO": false
+  },
+  "source_review": {
+    "new_recipe_source_checks": 8,
+    "base_archive_files": 205,
+    "additional_archive_files": 1,
+    "source_manifest": "workflows/references/input-reuse-reviews/source-manifest.json",
+    "knowledge_review": "workflows/references/input-reuse-reviews/knowledge.json"
+  },
+  "expanded_regression": {
+    "scenarios": 21,
+    "checks_passed": 28,
+    "checks_failed": 0,
+    "distinct_imported_knowledge_bodies": 9,
+    "result_manifest_sha256": "sha256:f0c15b62b077b42a14136d1594c1563b845209418a2b07551afcf90e3774a08a",
+    "cases": [
+      {
+        "scenario": "A-small-launch",
+        "description": "保留原小搬运场景：总字节已达最小值，按同窗口数据比较发射与带宽候选。",
+        "action": "action.coalesce_contiguous_transfers",
+        "action_status": {
+          "status": "ready",
+          "missing": [],
+          "failed": []
+        },
+        "P_mode": "KEEP",
+        "main_recipe": null,
+        "result": "documents_only",
+        "gates_ready_for_document_candidate": false,
+        "C2_status": "ready",
+        "consulted_documents": [
+          {
+            "id": "problem.tiny_transfer_setup_amplification",
+            "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+            "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a"
+          },
+          {
+            "id": "problem.memory_bandwidth_saturation",
+            "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+            "body_sha256": "sha256:c15b87a9fd66fae448d7ce13ef4ea6a89ecdc1a5025855aa5b9eac3d90449fdc"
+          },
+          {
+            "id": "problem.insufficient_input_reuse",
+            "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+            "body_sha256": "sha256:00c5e4f627796a3e9b6ebda8970e9cd74f87d031fdad3a2545162730b68fe00a"
+          },
+          {
+            "id": "planning.elementwise.continuous",
+            "source_hash": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d",
+            "body_sha256": "sha256:cad6a27a29a7c575645cc854b6fda0bd779606fafcee88a1bdcf71f276f92079"
+          },
+          {
+            "id": "implementation.memory-transfer.coalesce",
+            "source_hash": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c",
+            "body_sha256": "sha256:ca94a8fcbcb9fde5e0a865e0561197ea98a91a179494a0fd07f9ed3cc471026e"
+          },
+          {
+            "id": "implementation.memory-transfer.strided-pad",
+            "source_hash": "sha256:0cf5e1f574a9785c650f54919fd7aed3a3cb1d03027994972fce15eb1082d924",
+            "body_sha256": "sha256:6c857916cd51af777b665814d85c59a01c39b390d8c9232ab5bbbd3e37f858e5"
+          }
+        ]
+      },
+      {
+        "scenario": "B-two-consumers",
+        "description": "修正 B 的两个真实消费者，xUb2 被 Adds 使用；同 owner 原值可保留。",
+        "action": "action.reuse_input_tiles",
+        "action_status": {
+          "status": "ready",
+          "missing": [],
+          "failed": []
+        },
+        "P_mode": "KEEP",
+        "main_recipe": {
+          "id": "implementation.memory-transfer.input-tile-residency",
+          "status": "reference_ready",
+          "missing": [],
+          "version": "1.0.0"
+        },
+        "result": "documents_only",
+        "gates_ready_for_document_candidate": true,
+        "C2_status": "ready",
+        "consulted_documents": [
+          {
+            "id": "problem.tiny_transfer_setup_amplification",
+            "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+            "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a"
+          },
+          {
+            "id": "problem.memory_bandwidth_saturation",
+            "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+            "body_sha256": "sha256:c15b87a9fd66fae448d7ce13ef4ea6a89ecdc1a5025855aa5b9eac3d90449fdc"
+          },
+          {
+            "id": "problem.insufficient_input_reuse",
+            "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+            "body_sha256": "sha256:00c5e4f627796a3e9b6ebda8970e9cd74f87d031fdad3a2545162730b68fe00a"
+          },
+          {
+            "id": "planning.elementwise.continuous",
+            "source_hash": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d",
+            "body_sha256": "sha256:cad6a27a29a7c575645cc854b6fda0bd779606fafcee88a1bdcf71f276f92079"
+          },
+          {
+            "id": "implementation.memory-transfer.cache-hint",
+            "source_hash": "sha256:917ba83e82ae17f958af90e99f4aee304575f7f6687d7863a7d24a2a0467b0d4",
+            "body_sha256": "sha256:5d5a7c906dea4f9da22b7c4efc5fd6243c7948e901ef10b5ddacc0a9cf89fa7a"
+          },
+          {
+            "id": "implementation.memory-transfer.input-tile-residency",
+            "source_hash": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8",
+            "body_sha256": "sha256:efe0a62579d63a8555254ebf6403e26f216ffc44469f5f2c04035d2410f3d18a"
+          },
+          {
+            "id": "implementation.memory-transfer.l2-reuse-order",
+            "source_hash": "sha256:393c78c5713b524d882441c5af3a0d4d4122a8e4a11442c0207ec45fc5137aba",
+            "body_sha256": "sha256:c97d9a26372c271af5230d1077fd03151aabdf2ec3ff44334b0909a2bc558a44"
+          }
+        ]
+      },
+      {
+        "scenario": "C-evidence-unknown",
+        "description": "MTE 占比高但缺调用/字节/校准，机制保持 unknown。",
+        "action": "action.coalesce_contiguous_transfers",
+        "action_status": {
+          "status": "conditional",
+          "missing": [
+            "symptom.profile.mte_setup_dominated"
+          ],
+          "failed": []
+        },
+        "P_mode": "KEEP",
+        "main_recipe": null,
+        "result": "documents_only",
+        "gates_ready_for_document_candidate": false,
+        "C2_status": "conditional",
+        "consulted_documents": [
+          {
+            "id": "problem.tiny_transfer_setup_amplification",
+            "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+            "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a"
+          },
+          {
+            "id": "problem.memory_bandwidth_saturation",
+            "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+            "body_sha256": "sha256:c15b87a9fd66fae448d7ce13ef4ea6a89ecdc1a5025855aa5b9eac3d90449fdc"
+          },
+          {
+            "id": "problem.insufficient_input_reuse",
+            "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+            "body_sha256": "sha256:00c5e4f627796a3e9b6ebda8970e9cd74f87d031fdad3a2545162730b68fe00a"
+          },
+          {
+            "id": "planning.elementwise.continuous",
+            "source_hash": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d",
+            "body_sha256": "sha256:cad6a27a29a7c575645cc854b6fda0bd779606fafcee88a1bdcf71f276f92079"
+          },
+          {
+            "id": "implementation.memory-transfer.coalesce",
+            "source_hash": "sha256:ae97f3a0b11ed80146830606cd1cdd15eff6088336d43c639611ac5af7b4d96c",
+            "body_sha256": "sha256:ca94a8fcbcb9fde5e0a865e0561197ea98a91a179494a0fd07f9ed3cc471026e"
+          },
+          {
+            "id": "implementation.memory-transfer.strided-pad",
+            "source_hash": "sha256:0cf5e1f574a9785c650f54919fd7aed3a3cb1d03027994972fce15eb1082d924",
+            "body_sha256": "sha256:6c857916cd51af777b665814d85c59a01c39b390d8c9232ab5bbbd3e37f858e5"
+          }
+        ]
+      },
+      {
+        "scenario": "D-necessary-bulk",
+        "description": "大块已饱和但无可消除字节，Problem 不等于可用 Action。",
+        "action": "action.reduce_memory_traffic",
+        "action_status": {
+          "status": "blocked",
+          "missing": [],
+          "failed": [
+            "constraint.traffic_reducible"
+          ]
+        },
+        "P_mode": "KEEP",
+        "main_recipe": null,
+        "result": "blocked_before_C1",
+        "C2_status": null,
+        "consulted_documents": [
+          {
+            "id": "problem.tiny_transfer_setup_amplification",
+            "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+            "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a"
+          },
+          {
+            "id": "problem.memory_bandwidth_saturation",
+            "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+            "body_sha256": "sha256:c15b87a9fd66fae448d7ce13ef4ea6a89ecdc1a5025855aa5b9eac3d90449fdc"
+          },
+          {
+            "id": "problem.insufficient_input_reuse",
+            "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+            "body_sha256": "sha256:00c5e4f627796a3e9b6ebda8970e9cd74f87d031fdad3a2545162730b68fe00a"
+          }
+        ]
+      },
+      {
+        "scenario": "E-inplace-destroys",
+        "description": "第一个消费者原地 Mul 覆盖原 x；第二消费者仍需原值。",
+        "action": "action.reuse_input_tiles",
+        "action_status": {
+          "status": "conditional",
+          "missing": [
+            "constraint.semantic_equivalence"
+          ],
+          "failed": []
+        },
+        "P_mode": "KEEP",
+        "main_recipe": {
+          "id": "implementation.memory-transfer.input-tile-residency",
+          "status": "needs_evidence",
+          "missing": [
+            "constraint.input_value_preserved",
+            "constraint.semantic_equivalence"
+          ],
+          "version": "1.0.0"
+        },
+        "result": "documents_only",
+        "gates_ready_for_document_candidate": false,
+        "C2_status": "conditional",
+        "consulted_documents": [
+          {
+            "id": "problem.tiny_transfer_setup_amplification",
+            "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+            "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a"
+          },
+          {
+            "id": "problem.memory_bandwidth_saturation",
+            "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+            "body_sha256": "sha256:c15b87a9fd66fae448d7ce13ef4ea6a89ecdc1a5025855aa5b9eac3d90449fdc"
+          },
+          {
+            "id": "problem.insufficient_input_reuse",
+            "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+            "body_sha256": "sha256:00c5e4f627796a3e9b6ebda8970e9cd74f87d031fdad3a2545162730b68fe00a"
+          },
+          {
+            "id": "planning.elementwise.continuous",
+            "source_hash": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d",
+            "body_sha256": "sha256:cad6a27a29a7c575645cc854b6fda0bd779606fafcee88a1bdcf71f276f92079"
+          },
+          {
+            "id": "implementation.memory-transfer.cache-hint",
+            "source_hash": "sha256:917ba83e82ae17f958af90e99f4aee304575f7f6687d7863a7d24a2a0467b0d4",
+            "body_sha256": "sha256:5d5a7c906dea4f9da22b7c4efc5fd6243c7948e901ef10b5ddacc0a9cf89fa7a"
+          },
+          {
+            "id": "implementation.memory-transfer.input-tile-residency",
+            "source_hash": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8",
+            "body_sha256": "sha256:efe0a62579d63a8555254ebf6403e26f216ffc44469f5f2c04035d2410f3d18a"
+          },
+          {
+            "id": "implementation.memory-transfer.l2-reuse-order",
+            "source_hash": "sha256:393c78c5713b524d882441c5af3a0d4d4122a8e4a11442c0207ec45fc5137aba",
+            "body_sha256": "sha256:c97d9a26372c271af5230d1077fd03151aabdf2ec3ff44334b0909a2bc558a44"
+          }
+        ]
+      },
+      {
+        "scenario": "F-input-mutates",
+        "description": "两消费者之间合法 producer 更新 GM 的 x，同一地址不代表同一值。",
+        "action": "action.reuse_input_tiles",
+        "action_status": {
+          "status": "blocked",
+          "missing": [],
+          "failed": [
+            "constraint.semantic_equivalence",
+            "symptom.source.insufficient_input_reuse"
+          ]
+        },
+        "P_mode": "KEEP",
+        "main_recipe": null,
+        "result": "blocked_before_C1",
+        "C2_status": null,
+        "consulted_documents": [
+          {
+            "id": "problem.tiny_transfer_setup_amplification",
+            "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+            "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a"
+          },
+          {
+            "id": "problem.memory_bandwidth_saturation",
+            "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+            "body_sha256": "sha256:c15b87a9fd66fae448d7ce13ef4ea6a89ecdc1a5025855aa5b9eac3d90449fdc"
+          },
+          {
+            "id": "problem.insufficient_input_reuse",
+            "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+            "body_sha256": "sha256:00c5e4f627796a3e9b6ebda8970e9cd74f87d031fdad3a2545162730b68fe00a"
+          }
+        ]
+      },
+      {
+        "scenario": "G-cross-owner",
+        "description": "消费者分给不同 owner；局部 UB 不能直接共享。",
+        "action": "action.reuse_input_tiles",
+        "action_status": {
+          "status": "blocked",
+          "missing": [],
+          "failed": [
+            "constraint.reuse_domain"
+          ]
+        },
+        "P_mode": "KEEP",
+        "main_recipe": null,
+        "result": "blocked_before_C1",
+        "C2_status": null,
+        "consulted_documents": [
+          {
+            "id": "problem.tiny_transfer_setup_amplification",
+            "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+            "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a"
+          },
+          {
+            "id": "problem.memory_bandwidth_saturation",
+            "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+            "body_sha256": "sha256:c15b87a9fd66fae448d7ce13ef4ea6a89ecdc1a5025855aa5b9eac3d90449fdc"
+          },
+          {
+            "id": "problem.insufficient_input_reuse",
+            "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+            "body_sha256": "sha256:00c5e4f627796a3e9b6ebda8970e9cd74f87d031fdad3a2545162730b68fe00a"
+          }
+        ]
+      },
+      {
+        "scenario": "H-capacity-unknown",
+        "description": "真实峰值 live/scratch 未确认；C2 可条件分析，C3 文档不能就绪。",
+        "action": "action.reuse_input_tiles",
+        "action_status": {
+          "status": "conditional",
+          "missing": [
+            "constraint.capacity"
+          ],
+          "failed": []
+        },
+        "P_mode": "KEEP",
+        "main_recipe": {
+          "id": "implementation.memory-transfer.input-tile-residency",
+          "status": "needs_evidence",
+          "missing": [
+            "constraint.capacity"
+          ],
+          "version": "1.0.0"
+        },
+        "result": "documents_only",
+        "gates_ready_for_document_candidate": false,
+        "C2_status": "conditional",
+        "consulted_documents": [
+          {
+            "id": "problem.tiny_transfer_setup_amplification",
+            "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+            "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a"
+          },
+          {
+            "id": "problem.memory_bandwidth_saturation",
+            "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+            "body_sha256": "sha256:c15b87a9fd66fae448d7ce13ef4ea6a89ecdc1a5025855aa5b9eac3d90449fdc"
+          },
+          {
+            "id": "problem.insufficient_input_reuse",
+            "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+            "body_sha256": "sha256:00c5e4f627796a3e9b6ebda8970e9cd74f87d031fdad3a2545162730b68fe00a"
+          },
+          {
+            "id": "planning.elementwise.continuous",
+            "source_hash": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d",
+            "body_sha256": "sha256:cad6a27a29a7c575645cc854b6fda0bd779606fafcee88a1bdcf71f276f92079"
+          },
+          {
+            "id": "implementation.memory-transfer.cache-hint",
+            "source_hash": "sha256:917ba83e82ae17f958af90e99f4aee304575f7f6687d7863a7d24a2a0467b0d4",
+            "body_sha256": "sha256:5d5a7c906dea4f9da22b7c4efc5fd6243c7948e901ef10b5ddacc0a9cf89fa7a"
+          },
+          {
+            "id": "implementation.memory-transfer.input-tile-residency",
+            "source_hash": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8",
+            "body_sha256": "sha256:efe0a62579d63a8555254ebf6403e26f216ffc44469f5f2c04035d2410f3d18a"
+          },
+          {
+            "id": "implementation.memory-transfer.l2-reuse-order",
+            "source_hash": "sha256:393c78c5713b524d882441c5af3a0d4d4122a8e4a11442c0207ec45fc5137aba",
+            "body_sha256": "sha256:c97d9a26372c271af5230d1077fd03151aabdf2ec3ff44334b0909a2bc558a44"
+          }
+        ]
+      },
+      {
+        "scenario": "I-capacity-false",
+        "description": "原 Action 容量前提明确 false。",
+        "action": "action.reuse_input_tiles",
+        "action_status": {
+          "status": "blocked",
+          "missing": [],
+          "failed": [
+            "constraint.capacity"
+          ]
+        },
+        "P_mode": "KEEP",
+        "main_recipe": null,
+        "result": "blocked_before_C1",
+        "C2_status": null,
+        "consulted_documents": [
+          {
+            "id": "problem.tiny_transfer_setup_amplification",
+            "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+            "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a"
+          },
+          {
+            "id": "problem.memory_bandwidth_saturation",
+            "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+            "body_sha256": "sha256:c15b87a9fd66fae448d7ce13ef4ea6a89ecdc1a5025855aa5b9eac3d90449fdc"
+          },
+          {
+            "id": "problem.insufficient_input_reuse",
+            "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+            "body_sha256": "sha256:00c5e4f627796a3e9b6ebda8970e9cd74f87d031fdad3a2545162730b68fe00a"
+          }
+        ]
+      },
+      {
+        "scenario": "J-plan-over-capacity",
+        "description": "确认计划自报 288KiB > 256KiB，应直接拒绝。",
+        "action": "action.reuse_input_tiles",
+        "action_status": {
+          "status": "ready",
+          "missing": [],
+          "failed": []
+        },
+        "P_mode": "KEEP",
+        "main_recipe": null,
+        "result": "C2_rejected",
+        "C2_status": "rejected",
+        "consulted_documents": [
+          {
+            "id": "problem.tiny_transfer_setup_amplification",
+            "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+            "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a"
+          },
+          {
+            "id": "problem.memory_bandwidth_saturation",
+            "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+            "body_sha256": "sha256:c15b87a9fd66fae448d7ce13ef4ea6a89ecdc1a5025855aa5b9eac3d90449fdc"
+          },
+          {
+            "id": "problem.insufficient_input_reuse",
+            "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+            "body_sha256": "sha256:00c5e4f627796a3e9b6ebda8970e9cd74f87d031fdad3a2545162730b68fe00a"
+          },
+          {
+            "id": "planning.elementwise.continuous",
+            "source_hash": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d",
+            "body_sha256": "sha256:cad6a27a29a7c575645cc854b6fda0bd779606fafcee88a1bdcf71f276f92079"
+          }
+        ]
+      },
+      {
+        "scenario": "K-cache-disable",
+        "description": "GM 输入使用 DISABLE，仍可在同 owner UB 精确保留；不能误套 L2 缓存配方。",
+        "action": "action.reuse_input_tiles",
+        "action_status": {
+          "status": "ready",
+          "missing": [],
+          "failed": []
+        },
+        "P_mode": "KEEP",
+        "main_recipe": {
+          "id": "implementation.memory-transfer.input-tile-residency",
+          "status": "reference_ready",
+          "missing": [],
+          "version": "1.0.0"
+        },
+        "result": "documents_only",
+        "gates_ready_for_document_candidate": true,
+        "C2_status": "ready",
+        "consulted_documents": [
+          {
+            "id": "problem.tiny_transfer_setup_amplification",
+            "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+            "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a"
+          },
+          {
+            "id": "problem.memory_bandwidth_saturation",
+            "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+            "body_sha256": "sha256:c15b87a9fd66fae448d7ce13ef4ea6a89ecdc1a5025855aa5b9eac3d90449fdc"
+          },
+          {
+            "id": "problem.insufficient_input_reuse",
+            "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+            "body_sha256": "sha256:00c5e4f627796a3e9b6ebda8970e9cd74f87d031fdad3a2545162730b68fe00a"
+          },
+          {
+            "id": "planning.elementwise.continuous",
+            "source_hash": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d",
+            "body_sha256": "sha256:cad6a27a29a7c575645cc854b6fda0bd779606fafcee88a1bdcf71f276f92079"
+          },
+          {
+            "id": "implementation.memory-transfer.cache-hint",
+            "source_hash": "sha256:917ba83e82ae17f958af90e99f4aee304575f7f6687d7863a7d24a2a0467b0d4",
+            "body_sha256": "sha256:5d5a7c906dea4f9da22b7c4efc5fd6243c7948e901ef10b5ddacc0a9cf89fa7a"
+          },
+          {
+            "id": "implementation.memory-transfer.input-tile-residency",
+            "source_hash": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8",
+            "body_sha256": "sha256:efe0a62579d63a8555254ebf6403e26f216ffc44469f5f2c04035d2410f3d18a"
+          },
+          {
+            "id": "implementation.memory-transfer.l2-reuse-order",
+            "source_hash": "sha256:393c78c5713b524d882441c5af3a0d4d4122a8e4a11442c0207ec45fc5137aba",
+            "body_sha256": "sha256:c97d9a26372c271af5230d1077fd03151aabdf2ec3ff44334b0909a2bc558a44"
+          }
+        ]
+      },
+      {
+        "scenario": "L-l2-hit-logical-only",
+        "description": "第二个逻辑 GM 读完全命中 L2；消除调用不等于减少 HBM 字节。",
+        "action": "action.reuse_input_tiles",
+        "action_status": {
+          "status": "ready",
+          "missing": [],
+          "failed": []
+        },
+        "P_mode": "KEEP",
+        "main_recipe": {
+          "id": "implementation.memory-transfer.input-tile-residency",
+          "status": "reference_ready",
+          "missing": [],
+          "version": "1.0.0"
+        },
+        "result": "documents_only",
+        "gates_ready_for_document_candidate": true,
+        "C2_status": "ready",
+        "consulted_documents": [
+          {
+            "id": "problem.tiny_transfer_setup_amplification",
+            "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+            "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a"
+          },
+          {
+            "id": "problem.memory_bandwidth_saturation",
+            "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+            "body_sha256": "sha256:c15b87a9fd66fae448d7ce13ef4ea6a89ecdc1a5025855aa5b9eac3d90449fdc"
+          },
+          {
+            "id": "problem.insufficient_input_reuse",
+            "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+            "body_sha256": "sha256:00c5e4f627796a3e9b6ebda8970e9cd74f87d031fdad3a2545162730b68fe00a"
+          },
+          {
+            "id": "planning.elementwise.continuous",
+            "source_hash": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d",
+            "body_sha256": "sha256:cad6a27a29a7c575645cc854b6fda0bd779606fafcee88a1bdcf71f276f92079"
+          },
+          {
+            "id": "implementation.memory-transfer.cache-hint",
+            "source_hash": "sha256:917ba83e82ae17f958af90e99f4aee304575f7f6687d7863a7d24a2a0467b0d4",
+            "body_sha256": "sha256:5d5a7c906dea4f9da22b7c4efc5fd6243c7948e901ef10b5ddacc0a9cf89fa7a"
+          },
+          {
+            "id": "implementation.memory-transfer.input-tile-residency",
+            "source_hash": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8",
+            "body_sha256": "sha256:efe0a62579d63a8555254ebf6403e26f216ffc44469f5f2c04035d2410f3d18a"
+          },
+          {
+            "id": "implementation.memory-transfer.l2-reuse-order",
+            "source_hash": "sha256:393c78c5713b524d882441c5af3a0d4d4122a8e4a11442c0207ec45fc5137aba",
+            "body_sha256": "sha256:c97d9a26372c271af5230d1077fd03151aabdf2ec3ff44334b0909a2bc558a44"
+          }
+        ]
+      },
+      {
+        "scenario": "M-tail-same-domain",
+        "description": "最后 27 个有效元素，两消费者同域；保留原已假设合法的尾块路径。",
+        "action": "action.reuse_input_tiles",
+        "action_status": {
+          "status": "ready",
+          "missing": [],
+          "failed": []
+        },
+        "P_mode": "KEEP",
+        "main_recipe": {
+          "id": "implementation.memory-transfer.input-tile-residency",
+          "status": "reference_ready",
+          "missing": [],
+          "version": "1.0.0"
+        },
+        "result": "documents_only",
+        "gates_ready_for_document_candidate": true,
+        "C2_status": "ready",
+        "consulted_documents": [
+          {
+            "id": "problem.tiny_transfer_setup_amplification",
+            "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+            "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a"
+          },
+          {
+            "id": "problem.memory_bandwidth_saturation",
+            "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+            "body_sha256": "sha256:c15b87a9fd66fae448d7ce13ef4ea6a89ecdc1a5025855aa5b9eac3d90449fdc"
+          },
+          {
+            "id": "problem.insufficient_input_reuse",
+            "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+            "body_sha256": "sha256:00c5e4f627796a3e9b6ebda8970e9cd74f87d031fdad3a2545162730b68fe00a"
+          },
+          {
+            "id": "planning.elementwise.continuous",
+            "source_hash": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d",
+            "body_sha256": "sha256:cad6a27a29a7c575645cc854b6fda0bd779606fafcee88a1bdcf71f276f92079"
+          },
+          {
+            "id": "implementation.memory-transfer.cache-hint",
+            "source_hash": "sha256:917ba83e82ae17f958af90e99f4aee304575f7f6687d7863a7d24a2a0467b0d4",
+            "body_sha256": "sha256:5d5a7c906dea4f9da22b7c4efc5fd6243c7948e901ef10b5ddacc0a9cf89fa7a"
+          },
+          {
+            "id": "implementation.memory-transfer.input-tile-residency",
+            "source_hash": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8",
+            "body_sha256": "sha256:efe0a62579d63a8555254ebf6403e26f216ffc44469f5f2c04035d2410f3d18a"
+          },
+          {
+            "id": "implementation.memory-transfer.l2-reuse-order",
+            "source_hash": "sha256:393c78c5713b524d882441c5af3a0d4d4122a8e4a11442c0207ec45fc5137aba",
+            "body_sha256": "sha256:c97d9a26372c271af5230d1077fd03151aabdf2ec3ff44334b0909a2bc558a44"
+          }
+        ]
+      },
+      {
+        "scenario": "N-tail-different-domain",
+        "description": "基址相同但第二消费者多读一个 halo，原 tile 不覆盖其完整有效域。",
+        "action": "action.reuse_input_tiles",
+        "action_status": {
+          "status": "conditional",
+          "missing": [
+            "constraint.semantic_equivalence"
+          ],
+          "failed": []
+        },
+        "P_mode": "KEEP",
+        "main_recipe": {
+          "id": "implementation.memory-transfer.input-tile-residency",
+          "status": "needs_evidence",
+          "missing": [
+            "constraint.same_input_region",
+            "constraint.semantic_equivalence"
+          ],
+          "version": "1.0.0"
+        },
+        "result": "documents_only",
+        "gates_ready_for_document_candidate": false,
+        "C2_status": "conditional",
+        "consulted_documents": [
+          {
+            "id": "problem.tiny_transfer_setup_amplification",
+            "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+            "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a"
+          },
+          {
+            "id": "problem.memory_bandwidth_saturation",
+            "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+            "body_sha256": "sha256:c15b87a9fd66fae448d7ce13ef4ea6a89ecdc1a5025855aa5b9eac3d90449fdc"
+          },
+          {
+            "id": "problem.insufficient_input_reuse",
+            "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+            "body_sha256": "sha256:00c5e4f627796a3e9b6ebda8970e9cd74f87d031fdad3a2545162730b68fe00a"
+          },
+          {
+            "id": "planning.elementwise.continuous",
+            "source_hash": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d",
+            "body_sha256": "sha256:cad6a27a29a7c575645cc854b6fda0bd779606fafcee88a1bdcf71f276f92079"
+          },
+          {
+            "id": "implementation.memory-transfer.cache-hint",
+            "source_hash": "sha256:917ba83e82ae17f958af90e99f4aee304575f7f6687d7863a7d24a2a0467b0d4",
+            "body_sha256": "sha256:5d5a7c906dea4f9da22b7c4efc5fd6243c7948e901ef10b5ddacc0a9cf89fa7a"
+          },
+          {
+            "id": "implementation.memory-transfer.input-tile-residency",
+            "source_hash": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8",
+            "body_sha256": "sha256:efe0a62579d63a8555254ebf6403e26f216ffc44469f5f2c04035d2410f3d18a"
+          },
+          {
+            "id": "implementation.memory-transfer.l2-reuse-order",
+            "source_hash": "sha256:393c78c5713b524d882441c5af3a0d4d4122a8e4a11442c0207ec45fc5137aba",
+            "body_sha256": "sha256:c97d9a26372c271af5230d1077fd03151aabdf2ec3ff44334b0909a2bc558a44"
+          }
+        ]
+      },
+      {
+        "scenario": "O-strided-same-domain",
+        "description": "两消费者使用同一个已物化 stride=2 的 UB 表示；删除第二个相同 gather 不改布局。",
+        "action": "action.reuse_input_tiles",
+        "action_status": {
+          "status": "ready",
+          "missing": [],
+          "failed": []
+        },
+        "P_mode": "KEEP",
+        "main_recipe": {
+          "id": "implementation.memory-transfer.input-tile-residency",
+          "status": "reference_ready",
+          "missing": [],
+          "version": "1.0.0"
+        },
+        "result": "documents_only",
+        "gates_ready_for_document_candidate": true,
+        "C2_status": "ready",
+        "consulted_documents": [
+          {
+            "id": "problem.tiny_transfer_setup_amplification",
+            "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+            "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a"
+          },
+          {
+            "id": "problem.memory_bandwidth_saturation",
+            "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+            "body_sha256": "sha256:c15b87a9fd66fae448d7ce13ef4ea6a89ecdc1a5025855aa5b9eac3d90449fdc"
+          },
+          {
+            "id": "problem.insufficient_input_reuse",
+            "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+            "body_sha256": "sha256:00c5e4f627796a3e9b6ebda8970e9cd74f87d031fdad3a2545162730b68fe00a"
+          },
+          {
+            "id": "planning.elementwise.continuous",
+            "source_hash": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d",
+            "body_sha256": "sha256:cad6a27a29a7c575645cc854b6fda0bd779606fafcee88a1bdcf71f276f92079"
+          },
+          {
+            "id": "implementation.memory-transfer.cache-hint",
+            "source_hash": "sha256:917ba83e82ae17f958af90e99f4aee304575f7f6687d7863a7d24a2a0467b0d4",
+            "body_sha256": "sha256:5d5a7c906dea4f9da22b7c4efc5fd6243c7948e901ef10b5ddacc0a9cf89fa7a"
+          },
+          {
+            "id": "implementation.memory-transfer.input-tile-residency",
+            "source_hash": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8",
+            "body_sha256": "sha256:efe0a62579d63a8555254ebf6403e26f216ffc44469f5f2c04035d2410f3d18a"
+          },
+          {
+            "id": "implementation.memory-transfer.l2-reuse-order",
+            "source_hash": "sha256:393c78c5713b524d882441c5af3a0d4d4122a8e4a11442c0207ec45fc5137aba",
+            "body_sha256": "sha256:c97d9a26372c271af5230d1077fd03151aabdf2ec3ff44334b0909a2bc558a44"
+          },
+          {
+            "id": "implementation.memory-transfer.strided-pad",
+            "source_hash": "sha256:0cf5e1f574a9785c650f54919fd7aed3a3cb1d03027994972fce15eb1082d924",
+            "body_sha256": "sha256:6c857916cd51af777b665814d85c59a01c39b390d8c9232ab5bbbd3e37f858e5"
+          }
+        ]
+      },
+      {
+        "scenario": "P-strided-different-domain",
+        "description": "相同 GM 基址但消费者 stride 分别 1 与 2，输入集合不同。",
+        "action": "action.reuse_input_tiles",
+        "action_status": {
+          "status": "conditional",
+          "missing": [
+            "constraint.semantic_equivalence"
+          ],
+          "failed": []
+        },
+        "P_mode": "KEEP",
+        "main_recipe": {
+          "id": "implementation.memory-transfer.input-tile-residency",
+          "status": "needs_evidence",
+          "missing": [
+            "constraint.same_input_region",
+            "constraint.semantic_equivalence"
+          ],
+          "version": "1.0.0"
+        },
+        "result": "documents_only",
+        "gates_ready_for_document_candidate": false,
+        "C2_status": "conditional",
+        "consulted_documents": [
+          {
+            "id": "problem.tiny_transfer_setup_amplification",
+            "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+            "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a"
+          },
+          {
+            "id": "problem.memory_bandwidth_saturation",
+            "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+            "body_sha256": "sha256:c15b87a9fd66fae448d7ce13ef4ea6a89ecdc1a5025855aa5b9eac3d90449fdc"
+          },
+          {
+            "id": "problem.insufficient_input_reuse",
+            "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+            "body_sha256": "sha256:00c5e4f627796a3e9b6ebda8970e9cd74f87d031fdad3a2545162730b68fe00a"
+          },
+          {
+            "id": "planning.elementwise.continuous",
+            "source_hash": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d",
+            "body_sha256": "sha256:cad6a27a29a7c575645cc854b6fda0bd779606fafcee88a1bdcf71f276f92079"
+          },
+          {
+            "id": "implementation.memory-transfer.cache-hint",
+            "source_hash": "sha256:917ba83e82ae17f958af90e99f4aee304575f7f6687d7863a7d24a2a0467b0d4",
+            "body_sha256": "sha256:5d5a7c906dea4f9da22b7c4efc5fd6243c7948e901ef10b5ddacc0a9cf89fa7a"
+          },
+          {
+            "id": "implementation.memory-transfer.input-tile-residency",
+            "source_hash": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8",
+            "body_sha256": "sha256:efe0a62579d63a8555254ebf6403e26f216ffc44469f5f2c04035d2410f3d18a"
+          },
+          {
+            "id": "implementation.memory-transfer.l2-reuse-order",
+            "source_hash": "sha256:393c78c5713b524d882441c5af3a0d4d4122a8e4a11442c0207ec45fc5137aba",
+            "body_sha256": "sha256:c97d9a26372c271af5230d1077fd03151aabdf2ec3ff44334b0909a2bc558a44"
+          }
+        ]
+      },
+      {
+        "scenario": "Q-lifetime-unknown",
+        "description": "值本身只读，但最后一个异步消费者的完成事件不明。",
+        "action": "action.reuse_input_tiles",
+        "action_status": {
+          "status": "ready",
+          "missing": [],
+          "failed": []
+        },
+        "P_mode": "KEEP",
+        "main_recipe": {
+          "id": "implementation.memory-transfer.input-tile-residency",
+          "status": "needs_evidence",
+          "missing": [
+            "constraint.dependency_lifetime"
+          ],
+          "version": "1.0.0"
+        },
+        "result": "documents_only",
+        "gates_ready_for_document_candidate": false,
+        "C2_status": "ready",
+        "consulted_documents": [
+          {
+            "id": "problem.tiny_transfer_setup_amplification",
+            "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+            "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a"
+          },
+          {
+            "id": "problem.memory_bandwidth_saturation",
+            "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+            "body_sha256": "sha256:c15b87a9fd66fae448d7ce13ef4ea6a89ecdc1a5025855aa5b9eac3d90449fdc"
+          },
+          {
+            "id": "problem.insufficient_input_reuse",
+            "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+            "body_sha256": "sha256:00c5e4f627796a3e9b6ebda8970e9cd74f87d031fdad3a2545162730b68fe00a"
+          },
+          {
+            "id": "planning.elementwise.continuous",
+            "source_hash": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d",
+            "body_sha256": "sha256:cad6a27a29a7c575645cc854b6fda0bd779606fafcee88a1bdcf71f276f92079"
+          },
+          {
+            "id": "implementation.memory-transfer.cache-hint",
+            "source_hash": "sha256:917ba83e82ae17f958af90e99f4aee304575f7f6687d7863a7d24a2a0467b0d4",
+            "body_sha256": "sha256:5d5a7c906dea4f9da22b7c4efc5fd6243c7948e901ef10b5ddacc0a9cf89fa7a"
+          },
+          {
+            "id": "implementation.memory-transfer.input-tile-residency",
+            "source_hash": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8",
+            "body_sha256": "sha256:efe0a62579d63a8555254ebf6403e26f216ffc44469f5f2c04035d2410f3d18a"
+          },
+          {
+            "id": "implementation.memory-transfer.l2-reuse-order",
+            "source_hash": "sha256:393c78c5713b524d882441c5af3a0d4d4122a8e4a11442c0207ec45fc5137aba",
+            "body_sha256": "sha256:c97d9a26372c271af5230d1077fd03151aabdf2ec3ff44334b0909a2bc558a44"
+          }
+        ]
+      },
+      {
+        "scenario": "R-owner-change-hidden-keep",
+        "description": "用 P_KEEP 偷改 owner 必须拒绝。",
+        "action": "action.reuse_input_tiles",
+        "action_status": {
+          "status": "ready",
+          "missing": [],
+          "failed": []
+        },
+        "P_mode": "KEEP",
+        "main_recipe": null,
+        "result": "C2_rejected",
+        "C2_status": "rejected",
+        "consulted_documents": [
+          {
+            "id": "problem.tiny_transfer_setup_amplification",
+            "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+            "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a"
+          },
+          {
+            "id": "problem.memory_bandwidth_saturation",
+            "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+            "body_sha256": "sha256:c15b87a9fd66fae448d7ce13ef4ea6a89ecdc1a5025855aa5b9eac3d90449fdc"
+          },
+          {
+            "id": "problem.insufficient_input_reuse",
+            "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+            "body_sha256": "sha256:00c5e4f627796a3e9b6ebda8970e9cd74f87d031fdad3a2545162730b68fe00a"
+          },
+          {
+            "id": "planning.elementwise.continuous",
+            "source_hash": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d",
+            "body_sha256": "sha256:cad6a27a29a7c575645cc854b6fda0bd779606fafcee88a1bdcf71f276f92079"
+          }
+        ]
+      },
+      {
+        "scenario": "S-context-platform-950",
+        "description": "固定 950 平台；910C 专用 recipe 不可越平台激活。",
+        "action": "action.reuse_input_tiles",
+        "action_status": {
+          "status": "ready",
+          "missing": [],
+          "failed": []
+        },
+        "P_mode": "KEEP",
+        "main_recipe": null,
+        "result": "documents_only",
+        "gates_ready_for_document_candidate": false,
+        "C2_status": "ready",
+        "consulted_documents": [
+          {
+            "id": "problem.tiny_transfer_setup_amplification",
+            "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+            "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a"
+          },
+          {
+            "id": "problem.memory_bandwidth_saturation",
+            "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+            "body_sha256": "sha256:c15b87a9fd66fae448d7ce13ef4ea6a89ecdc1a5025855aa5b9eac3d90449fdc"
+          },
+          {
+            "id": "problem.insufficient_input_reuse",
+            "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+            "body_sha256": "sha256:00c5e4f627796a3e9b6ebda8970e9cd74f87d031fdad3a2545162730b68fe00a"
+          },
+          {
+            "id": "planning.elementwise.continuous",
+            "source_hash": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d",
+            "body_sha256": "sha256:cad6a27a29a7c575645cc854b6fda0bd779606fafcee88a1bdcf71f276f92079"
+          }
+        ]
+      },
+      {
+        "scenario": "T-no-memory-domain",
+        "description": "Context 未声明 memory-transfer 域，Action hint 不可擅自注入 features。",
+        "action": "action.reuse_input_tiles",
+        "action_status": {
+          "status": "ready",
+          "missing": [],
+          "failed": []
+        },
+        "P_mode": "KEEP",
+        "main_recipe": null,
+        "result": "documents_only",
+        "gates_ready_for_document_candidate": false,
+        "C2_status": "ready",
+        "consulted_documents": [
+          {
+            "id": "problem.tiny_transfer_setup_amplification",
+            "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+            "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a"
+          },
+          {
+            "id": "problem.memory_bandwidth_saturation",
+            "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+            "body_sha256": "sha256:c15b87a9fd66fae448d7ce13ef4ea6a89ecdc1a5025855aa5b9eac3d90449fdc"
+          },
+          {
+            "id": "problem.insufficient_input_reuse",
+            "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+            "body_sha256": "sha256:00c5e4f627796a3e9b6ebda8970e9cd74f87d031fdad3a2545162730b68fe00a"
+          },
+          {
+            "id": "planning.elementwise.continuous",
+            "source_hash": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d",
+            "body_sha256": "sha256:cad6a27a29a7c575645cc854b6fda0bd779606fafcee88a1bdcf71f276f92079"
+          }
+        ]
+      },
+      {
+        "scenario": "U-conditional-owner-replan",
+        "description": "跨 owner 的原计划不能直接复用；可进入 C2 比较同 owner 新计划，未证实的复用域/兼容性仍 unknown。",
+        "action": "action.reuse_input_tiles",
+        "action_status": {
+          "status": "conditional",
+          "missing": [
+            "constraint.reuse_domain"
+          ],
+          "failed": []
+        },
+        "P_mode": "CHANGE",
+        "main_recipe": {
+          "id": "implementation.memory-transfer.input-tile-residency",
+          "status": "needs_evidence",
+          "missing": [
+            "constraint.reuse_domain"
+          ],
+          "version": "1.0.0"
+        },
+        "result": "documents_only",
+        "gates_ready_for_document_candidate": false,
+        "C2_status": "conditional",
+        "consulted_documents": [
+          {
+            "id": "problem.tiny_transfer_setup_amplification",
+            "source_hash": "sha256:fe588d08566865b0b3a47cd32214235a2d572ec54d4bf356ba9a4f0cdd767b05",
+            "body_sha256": "sha256:5fea5d607fe3e52f993da93688aab4238601ef51b2477270fe2aca339c4e619a"
+          },
+          {
+            "id": "problem.memory_bandwidth_saturation",
+            "source_hash": "sha256:85bf2253746d6290616b3bcfdf9ff73e6ed777a23895c20835535d55a41be39f",
+            "body_sha256": "sha256:c15b87a9fd66fae448d7ce13ef4ea6a89ecdc1a5025855aa5b9eac3d90449fdc"
+          },
+          {
+            "id": "problem.insufficient_input_reuse",
+            "source_hash": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4",
+            "body_sha256": "sha256:00c5e4f627796a3e9b6ebda8970e9cd74f87d031fdad3a2545162730b68fe00a"
+          },
+          {
+            "id": "planning.elementwise.continuous",
+            "source_hash": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d",
+            "body_sha256": "sha256:cad6a27a29a7c575645cc854b6fda0bd779606fafcee88a1bdcf71f276f92079"
+          },
+          {
+            "id": "implementation.memory-transfer.cache-hint",
+            "source_hash": "sha256:917ba83e82ae17f958af90e99f4aee304575f7f6687d7863a7d24a2a0467b0d4",
+            "body_sha256": "sha256:5d5a7c906dea4f9da22b7c4efc5fd6243c7948e901ef10b5ddacc0a9cf89fa7a"
+          },
+          {
+            "id": "implementation.memory-transfer.input-tile-residency",
+            "source_hash": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8",
+            "body_sha256": "sha256:efe0a62579d63a8555254ebf6403e26f216ffc44469f5f2c04035d2410f3d18a"
+          },
+          {
+            "id": "implementation.memory-transfer.l2-reuse-order",
+            "source_hash": "sha256:393c78c5713b524d882441c5af3a0d4d4122a8e4a11442c0207ec45fc5137aba",
+            "body_sha256": "sha256:c97d9a26372c271af5230d1077fd03151aabdf2ec3ff44334b0909a2bc558a44"
+          }
+        ]
+      }
+    ],
+    "drafts_counted": false,
+    "semantic_review": "每场景单独检查源码/公式/有效域/物理分配，schema通过不替代语义。原草稿遗留算法标签等冲突已修正为后继，旧材料保留。",
+    "historical_routes": {
+      "routing_ref": {
+        "path": "workflows/references/action-routing-snapshots/e7adfbcae71def9a32ab10723209b45b2077ac4cbc8e13afe0ad0d6f321df714.json",
+        "sha256": "sha256:e02326a061602113748ff3906cccde27a1614c404fde417408b55b4f25d61178"
+      },
+      "cases": [
+        {
+          "run": "A1/review-v2",
+          "status": "ready",
+          "same_route_hash": true,
+          "O_version": "v0002",
+          "matches": [
+            "implementation.memory-transfer.coalesce",
+            "implementation.memory-transfer.strided-pad"
+          ]
+        },
+        {
+          "run": "B1/context-v3",
+          "status": "ready",
+          "same_route_hash": true,
+          "O_version": "v0002",
+          "matches": [
+            "implementation.buffer-lifetime.reuse",
+            "implementation.memory-transfer.cache-hint",
+            "implementation.memory-transfer.l2-reuse-order"
+          ]
+        },
+        {
+          "run": "C/review-v2",
+          "status": "conditional",
+          "same_route_hash": true,
+          "O_version": "v0002",
+          "matches": [
+            "implementation.memory-transfer.coalesce",
+            "implementation.memory-transfer.strided-pad"
+          ]
+        }
+      ],
+      "all_identical": true
+    }
+  },
+  "independent_forward": {
+    "actual_opened_documents": 57,
+    "problem_directory_count": 28,
+    "cases": [
+      {
+        "case": "01",
+        "primary_problem": "problem.insufficient_input_reuse",
+        "P_selection": {
+          "actual_document": "planning.elementwise.continuous",
+          "decision": "conditional P_KEEP within supplied paper plan",
+          "reason": "实际同形/同下标链；当前自由度可保持T/owners/算法/拓扑/0workspace，仅延长x原值存活、改第二读者映射；若现有计划真实有效无需算法重搜。",
+          "alternatives_rejected": [
+            "broadcast：无广播shape",
+            "P_CHANGE owner/fusion/pipeline：无必要且当前禁止"
+          ]
+        },
+        "O_document_selection": {
+          "primary": "implementation.memory-transfer.input-tile-residency",
+          "status": "conditionally applicable to supplied synthetic source, not implemented",
+          "supports": [
+            "implementation.buffer-lifetime.reuse",
+            "implementation.tiling-tail.valid-length",
+            "implementation.precision-boundaries.bounds",
+            "implementation.precision-boundaries.numeric"
+          ],
+          "direct_method_gates": {
+            "same_input_region": true,
+            "input_value_preserved": true,
+            "reuse_domain": true,
+            "dependency_lifetime": "unknown actual; required completion edges enumerated",
+            "plan_freedom": "paper yes; actual verified plan unknown",
+            "capacity": "196608B if x2 allocation actually removed; 262144B otherwise, both <= assumed plan262144B <= assumed UB327680B"
+          },
+          "rejected": [
+            "coalesce is not same-address deduplication",
+            "l2-reuse-order/cache-hint not selected",
+            "fusion boundary not changed"
+          ]
+        },
+        "C3_actual_status": "not_created; documentation selection only",
+        "unknowns": [
+          "真实SoC/SDK/API支持、编译目标与可用UB保留区",
+          "具体事件实现和最后异步读者完成证明",
+          "原oracle/特殊值/异常值约定与完整正确性",
+          "实际分派/entry/key启动证据和计时覆盖",
+          "实际HBM/L2/Task时间；所有profile仅合成假设",
+          "v3中01/02 freedom.reason含03/最后27的公共说明，不能作为01/02有效n证据；以各raw/workload/参数域为准"
+        ]
+      },
+      {
+        "case": "02",
+        "primary_problem": "problem.insufficient_input_reuse",
+        "P_selection": {
+          "actual_document": "planning.elementwise.continuous (ownership/capacity reference only)",
+          "decision": "conditional P_KEEP for unchanged parent; proposed saving variant needs new evidence snapshot",
+          "reason": "与01同样的输出所有权可保留；但当前input_value_preserved=false，P_KEEP不能把O前提变真。若保存副本仍在local_transfer/buffer_lifetime和同预算内，不自动重跑全局规划；超预算/改数据通路/拓扑则返回C2。"
+        },
+        "O_document_selection": {
+          "primary_requested": "implementation.memory-transfer.input-tile-residency",
+          "status": "blocked for direct reuse of current xUb1",
+          "direct_method_gates": {
+            "same_input_region": true,
+            "input_value_preserved": false,
+            "reuse_domain": true
+          },
+          "selected_current_behavior": "O_KEEP/retain second GM read; no executed mitigation action",
+          "support_reference": "implementation.buffer-lifetime.reuse for saved-copy physical accounting only",
+          "conditional_alternative": "input-residency正文允许显式保存原值副本；必须新实例/证据证明副本来源、原值/事件/API/容量，不能直接复用被覆盖槽的ready结论。"
+        },
+        "C3_actual_status": "not_created; documentation selection only",
+        "unknowns": [
+          "真实SoC/SDK/API支持、编译目标与可用UB保留区",
+          "具体事件实现和最后异步读者完成证明",
+          "原oracle/特殊值/异常值约定与完整正确性",
+          "实际分派/entry/key启动证据和计时覆盖",
+          "实际HBM/L2/Task时间；所有profile仅合成假设",
+          "v3中01/02 freedom.reason含03/最后27的公共说明，不能作为01/02有效n证据；以各raw/workload/参数域为准"
+        ]
+      },
+      {
+        "case": "03",
+        "primary_problem": "problem.insufficient_input_reuse",
+        "P_selection": {
+          "actual_document": "planning.elementwise.fallback (retention principle); continuous explicitly rejected as complete halo template",
+          "decision": "conditional P_KEEP for the supplied halo-aware parent; no complete new halo P template selected",
+          "reason": "既有计划现已明确x[i+1]及input_elements=N+1，copy maxT+1=16385；不因最后n=27或第二输入n+1就改静态T/owner。continuous明文只支持同shape同下标依赖，因此family命中不构成halo适用。",
+          "new_template_gap": "需要halo/邻点输入区域与输出所有权的完整规划证明；可沿既有P自由度做任务内条件分析，不宣称现成continuous已覆盖。"
+        },
+        "O_document_selection": {
+          "primary_requested": "implementation.memory-transfer.input-tile-residency",
+          "status": "blocked for whole second read removal; partial overlap requires separate proof and method gap",
+          "direct_method_gates": {
+            "same_input_region": false,
+            "input_value_preserved": true,
+            "reuse_domain": true
+          },
+          "selected_current_behavior": "O_KEEP/keep n and n+1 required loads; no implemented mitigation",
+          "support_reference": [
+            "implementation.tiling-tail.valid-length",
+            "implementation.precision-boundaries.bounds",
+            "implementation.buffer-lifetime.reuse"
+          ],
+          "coverage_limits": "input-residency代码仅完全相同连续tile；valid-length代码也假定输入输出同域，不能把一个cp原样用于输入n+1/输出n。"
+        },
+        "C3_actual_status": "not_created; documentation selection only",
+        "unknowns": [
+          "真实SoC/SDK/API支持、编译目标与可用UB保留区",
+          "具体事件实现和最后异步读者完成证明",
+          "原oracle/特殊值/异常值约定与完整正确性",
+          "实际分派/entry/key启动证据和计时覆盖",
+          "实际HBM/L2/Task时间；所有profile仅合成假设",
+          "v3中01/02 freedom.reason含03/最后27的公共说明，不能作为01/02有效n证据；以各raw/workload/参数域为准"
+        ]
+      }
+    ],
+    "reading_manifest": "workflows/references/input-reuse-reviews/forward-reading.json",
+    "runtime_interpretation": "Routes ran against byte-identical v2 predecessors of final v3 input, with explicit conditional dav-2201 document-search context. All real device/API/event/correctness gates remained unknown. matches are document candidates, not implementation choices; body scope checked independently.",
+    "scope_note": "结构回归明确假定所列必要证据成立；独立原始输入阅读保留实际SDK/事件/entry未知。两者都没有实施授权。"
+  },
+  "independent_technical_review": {
+    "status": "pass_with_limits",
+    "package": "graph-base/1.3.0",
+    "reviewer": "independent_agent",
+    "public_files_modified": false,
+    "hardware": false,
+    "sdk_compilation": false,
+    "performance_claim": false,
+    "blocking_findings": 0,
+    "resolved_findings": [
+      {
+        "severity": "low",
+        "location": "workflows/references/input-reuse-1.3.0.md:17",
+        "issue": "references coverage wording overstated metadata content",
+        "resolution": "Main agent corrected wording; independently observed revised text"
+      }
+    ],
+    "source_full_and_excerpt_checks": 8,
+    "protected_identity_files_unchanged": 592,
+    "schemas_unchanged": 41,
+    "runtime_source_files_unchanged": 42,
+    "old_routing_snapshots_unchanged": 1,
+    "independent_route_cases_passed": 13,
+    "integer_tail_cases_passed": 30
+  },
+  "cpu_tests": {
+    "tests": 179,
+    "passed": 178,
+    "skipped": 1,
+    "failures": 0,
+    "errors": 0,
+    "method": "完整CPU回归后，两处测试固定版本假设更新并定向复测；按模块和用例名以最终结果去重。无重复已通过项。",
+    "initial_failures": [
+      "未来分类测试写死O后继v0003，与已冻结v0003冲突",
+      "离线集成测试仍断言当前O为v0002"
+    ],
+    "fixes": "仅更新测试版本分配和预期；runtime实现与schema未修改。",
+    "runs": [
+      {
+        "run": "cpu-tests.xml",
+        "counts": {
+          "passed": 176,
+          "skipped": 1,
+          "failed": 2
+        },
+        "seconds": 636.565,
+        "sha256": "sha256:65406a89539da27f126955954b4bd4a925c8e83197891aa4948e81ffea62405a"
+      },
+      {
+        "run": "future-category-test.xml",
+        "counts": {
+          "passed": 1
+        },
+        "seconds": 32.95,
+        "sha256": "sha256:7312a947291f65006c660f58c7cc0ae7ea9f8c5e21a578d510ca34da77ced31f"
+      },
+      {
+        "run": "offline-integration-test.xml",
+        "counts": {
+          "passed": 1
+        },
+        "seconds": 91.184,
+        "sha256": "sha256:0b9b1b075d0c02f4fddf1e8402c32f5e03efbe64075211c2668495f8272f5324"
+      }
+    ],
+    "by_module": {
+      "tests.test_action_handoff_v3": {
+        "passed": 45
+      },
+      "tests.test_diagnosis_integration_v130": {
+        "passed": 3
+      },
+      "tests.test_diagnosis_v4": {
+        "passed": 50
+      },
+      "tests.test_input_reuse_v130": {
+        "passed": 20
+      },
+      "tests.test_knowledge": {
+        "passed": 27
+      },
+      "tests.test_knowledge_v130": {
+        "passed": 7
+      },
+      "tests.test_local_archive": {
+        "passed": 21,
+        "skipped": 1
+      },
+      "tests.test_workflow_package": {
+        "passed": 5
+      }
+    },
+    "skip_reason": "可选开发仓库的旧归档分派入口缺失；技能包不依赖该入口。",
+    "hardware": false
+  },
+  "standalone": {
+    "status": "passed",
+    "network": "blocked_by_audit_hook",
+    "original_worktree": "blocked_by_audit_hook",
+    "upstream_and_tmp": "blocked_by_audit_hook",
+    "original_regression_task": "blocked_by_audit_hook",
+    "optimization_build_identical": true,
+    "knowledge_versions": {
+      "diagnosis": "v0004",
+      "parallel-planning": "v0002",
+      "optimization": "v0003"
+    },
+    "C2_status": "ready",
+    "P_mode": "KEEP",
+    "O_main": {
+      "id": "implementation.memory-transfer.input-tile-residency",
+      "status": "reference_ready",
+      "source_count": 8,
+      "body_content_hash": "sha256:b39e0113eb5932b068b3c3f6280cc721d1159dc1974ebd155f306a91e5d9b9a3"
+    },
+    "official_C3_created": false,
+    "hardware": false,
+    "complete_package_copy": true,
+    "final_copy_bytes_and_modes_identical": true
+  },
+  "historical_handoff_replay": [
+    {
+      "scenario": "runs/A1/review-v2",
+      "status": "ready",
+      "missing": [],
+      "old_optimization_version": "v0002"
+    },
+    {
+      "scenario": "runs/B1/context-v3",
+      "status": "ready",
+      "missing": [],
+      "old_optimization_version": "v0002"
+    },
+    {
+      "scenario": "runs/C/review-v2",
+      "status": "conditional",
+      "missing": [
+        "symptom.profile.mte_setup_dominated"
+      ],
+      "old_optimization_version": "v0002"
+    }
+  ],
+  "protection": {
+    "report": "workflows/references/input-reuse-reviews/preservation.json",
+    "protected_files": 799,
+    "violations": [],
+    "old_O_v0002_retained": true,
+    "old_routing_bundle_retained": true,
+    "diagnosis_P_runtime_schema_unchanged": true
+  },
+  "remaining_gaps": [
+    "halo/部分重叠/不同有效域的公共子区或union载入仍需独立方案及逐段证明；continuous同下标正文不覆盖邻点依赖。",
+    "跨owner/dispatch保留、复杂广播驻留与Cube L1/L0复用须各自C2计划，不由本地UB配方统一授权。",
+    "非连续输入须保留合法原物化或核验相应搬运文档，连续FP32示例不能直接照搬。",
+    "P/O沿用原路由状态：false和unknown均可显示needs_evidence；必须读原facts及机制说明，二者均不能授权C3。",
+    "目标SDK编译、真实容量/事件/API、输出正确性和硬件收益仍未验证。"
+  ],
+  "not_performed": [
+    "SDK编译",
+    "NPU执行",
+    "性能计时或硬件实验",
+    "边权训练",
+    "知识case_support晋升",
+    "生成implemented C3",
+    "切换默认版本"
+  ],
+  "structure": {
+    "valid": true,
+    "release_id": "graph-base/1.3.0",
+    "files": 1076,
+    "status": "unsealed",
+    "verification": "structure_only",
+    "final_payload_identity": "主包与保留副本的全部inventory文件bytes及mode一致；复制后再次执行新增方法隔离链检查",
+    "publication_accepted": false
+  }
+}

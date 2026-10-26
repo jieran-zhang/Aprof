@@ -1,0 +1,26 @@
+{
+  "task_id": "case-08",
+  "status": "conditional_analysis_only",
+  "strict_C2_constructed": false,
+  "selected_P": [
+    "planning.indexing.gather_output_owned"
+  ],
+  "selected_O": [
+    "implementation.scalar-control.hot_loop_address",
+    "implementation.precision-boundaries.numeric"
+  ],
+  "plan": "新P按(n,channel-group,spatial-tile)拥有互斥输出，H∈{4,8,16}, T∈{64,128,256,512}。同一个空间tile先算一次坐标几何，再按channel顺序采样，保留原GridRead边界和三线性八项相加/乘法顺序；只缓存x0/x1,y0/y1,z0/z1与6个独立FP32轴权重，禁止预乘权重改变舍入。nearest缓存3个int64坐标。U≤Align32(3*b*T)+Align32(geometry*T)+Align32((b+4)*T)+reserve，geometry=72或24B；输出每次只保留一个channel的T元素；不新增GM workspace。R2收紧输出所有权：S*b可64B整除时按H组与64B空间边界分区。否则复用原64B对齐线性owner区间[B,E)，只在同一batch、完整落在此owner内的channel平面之间共享几何；头尾不完整平面保留原GridSampler3DOne。各完整平面内部切T不会跨owner；禁止为了共享几何把别的owner输出移进来。若owner包含不足2个完整channel，则直接fallback。实际坐标求值数按每owner完整平面数量与头尾残片求和，不能沿用理想ceil(C/H)全覆盖节省量。",
+  "missing": [
+    "实际device/SKU/hardware_fingerprint及CANN/compiler身份",
+    "真实可见AIV与可用UB及API预留（影响最终核数/tile/槽域）",
+    "有来源的architecture_profile与冻结parallel_plan/dispatch_plan及其能力/容量回执",
+    "新实现真实入口/dispatch源码绑定；本轮只有计划没有C3"
+  ],
+  "not_claimed": [
+    "C2实施就绪",
+    "C3 implemented",
+    "正确性passed",
+    "性能加速比"
+  ],
+  "reason": "不以占位hardware facts或书面参数替代严格计划；target-provenance仅目标适用域。"
+}

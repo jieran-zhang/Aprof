@@ -1,0 +1,18 @@
+{
+  "task_id": "raw15-case-02",
+  "kind": "new_static_evidence",
+  "parent_R1_analysis_ref": {
+    "path": "R1-analysis.md",
+    "sha256": "sha256:9d05a1dd1b6521a000f37ca27fea5cf48d8c850a5ba08b3bce94225ad8329014"
+  },
+  "matrix_costs_ref": {
+    "path": "matrix-costs.json",
+    "sha256": "sha256:f3970a79917416f7f79906b10f5fec47fadb2fe180620f9eab381651cb955f24"
+  },
+  "checks": [
+    "T3392完全计入512B compare mask；保持输入/输出+0指令避免±0语义变化。"
+  ],
+  "conclusion": "生命周期逐项复核：fi在最后Mul前仍活，不能把fi和work互相覆盖；fo从Maxs后持续参与Add/Select/Tanh直到Mul。正确复用是fi=in、fo=out，不是fi/work/fo三者共用一块。保留两次+0，源工作预测调整为减少静态分配与扩大tile，不能宣称已删两条Vector指令。T3392时12T+mask512=41216，恰等于原20×2048+256。",
+  "execution": "CPU integer/formula assertions only; no original module import, hardware or correctness run",
+  "performance": "not_measured"
+}

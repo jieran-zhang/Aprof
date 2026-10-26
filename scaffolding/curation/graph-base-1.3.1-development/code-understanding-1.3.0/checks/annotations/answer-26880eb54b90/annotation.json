@@ -1,0 +1,67 @@
+{
+  "answer_id": "answer-26880eb54b90",
+  "case": "case-06",
+  "facts": [
+    {
+      "id": "CU06.A01",
+      "status": "correct",
+      "rationale": "明确给出数学变换2^(0.5x−1)，并说明BF16扩展为FP32后执行Muls、Adds、Exp，再以CAST_RINT转回。开头将更改限定为标识符更名，没有赋予更名新的计算含义。",
+      "answer_span": "BF16先以CAST_NONE扩展成FP32，再分别Muls、Adds、Exp，最后CAST_RINT转回BF16；RINT为最近偶数舍入。"
+    },
+    {
+      "id": "CU06.A02",
+      "status": "correct",
+      "rationale": "正确说明half输入矩阵乘、float累加、Fixpipe先转half再进行half LeakyRelu，斜率约0.001；另外明确每个AIC仅处理一个tile，其结果由两个AIV分担。",
+      "answer_span": "整体先算S=A×B，再对已转为half的S执行LeakyRelu：非负值保持，负值乘half(0.001)，该系数实际约0.00100040436。由于先将矩阵乘结果舍入为half，再执行half激活，不能解释为先在FP32完成激活、最后才转half。"
+    },
+    {
+      "id": "CU06.A03",
+      "status": "correct",
+      "rationale": "将DELTA的变化限定为名称变化、数值与API保持不变，语义上支持原有形状、分块、分配和控制流程保持。全文分别解释两个独立入口及其不同类型和形状的输出，没有将更名解释成新算法、缓冲或同步方案。",
+      "answer_span": "本题有两个独立入口，DELTA.json仅记录标识符更名，未改变数值或API。"
+    },
+    {
+      "id": "CU06.E01",
+      "status": "correct",
+      "rationale": "正确给出3块、laneExtent=8340、4096元素窗口，以及全部起点、长度和尾部计数；后文明确输入输出队列各单槽，BF16显式UB合计49152字节。",
+      "answer_span": "分核规则为useful=max(1,ceil(n/4096))=7，laneCount=min(3,7)=3，laneExtent=ceil(25019/3)=8340。StageNacre::Init以GetBlockIdx()×8340为元素偏移，三块分别覆盖半开区间[0,8340)、[8340,16680)、[16680,25019)，长度8340、8340、8339；对应GM字节区间[0,16680)、[16680,33360)、[33360,50038)。每块依次处理4096、4096及148/148/147个元素，总计9个窗口，各核范围互不重叠。"
+    },
+    {
+      "id": "CU06.E02",
+      "status": "correct",
+      "rationale": "正确给出__mix__(1,2)下2个AIC、4个AIV。AIC偏移公式等价于half元素起点[0,32768]；AIV字节起点等价于half元素起点[0,16384,32768,49152]，每个处理16384元素。j/2与j%2的说明正确还原ApplyGate的GM偏移。",
+      "answer_span": "numBlocks=(512/256)×(128/128)=2；mica_entry以__mix__(1,2)启动，即2个AIC工作块和4个AIV工作块。按rawdocs的simd_builtin_keywords.md，GetBlockIdx返回类型内的逻辑核号：AIC为0、1，AIV为0至3。StageMica::Init中AIC的A、C偏移分别为b×256×128个half，即b×65536字节；B不偏移，两核各读取整个B。AIV先用j/2定位对应AIC输出，再用j%2选择半块，最终处理C的行[128j,128(j+1))，字节起点依次为0、32768、65536、98304，各覆盖32768字节。"
+    },
+    {
+      "id": "CU06.E03",
+      "status": "correct",
+      "rationale": "全文完整描述C的GM half ND→L1 half NZ→L0A/L0B half→float NZ L0C→half ND GM→UB half→原GM区域，也明确V的BF16输入输出队列与两个FP32临时区。结合仅名称变化的限定，没有把更名后的张量当作额外分配。",
+      "answer_span": "C通过GM中间结果完成协作，并非直接L0C→UB；逻辑GM流量为192KiB输入读取，加三次128KiB结果写入/读取/写回，共576KiB，不等于实际HBM流量。"
+    },
+    {
+      "id": "CU06.H01",
+      "status": "partial",
+      "rationale": "正确确定910C使用2201，并将3510限制为静态契约对照，未因宏分支或同名API而声称3510行为已在910C运行；但没有说明3510对应Ascend 950PR/950DT系列。",
+      "answer_span": "以下依据源码与固定rawdocs作静态解释；实际目标为910C、__NPU_ARCH__=2201，3510仅作契约对照。"
+    },
+    {
+      "id": "CU06.H02",
+      "status": "correct",
+      "rationale": "2201段明确说明循环LoadData将L1 NZ重排为L0A Zz，并给出repeatTimes、srcStride等参数；3510段明确使用LoadData2DParamsV2保持L0A NZ。正确区分参数结构和实际A布局，没有将一个分支套用到两个目标。",
+      "answer_span": "3510静态分支只替换L1→L0代码（92—106行）：A以LoadData2DParamsV2{0,0,16,8,16,16,false,0}一次描述128个分形，保持Nz；B以{0,0,8,8,8,8,true,0}描述64个分形并转为Zn。"
+    },
+    {
+      "id": "CU06.H03",
+      "status": "correct",
+      "rationale": "正确说明2201的B经循环LoadData逐分形转置为Zn，3510使用V2且转置字段为true，同样得到Zn；并明确Mmad、GM中转与激活在分支之外保持相同逻辑流程。",
+      "answer_span": "两分支其余分核、分配、GM中转、Mmad及激活源码相同，但同名调用不保证相同硬件语义。"
+    },
+    {
+      "id": "CU06.H04",
+      "status": "correct",
+      "rationale": "准确给出当前A3目标与3510之间的具体等待语义边界：A3忽略pipe并阻塞全部流水，3510使用配置流水且本调用默认为PIPE_S。另明确3510兼容性缺少编译证据，全文也没有声称取得运行或性能验证；具体SDK配置疑点未被误作已观测故障。",
+      "answer_span": "CrossCoreWaitFlag_ISASI.md规定：A3上modeId、pipe不作为硬件输入，等待阻塞全部流水；3510上pipe生效，本调用省略pipe而采用PIPE_S，不能直接称为全流水等待。"
+    }
+  ],
+  "critical_errors": []
+}

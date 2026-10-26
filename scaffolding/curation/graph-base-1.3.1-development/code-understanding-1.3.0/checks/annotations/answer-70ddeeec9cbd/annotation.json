@@ -1,0 +1,67 @@
+{
+  "answer_id": "answer-70ddeeec9cbd",
+  "case": "case-05",
+  "facts": [
+    {
+      "id": "CU05.A01",
+      "status": "correct",
+      "rationale": "明确给出直接矩阵乘输出、half输入输出和float L0C累加；[N,K]存储对应逻辑B的转置路线，直接求和表达式也排除了激活。另明确说明SCENARIO_NUM=1进入Process。",
+      "answer_span": "本实现计算 C[m,n]=Σₖ A[m,k]·Bfile[n,k]：A 为行连续的 [8192,8192] half，B 文件为 [N,K] 行连续存储，对应逻辑 [K,N] 矩阵的转置存储；输出 C 为行连续 half。乘积在 float L0C 中累加，最后转换为 half，不包含 bias。"
+    },
+    {
+      "id": "CU05.A02",
+      "status": "correct",
+      "rationale": "完整说明固定矩阵尺寸、每核分块、24个block映射、基本块尺寸和各层循环次数，包括最后512列的两个tile及每核完成全部8192维K。",
+      "answer_span": "`InitComputeParams`（273—307行）把24个 block 排成4份M×6份N：核号 b 对应 i=b%4、j=b/4，起点为(m₀,n₀)=(2048i,1536j)。j=0…4各负责2048×1536，j=5负责2048×512。三个 GM 起始偏移分别为2048i×8192、1536j×8192、2048i×8192+1536j，单位均为 half 元素，转字节须乘2。核内按 nBlock→mBlock→kBlock 循环：baseM=128、baseN=256、baseK=64，M循环16次，N循环6或2次，K循环8192/64=128次；没有跨核归约，每核独立完成全部K。"
+    },
+    {
+      "id": "CU05.A03",
+      "status": "correct",
+      "rationale": "说明L1的A/B包分别覆盖8/4个K迭代、L0每轮处理一个baseK，以及仅首轮初始化C。准确解释Mmad的2/3和Fixpipe的3所构成的UnitFlag协议；末尾关于计算方向与默认配置的限定没有否认该协议，也未把缺少M_FIX判为已证实错误。",
+      "answer_span": "`Compute/CopyOut`（501—541行）每轮Mmad为128×256×64。前127次unitFlag=2，最后一次=3；Fixpipe也为3，按L0C内存块建立计算完成→搬出→下一tile复用的关系。"
+    },
+    {
+      "id": "CU05.E01",
+      "status": "correct",
+      "rationale": "解盲前独立抽审与主 Agent 裁决：完整给出共享 L1 四槽大小/范围、128 次 K 迭代与 A/B 包覆盖8/4次及周期公式，直接确定 128/8=16、128/4=32；按冻结协议接受语义等价表达，不要求重复列数值。",
+      "answer_span": "`InitComputeParams`（273—307行）把24个 block 排成4份M×6份N：核号 b 对应 i=b%4、j=b/4，起点为(m₀,n₀)=(2048i,1536j)。j=0…4各负责2048×1536，j=5负责2048×512。三个 GM 起始偏移分别为2048i×8192、1536j×8192、2048i×8192+1536j，单位均为 half 元素，转字节须乘2。核内按 nBlock→mBlock→kBlock 循环：baseM=128、baseN=256、baseK=64，M循环16次，N循环6或2次，K循环8192/64=128次；没有跨核归约，每核独立完成全部K。20核各算96个输出 tile，4核各算32个，共2048个 tile、262144次 Mmad。固定尺寸均整除基本块，最后四核的512列也由两个完整 tile 组成，tailM/tailN 分支实际不被选中。\n\n数据路径是 GM→MTE2→L1→MTE1→L0A/L0B→Cube→L0C→FIX→GM。`DataCopyInA/B`（343—389行）随搬运进行 ND2NZ：A一次搬128×512，涵盖8个K迭代；B一次搬256×256，涵盖4个K迭代，各为65536个half、128KiB。两者源行距均为8192个half。Nd2NzParams 的 dstNzC0Stride 分别为128、256，单位是32字节，并非元素；dstNzNStride=1。half的C0含16元素，例如包内(r,c)的NZ元素偏移为⌊c/16⌋×H×16+r×16+c%16，其中A的H=128、B的H=256。\n\n`DataLoadA`（395—424行）在2201使用 LoadData3D V2，l1H=1、l1W=128、channelSize=kExtension=64、mExtension=128，把一片A装入L0A的ZZ布局。`DataLoadB`（429—496行）采用已转置存储分支，不再转置分形：循环4次，每次 LoadData2D 的 repeatTimes=16，按512字节分形连续搬运8192字节；四次共32KiB，形成L0B的ZN布局。srcStride=1和dstGap=0分别表示相邻源分形间隔512字节、目的分形连续。\n\n`Process`（50—72行）直接构造静态 LocalTensor。构造地址是字节，长度是元素数；以下区间及表中数字均为核内相应物理存储的KiB偏移，1KiB=1024字节。A1/B1共用L1：A Ping/Pong占[0,128)、[128,256)，B占[256,384)、[384,512)。L0A的A2占[0,16)、[32,48)，L0B的B2占[0,32)、[32,64)；A2/B2地址相同也不别名，因为属于不同物理存储。唯一CO1位于L0C的[0,128)，存128×256个float。\n\n选核0首个输出 tile C[0:128,0:256]，令t=kBlockIdx从0计数。每轮处理K区间[64t,64t+64)。A的L1切片起点为128(⌊t/8⌋%2)+16(t%8)，B为256+128(⌊t/4⌋%2)+32(t%4)；L0选择t%2。因此前十轮为："
+    },
+    {
+      "id": "CU05.E02",
+      "status": "correct",
+      "rationale": "以明确的KiB单位给出全部L0A/L0B区间、各槽大小和独立物理存储关系，同时给出128KiB的float L0C。",
+      "answer_span": "L0A的A2占[0,16)、[32,48)，L0B的B2占[0,32)、[32,64)；A2/B2地址相同也不别名，因为属于不同物理存储。唯一CO1位于L0C的[0,128)，存128×256个float。"
+    },
+    {
+      "id": "CU05.E03",
+      "status": "correct",
+      "rationale": "前十轮的地址公式与表格准确表达A1、B1及L0槽序列；还完整说明k0后的首次Pong预取、k3/k7释放时点和A/B各自的事件ID。",
+      "answer_span": "`ProcessLoop`（148—270行）先搬A/B Ping，包的K起点均为0。t=0发出Compute后，按B再A的源码顺序预取Pong，B从K=256、A从K=512开始。t=3释放B Ping并向其预取K=512；t=7释放B Pong与A Ping，分别预取K=768、1024。故t=8读取A Pong和已经复用的B Ping。"
+    },
+    {
+      "id": "CU05.H01",
+      "status": "correct",
+      "rationale": "明确MTE2_MTE1仅在包首片保护就绪，MTE1_M保护装载后供Cube读取；并明确指出正向依赖不能补回覆盖前所需的反向依赖。",
+      "answer_span": "事件按“源流水_目的流水”解释，类型不同则即使ID相同也不是同一事件。初始化的 MTE1_MTE2 ID0/1管理A Ping/Pong，ID2/3管理B；首次写入先消费可写事件，搬完置 MTE2_MTE1，同一包首轮才等待就绪。因此A在t=0、8等待ID0、1；B在t=0、4、8等待ID2、3、2。包的最后切片完成Load后，MTE1置反向事件，允许MTE2覆盖L1。此时无需等待Cube，因为操作数已经进入L0。\n\nbaseline每轮还先等待 M_MTE1 ID=t%2，再装载L0；装载后用 MTE1_M Set/Wait 保证Cube能读，Mmad后置 M_MTE1 释放该槽。"
+    },
+    {
+      "id": "CU05.H02",
+      "status": "correct",
+      "rationale": "正确区分包末Load完成后释放L1与Mmad消费完成后释放L0，说明初始化事件代表可写槽，并描述收尾消费全部剩余反向事件。",
+      "answer_span": "baseline每轮还先等待 M_MTE1 ID=t%2，再装载L0；装载后用 MTE1_M Set/Wait 保证Cube能读，Mmad后置 M_MTE1 释放该槽。初始化两个释放事件供t=0、1消费，随后形成 Compute(t)完成→Load(t+2)覆盖的依赖，同时允许另一槽搬运与计算重叠。收尾等待消费剩余两槽释放事件及四个L1可写事件。"
+    },
+    {
+      "id": "CU05.H03",
+      "status": "correct",
+      "rationale": "准确定位删除循环内M_MTE1等待导致Compute(t)到Load(t+2)的复用保证丢失，给出t2可能覆盖t0仍在读取地址的异步情形，并说明双槽与正向依赖不足以修复。",
+      "answer_span": "variant删除209行后，L1保护和装载→计算的正向依赖仍在，但计算→L0覆盖的反向依赖不再成立：t=2可覆盖仍被t=0计算读取的地址。Pong只延后复用两轮，并不能证明旧读取已经完成。"
+    },
+    {
+      "id": "CU05.H04",
+      "status": "correct",
+      "rationale": "指出未配对的重复Set违反事件生命周期约束，并把文档中的卡死示例与本题设备观测区分开；结论限定为静态正确执行保证丢失，没有声称实际发生错误值或卡死。",
+      "answer_span": "固定rawdocs的 SetFlag/WaitFlag 契约规定：Set等待源流水前序读写完成，但不阻塞后续源指令；Wait消费并清零标志，二者必须配对；同类型同ID未经消费连续Set属于未定义行为，并给出后续屏障卡死示例。因此变体既失去可证明的L0生命周期依赖，也违反事件配对约束。正向等待、L0C的unitFlag、末尾屏障都不能补回循环内缺失的依赖；静态材料支持“无正确执行保证”，不能断言实际必然出现某个错误值或必然卡死。"
+    }
+  ],
+  "critical_errors": []
+}

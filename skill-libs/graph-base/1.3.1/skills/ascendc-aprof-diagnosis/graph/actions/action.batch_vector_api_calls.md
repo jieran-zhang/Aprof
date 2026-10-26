@@ -1,0 +1,315 @@
+---
+schema_version: aprof.diagnosis-record/v1
+id: action.batch_vector_api_calls
+kind: action
+version: 1.2.0
+status: active
+title: 批量调用 Vector API
+scope:
+  platforms:
+  - all
+  workloads:
+  - all
+  dtypes:
+  - all
+sources:
+- path: skills/ascendc-aprof-diagnosis/graph/history/provenance/skills/aprof/optimization/references/api-algorithm-optimization-strategies.md
+  original_path: skills/aprof/optimization/references/api-algorithm-optimization-strategies.md
+  revision: aprof-1.1.0-pre-governance:sha256:27255603c8155ac2f34ba59420190390ba76d940bd9723790a6e72bb1defa5ad
+  lines:
+  - 20
+  - 31
+  sha256: sha256:27255603c8155ac2f34ba59420190390ba76d940bd9723790a6e72bb1defa5ad
+  excerpt_sha256: sha256:bb24449a74087725fcd3a3da85fee76127b6fed34980d9a192704cab40aa17aa
+- path: skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md
+  original_path: ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md
+  revision: 41377d0a442cd5b1c2356874873a3dda591c6633
+  lines:
+  - 5
+  - 7
+  sha256: sha256:103bb67af7b9bc8316403167dbfd6e57da2a757dd0bfbc8af03336378051b13e
+  excerpt_sha256: sha256:9fdf79fde327ec40103f1244c9c79ee4afac5860645886bc8ca27129f5ded562
+- path: skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md
+  original_path: ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md
+  revision: 41377d0a442cd5b1c2356874873a3dda591c6633
+  lines:
+  - 64
+  - 112
+  sha256: sha256:103bb67af7b9bc8316403167dbfd6e57da2a757dd0bfbc8af03336378051b13e
+  excerpt_sha256: sha256:8348896087faf9bd588de56b5e1df00baa68d475f1afab6f8e8276e1f9cc60be
+- path: skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md
+  original_path: ops/ascendc-performance-best-practices/references/elementwise/vector_efficiency_design.md
+  revision: 41377d0a442cd5b1c2356874873a3dda591c6633
+  lines:
+  - 150
+  - 172
+  sha256: sha256:103bb67af7b9bc8316403167dbfd6e57da2a757dd0bfbc8af03336378051b13e
+  excerpt_sha256: sha256:e5e66d6dfee5187142cfec46bffa5d0f200431651a54f2df298a34412ae93434
+- path: skills/ascendc-aprof-diagnosis/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/mask_operations/SetVectorMask.md
+  original_path: docs/zh/api/SIMD-API/basic_api/memory_vector_compute/mask_operations/SetVectorMask.md
+  revision: d378849769f9ee610af9d0ac38db2b3b6bed3209
+  lines:
+  - 1
+  - 40
+  sha256: sha256:0de631e061a2e005d01aaf2efe0076a9e2adb3287edf1d1e96dd515ab919a256
+  excerpt_sha256: sha256:d7c691d2216b08e98f944e42db95c3e223e5d1515796094c4fcbaddc8d5e7a8c
+- path: skills/ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-performance-best-practices/references/common/scalar/guide.md
+  original_path: ops/ascendc-performance-best-practices/references/common/scalar/guide.md
+  revision: 41377d0a442cd5b1c2356874873a3dda591c6633
+  lines:
+  - 4
+  - 8
+  sha256: sha256:1f9161d4bdd0ed256130213ce0e61598369c869b00ce28d54db38f5860536fdc
+  excerpt_sha256: sha256:47193296d3dadc4f6cb6cf1c115a43b5e8378f6bccc04e275dac8a22b2a2093a
+learning:
+  bias: 0
+tags:
+- api_algorithm
+- tiling
+seed_reason: 独立可核验证据匹配增益为 1；机制与动作不加先验偏置。
+transformation: 批量调用 Vector API
+preconditions:
+- fact: constraint.semantic_equivalence
+  state: true
+- fact: constraint.capacity
+  state: true
+- fact: constraint.vector_batch_compatibility
+  state: true
+invariants:
+- 算子语义与精度要求保持
+- 有效写回无重叠且覆盖完整
+- 资源与依赖约束经核验
+expected_effect: 合法合批可能减少Vector/Scalar发射与循环控制，未必减少必要算术或内存量。 是否作用于关键路径及实际收益由后继验证，不能由Action就绪推出。
+slots:
+- name: target
+  kind: object
+  description: 同一有效元素域上的Vector API序列、repeat和mask分布
+  required: true
+- name: stage
+  kind: stage
+  description: kernel Vector发射与尾处理
+  required: true
+- name: workload
+  kind: workload
+  description: 绑定shape、dtype、layout、feature与有效元素域，不跨workload借证据
+  required: true
+- name: implementation
+  kind: implementation
+  description: 绑定当前parent源码、host/tiling/kernel、编译配置或artifact身份
+  required: true
+claims:
+- id: legacy_seed
+  text: '原种子：批量调用 Vector API；原learning={"bias": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。'
+  basis: legacy_seed
+  source_indexes:
+  - 0
+  review_status: reviewed
+  limitations:
+  - 旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定
+- id: source_vector
+  text: Vector效率文档区分repeat/mask控制、归约指令路径和中间GM往返，count接口与尾处理必须符合API约束。
+  basis: source_statement
+  source_indexes:
+  - 1
+  - 2
+  - 3
+  review_status: reviewed
+  limitations:
+  - 仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持
+- id: source_mask
+  text: SetVectorMask为向量执行配置掩码；具体产品和接口形式须以该固定修订及目标SDK核对。
+  basis: source_statement
+  source_indexes:
+  - 4
+  review_status: reviewed
+  limitations:
+  - 仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持
+- id: source_scalar_guide
+  text: Scalar负责地址计算、参数构造和指令分发；文档要求以目标profiling、汇编或编译证据确认Load/Store及spill假设。
+  basis: source_statement
+  source_indexes:
+  - 5
+  review_status: reviewed
+  limitations:
+  - 仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持
+- id: intervention
+  text: 把语义和依赖允许的相邻Vector调用按count/repeat批量表达
+  basis: mechanism_inference
+  source_indexes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  review_status: reviewed
+  limitations:
+  - API理论利用率必须由目标指令和dtype推导
+  - 没有自动extractor，本轮不声称已采样到repeat分布
+- id: costs
+  text: 更长向量临时区生存期；合并受mask、地址跨度、参数上限及精度路径限制
+  basis: mechanism_inference
+  source_indexes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  review_status: reviewed
+  limitations:
+  - 代价需要绑定具体候选量化，尚无本任务收益
+- id: condition_separation
+  text: 存在可按同一合法Vector API的count/repeat等参数合并表达的调用域；依赖、mask、dtype、stride和目标支持均已验证。 本项原来没有源码结构前提；以明确API合批兼容性替代性能粒度门槛。
+    合法合批可能减少Vector/Scalar发射与循环控制，未必减少必要算术或内存量。
+  basis: mechanism_inference
+  source_indexes: []
+  review_status: reviewed
+  limitations:
+  - 本次基于已有模板、包内来源和变换语义的条件分层归纳，不是上游新增性能结论。
+  - 性能证据不足不等于变换不安全；实施安全也不证明当前关键路径、收益或试验优先级。
+review:
+  state: reviewed_with_limits
+  source_credibility: 固定修订的API文档、策略说明或公开代码；新claim独立引用本包来源与行号。旧迁移引用只作为legacy_seed，仓库名不自动等于硬件证明。
+  discriminating_power: 按dtype与有效mask计有效元素而非把repeat数直接当利用率；区分尾部必要小调用、分支依赖和不必要的主体碎片化；小shape仅需一次小调用或各调用存在数据依赖时，不据粒度小判可合并
+  observed_frequency: unknown
+  gaps:
+  - 尚无当前任务同scope的profiling关联或独立硬件复核；所有效果为prediction。
+  - API理论利用率必须由目标指令和dtype推导
+  - 没有自动extractor，本轮不声称已采样到repeat分布
+instantiation:
+  target_slots:
+  - target
+  - stage
+  - workload
+  - implementation
+  required_bindings:
+  - target
+  - stage
+  - workload
+  - implementation
+  effect: 把语义和依赖允许的相邻Vector调用按count/repeat批量表达；预期变化仅为prediction：合法批量表达应减少API和控制次数，未必改变必要算术量；这是prediction
+  costs:
+  - 更长向量临时区生存期
+  - 合并受mask、地址跨度、参数上限及精度路径限制
+  unknown_policy: 实施前逐条满足本版本preconditions与invariants；安全/结构条件缺失则指出具体未证项，C2可继续条件分析，C3不得绕过。性能假设独立记录：来源与当前源码足以支持适用时，可在合法且有试验价值的条件下提出优化，不以尚无严格性能实测一律否决；不把未知写成确认。Action优先级由成本机会比较和补证据决策形成。
+  replan_triggers:
+  - 目标/阶段、owner或有效元素域变化
+  - 算法、归并/同步拓扑、workspace owner、融合、通路或dispatch域超出已确认C2计划自由度
+  - 工作量、dtype、平台、容量或profile反证使原干预假设失效
+---
+
+# 批量调用 Vector API
+
+## 变换与作用对象
+
+把语义和依赖允许的相邻Vector调用按count/repeat批量表达。
+
+同一有效元素域上的Vector API序列、repeat和mask分布；阶段：kernel Vector发射与尾处理。
+
+## 实例绑定与实施安全条件
+
+实例必须给出精确template_hash、task与parent实现、目标和阶段；参数逐项给单位、来源及有效域，关联已确认C2计划。来源/源码/合法API与资源公式可以证明安全，无需将每项伪装成硬件观测。
+
+存在可按同一合法Vector API的count/repeat等参数合并表达的调用域；依赖、mask、dtype、stride和目标支持均已验证。
+
+- `constraint.semantic_equivalence=true`：完整数学、异常值、精度、地址和值可见性必须满足既有oracle与执行契约；源码证明/API依据可用于分析，后续实施仍需原正确性验证。
+- `constraint.capacity=true`：按当前平台/配置的可用容量与真实对齐、buffer深度和并发存活峰值核算；未知容量上限不能假定足够，也不要求先做性能实验。
+- `constraint.vector_batch_compatibility=true`：移除性能粒度门槛后，补上原Action缺少的明确结构/API准入，不能因存在多个Vector调用就视为可合批。
+
+不变量：算子语义与精度要求保持；有效写回无重叠且覆盖完整；资源与依赖约束经核验。
+
+新增谓词 `constraint.vector_batch_compatibility` 的证明范围：针对已绑定实现、对象/阶段、workload和目标SDK，拟合并的Vector调用能用该API允许的count/repeat/stride/mask表示，并保持调用间数据依赖和数值语义。
+
+- 引用各调用点、操作种类、dtype、地址空间与每次有效元素域，列出拟合并前后元素映射。
+- 核对当前平台/SDK支持、count/repeat上限、blk/repeat stride单位、mask和对齐。
+- 逐项检查跨调用读写依赖、alias、舍入和异常值；若需要中间结果或改变数值顺序，不属于直接合批。
+- 由新活跃区和深度计算容量；其余semantic_equivalence与capacity仍独立核验。
+
+具体未知条件：具体API/目标SDK支持或有效域无法定位。；调用间别名/依赖、数值路径或参数上限仍未确认。。
+
+## 性能假设、比较与补证据
+
+本项原来没有源码结构前提；以明确API合批兼容性替代性能粒度门槛。
+
+合法合批可能减少Vector/Scalar发射与循环控制，未必减少必要算术或内存量。
+
+以下旧门槛作为性能/选择线索保留，不再与实施安全混用；期望false也原样保留：
+
+- `symptom.profile.vector_granularity_low=true`：低Vector粒度是性能判别证据，合法合批可由调用结构和API契约独立证明。
+
+1. 从调用点列出单次有效元素、总调用次数、依赖/stride和API上限，推导可合并次数与新UB峰值。
+2. 若已是大count或后端已合并，收益依据减弱；把减少的调用数作为可验证预测，不要求先测到低粒度。
+
+已有来源说明该方法，并且当前源码形态、对象、目标API与约束匹配时，即可将其作为有依据的优化候选；不要求先完成严格性能实验。每个unknown只写具体缺失项、决策影响和是否值得补证据。若补充检查不会改变候选选择，就记录预测后进入获授权的试验，不把“信息不完备”当统一否决。反之，安全未知或明确不适用必须阻断实施。
+
+本Action能实施只是准入。选择前应与当前workload的主要字节、逐元素工作、任务/流水机会比较，说明预计改变何种成本、影响哪些case、可能代价及为何优先；不能以容易等价作为唯一理由。R2把R1实际patch与预测逐项对照，区分支持、削弱和无法判断；继续同一Action应有新证据、不同参数或尚未验证的预测，不要求机械换Action。
+
+## 预期效果与代价
+
+把语义和依赖允许的相邻Vector调用按count/repeat批量表达；预期变化仅为prediction：合法批量表达应减少API和控制次数，未必改变必要算术量；这是prediction
+
+- 更长向量临时区生存期
+- 合并受mask、地址跨度、参数上限及精度路径限制
+
+## 未知与返回规划
+
+实施前逐条满足本版本preconditions与invariants；安全/结构条件缺失则指出具体未证项，C2可继续条件分析，C3不得绕过。性能假设独立记录：来源与当前源码足以支持适用时，可在合法且有试验价值的条件下提出优化，不以尚无严格性能实测一律否决；不把未知写成确认。Action优先级由成本机会比较和补证据决策形成。
+
+- 目标/阶段、owner或有效元素域变化
+- 算法、归并/同步拓扑、workspace owner、融合、通路或dispatch域超出已确认C2计划自由度
+- 工作量、dtype、平台、容量或profile反证使原干预假设失效
+
+## 平台与workload限制
+
+- API理论利用率必须由目标指令和dtype推导
+- 没有自动extractor，本轮不声称已采样到repeat分布
+
+## 逐项主张与依据
+
+### legacy_seed [legacy_seed]
+
+原种子：批量调用 Vector API；原learning={"bias": 0}；独立可核验证据匹配增益为 1；机制与动作不加先验偏置。
+
+来源索引：0。限制：旧值仅供历史审计与旧快照回放，不是本轮可靠性、概率或收益标定
+
+### source_vector [source_statement]
+
+Vector效率文档区分repeat/mask控制、归约指令路径和中间GM往返，count接口与尾处理必须符合API约束。
+
+来源索引：1, 2, 3。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持
+
+### source_mask [source_statement]
+
+SetVectorMask为向量执行配置掩码；具体产品和接口形式须以该固定修订及目标SDK核对。
+
+来源索引：4。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持
+
+### source_scalar_guide [source_statement]
+
+Scalar负责地址计算、参数构造和指令分发；文档要求以目标profiling、汇编或编译证据确认Load/Store及spill假设。
+
+来源索引：5。限制：仅陈述该固定修订来源内容；不证明当前任务实现、性能或目标硬件支持
+
+### intervention [mechanism_inference]
+
+把语义和依赖允许的相邻Vector调用按count/repeat批量表达
+
+来源索引：1, 2, 3, 4, 5。限制：API理论利用率必须由目标指令和dtype推导；没有自动extractor，本轮不声称已采样到repeat分布
+
+### costs [mechanism_inference]
+
+更长向量临时区生存期；合并受mask、地址跨度、参数上限及精度路径限制
+
+来源索引：1, 2, 3, 4, 5。限制：代价需要绑定具体候选量化，尚无本任务收益
+
+
+### condition_separation [mechanism_inference]
+
+存在可按同一合法Vector API的count/repeat等参数合并表达的调用域；依赖、mask、dtype、stride和目标支持均已验证。 本项原来没有源码结构前提；以明确API合批兼容性替代性能粒度门槛。 合法合批可能减少Vector/Scalar发射与循环控制，未必减少必要算术或内存量。
+
+本次维护归纳；原来源与许可不变。旧条件逐项去向见包内 `workflows/references/action-condition-policy.json`，v0004前提仅在历史快照继续按原义回放。
+
+## v0006 选择与语义边界
+
+批量化覆盖的有效元素与当前 tile/尾部域应明确；合并调用可能增加临时空间、补齐和依赖等待。按选定 API 重载核查 count/repeat/mask 及相邻调用依赖，不能把单一 API 的尾部规则泛化为所有 Vector 调用。正确性修复可以继续本意图，只有实际改变工作与合法同步后才检验性能预测。
+
+此段为基于既有变换语义的维护归纳，不新增上游性能声明、不放宽 preconditions，也不将当前任务的性能 unknown 改成 true。

@@ -1,0 +1,184 @@
+{
+  "task_id": "raw15-case-03",
+  "skills": [
+    "ascendc-aprof-diagnosis",
+    "ascendc-aprof-parallel-planning",
+    "ascendc-aprof-optimization"
+  ],
+  "source_read": [
+    {
+      "ref": {
+        "path": "source/op_kernel/masked_scale_kernel.asc",
+        "sha256": "sha256:6ea1081c096d1f0866959ed96d44558a45987abb3b1e092c87ee7f5f754329e3"
+      },
+      "purpose": "核内计算、队列、有效长与Cast顺序"
+    },
+    {
+      "ref": {
+        "path": "source/op_host/masked_scale.asc",
+        "sha256": "sha256:e09aa9781ad5c6c851fee91441e673b860cee51c4a64d639269f424182f8f28c"
+      },
+      "purpose": "实际launch一次、分配与dtype/shape检查"
+    },
+    {
+      "ref": {
+        "path": "source/op_kernel/masked_scale_tiling.h",
+        "sha256": "sha256:cda8b11cf98d5f0d0737937f0ace050a45a1ebf41e06d1a9623bcb62089b6cae"
+      },
+      "purpose": "tile/核分配/UB公式"
+    },
+    {
+      "ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:693494eb315b2ac87c17afd3588b18f733f323c993c235012691311043e81279"
+      },
+      "purpose": "原20case全部元数据"
+    },
+    {
+      "ref": {
+        "path": "source/scripts/verify_result.py",
+        "sha256": "sha256:963f174d5ddfe96f68af7b69b5d87b21d58ccb36991e2f221bd0f531614bb1af"
+      },
+      "purpose": "原oracle门槛和特殊值比较"
+    }
+  ],
+  "problem_catalog": "retrieval.json全部28项；已按各自源码挑选正文，无预设Action数量",
+  "expansion_ref": {
+    "path": "expansion.json",
+    "sha256": "sha256:41a4dc2e2b8c592c70a840ccdc6b527bb906447896e64e1d92d0efff3ffd891a"
+  },
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "storage"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+        "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+      },
+      "locator": "lines:308-351",
+      "effect_kind": "mechanism",
+      "before": "当前源码结构：xf只用于Mul(of,xf,mf)，随后不再读旧xf；of后续仅Muls及FromFloat。因此目标完全alias xf可删outFp_一片。",
+      "after": "正文机制/边界确认：每种X/M dtype都可减少4T静态字节并扩大tile域；相对直接删int8→half→float转换，不依赖未核验的直接Cast支持，也不改精度。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "casts"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.redundant_cast.md",
+        "sha256": "sha256:c7f8ace396cc0a0f53f4bc0a5b9f0883cbd8b439d45dce74edc1e4f50b1b326d"
+      },
+      "locator": "lines:290-334",
+      "effect_kind": "mechanism",
+      "before": "当前源码结构：int8/uint8先转half再转float，整型值范围可在half精确表示；直接int8→float若目标支持可省一次Cast与half缓冲。",
+      "after": "正文机制/边界确认：数值域可静态证明，但实际目标SDK直接Cast是否支持未读到已验证平台，暂缓；不把int8→half→float当成必然冗余性能瓶颈。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "pipeline"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.pipeline_serialization.md",
+        "sha256": "sha256:4cacb553cd1af278ad9d2513e21cd70f968767b0eac3ef28ae42a90eb4e70d74"
+      },
+      "locator": "lines:272-316",
+      "effect_kind": "mechanism",
+      "before": "当前源码结构：两路CopyIn及一路CopyOut使用单槽，Compute含转换及两个乘法。",
+      "after": "正文机制/边界确认：能打开搬运重叠但多dtype槽宽不同，增槽压缩T；先用确定生命周期减少物理分配再决定双缓冲。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "storage"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+      },
+      "locator": "lines:72-108",
+      "effect_kind": "plan",
+      "before": "有元素总数与原始块长，但尚未明确新方案的owner/存储范围。",
+      "after": "保留每核独占输出与原逐元素数学链，T和物理槽分别计入字节公式；已有分区提取不算新并行优化。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "storage"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+        "sha256": "sha256:04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483"
+      },
+      "locator": "lines:74-119",
+      "effect_kind": "parameters",
+      "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+      "after": "删除outFp_，令of=xf，以Mul(xf,xf,mf)后Muls(xf,xf,scale)保持原先先乘mask再乘scale；FromFloat(yLocal,xf)保留原RoundMode。T=64k，第一候选4096；后续T≤floor64((UB原预算-API预留)/(2sx+sm+8+2Ibyte))，Ibyte表示int8/uint8 mask。输入输出所有权、每个有效count和半精度输出路径保持原定义；不把scale0或mask0替换成常数以规避Inf/NaN。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "storage"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+        "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+      },
+      "locator": "lines:75-110",
+      "effect_kind": "parameters",
+      "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+      "after": "保留输入/输出Cast、原算术顺序、NaN/Inf及±0；没有把值域case当公共输入保证。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    },
+    {
+      "opportunity_ids": [
+        "storage"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/fallback.md",
+        "sha256": "sha256:5c0be5bd2438407b7fafcda246add02711250c3cbfdf946224b2fba04f40a52c"
+      },
+      "locator": "lines:62-70",
+      "effect_kind": "parameters",
+      "before": "候选只有变换意图，尚未落实源码对象、生命周期与API边界。",
+      "after": "具体目标API/重叠/stride证据不全，保留原实现fallback并写明参数补项，而非借另一ISA能力。",
+      "applicability": "按当前host/tiling/kernel及完整20case恢复的对象使用；只作条件方法，不授权未核验资源/API。"
+    }
+  ],
+  "conditional_P_adoption": "planning.elementwise.continuous",
+  "O_consulted_documents_no_confirmed_C2": [
+    "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+    "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+    "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/fallback.md"
+  ],
+  "limits": "仅采用正文作为条件规划依据；route匹配不等于已阅读/已实施，本文仅记录实际读过并解释的条目。",
+  "routing_layers": {
+    "full_tree_consultation": {
+      "P": "R2-parallel-planning-route.json",
+      "O": "R2-optimization-route.json"
+    },
+    "action_bound_candidates": {
+      "P": [
+        "planning.elementwise.continuous"
+      ],
+      "O": [
+        "implementation.buffer-lifetime.reuse"
+      ]
+    },
+    "conditional_adoption": {
+      "P": "planning.elementwise.continuous",
+      "proposed_O_method": "implementation.buffer-lifetime.reuse",
+      "status": "条件采用规划/实现知识，未形成confirmed C2，因此O不是C3正式选定/实施"
+    },
+    "supporting_docs_outside_action_subtrees": "numeric用于原精度与特殊值约束；vector-api fallback用于未核验API的限制；AdamW中reuse用于拒绝不合法进一步合并。这些是咨询/审读，不是额外Action或正式O选定。"
+  }
+}

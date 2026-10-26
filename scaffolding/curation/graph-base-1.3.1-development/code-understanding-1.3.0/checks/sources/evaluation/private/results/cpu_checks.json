@@ -1,0 +1,560 @@
+{
+  "schema": "aprof.code-understanding-cpu-checks/v1",
+  "status": "pass",
+  "checks_passed": 6,
+  "checks": [
+    {
+      "check": "C01_C06_original_header_tiling",
+      "status": "pass",
+      "details": {
+        "direct_header_call": true,
+        "plans": [
+          {
+            "block": 0,
+            "element_start": 0,
+            "length_elements": 8340,
+            "tile_counts_elements": [
+              4096,
+              4096,
+              148
+            ],
+            "byte_start": 0,
+            "tail_blockLen_bytes": 296
+          },
+          {
+            "block": 1,
+            "element_start": 8340,
+            "length_elements": 8340,
+            "tile_counts_elements": [
+              4096,
+              4096,
+              148
+            ],
+            "byte_start": 16680,
+            "tail_blockLen_bytes": 296
+          },
+          {
+            "block": 2,
+            "element_start": 16680,
+            "length_elements": 8339,
+            "tile_counts_elements": [
+              4096,
+              4096,
+              147
+            ],
+            "byte_start": 33360,
+            "tail_blockLen_bytes": 294
+          }
+        ],
+        "explicit_ub_bytes_bf16": 49152
+      }
+    },
+    {
+      "check": "C02_contract_byte_address_model",
+      "status": "pass",
+      "details": {
+        "input_allocation_bytes": 400,
+        "gm_read_bytes": [
+          [
+            0,
+            52
+          ],
+          [
+            80,
+            132
+          ],
+          [
+            160,
+            212
+          ],
+          [
+            240,
+            292
+          ],
+          [
+            320,
+            372
+          ]
+        ],
+        "ub_allocation_bytes": 480,
+        "ub_rows": [
+          {
+            "data_bytes": [
+              0,
+              52
+            ],
+            "right_pad_bytes": [
+              52,
+              64
+            ],
+            "gap_bytes": [
+              64,
+              96
+            ]
+          },
+          {
+            "data_bytes": [
+              96,
+              148
+            ],
+            "right_pad_bytes": [
+              148,
+              160
+            ],
+            "gap_bytes": [
+              160,
+              192
+            ]
+          },
+          {
+            "data_bytes": [
+              192,
+              244
+            ],
+            "right_pad_bytes": [
+              244,
+              256
+            ],
+            "gap_bytes": [
+              256,
+              288
+            ]
+          },
+          {
+            "data_bytes": [
+              288,
+              340
+            ],
+            "right_pad_bytes": [
+              340,
+              352
+            ],
+            "gap_bytes": [
+              352,
+              384
+            ]
+          },
+          {
+            "data_bytes": [
+              384,
+              436
+            ],
+            "right_pad_bytes": [
+              436,
+              448
+            ],
+            "gap_bytes": [
+              448,
+              480
+            ]
+          }
+        ],
+        "output_allocation_bytes": 360,
+        "gm_write_bytes": [
+          [
+            0,
+            52
+          ],
+          [
+            72,
+            124
+          ],
+          [
+            144,
+            196
+          ],
+          [
+            216,
+            268
+          ],
+          [
+            288,
+            340
+          ]
+        ],
+        "gm_gap_bytes_per_row": 20,
+        "gm_gaps_remain_hex": "A5",
+        "cpu_output_sha256": "9c4c68d1bf2e83c56aaf91bf7d7bd0bf6208c5290a071423de69e8114c35b2e5",
+        "scope": "Byte-copy model of the documented contract; not hardware execution."
+      }
+    },
+    {
+      "check": "C03_original_header_and_selected_address_paths",
+      "status": "pass",
+      "details": {
+        "tilings_from_original_function": {
+          "P": {
+            "total": 6,
+            "blockLength": 6,
+            "blocks": 1,
+            "tile": 4096,
+            "dtype": 0,
+            "rank": 2,
+            "sameShape": 0,
+            "outShape": [
+              2,
+              3
+            ],
+            "x1Stride": [
+              3,
+              1
+            ],
+            "x2Stride": [
+              1,
+              0
+            ]
+          },
+          "Q": {
+            "total": 6,
+            "blockLength": 6,
+            "blocks": 1,
+            "tile": 4096,
+            "dtype": 1,
+            "rank": 2,
+            "sameShape": 0,
+            "outShape": [
+              2,
+              3
+            ],
+            "x1Stride": [
+              3,
+              1
+            ],
+            "x2Stride": [
+              1,
+              0
+            ]
+          },
+          "R": {
+            "total": 6,
+            "blockLength": 6,
+            "blocks": 1,
+            "tile": 4096,
+            "dtype": 0,
+            "rank": 2,
+            "sameShape": 0,
+            "outShape": [
+              2,
+              3
+            ],
+            "x1Stride": [
+              3,
+              1
+            ],
+            "x2Stride": [
+              0,
+              1
+            ]
+          }
+        },
+        "intended_or_scalar_x2_indices": {
+          "P": [
+            0,
+            0,
+            0,
+            1,
+            1,
+            1
+          ],
+          "Q": [
+            0,
+            0,
+            0,
+            1,
+            1,
+            1
+          ],
+          "R": [
+            0,
+            1,
+            2,
+            0,
+            1,
+            2
+          ]
+        },
+        "selected_half_copy_requests": [
+          {
+            "out_element_start": 0,
+            "count_elements": 3,
+            "x2_element_indices": [
+              0,
+              1,
+              2
+            ],
+            "x2_read_bytes": [
+              0,
+              6
+            ],
+            "P_x2_allocation_bytes": 4,
+            "P_outside_allocation_bytes": [
+              4,
+              5
+            ]
+          },
+          {
+            "out_element_start": 3,
+            "count_elements": 3,
+            "x2_element_indices": [
+              0,
+              1,
+              2
+            ],
+            "x2_read_bytes": [
+              0,
+              6
+            ],
+            "P_x2_allocation_bytes": 4,
+            "P_outside_allocation_bytes": [
+              4,
+              5
+            ]
+          }
+        ],
+        "Q_finite_result": [
+          3,
+          4,
+          8,
+          7,
+          7,
+          9
+        ],
+        "R_finite_result": [
+          3,
+          7,
+          8,
+          3,
+          7,
+          9
+        ],
+        "P_result": "not predicted: requested read crosses actual host allocation",
+        "scope": "Dispatch/address model recognized against exact source fragments, not kernel execution or NumPy."
+      }
+    },
+    {
+      "check": "C04_C06_format_and_mixed_core_mapping",
+      "status": "pass",
+      "details": {
+        "A_NZ_17_33_half_offset": 8465,
+        "A_2201_Zz_17_33_half_offset": 2577,
+        "A_3510_NZ_17_33_half_offset": 8465,
+        "A_L0_formats_differ": true,
+        "AIV_regions": [
+          {
+            "AIV": 0,
+            "paired_AIC": 0,
+            "start_half_elements": 0,
+            "count_half_elements": 16384,
+            "start_bytes": 0
+          },
+          {
+            "AIV": 1,
+            "paired_AIC": 0,
+            "start_half_elements": 16384,
+            "count_half_elements": 16384,
+            "start_bytes": 32768
+          },
+          {
+            "AIV": 2,
+            "paired_AIC": 1,
+            "start_half_elements": 32768,
+            "count_half_elements": 16384,
+            "start_bytes": 65536
+          },
+          {
+            "AIV": 3,
+            "paired_AIC": 1,
+            "start_half_elements": 49152,
+            "count_half_elements": 16384,
+            "start_bytes": 98304
+          }
+        ],
+        "format_scope": "Labeled block packing/transpose under frozen ND2NZ/LoadData contract; not an SDK simulator."
+      }
+    },
+    {
+      "check": "C05_slot_addresses_and_event_partial_order",
+      "status": "pass",
+      "details": {
+        "first_ten_K_iterations": [
+          {
+            "k": 0,
+            "A1_slot": 0,
+            "B1_slot": 0,
+            "L0_slot": 0,
+            "A_offset_in_chunk": 0,
+            "B_offset_in_chunk": 0
+          },
+          {
+            "k": 1,
+            "A1_slot": 0,
+            "B1_slot": 0,
+            "L0_slot": 1,
+            "A_offset_in_chunk": 1,
+            "B_offset_in_chunk": 1
+          },
+          {
+            "k": 2,
+            "A1_slot": 0,
+            "B1_slot": 0,
+            "L0_slot": 0,
+            "A_offset_in_chunk": 2,
+            "B_offset_in_chunk": 2
+          },
+          {
+            "k": 3,
+            "A1_slot": 0,
+            "B1_slot": 0,
+            "L0_slot": 1,
+            "A_offset_in_chunk": 3,
+            "B_offset_in_chunk": 3
+          },
+          {
+            "k": 4,
+            "A1_slot": 0,
+            "B1_slot": 1,
+            "L0_slot": 0,
+            "A_offset_in_chunk": 4,
+            "B_offset_in_chunk": 0
+          },
+          {
+            "k": 5,
+            "A1_slot": 0,
+            "B1_slot": 1,
+            "L0_slot": 1,
+            "A_offset_in_chunk": 5,
+            "B_offset_in_chunk": 1
+          },
+          {
+            "k": 6,
+            "A1_slot": 0,
+            "B1_slot": 1,
+            "L0_slot": 0,
+            "A_offset_in_chunk": 6,
+            "B_offset_in_chunk": 2
+          },
+          {
+            "k": 7,
+            "A1_slot": 0,
+            "B1_slot": 1,
+            "L0_slot": 1,
+            "A_offset_in_chunk": 7,
+            "B_offset_in_chunk": 3
+          },
+          {
+            "k": 8,
+            "A1_slot": 1,
+            "B1_slot": 0,
+            "L0_slot": 0,
+            "A_offset_in_chunk": 0,
+            "B_offset_in_chunk": 0
+          },
+          {
+            "k": 9,
+            "A1_slot": 1,
+            "B1_slot": 0,
+            "L0_slot": 1,
+            "A_offset_in_chunk": 1,
+            "B_offset_in_chunk": 1
+          }
+        ],
+        "L1_byte_ranges": {
+          "A_ping": [
+            0,
+            131072
+          ],
+          "A_pong": [
+            131072,
+            262144
+          ],
+          "B_ping": [
+            262144,
+            393216
+          ],
+          "B_pong": [
+            393216,
+            524288
+          ]
+        },
+        "L0A_byte_ranges": {
+          "ping": [
+            0,
+            16384
+          ],
+          "pong": [
+            32768,
+            49152
+          ]
+        },
+        "L0B_byte_ranges": {
+          "ping": [
+            0,
+            32768
+          ],
+          "pong": [
+            32768,
+            65536
+          ]
+        },
+        "baseline_M0_before_L2": true,
+        "variant_M0_before_L2_guaranteed": false,
+        "variant_valid_order_for_retained_data_edges": [
+          "L0",
+          "L1",
+          "L2",
+          "L3",
+          "L4",
+          "L5",
+          "L6",
+          "L7",
+          "L8",
+          "L9",
+          "M0",
+          "M1",
+          "M2",
+          "M3",
+          "M4",
+          "M5",
+          "M6",
+          "M7",
+          "M8",
+          "M9"
+        ],
+        "scope": "Dataflow partial order only; remaining unmatched flag lifecycle is not simulated; no hardware failure or corruption asserted."
+      }
+    },
+    {
+      "check": "C06_rename_equivalence_and_common_contract",
+      "status": "pass",
+      "details": {
+        "vector_files_restored_exactly": 3,
+        "cube_file_restored_exactly": true,
+        "common_contract_sha256": "c364a66871f43c6402ae2a2996150171e17cadb246f0dced6485729b4a4e2512"
+      }
+    }
+  ],
+  "ordinary_cpp_header_build": {
+    "command": [
+      "/usr/bin/g++",
+      "-std=c++17",
+      "-O0",
+      "-Wall",
+      "-Wextra",
+      "-pedantic",
+      "/dev/shm/aprof-code-understanding-6xvz3x8v/eval-private/private/helpers/tiling_probe.cpp",
+      "-o",
+      "/dev/shm/aprof-code-understanding-6xvz3x8v/eval-private/private/results/tiling_probe"
+    ],
+    "returncode": 0,
+    "execution": "ordinary executable",
+    "compiler": "/usr/bin/g++"
+  },
+  "not_run": [
+    "NPU hardware",
+    "Ascend SDK build",
+    "device compiler",
+    "hardware simulator",
+    "evaluation agents"
+  ],
+  "reads_gold": false
+}

@@ -1,0 +1,148 @@
+{
+  "task_id": "raw-case-15",
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "o1"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+        "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+      },
+      "locator": "lines:292-304",
+      "effect_kind": "mechanism",
+      "before": "源码显示：ResizeOne每输出计算linear%outputSpatial、nc、oh/ow和两次ResizeCoord，四个GM标量读取，逐输出FP32加权。",
+      "after": "把逐输出输入解码和插值运算移到UB/Vector，地址按连续输出row分段，直接减少主体Scalar数据处理。",
+      "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+    },
+    {
+      "opportunity_ids": [
+        "o2"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+        "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+      },
+      "locator": "lines:310-322",
+      "effect_kind": "mechanism",
+      "before": "源码显示：ResizeOne每输出计算linear%outputSpatial、nc、oh/ow和两次ResizeCoord，四个GM标量读取，逐输出FP32加权。",
+      "after": "每row只算ih/h0/h1/dh，宽坐标按列计算或缓存可减少重复坐标，但仍4个GM标量读及输入解码。",
+      "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+    },
+    {
+      "opportunity_ids": [
+        "o3"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.insufficient_input_reuse.md",
+        "sha256": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4"
+      },
+      "locator": "lines:265-277",
+      "effect_kind": "mechanism",
+      "before": "源码显示：ResizeCoord对每个输出列给出相邻w0/w1，scale<1时邻接输出可复用同源索引，scale=2时pair分离；原四点值只读。",
+      "after": "上采样同源行/列强复用；整2倍下采样邻居不重叠，统一驻留整源行可能多搬无用字节。",
+      "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+    },
+    {
+      "opportunity_ids": [
+        "o1"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/gather_output_owned.md",
+        "sha256": "sha256:76c17821a374cd11f8f73abd6c97ff063e37eccaa4d52f0615a405282fadb43e"
+      },
+      "locator": "lines:104-116",
+      "effect_kind": "parameters",
+      "before": "尚未把源循环转换为有界任务/内存方案。",
+      "after": "Gather模板的尾轴源窗口/输出owner原则迁移到ResizeCoord生成的有界索引，未声称是GatherElements算子；取数只搬值，之后另保留四项FP32插值，强下采样源span按实址计。",
+      "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+    },
+    {
+      "opportunity_ids": [
+        "o1"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+        "sha256": "sha256:d1a2e2eb822d93e4962d5c0198fd3a124e81e5af354c73596b513bd53ee13f08"
+      },
+      "locator": "lines:85-97",
+      "effect_kind": "parameters",
+      "before": "尚未把源循环转换为有界任务/内存方案。",
+      "after": "Resize按W=64/128/256有效count规划，GM范围须单独核对；逐步乘加/Cast与原手工解码的全域语义仍unknown。",
+      "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+    },
+    {
+      "opportunity_ids": [
+        "o1",
+        "o2"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+        "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+      },
+      "locator": "lines:121-133",
+      "effect_kind": "alternative",
+      "before": "此前尚未比较该方法的边界。",
+      "after": "相邻四点只是部分重叠，不能删整次第二加载；逐输出列枚举union后保留两源行共同区，强下采样pair分离时撤回驻留。",
+      "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+    },
+    {
+      "opportunity_ids": [
+        "o1",
+        "o2"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/scalar-control/recipes/hot-loop-address.md",
+        "sha256": "sha256:136b0642b2359171260588136c3cf909e46b82a62ef99790607771cade27d576"
+      },
+      "locator": "lines:70-82",
+      "effect_kind": "alternative",
+      "before": "此前尚未比较该方法的边界。",
+      "after": "nc/oh不变量只可提到行作用域；ow坐标仍直接FP32求值，禁止累加scale产生不同舍入，输入pair代次变化时重建窗口。",
+      "applicability": "ResizeCoord只由shape/align/out坐标决定，无数据相关地址；输入只读、输出唯一owner，无归约；clamp后两源点均在原输入域。 这只是地址/表达式结构证明，完整semantic_equivalence仍unknown。"
+    }
+  ],
+  "adopted_routes": {
+    "P": "planning.indexing.gather_output_owned",
+    "O": "implementation.vector-api.batch"
+  },
+  "scope": "conditional method adoption; no C3 implementation",
+  "complete_directory_reviewed": [
+    "problem.broadcast_strategy_mismatch",
+    "problem.cache_policy_mismatch",
+    "problem.chunk_merge_overhead",
+    "problem.control_metadata_overhead",
+    "problem.core_tail_imbalance",
+    "problem.dynamic_shape_mismatch",
+    "problem.excessive_sync_scope",
+    "problem.fragmented_writeback",
+    "problem.insufficient_input_reuse",
+    "problem.l1_l0_reuse_deficit",
+    "problem.memory_bandwidth_saturation",
+    "problem.missing_kernel_fusion",
+    "problem.mixed_pipeline_imbalance",
+    "problem.noncontiguous_access",
+    "problem.onchip_capacity_pressure",
+    "problem.pipeline_serialization",
+    "problem.reduction_strategy_mismatch",
+    "problem.redundant_cast",
+    "problem.redundant_gm_round_trip",
+    "problem.register_spill",
+    "problem.scalar_control_hot_loop",
+    "problem.tail_slow_path",
+    "problem.tiny_transfer_setup_amplification",
+    "problem.transfer_compute_contention",
+    "problem.ub_bank_conflict",
+    "problem.underused_task_parallelism",
+    "problem.vector_api_fragmentation",
+    "problem.workspace_overallocation"
+  ],
+  "stopping_reason": "当前主体数据路径与竞争机会已比较，剩余合法性/性能问题不能由文档替代当前设备证据。"
+}

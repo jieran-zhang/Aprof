@@ -1,0 +1,29 @@
+该算子对一维连续 ND 张量逐元素计算指数，输出与输入等长、同类型，没有归约或核间结果合并。数学目标为：base>0 时 yᵢ=base^(scale·xᵢ+shift)，否则 yᵢ=exp(scale·xᵢ+shift)。非正 base 在代码中表示使用自然指数，不表示计算负底数幂。依据是 exp_tiling.h 的 ComputeExpTiling：host 将乘数预先算为 scale·ln(base)，偏移算为 shift·ln(base)，非正底数则用 1 替代 ln(base)；kernel 最终执行 Muls→Adds→Exp。
+
+本次参数得到 multiplier≈0.34657359、内部 shift≈−0.69314718，因此计算 exp(0.34657359·x−0.69314718)，数学上等于 2^(0.5x−1)。代表输入 −2、0、2 对应结果 0.25、0.5、1，均可被 bfloat16 精确表示，其预期 bfloat16 编码依次为 0x3e80、0x3f00、0x3f80。实际数值路径包含 host 的 float 对数及系数计算、device 的分步 float 运算和指数近似，不能推广为任意输入都与无限精度幂运算逐位一致。
+
+host 完整路径见 source/op_host/exp.asc:38–63：解析 numel、dtype、base、scale、shift，初始化设备，查询向量核数量并生成 tiling，分配输入、输出和 tiling 内存，读取输入文件，将输入及 tiling 拷到设备，启动 kernel，等待 stream 完成，再将输出拷回并写文件。bfloat16 每元素 2B，所以本次输入、输出各为 25019×2=50038B。data_utils.h 的 ReadFile/WriteFile 按原始二进制字节读写，host 不转换数值格式；因此文件应直接包含相应 dtype 的数据，而非文本数字。
+
+分核公式见 source/op_kernel/exp_tiling.h:18–29：useful=max(1,ceil(25019/4096))=7；题设查询值为 3，故 blockNum=max(1,min(3,7))=3；blockLength=ceil(25019/3)=8340 个元素；tileElements 固定为 4096。kernel 的 Init 以 blockIdx×blockLength 定位，再用剩余总长度截断每核有效长度。下表区间均为左闭右开，字节偏移相对于各自输入或输出 GM 基址：
+
+| block | 元素区间 | 字节区间 | 三次 count |
+| --- | --- | --- | --- |
+| 0 | [0,8340) | [0,16680) | 4096、4096、148 |
+| 1 | [8340,16680) | [16680,33360) | 4096、4096、148 |
+| 2 | [16680,25019) | [33360,50038) | 4096、4096、147 |
+
+每核循环的局部 off 都是 0、4096、8192 个元素。对应三个 tile 的 GM 起始字节偏移分别为：block 0 的 0、8192、16384；block 1 的 16680、24872、33064；block 2 的 33360、41552、49744。这里 GlobalTensor<T> 的索引和指针加法按元素计，变成字节地址才乘 sizeof(T)。三核合计执行 9 个 tile，覆盖 6×4096+148+148+147=25019 个元素，逻辑读写区间无遗漏、无重叠。
+
+每个 tile 的数据流由 source/op_kernel/exp_kernel.asc 的 CopyIn、Compute、CopyOut 给出：GM 输入经 MTE2 进入 UB 的输入队列；bfloat16 经 Cast(CAST_NONE) 扩展到 fpIn_ 中的 float；Muls 将结果写入 fpOut_，随后 Adds 和 Exp 原地更新 fpOut_；最后 Cast(CAST_RINT) 写入 bfloat16 输出队列，再经 MTE3 写回 GM。CAST_RINT 是最近舍入、正中间取偶数，并非把结果舍入为整数。当前调用进入入口的 bfloat16_t 分支，再由模板的非 float 路径完成上述计算。
+
+float16 也先精确扩展到 float，在两个 float 临时区完成相同计算，最后以 CAST_NONE 转回 half。固定 Cast.md 的契约规定：CAST_NONE 在有精度损失时表示 CAST_RINT，因此不能把此处解释为截断。float32 则直接在输入、输出队列中执行三步 float 运算，不分配这两个临时区，也没有前后 Cast。三种类型的分核和 count 相同；float32 的 GM 容量和搬运字节数翻倍。
+
+搬运参数见 kernel:37–42、69–73，匹配 shared/rawdocs 中 DataCopyPad_GMToUB.md、DataCopyPad_UBToGM.md 的 A3 普通重载：blockCount=1，blockLen=count×sizeof(T)，单位为字节；两个 stride 和保留字段均为 0。GM 地址只需 1B 对齐，UB 地址要求 32B 对齐，所以后两核起点相对 GM 基址分别偏移 8、16B（模 32），仍满足契约。满 tile 搬运 8192B；尾 tile 搬运 296B、296B、294B。搬入 UB 时各尾块补齐至 320B，即分别增加 24、24、26B 的 dummy。
+
+pad={false,0,0,0} 不表示补零：isPad=false 禁用 paddingValue，左右显式 padding 都为零；文档规定这种非对齐情形的 dummy 使用本块首元素值。计算 API 的 count 仍只覆盖 148 或 147 个有效元素，dummy 不参与结果。写回时 DataCopyPad 只输出 blockLen 有效字节，对齐部分被丢弃，所以最后一块止于字节偏移 50038，不会把补齐区写到输出末尾之外。输入、输出的有效 GM 流量各为 50038B，合计 100076B；这不包含 tiling 读取、host 拷贝，也不代表底层总线事务量。
+
+资源组织见 kernel 的 Init 和成员声明：inQ_、outQ_ 均为深度 1 的 TQue，且 InitBuffer 的物理块数也为 1。按 InitBuffer.md，后者才决定是否启用双缓冲；当前每队列只有一块。bfloat16 每核分配两个 8192B 队列块及两个 16384B float TBuf，共 49152B=48KiB；float16 相同，float32 仅两个 16384B 队列块，共 32KiB。尾 tile 仍复用这些完整分配。VECIN、VECOUT、VECCALC 都映射到同一核的 UB，是不同区域及用途，不是三层物理存储；上述容量只统计显式数据区，不含框架或编译器额外占用。
+
+生命周期是输入 AllocTensor→搬入→EnQue→DeQue→计算→FreeTensor，输出 AllocTensor→计算→EnQue→DeQue→搬出→FreeTensor。必须满足搬入完成后 V 才读取输入、V 完成后 MTE3 才读取输出，以及下一轮覆盖单块缓冲前前一消费者已读完。源码采用 TPipe/TQue 管理这些交接，没有手写事件；固定核内同步文档说明框架和编译器支持自动同步。连续向量算子及复用临时区的依赖也需由该同步体系满足，不能把 C++ 调用返回或 FreeTensor 当作硬件全流水完成。材料没有编译产物，无法进一步确认实际插入的屏障、事件及等待时长。
+
+按 workload/sdk-contract.md，本题目标为 910C/Atlas A3，适用 __NPU_ARCH__=2201。该实现是 AIV 上的 Scalar 控制、MTE2 搬入、Vector 计算、MTE3 搬出路径，不使用 Cube、L1/L0 矩阵布局转换、workspace 或显式核间同步。三个 block 的输出独立，host 的 stream 同步保证回传发生在 kernel 完成之后。单缓冲及逐 tile 的 CopyIn→Compute→CopyOut 说明了资源复用约束，但静态代码不能证明实际流水重叠、吞吐或瓶颈。查询值 3 仅是本题可见资源设定，不是 910C 固定物理核数；当前 source 未提供构建配置，亦无设备运行、具体指令和全输入精度验证证据。

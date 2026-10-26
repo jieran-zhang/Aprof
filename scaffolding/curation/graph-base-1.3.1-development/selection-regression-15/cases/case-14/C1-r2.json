@@ -1,0 +1,677 @@
+{
+  "schema_version": "aprof.handoff/v3",
+  "stage": "C1",
+  "task_id": "autonomy-c-14",
+  "candidate_id": null,
+  "parent_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+  "artifacts": [
+    {
+      "path": "decision-r2.json",
+      "sha256": "sha256:ecdef3ec59095ef949d31c780edb9ca60c0c15a2bacda45df383352b3dff8611"
+    },
+    {
+      "path": "retrieval.json",
+      "sha256": "sha256:ee445f5143be3a11c861f2a46316a8ccd66eefd9b151ec80d360f75165838e28"
+    },
+    {
+      "path": "expansion.json",
+      "sha256": "sha256:b4bbd0053664084a38fc811ad3cd2ca5d3140aae878c0b81e7b4cc15d930ded0"
+    },
+    {
+      "path": "parallel-planning-consult-route.json",
+      "sha256": "sha256:be3a6480bbe8993cf71102b9e2dbb3b91bfe6b5e15644ce47de658b59de96916"
+    },
+    {
+      "path": "optimization-consult-route.json",
+      "sha256": "sha256:1b35b3ccb067bdf03bc3a58dd76b2e8c2a09831606e6b28ab5ce11bf62eb6f8d"
+    },
+    {
+      "path": "parallel-planning-action-consult-r2.json",
+      "sha256": "sha256:e6e59e1aa3167a0e741eb93c135787dbabc797fed94be6b4099147c6392b7849"
+    },
+    {
+      "path": "optimization-action-consult-r2.json",
+      "sha256": "sha256:768f5154cb1bf582bd0235884bdf89175e9b80a5c2df90c67fbfdf98de170219"
+    }
+  ],
+  "reasoning": {
+    "schema_version": "aprof.diagnosis-reasoning/v1",
+    "task_id": "autonomy-c-14",
+    "context_hash": "sha256:0e8499e836da770116c71f416ff0b5ebbdaed9e59c4af055a9374ee0e5bbe7e9",
+    "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+    "source_context_ref": {
+      "path": "authority.json",
+      "sha256": "sha256:9178bb04554e8e9bc4ccc578f69cc2089aa413af4c0e913e54e18bb4b8e95b72"
+    },
+    "context_snapshot": {
+      "schema_version": "aprof.evidence/v1",
+      "task_id": "autonomy-c-14",
+      "source_context_ref": {
+        "path": "authority.json",
+        "sha256": "sha256:9178bb04554e8e9bc4ccc578f69cc2089aa413af4c0e913e54e18bb4b8e95b72"
+      },
+      "attributes": {
+        "platform": "dav-2201",
+        "family": [
+          "layout"
+        ],
+        "dtype": [
+          "bfloat16",
+          "float16",
+          "float32",
+          "int16",
+          "int32",
+          "int64",
+          "int8"
+        ],
+        "features": [
+          "memory-transfer",
+          "scalar-control",
+          "vector-api"
+        ]
+      },
+      "facts": {}
+    },
+    "current": {
+      "implementation_ref": {
+        "path": "parent-source.json",
+        "sha256": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad"
+      },
+      "workload_ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c"
+      },
+      "objects": [
+        {
+          "object_id": "path",
+          "kind": "object",
+          "description": "host检查rank<=8及perm双射、生成inputStride和outputShape；连续output分核，每输出从末轴倒序rank次除模重建source，原始位宽Scalar读写，不作数值运算。"
+        },
+        {
+          "object_id": "stage",
+          "kind": "stage",
+          "description": "kernel complete compute/data path"
+        },
+        {
+          "object_id": "workload",
+          "kind": "workload",
+          "description": "20 cases matrix"
+        },
+        {
+          "object_id": "implementation",
+          "kind": "implementation",
+          "description": "frozen full source parent"
+        }
+      ],
+      "scope": {
+        "task_id": "autonomy-c-14",
+        "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+        "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+        "target_ids": [
+          "path"
+        ],
+        "stage": "kernel-full-path"
+      }
+    },
+    "facts": {
+      "source.kernel": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/transpose_kernel.asc@lines:1-32",
+        "ref": {
+          "path": "source/op_kernel/transpose_kernel.asc",
+          "sha256": "sha256:b103972552bd43cc98b15c0daf3b4dfe1b7b2e68a079e98d6b87aac58aa4c0fe",
+          "locator": "lines:1-32"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source"
+      },
+      "source.host": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_host/transpose.asc@lines:1-71",
+        "ref": {
+          "path": "source/op_host/transpose.asc",
+          "sha256": "sha256:89474e01d986776a0b4dfba3394f33a68c7535e2603b73b37de4bfd019f0eb0c",
+          "locator": "lines:1-71"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source"
+      },
+      "source.tiling": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/transpose_tiling.h@lines:1-35",
+        "ref": {
+          "path": "source/op_kernel/transpose_tiling.h",
+          "sha256": "sha256:6aed36c8122bdb797fb28be0c2af2ae3348224edb21e320e22912fc539db2bc6",
+          "locator": "lines:1-35"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source"
+      },
+      "source.workload": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/matrix-20.json@cases",
+        "ref": {
+          "path": "source/matrix-20.json",
+          "sha256": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "locator": "cases"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "workload"
+      },
+      "source.oracle": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/scripts/verify_result.py@main",
+        "ref": {
+          "path": "source/scripts/verify_result.py",
+          "sha256": "sha256:e6321455c4b73618afe6af72f5d2b67adb177d60e6b66179f59f5192dac68f84",
+          "locator": "main"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source"
+      },
+      "primary.symptom.source.noncontiguous_access": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "primary.symptom.source.noncontiguous_access.component_1",
+          "primary.symptom.source.noncontiguous_access.component_2",
+          "primary.symptom.source.noncontiguous_access.component_3"
+        ],
+        "components": [
+          "primary.symptom.source.noncontiguous_access.component_1",
+          "primary.symptom.source.noncontiguous_access.component_2",
+          "primary.symptom.source.noncontiguous_access.component_3"
+        ],
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.noncontiguous_access"
+      },
+      "primary.symptom.source.noncontiguous_access.component_1": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/transpose_kernel.asc@lines:1-32",
+        "ref": {
+          "path": "source/op_kernel/transpose_kernel.asc",
+          "sha256": "sha256:b103972552bd43cc98b15c0daf3b4dfe1b7b2e68a079e98d6b87aac58aa4c0fe",
+          "locator": "lines:1-32"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.noncontiguous_access.component_1"
+      },
+      "primary.symptom.source.noncontiguous_access.component_2": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/transpose_kernel.asc@lines:1-32",
+        "ref": {
+          "path": "source/op_kernel/transpose_kernel.asc",
+          "sha256": "sha256:b103972552bd43cc98b15c0daf3b4dfe1b7b2e68a079e98d6b87aac58aa4c0fe",
+          "locator": "lines:1-32"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.noncontiguous_access.component_2"
+      },
+      "primary.symptom.source.noncontiguous_access.component_3": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/transpose_kernel.asc@lines:1-32",
+        "ref": {
+          "path": "source/op_kernel/transpose_kernel.asc",
+          "sha256": "sha256:b103972552bd43cc98b15c0daf3b4dfe1b7b2e68a079e98d6b87aac58aa4c0fe",
+          "locator": "lines:1-32"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.noncontiguous_access.component_3"
+      },
+      "primary.constraint.layout_semantics": {
+        "state": "unknown",
+        "kind": "raw",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "constraint",
+        "predicate": "constraint.layout_semantics"
+      },
+      "primary.constraint.semantic_equivalence": {
+        "state": "unknown",
+        "kind": "raw",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "constraint",
+        "predicate": "constraint.semantic_equivalence"
+      },
+      "primary.constraint.capacity": {
+        "state": "unknown",
+        "kind": "raw",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "constraint",
+        "predicate": "constraint.capacity"
+      },
+      "alternative.symptom.source.control_metadata_overhead": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "alternative.symptom.source.control_metadata_overhead.component_1",
+          "alternative.symptom.source.control_metadata_overhead.component_2",
+          "alternative.symptom.source.control_metadata_overhead.component_3"
+        ],
+        "components": [
+          "alternative.symptom.source.control_metadata_overhead.component_1",
+          "alternative.symptom.source.control_metadata_overhead.component_2",
+          "alternative.symptom.source.control_metadata_overhead.component_3"
+        ],
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.control_metadata_overhead"
+      },
+      "alternative.symptom.source.control_metadata_overhead.component_1": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/transpose_kernel.asc@lines:1-32",
+        "ref": {
+          "path": "source/op_kernel/transpose_kernel.asc",
+          "sha256": "sha256:b103972552bd43cc98b15c0daf3b4dfe1b7b2e68a079e98d6b87aac58aa4c0fe",
+          "locator": "lines:1-32"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.control_metadata_overhead.component_1"
+      },
+      "alternative.symptom.source.control_metadata_overhead.component_2": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/transpose_kernel.asc@lines:1-32",
+        "ref": {
+          "path": "source/op_kernel/transpose_kernel.asc",
+          "sha256": "sha256:b103972552bd43cc98b15c0daf3b4dfe1b7b2e68a079e98d6b87aac58aa4c0fe",
+          "locator": "lines:1-32"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.control_metadata_overhead.component_2"
+      },
+      "alternative.symptom.source.control_metadata_overhead.component_3": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source/op_kernel/transpose_kernel.asc@lines:1-32",
+        "ref": {
+          "path": "source/op_kernel/transpose_kernel.asc",
+          "sha256": "sha256:b103972552bd43cc98b15c0daf3b4dfe1b7b2e68a079e98d6b87aac58aa4c0fe",
+          "locator": "lines:1-32"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source",
+        "predicate": "symptom.source.control_metadata_overhead.component_3"
+      },
+      "alternative.constraint.control_equivalence": {
+        "state": "unknown",
+        "kind": "raw",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "constraint",
+        "predicate": "constraint.control_equivalence"
+      },
+      "source.r2": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "r2-new-static-evidence.json@finding",
+        "ref": {
+          "path": "r2-new-static-evidence.json",
+          "sha256": "sha256:eb780cc3e8c10c7be042c32bb42ad90fe445dd4ef90866435ed698c14012d0c1",
+          "locator": "finding"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "view": "source"
+      }
+    },
+    "candidates": [
+      {
+        "hypothesis_id": "H-primary",
+        "problem_id": "problem.noncontiguous_access",
+        "mechanism": "连续后缀域每E元素一次外层地址解码并整段搬运；矩形域按tile外层解码，输入连续段DMA和UB局部置换替代N次离散源请求",
+        "targets": [
+          "path"
+        ],
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "support": [
+          "source.kernel",
+          "source.tiling",
+          "source.workload"
+        ],
+        "counter": [],
+        "unknown": [
+          "primary.constraint.layout_semantics",
+          "primary.constraint.semantic_equivalence",
+          "primary.constraint.capacity"
+        ],
+        "alternatives": [
+          "H-alternative"
+        ],
+        "checks": [
+          "用源码地址/数值/API/物理容量闭合，再用编译/同协议Task测量区分逻辑工作和关键路径"
+        ],
+        "status": "plausible",
+        "reason": "按真实perm合并两端均连续轴；保留末轴的域直接搬连续条带，其余规则二维/批次二维域采用片上矩形转置，复杂perm保留通用索引fallback；Raw位宽搬运不转换数值，输出矩形互斥且只写有效元素。",
+        "excluded_by": [],
+        "independent_evidence_groups": [
+          [
+            "source.kernel",
+            "source.tiling",
+            "source.workload"
+          ]
+        ]
+      },
+      {
+        "hypothesis_id": "H-alternative",
+        "problem_id": "problem.control_metadata_overhead",
+        "mechanism": "每task固定rank/shape/stride字段load移至Init；连续行的公共source前缀每行一次，仍保留一般perm的逐元素地址与读写",
+        "targets": [
+          "path"
+        ],
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "support": [
+          "source.kernel",
+          "source.tiling",
+          "source.workload"
+        ],
+        "counter": [],
+        "unknown": [
+          "alternative.constraint.control_equivalence",
+          "primary.constraint.semantic_equivalence",
+          "primary.constraint.capacity"
+        ],
+        "alternatives": [
+          "H-primary"
+        ],
+        "checks": [
+          "用源码地址/数值/API/物理容量闭合，再用编译/同协议Task测量区分逻辑工作和关键路径"
+        ],
+        "status": "plausible",
+        "reason": "仅缓存rank/stride及外提公共前缀成本小、全dtype通用，但一般转置仍每输出离散源访问；编译器可能已缓存字段，不能由源码加载次数推收益。",
+        "excluded_by": [],
+        "independent_evidence_groups": [
+          [
+            "source.kernel",
+            "source.tiling",
+            "source.workload"
+          ]
+        ]
+      }
+    ],
+    "action_instances": [
+      {
+        "instance_id": "I-primary",
+        "action_id": "action.reorder_contiguous_access",
+        "template_hash": "sha256:1a2df2e4c96fcbd6273064aaec495473dfa9db0caa6da0b364b685f2fe015201",
+        "hypothesis_id": "H-primary",
+        "targets": {
+          "target": "path",
+          "stage": "stage",
+          "workload": "workload",
+          "implementation": "implementation"
+        },
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "parameters": {
+          "plan": "按真实perm合并两端均连续轴；保留末轴的域直接搬连续条带，其余规则二维/批次二维域采用片上矩形转置，复杂perm保留通用索引fallback；Raw位宽搬运不转换数值，输出矩形互斥且只写有效元素。",
+          "capacity_formula": "U=qX*A(tileR*inputPitch*s)+qY*A(tileC*outputPitch*s)+Boffset+BtransposeTmp；增加局部置换、尾mask和两方向padding，禁止GM中转被当免费"
+        },
+        "evidence_bindings": {
+          "symptom.source.noncontiguous_access": "primary.symptom.source.noncontiguous_access",
+          "constraint.layout_semantics": "primary.constraint.layout_semantics",
+          "constraint.semantic_equivalence": "primary.constraint.semantic_equivalence",
+          "constraint.capacity": "primary.constraint.capacity"
+        },
+        "unknowns": [
+          "constraint.layout_semantics",
+          "constraint.semantic_equivalence",
+          "constraint.capacity"
+        ],
+        "status": "conditional",
+        "reason": "已知源码支持具体假设；最终API、物理容量及实例等价证明未做，不能实施。",
+        "parent_plan_hash": null
+      },
+      {
+        "instance_id": "I-alternative",
+        "action_id": "action.hoist_invariant_control",
+        "template_hash": "sha256:258231e590dee21154f5750b3732a427144982431b76caf8322543a0384948cf",
+        "hypothesis_id": "H-alternative",
+        "targets": {
+          "target": "path",
+          "stage": "stage",
+          "workload": "workload",
+          "implementation": "implementation"
+        },
+        "scope": {
+          "task_id": "autonomy-c-14",
+          "parent_implementation_hash": "sha256:b7a08774c74edded0dd7b11eea7095085fde8e46cca70f878a45a7d8877a8cad",
+          "workload_hash": "sha256:cc9504b3a8784c245af1d367d1930eb14bd3066c93579e0142d9f59959c1c77c",
+          "target_ids": [
+            "path"
+          ],
+          "stage": "kernel-full-path"
+        },
+        "parameters": {
+          "plan": "仅缓存rank/stride及外提公共前缀成本小、全dtype通用，但一般转置仍每输出离散源访问；编译器可能已缓存字段，不能由源码加载次数推收益。",
+          "capacity_formula": "O(rank)活跃标量与展开代码，寄存器/spill未知；无需UB矩形但不改善离散GM访问"
+        },
+        "evidence_bindings": {
+          "symptom.source.control_metadata_overhead": "alternative.symptom.source.control_metadata_overhead",
+          "constraint.control_equivalence": "alternative.constraint.control_equivalence",
+          "constraint.semantic_equivalence": "primary.constraint.semantic_equivalence",
+          "constraint.capacity": "primary.constraint.capacity"
+        },
+        "unknowns": [
+          "constraint.control_equivalence",
+          "constraint.semantic_equivalence",
+          "constraint.capacity"
+        ],
+        "status": "conditional",
+        "reason": "已知源码支持具体假设；最终API、物理容量及实例等价证明未做，不能实施。",
+        "parent_plan_hash": null
+      }
+    ],
+    "predecessor_ref": {
+      "path": "reasoning-r1.json",
+      "sha256": "sha256:c0c6573c2e932c761252f722042a31c88f473a6a8b275289c24dca2fcb581df8"
+    }
+  }
+}

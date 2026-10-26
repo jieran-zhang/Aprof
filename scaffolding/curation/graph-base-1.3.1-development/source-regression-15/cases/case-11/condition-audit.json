@@ -1,0 +1,119 @@
+{
+  "task_id": "raw-case-11",
+  "known_conditions": [
+    {
+      "predicate": "constraint.semantic_equivalence",
+      "state": true,
+      "basis": "计划只交错不同tile的CopyIn/Compute/CopyOut；同一输出保留Div→Muls→Add、源T→FP32→原T和原RoundMode，host独立dx1/dx2/dx3/dy，输入只读。因此tile先后变化无数值依赖。",
+      "scope": "本项精确静态证明；没有把尚未核验的API、资源、完整精度或物理写许可默认置true。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/foreach_addcdiv_scalar_kernel.asc",
+          "sha256": "sha256:d54b511cbe97cadbcba0bb66a3ad3ddfab570f266b794272d299addcb80d600c",
+          "locator": "lines:12-98"
+        },
+        {
+          "path": "source/scripts/verify_result.py",
+          "sha256": "sha256:dcb5c59a05da0d1b553319b302dc5c308e64f676b392e9b5ccd053f6a11b1711",
+          "locator": "lines:21-51"
+        }
+      ]
+    },
+    {
+      "predicate": "constraint.task_ownership",
+      "state": true,
+      "basis": "原host为输入/输出各自分配GM；每核begin=c*blockLength，end=min(begin+blockLength,total)，或RoPE以rowPerBlock分完整row。条件方案在每个输出有效片上只设置唯一owner，不引入写共享、原子或跨核归约。若改任务分解，必须在C2重新冻结实现；这里是数学所有权证明。",
+      "scope": "本项精确静态证明；没有把尚未核验的API、资源、完整精度或物理写许可默认置true。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/foreach_addcdiv_scalar_kernel.asc",
+          "sha256": "sha256:d54b511cbe97cadbcba0bb66a3ad3ddfab570f266b794272d299addcb80d600c",
+          "locator": "lines:12-98"
+        },
+        {
+          "path": "source/op_kernel/foreach_addcdiv_scalar_tiling.h",
+          "sha256": "sha256:4feb20530a6ed3dbf58746cedf1f9fcc15fe21dab5718f41cbff05fe98bf5d81",
+          "locator": "lines:12-27"
+        },
+        {
+          "path": "source/op_host/foreach_addcdiv_scalar.asc",
+          "sha256": "sha256:e075214116b85080d5828537762255e0f8e912f0dae34ca507529a6af7ff9a16",
+          "locator": "lines:67-91"
+        }
+      ]
+    },
+    {
+      "predicate": "constraint.output_ownership",
+      "state": true,
+      "basis": "原host为输入/输出各自分配GM；每核begin=c*blockLength，end=min(begin+blockLength,total)，或RoPE以rowPerBlock分完整row。条件方案在每个输出有效片上只设置唯一owner，不引入写共享、原子或跨核归约。若改任务分解，必须在C2重新冻结实现；这里是数学所有权证明。",
+      "scope": "本项精确静态证明；没有把尚未核验的API、资源、完整精度或物理写许可默认置true。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/foreach_addcdiv_scalar_kernel.asc",
+          "sha256": "sha256:d54b511cbe97cadbcba0bb66a3ad3ddfab570f266b794272d299addcb80d600c",
+          "locator": "lines:12-98"
+        },
+        {
+          "path": "source/op_kernel/foreach_addcdiv_scalar_tiling.h",
+          "sha256": "sha256:4feb20530a6ed3dbf58746cedf1f9fcc15fe21dab5718f41cbff05fe98bf5d81",
+          "locator": "lines:12-27"
+        },
+        {
+          "path": "source/op_host/foreach_addcdiv_scalar.asc",
+          "sha256": "sha256:e075214116b85080d5828537762255e0f8e912f0dae34ca507529a6af7ff9a16",
+          "locator": "lines:67-91"
+        }
+      ]
+    },
+    {
+      "predicate": "constraint.valid_lengths",
+      "state": true,
+      "basis": "全部20case非空；尾段定义valid=min(U,end-off)>0；每次GM只读写valid，不把padding当有效元素。Transpose矩形同时裁剪有效行列，RoPE完整row，Resize列片止于row末。原host与tiling形状上界给出地址域；R2矩阵/索引公式逐组复核。",
+      "scope": "本项精确静态证明；没有把尚未核验的API、资源、完整精度或物理写许可默认置true。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/foreach_addcdiv_scalar_kernel.asc",
+          "sha256": "sha256:d54b511cbe97cadbcba0bb66a3ad3ddfab570f266b794272d299addcb80d600c",
+          "locator": "lines:12-98"
+        },
+        {
+          "path": "source/op_kernel/foreach_addcdiv_scalar_tiling.h",
+          "sha256": "sha256:4feb20530a6ed3dbf58746cedf1f9fcc15fe21dab5718f41cbff05fe98bf5d81",
+          "locator": "lines:12-27"
+        },
+        {
+          "path": "source/op_host/foreach_addcdiv_scalar.asc",
+          "sha256": "sha256:e075214116b85080d5828537762255e0f8e912f0dae34ca507529a6af7ff9a16",
+          "locator": "lines:67-91"
+        }
+      ]
+    },
+    {
+      "predicate": "constraint.dependency_lifetime",
+      "state": true,
+      "basis": "抽象排程中每槽先等上代最后读完成，再发MTE2；DeQue后才读，Compute最后读取后归还输入；输出必须等MTE3读取完才复用，最后drain。该关系图可静态闭合；安装SDK是否实现该队列契约独立保持constraint.target_api unknown。",
+      "scope": "本项精确静态证明；没有把尚未核验的API、资源、完整精度或物理写许可默认置true。",
+      "source_refs": [
+        {
+          "path": "source/op_kernel/foreach_addcdiv_scalar_kernel.asc",
+          "sha256": "sha256:d54b511cbe97cadbcba0bb66a3ad3ddfab570f266b794272d299addcb80d600c",
+          "locator": "lines:12-98"
+        },
+        {
+          "path": "source/op_kernel/foreach_addcdiv_scalar_tiling.h",
+          "sha256": "sha256:4feb20530a6ed3dbf58746cedf1f9fcc15fe21dab5718f41cbff05fe98bf5d81",
+          "locator": "lines:12-27"
+        }
+      ]
+    }
+  ],
+  "unknown_action_conditions": [
+    "constraint.capacity"
+  ],
+  "implementation_note": "任何API/容量/numeric unknown未补齐前不得成为C3实施授权。所有true条件逐项有源码或数学依据，未按前提名称默认认定。",
+  "mathematical_facts": [],
+  "unknown_condition_details": {
+    "constraint.capacity": "缺实际可用UB及编译器/API预留R；需比较候选65536/131072B加R而非把配置示例当实值。",
+    "constraint.target_api": "目标安装SDK的TQue物理num=2、depth=1交错EnQue/DeQue与尾DataCopyPad支持尚未核验。"
+  }
+}

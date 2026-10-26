@@ -1,0 +1,67 @@
+{
+  "answer_id": "answer-8689c1dbfe9e",
+  "case": "case-06",
+  "facts": [
+    {
+      "id": "CU06.A01",
+      "status": "correct",
+      "rationale": "明确给出相同的指数变换，以及 BF16 转 float、依次执行 Muls/Adds/Exp、以 CAST_RINT 回转的路径；结合仅更名的说明，未改变数学计算。",
+      "answer_span": "本题 gain≈0.34657359、bias≈−0.69314718，目标为2^(0.5x−1)。实际先把 bfloat16 转成 float，依次执行 Muls、Adds、Exp，再以 CAST_RINT 转回 bfloat16；因此结果包含 float 运算、指数实现及最终舍入的影响，不能视为实数表达式的精确值。"
+    },
+    {
+      "id": "CU06.A02",
+      "status": "correct",
+      "rationale": "完整说明 half 输入矩阵乘、float 累加、Fixpipe 先转 half 存 GM、再进行约 0.001 斜率的 half 激活；后文还明确每 AIC 一次 Mmad 完成一个 tile，并由两个 AIV 分担。",
+      "answer_span": "数学目标是逐点 LeakyReLU(A×B)：非负值保留，负值乘0.001。数值路径更具体：half 输入经 Mmad 得到 float 累加结果，Fixpipe 先以 F322F16、CAST_RINT 转成 half 写入 GM，Vector 再用 half 表示的0.001进行 half 激活。因此它包含激活前的 half 舍入，并非全程 float 激活后才转 half。"
+    },
+    {
+      "id": "CU06.A03",
+      "status": "correct",
+      "rationale": "将 DELTA 限定为标识符更名，并明确常量和 API 未变；全文保持原有类型、控制流、缓冲和同步结构，没有据更名添加算法或分配。V、C 分别描述各自入口与输出。",
+      "answer_span": "两个入口彼此独立。source/DELTA.json 记录的只是测试包标识符更名，常量和 API 调用未变。"
+    },
+    {
+      "id": "CU06.E01",
+      "status": "correct",
+      "rationale": "给出 3 核、4096 窗口、8340 核区间及全部起点、长度和尾数；同时明确 BF16 输入输出各一个槽及 49152 字节显式 UB 分配。",
+      "answer_span": "分工公式为 useful=ceil(25019/4096)=7，laneCount=min(3,7)=3，laneExtent=ceil(25019/3)=8340。核0、1、2的起点分别是0、8340、16680个元素，即相对输入或输出基址0、16680、33360字节；有效长度分别为8340、8340、8339。每核依次处理4096、4096、148/147个元素，共9个窗口；最后窗口的全局元素起点为8192、16532、24872。各核区间相接，恰好覆盖25019个元素，没有跨核归约或输出重叠。\n\nnacre_stage.asc:16–23 为每核分配单槽输入、输出队列，各8192字节，以及两个各16384字节的 float TBuf，所列 UB 分配共49152字节，即48 KiB。"
+    },
+    {
+      "id": "CU06.E02",
+      "status": "correct",
+      "rationale": "明确 __mix__(1,2) 下为 2 AIC、4 AIV，AIC 的 j×32768 half 偏移及 AIV 的 v×16384 half 偏移均正确；每 AIV 的 128×128 元素和原位区域也正确。",
+      "answer_span": "AIV v 先用 floor(v/2) 定位所属 AIC 输出，再用 v%2 选择上下半块（41–44、143–176行）。合并偏移为 v×16384个 half，所以4个 AIV 分别从0、32768、65536、98304字节处处理128×128元素。"
+    },
+    {
+      "id": "CU06.E03",
+      "status": "correct",
+      "rationale": "全文具体说明 C 的 half ND GM→half NZ L1→half L0A/B→float NZ L0C→half ND GM→half UB→原 GM 区域路径，也说明 V 的 BF16 队列与两个 FP32 缓冲。分配和更名说明未把新名称当作新增内存。",
+      "answer_span": "Process:52–68 每个 AIC 在 L1 分配 A的65536字节和B的32768字节，共96 KiB；L0A、L0B 分别为64、32 KiB，float L0C 为128 KiB。每个 AIV 另有32 KiB UB。它们是所列张量分配量，不包含编译器或框架预留。GM→L1 的两次 Nd2Nz 搬运分别覆盖256×128和128×128；源行跨度分别为 K=128、N=128个元素。输入从 ND 转为 NZ，half 的16×16分形为512字节，本题维度均整除16，不需要形状补齐。"
+    },
+    {
+      "id": "CU06.H01",
+      "status": "partial",
+      "rationale": "正确将 910C/Atlas A3 对应到 2201，并明确 3510 只是静态对照，不能作为目标设备运行证据；但未说明 3510 对应 Ascend 950PR/950DT。",
+      "answer_span": "以下依据 workload 指定的 910C/Atlas A3、__NPU_ARCH__=2201 解释实际路径；3510 仅作静态契约对照，未进行构建或运行。"
+    },
+    {
+      "id": "CU06.H02",
+      "status": "correct",
+      "rationale": "明确 2201 通过循环重排把 A 的 L1 NZ 转为 L0A ZZ，并在 3510 段明确改用一次 LoadData2DParamsV2、保留 L0A NZ；区分了参数组织与实际物理布局，没有混派平台分支。",
+      "answer_span": "2201 分支（75–91行）用 MTE1 重排 L1 数据。A 循环16次，每次搬8个分形：源切片偏移 i×256个 half，分形起点间隔16×512字节；目的切片偏移 i×2048个 half，dstGap=0使分形连续。因此源分形 i+16r 被放到目的8i+r，形成 L0A 的 ZZ。"
+    },
+    {
+      "id": "CU06.H03",
+      "status": "correct",
+      "rationale": "2201 段明确 B 循环搬运并开启分形内部转置形成 ZN；3510 段给出 V2 的 true 转置参数及相同 ZN 结果。同时明确 Mmad、Fixpipe、GM 中转和激活保持不变。",
+      "answer_span": "3510 条件下，host 常量、分核地址、分配表达式、ND→NZ、Mmad、Fixpipe、GM 中转、激活及事件调用均保持相同；不同的源码路径仅在 L1→L0：A改为一次 LoadData2DParamsV2{0,0,16,8,16,16,false,0}，保持 L0A 的 NZ；B改为{0,0,8,8,8,8,true,0}，得到 ZN。"
+    },
+    {
+      "id": "CU06.H04",
+      "status": "correct",
+      "rationale": "准确指出当前 A3 目标的等待阻塞全部流水，而 3510 的 pipe 参数生效且本调用默认为 PIPE_S；同时明确静态解释不证明编译成功、运行或性能，满足具体平台契约及证据边界要求。",
+      "answer_span": "相同调用也可能有不同硬件契约。固定 rawdocs 的 CrossCoreWaitFlag 文档规定：A3 的 modeId、pipe 不作为硬件输入，等待阻塞全部流水；3510 对应平台的 pipe 生效，本调用省略后为 PIPE_S，不能解释成同样阻塞全部流水。"
+    }
+  ],
+  "critical_errors": []
+}

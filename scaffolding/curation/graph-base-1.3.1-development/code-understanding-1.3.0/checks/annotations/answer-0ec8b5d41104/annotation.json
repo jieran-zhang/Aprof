@@ -1,0 +1,67 @@
+{
+  "answer_id": "answer-0ec8b5d41104",
+  "case": "case-06",
+  "facts": [
+    {
+      "id": "CU06.A01",
+      "status": "correct",
+      "rationale": "正确给出同一一元指数变换、BF16转FP32后执行Muls/Adds/Exp及CAST_RINT回转；开头将变更限定为标识符更名，没有赋予名称新的计算含义。",
+      "answer_span": "因此数学目标为 y[i]=2^(0.5x[i]−1)。实现先将 BF16 转为 FP32，依次执行 Muls、Adds、Exp，再以 CAST_RINT 转回 BF16，不能视为无限精度求幂后只舍入一次。"
+    },
+    {
+      "id": "CU06.A02",
+      "status": "correct",
+      "rationale": "明确说明half输入矩阵乘、FP32累加、Fixpipe先转half落GM，再做half LeakyRelu及约0.001斜率。后文明确每个AIC一个tile、每个AIC对应两个AIV，覆盖完整事实。",
+      "answer_span": "算法先计算 S[m,n]=Σ(k=0…127)A[m,k]B[k,n]，用 FP32 L0C 保存矩阵乘结果；Fixpipe 先将其转换成 half 写入 C，随后执行 half LeakyRelu：非负值保留，负值乘以 (half)0.001。因此实际数值路径包含激活前的 half 舍入，斜率本身也先转为 half。"
+    },
+    {
+      "id": "CU06.A03",
+      "status": "correct",
+      "rationale": "将DELTA限定为纯更名且常量和API不变；后续按既有控制流、缓冲及同步解释两个入口，没有把更名当成算法、分配或同步变化。两个入口及其输出也分别说明。",
+      "answer_span": "两个入口彼此独立；source/DELTA.json 只记录测试标识符更名，没有改变数值常量或 API。"
+    },
+    {
+      "id": "CU06.E01",
+      "status": "correct",
+      "rationale": "正确列出3块、8340块跨度、4096窗口、三个起点和长度；随后逐块列出148/148/147尾数，并明确输入输出各单槽及49152字节显式UB。",
+      "answer_span": "[MakeNacrePlan](/tmp/eval/source/vector/op_kernel/nacre_plan.h:18) 得到 useful=ceil(25019/4096)=7，laneCount=min(3,7)=3，laneExtent=ceil(25019/3)=8340，windowElements=4096。三个逻辑块的元素起点为 0、8340、16680，长度为 8340、8340、8339；对应字节半开区间为 [0,16680)、[16680,33360)、[33360,50038)，完整覆盖输入且不重叠。"
+    },
+    {
+      "id": "CU06.E02",
+      "status": "correct",
+      "rationale": "正确说明__mix__(1,2)下2个AIC和4个AIV。AIC起点以half元素给出；AIV字节起点换算为half元素即0/16384/32768/49152，每核128×128=16384元素。ApplyGate的偏移和原址写回也已说明。",
+      "answer_span": "mica_entry 的 __mix__(1,2) 表示两个组合，共 2 个 AIC 和 4 个 AIV。GetBlockIdx 返回逻辑核编号：AIC 为 0、1，AIV 为 0…3。AIC j 的 A/C 起点各为 j·32768 个 half，即 j·65536 字节，分别处理行 0…255、256…511；两核都读取完整 B。AIV 通过编号除以 2 找所属 AIC，通过余数选择其前、后 128 行，最终四核分别覆盖全矩阵连续的四个 128×128 区域，字节起点为 0、32768、65536、98304。"
+    },
+    {
+      "id": "CU06.E03",
+      "status": "correct",
+      "rationale": "全文完整交代C的half ND GM→half NZ L1→half L0A/L0B→float NZ L0C→half ND GM→half UB→原GM区域路径；V明确为BF16输入输出队列加FP32临时区。纯更名说明与实际分配清单一致，没有把新名称当成新分配。",
+      "answer_span": "每个 V 块分配输入、输出队列各一个 8192 字节槽，以及两个各 16384 字节的 FP32 临时区，显式 UB 合计 49152 字节，即 48 KiB。"
+    },
+    {
+      "id": "CU06.H01",
+      "status": "partial",
+      "rationale": "正确将910C/A3对应2201，并把3510限定为静态对照，没有凭宏或API声称其已在910C运行；但未说明3510对应Ascend 950PR/950DT系列。",
+      "answer_span": "以下结论来自源码和固定 API 契约，实际目标按 910C/A3、__NPU_ARCH__=2201 解释，3510 仅作静态对照。"
+    },
+    {
+      "id": "CU06.H02",
+      "status": "correct",
+      "rationale": "正确区分2201循环LoadData2DParams实现A的NZ→Zz，与3510使用LoadData2DParamsV2保持NZ；没有把两种物理布局或参数结构混同，也没有把3510分支归给910C。",
+      "answer_span": "2201 分支（mica.asc:75–91）用 512 字节、即 16×16 half 的分形搬运。A 循环 16 次，每次 repeatTimes=8、srcStride=16、dstGap=0、不转置：第 i 次从 L1 的 i·512 字节开始，依次读取分形 i+16r，写至 L0A 的 i·4096+r·512 字节，r=0…7，共搬 128 个分形、65536 字节，实现 NZ→ZZ。B 循环 8 次，每次读分形 i+8r，r=0…7，写至 L0B 的 i·4096+r·512 字节，并转置每个分形，共 64 个分形、32768 字节，实现 NZ→ZN。这是适配 Cube 输入布局，不是把数学问题改成 A·B转置。\n\n3510 分支（92–106）改为各一次 LoadData2DParamsV2：A={0,0,16,8,16,16,false,0}，B={0,0,8,8,8,8,true,0}。mStep 以 16 元素计，kStep 以 32 字节计，src/dstStride 以 512 字节分形计；搬运量仍分别为 128、64 个分形。其 L0A 契约为 NZ，L0B 仍为 ZN，L0C 仍为 NZ。固定 LoadData/Mmad 文档明确支持这一布局差异，V2 在 A3 不受支持，所以该分支不能当作 910C 的执行路径。"
+    },
+    {
+      "id": "CU06.H03",
+      "status": "correct",
+      "rationale": "前文分别给出2201循环转置加载B与3510 V2中transpose=true，二者均为NZ→Zn。后文明确Mmad、Fixpipe及混合核激活是两分支共有的后续逻辑路径。",
+      "answer_span": "两分支随后都调用一次 Mmad{256,128,128,0,false,true}：清零初始化 C，不使用 BT 偏置，完成整个 K=128 的乘加，而非跨多次调用累加。"
+    },
+    {
+      "id": "CU06.H04",
+      "status": "correct",
+      "rationale": "明确给出A3全流水阻塞与3510按pipe选择阻塞流水的行为边界，并补充V2不支持A3这一具体平台契约。结尾明确没有设备编译、运行及性能证据，满足允许的等价边界说明和验证限制。",
+      "answer_span": "A3 的 CrossCoreWaitFlag<2>(0) 阻塞全部流水的后续指令；3510 的默认 PIPE_S 参数生效，选择阻塞 Scalar 流水，不能把硬件等待范围说成完全相同。"
+    }
+  ],
+  "critical_errors": []
+}

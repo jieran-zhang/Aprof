@@ -1,0 +1,645 @@
+{
+  "schema_version": "aprof.handoff/v3",
+  "stage": "C1",
+  "task_id": "case-06",
+  "candidate_id": null,
+  "parent_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+  "reasoning": {
+    "schema_version": "aprof.diagnosis-reasoning/v1",
+    "task_id": "case-06",
+    "context_hash": "sha256:dd3ecc3b359aeeb687ca154251c5c3a2712d114a00329b2069b6de1c67b1696c",
+    "knowledge_hash": "sha256:5cbe43b3c590f6087959ccbe281d49aa10cb8021b6930f7a1684d2fd6b30f16a",
+    "source_context_ref": {
+      "path": "context-origin.json",
+      "sha256": "sha256:8d66d6fb38e13d2234b9dcc6e65df99d3c948cda1b44dedac47a4026e6e84e93"
+    },
+    "context_snapshot": {
+      "schema_version": "aprof.evidence/v1",
+      "task_id": "case-06",
+      "source_context_ref": {
+        "path": "context-origin.json",
+        "sha256": "sha256:8d66d6fb38e13d2234b9dcc6e65df99d3c948cda1b44dedac47a4026e6e84e93"
+      },
+      "attributes": {
+        "family": [
+          "indexing",
+          "layout"
+        ],
+        "dtype": [
+          "bfloat16",
+          "float16",
+          "float32",
+          "int32",
+          "int64",
+          "int8"
+        ],
+        "features": [
+          "scalar-control",
+          "memory-transfer",
+          "vector-api",
+          "tiling-tail",
+          "pipeline-sync",
+          "buffer-lifetime",
+          "precision-boundaries"
+        ],
+        "platform": "dav-2201"
+      },
+      "facts": {}
+    },
+    "current": {
+      "implementation_ref": {
+        "path": "source-identity.json",
+        "sha256": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb"
+      },
+      "workload_ref": {
+        "path": "source/matrix-20.json",
+        "sha256": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1"
+      },
+      "objects": [
+        {
+          "object_id": "kernel-path",
+          "kind": "object",
+          "description": "Host验证同rank/非gather轴上界与index取值；按线性输出分核，逐输出读取index，rank轴除模得到源地址，再按存储位宽读取源/写出。"
+        },
+        {
+          "object_id": "stage",
+          "kind": "stage",
+          "description": "host->tiling->kernel完整路径"
+        },
+        {
+          "object_id": "workload",
+          "kind": "workload",
+          "description": "完整matrix20与未覆盖API域分开"
+        },
+        {
+          "object_id": "implementation",
+          "kind": "implementation",
+          "description": "原始源码manifest"
+        }
+      ],
+      "scope": {
+        "task_id": "case-06",
+        "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+        "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+        "target_ids": [
+          "kernel-path"
+        ],
+        "stage": "kernel"
+      }
+    },
+    "facts": {
+      "source.kernel": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source.kernel",
+        "ref": {
+          "path": "source/op_kernel/gather_kernel.asc",
+          "sha256": "sha256:c2558645a1b97647993bf9179dae4f29385503c0f397801f202ffc398db75ade",
+          "locator": "whole-file"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "source.tiling": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source.tiling",
+        "ref": {
+          "path": "source/op_kernel/gather_tiling.h",
+          "sha256": "sha256:9022b7f3f4e5c4b15324266dc929ad421ef076d26df91539dd429a9820411b45",
+          "locator": "whole-file"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "source.host": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source.host",
+        "ref": {
+          "path": "source/op_host/gather.asc",
+          "sha256": "sha256:4b34751028a746863704d9c1362774cc0d971281c68ebec354045730c2ae0c34",
+          "locator": "whole-file"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "workload.matrix": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "workload.matrix",
+        "ref": {
+          "path": "source/matrix-20.json",
+          "sha256": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "locator": "cases"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "workload"
+      },
+      "source.oracle": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "source.oracle",
+        "ref": {
+          "path": "source/scripts/verify_result.py",
+          "sha256": "sha256:58ce3daecb4d61bce1d2610a3ed7a468dbfbd4e4e77c725a7ba891cae582f2fc",
+          "locator": "whole-file"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "source.metrics": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "source.host",
+          "source.tiling",
+          "workload.matrix"
+        ],
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "workload"
+      },
+      "constraint.target": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "constraint.target",
+        "ref": {
+          "path": "target-constraint.json",
+          "sha256": "sha256:649112da90200239410f22e1a2a0654619ad3d14fca5a5aa29bfeea7315c813a",
+          "locator": "target"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "constraint"
+      },
+      "constraint.control_equivalence": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "constraint.control_equivalence",
+        "ref": {
+          "path": "source/op_kernel/gather_kernel.asc",
+          "sha256": "sha256:c2558645a1b97647993bf9179dae4f29385503c0f397801f202ffc398db75ade",
+          "locator": "address affine within a segment"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "constraint"
+      },
+      "constraint.semantic_equivalence": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "constraint.semantic_equivalence",
+        "ref": {
+          "path": "source/op_kernel/gather_kernel.asc",
+          "sha256": "sha256:c2558645a1b97647993bf9179dae4f29385503c0f397801f202ffc398db75ade",
+          "locator": "same per-element formula / storage bits; proposed re-grouping only"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "constraint"
+      },
+      "symptom.source.control_metadata_overhead.component_1": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "symptom.source.control_metadata_overhead.component_1",
+        "ref": {
+          "path": "source/op_kernel/gather_kernel.asc",
+          "sha256": "sha256:c2558645a1b97647993bf9179dae4f29385503c0f397801f202ffc398db75ade",
+          "locator": "当前热循环重复计算mask、分支、索引或读取TilingData字段"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.control_metadata_overhead.component_2": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "symptom.source.control_metadata_overhead.component_2",
+        "ref": {
+          "path": "source/op_kernel/gather_kernel.asc",
+          "sha256": "sha256:c2558645a1b97647993bf9179dae4f29385503c0f397801f202ffc398db75ade",
+          "locator": "当前重复表达式、依赖变量及其循环内变化范围有源码引用"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.control_metadata_overhead.component_3": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "symptom.source.control_metadata_overhead.component_3",
+        "ref": {
+          "path": "source/op_kernel/gather_kernel.asc",
+          "sha256": "sha256:c2558645a1b97647993bf9179dae4f29385503c0f397801f202ffc398db75ade",
+          "locator": "当前TilingData ABI和host写入到kernel读取的映射可对应；不要求先外提表达式或证明外提无spill"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.control_metadata_overhead": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "symptom.source.control_metadata_overhead.component_1",
+          "symptom.source.control_metadata_overhead.component_2",
+          "symptom.source.control_metadata_overhead.component_3"
+        ],
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source",
+        "components": [
+          "symptom.source.control_metadata_overhead.component_1",
+          "symptom.source.control_metadata_overhead.component_2",
+          "symptom.source.control_metadata_overhead.component_3"
+        ]
+      },
+      "symptom.source.scalar_element_loop.component_1": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "symptom.source.scalar_element_loop.component_1",
+        "ref": {
+          "path": "source/op_kernel/gather_kernel.asc",
+          "sha256": "sha256:c2558645a1b97647993bf9179dae4f29385503c0f397801f202ffc398db75ade",
+          "locator": "当前逐元素循环调用Scalar读写或算术"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.scalar_element_loop.component_2": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "symptom.source.scalar_element_loop.component_2",
+        "ref": {
+          "path": "source/op_kernel/gather_kernel.asc",
+          "sha256": "sha256:c2558645a1b97647993bf9179dae4f29385503c0f397801f202ffc398db75ade",
+          "locator": "当前循环有效域、Scalar API、地址更新及数据/控制依赖具有源码引用"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.scalar_element_loop.component_3": {
+        "state": true,
+        "kind": "raw",
+        "evidence_id": "symptom.source.scalar_element_loop.component_3",
+        "ref": {
+          "path": "source/op_kernel/gather_kernel.asc",
+          "sha256": "sha256:c2558645a1b97647993bf9179dae4f29385503c0f397801f202ffc398db75ade",
+          "locator": "当前dtype、分支、别名和有效元素范围已明确；不要求先证明可以向量化"
+        },
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source"
+      },
+      "symptom.source.scalar_element_loop": {
+        "state": true,
+        "kind": "derived",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [
+          "symptom.source.scalar_element_loop.component_1",
+          "symptom.source.scalar_element_loop.component_2",
+          "symptom.source.scalar_element_loop.component_3"
+        ],
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "source",
+        "components": [
+          "symptom.source.scalar_element_loop.component_1",
+          "symptom.source.scalar_element_loop.component_2",
+          "symptom.source.scalar_element_loop.component_3"
+        ]
+      },
+      "constraint.capacity": {
+        "state": "unknown",
+        "kind": "raw",
+        "evidence_id": null,
+        "ref": null,
+        "derived_from": [],
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "view": "constraint"
+      }
+    },
+    "candidates": [
+      {
+        "hypothesis_id": "h-address",
+        "problem_id": "problem.control_metadata_overhead",
+        "mechanism": "按最内轴段初始化一次非gather坐标前缀，段内地址递增；gatherIndex*源stride仍逐元素计算，不把index视为共享行索引。",
+        "targets": [
+          "kernel-path"
+        ],
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "support": [
+          "source.kernel",
+          "source.tiling",
+          "workload.matrix"
+        ],
+        "counter": [],
+        "unknown": [],
+        "alternatives": [
+          "h-vector"
+        ],
+        "checks": [
+          "若编译器已强度削减全部除模，或合法尾轴整行UB Gather可摊销整行加载，批量取数更优",
+          "只核对源码逻辑工作，不从逻辑量推出加速比"
+        ],
+        "status": "plausible",
+        "reason": "按最内轴段初始化一次非gather坐标前缀，段内地址递增；gatherIndex*源stride仍逐元素计算，不把index视为共享行索引。；随机源GM读取、逐元素guard与标量存储保留；rank1减法空间小",
+        "excluded_by": [],
+        "independent_evidence_groups": []
+      },
+      {
+        "hypothesis_id": "h-vector",
+        "problem_id": "problem.scalar_control_hot_loop",
+        "mechanism": "尾轴源行能放入UB时搬源行和index片，在UB作按位Gather；非尾轴保留标量源读取，仅批量index和输出，不引入转置workspace。",
+        "targets": [
+          "kernel-path"
+        ],
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "support": [
+          "source.kernel",
+          "source.tiling",
+          "workload.matrix"
+        ],
+        "counter": [],
+        "unknown": [],
+        "alternatives": [
+          "h-address"
+        ],
+        "checks": [
+          "G很大或N很小时整源行加载浪费压倒收益，地址分段更优",
+          "只核对源码逻辑工作，不从逻辑量推出加速比"
+        ],
+        "status": "plausible",
+        "reason": "尾轴源行能放入UB时搬源行和index片，在UB作按位Gather；非尾轴保留标量源读取，仅批量index和输出，不引入转置workspace。；非尾轴随机访问与精确64位/整数bit-copy API仍需处理",
+        "excluded_by": [],
+        "independent_evidence_groups": []
+      }
+    ],
+    "action_instances": [
+      {
+        "instance_id": "address-r1",
+        "action_id": "action.hoist_invariant_control",
+        "template_hash": "sha256:258231e590dee21154f5750b3732a427144982431b76caf8322543a0384948cf",
+        "hypothesis_id": "h-address",
+        "targets": {
+          "target": "kernel-path",
+          "stage": "stage",
+          "workload": "workload",
+          "implementation": "implementation"
+        },
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "parameters": {
+          "method": "按最内轴段初始化一次非gather坐标前缀，段内地址递增；gatherIndex*源stride仍逐元素计算，不把index视为共享行索引。",
+          "resource_bound": "O(d)坐标状态和段边界控制；无新UB；编译寄存器和spill未知",
+          "paper_only": true
+        },
+        "evidence_bindings": {
+          "symptom.source.control_metadata_overhead": "symptom.source.control_metadata_overhead",
+          "constraint.control_equivalence": "constraint.control_equivalence",
+          "constraint.semantic_equivalence": "constraint.semantic_equivalence",
+          "constraint.capacity": "constraint.capacity"
+        },
+        "unknowns": [
+          "constraint.capacity"
+        ],
+        "status": "conditional",
+        "reason": "仅条件方案：按最内轴段初始化一次非gather坐标前缀，段内地址递增；gatherIndex*源stride仍逐元素计算，不把index视为共享行索引。",
+        "parent_plan_hash": null
+      },
+      {
+        "instance_id": "vector-r1",
+        "action_id": "action.vectorize_scalar_loop",
+        "template_hash": "sha256:999efb87cd58b497fcf2315e3dc294419c39404d0d0256d9f51b45f723311d3a",
+        "hypothesis_id": "h-vector",
+        "targets": {
+          "target": "kernel-path",
+          "stage": "stage",
+          "workload": "workload",
+          "implementation": "implementation"
+        },
+        "scope": {
+          "task_id": "case-06",
+          "parent_implementation_hash": "sha256:810b7f6e961be2b1c785d43e5f8076872c179a7a90fff8b89c44f3935b49b8eb",
+          "workload_hash": "sha256:70a891319c0aeb68a2986e529f6cfb4affeeedfb5693eb67e3f7895274f1eaa1",
+          "target_ids": [
+            "kernel-path"
+          ],
+          "stage": "kernel"
+        },
+        "parameters": {
+          "method": "尾轴源行能放入UB时搬源行和index片，在UB作按位Gather；非尾轴保留标量源读取，仅批量index和输出，不引入转置workspace。",
+          "resource_bound": "UB=A(G*b)+A(T*i)+A(T*b)+A(T*offsetBytes)+Tmp+F；源行按索引片重读，非尾轴转置被暂缓",
+          "paper_only": true
+        },
+        "evidence_bindings": {
+          "symptom.source.scalar_element_loop": "symptom.source.scalar_element_loop",
+          "constraint.semantic_equivalence": "constraint.semantic_equivalence",
+          "constraint.capacity": "constraint.capacity"
+        },
+        "unknowns": [
+          "constraint.capacity"
+        ],
+        "status": "conditional",
+        "reason": "仅条件方案：尾轴源行能放入UB时搬源行和index片，在UB作按位Gather；非尾轴保留标量源读取，仅批量index和输出，不引入转置workspace。",
+        "parent_plan_hash": null
+      }
+    ],
+    "predecessor_ref": null
+  },
+  "artifacts": [
+    {
+      "path": "decision-r1.json",
+      "sha256": "sha256:0d6dd994fb8883e90a78f7a4c79e121d60452aec46dbd087f5923131636d2d5c"
+    },
+    {
+      "path": "retrieval-r1.json",
+      "sha256": "sha256:97b7f4c7c8d97e78e67198bfe419b8eb2535f10bf5e61721aa8d328d5b317763"
+    },
+    {
+      "path": "expansion-r1.json",
+      "sha256": "sha256:0c996530badc0fd64727e6bf8581f65379f223517a4c890d3395d5bf6bb2d4d2"
+    },
+    {
+      "path": "consultation-r1.json",
+      "sha256": "sha256:26b375bed236ffeb674115c4396eac87b0a5c973b92ba01ef34f931d34342c07"
+    }
+  ]
+}

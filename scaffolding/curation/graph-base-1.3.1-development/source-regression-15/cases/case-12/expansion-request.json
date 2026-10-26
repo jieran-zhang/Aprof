@@ -1,0 +1,35 @@
+{
+  "task_id": "raw-case-12",
+  "context_hash": "sha256:bbe7518e99f9130b47aa96b26f71f47ee580ac037de33a61dd3b4aa41fe6588f",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "graph_version": "v0005",
+  "source_context_ref": {
+    "path": "C0-source-only.json",
+    "sha256": "sha256:a053ad9522d495ebc38b757730a938ab8448346e216b687e3a25d65e77773fd8"
+  },
+  "schema_version": "aprof.diagnosis-problem-expansion-request/v1",
+  "retrieval_hash": "sha256:1fbb097b9a04472aa7549755450fbeb921a77830bc71311a7057f80e8adfa83c",
+  "selections": [
+    {
+      "problem_id": "problem.broadcast_strategy_mismatch",
+      "reason": "float/int32广播走逐输出rank解码而FP16已有内轴路径，比较内轴分段",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": []
+    },
+    {
+      "problem_id": "problem.scalar_control_hot_loop",
+      "reason": "int64连sameShape也进标量循环，比较Vector与纯解码外提",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": []
+    },
+    {
+      "problem_id": "problem.insufficient_input_reuse",
+      "reason": "case18重复搬同8193元素row，比较输入驻留",
+      "trigger": "observation_match",
+      "related_problem_ids": [],
+      "unexplained_observations": []
+    }
+  ]
+}

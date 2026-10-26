@@ -1,0 +1,173 @@
+{
+  "task_id": "case-08",
+  "round": 1,
+  "consultations": [
+    {
+      "instance_id": "vector-r1",
+      "owner": "parallel-planning",
+      "route_ref": {
+        "path": "vector-r1-parallel-planning-route.json",
+        "sha256": "sha256:12f470a26478c74261b22ef24dc6c1f71a1e86f6c6dacbfcc5e4c88b9daa445a"
+      },
+      "mode": "conditional_consultation",
+      "consulted_document_refs": [
+        {
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/coordinate_neighborhood.md",
+          "sha256": "sha256:5e4f96af8fde45ec3d5ea785c96c2243f211dbeeb93cd28c1f4d7e63bdf036fb"
+        }
+      ],
+      "consultation_limits": "正文用于机会比较与条件方案；只有route_ref内的可路由候选可进入该实例正式选择；partial适用见knowledge_use。本轮无P/O叶子正式采用或实现。",
+      "plan_status": "extract_existing_or_replan; no prior confirmed plan; no KEEP",
+      "implementation": "not_implemented"
+    },
+    {
+      "instance_id": "vector-r1",
+      "owner": "optimization",
+      "route_ref": {
+        "path": "vector-r1-optimization-route.json",
+        "sha256": "sha256:e9379a8371fb43b815e14cd83f1fe44f3215d5ca539b7560361bb1c173f25f5d"
+      },
+      "mode": "conditional_consultation",
+      "consulted_document_refs": [
+        {
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+          "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+        }
+      ],
+      "consultation_limits": "正文用于机会比较与条件方案；只有route_ref内的可路由候选可进入该实例正式选择；partial适用见knowledge_use。本轮无P/O叶子正式采用或实现。",
+      "plan_status": "extract_existing_or_replan; no prior confirmed plan; no KEEP",
+      "implementation": "not_implemented"
+    },
+    {
+      "instance_id": "rawgrid-r1",
+      "owner": "parallel-planning",
+      "route_ref": {
+        "path": "rawgrid-r1-parallel-planning-route.json",
+        "sha256": "sha256:12f470a26478c74261b22ef24dc6c1f71a1e86f6c6dacbfcc5e4c88b9daa445a"
+      },
+      "mode": "conditional_consultation",
+      "consulted_document_refs": [
+        {
+          "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/coordinate_neighborhood.md",
+          "sha256": "sha256:5e4f96af8fde45ec3d5ea785c96c2243f211dbeeb93cd28c1f4d7e63bdf036fb"
+        }
+      ],
+      "consultation_limits": "正文用于机会比较与条件方案；只有route_ref内的可路由候选可进入该实例正式选择；partial适用见knowledge_use。本轮无P/O叶子正式采用或实现。",
+      "plan_status": "extract_existing_or_replan; no prior confirmed plan; no KEEP",
+      "implementation": "not_implemented"
+    },
+    {
+      "instance_id": "rawgrid-r1",
+      "owner": "optimization",
+      "route_ref": {
+        "path": "rawgrid-r1-optimization-route.json",
+        "sha256": "sha256:0706c2e4ff16a20fcf6261ecf88409c61aebabd4eec9bcce470d1af4e991df2a"
+      },
+      "mode": "conditional_consultation",
+      "consulted_document_refs": [
+        {
+          "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+          "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+        }
+      ],
+      "consultation_limits": "正文用于机会比较与条件方案；只有route_ref内的可路由候选可进入该实例正式选择；partial适用见knowledge_use。本轮无P/O叶子正式采用或实现。",
+      "plan_status": "extract_existing_or_replan; no prior confirmed plan; no KEEP",
+      "implementation": "not_implemented"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "geometry",
+        "vector",
+        "rawgrid"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/indexing/templates/coordinate_neighborhood.md",
+        "sha256": "sha256:5e4f96af8fde45ec3d5ea785c96c2243f211dbeeb93cd28c1f4d7e63bdf036fb"
+      },
+      "locator": "lines:110-183",
+      "effect_kind": "plan",
+      "before": "从原源码识别 Host NCDHW/grid[N,S,3]，owner为连续输出；每个输出从grid三元组算坐标/padding/邻域后取1或8个体素，FP32累加；half仅最终Cast与DataCopyPad批量，内层仍Scalar。",
+      "after": "绑定G/B/H/F后比较Ct×St矩形；几何D独立于c但X依赖c；派生复用确有Action意图缺口",
+      "applicability": "partial：任务骨架可采用，具体数值/API/容量尚未闭合"
+    },
+    {
+      "opportunity_ids": [
+        "rawgrid"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/memory-transfer/recipes/input-tile-residency.md",
+        "sha256": "sha256:b09805a543555151cb41051cb57cfb967a8b47e68ae5d320820ef661806dc6e8"
+      },
+      "locator": "lines:97-264",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host NCDHW/grid[N,S,3]，owner为连续输出；每个输出从grid三元组算坐标/padding/邻域后取1或8个体素，FP32累加；half仅最终Cast与DataCopyPad批量，内层仍Scalar。",
+      "after": "只把原grid值纳入reuse_input_tiles；保存权重/坐标不是本配方",
+      "applicability": "partial：原grid保留原则可用，需重新确认owner和生命周期"
+    },
+    {
+      "opportunity_ids": [
+        "vector"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/vector-api/recipes/batch.md",
+        "sha256": "sha256:0cffdf7e3e243d4e81e80b177ef1646ecdb84f5ceeafc922ef85fa58e86f57d1"
+      },
+      "locator": "lines:90-131",
+      "effect_kind": "parameters",
+      "before": "从原源码识别 Host NCDHW/grid[N,S,3]，owner为连续输出；每个输出从grid三元组算坐标/padding/邻域后取1或8个体素，FP32累加；half仅最终Cast与DataCopyPad批量，内层仍Scalar。",
+      "after": "独立空间片数值批量化仍保持FP32顺序和有效域，不使用950 GM Gather",
+      "applicability": "partial：合法API/舍入路径未验证"
+    },
+    {
+      "opportunity_ids": [
+        "rawgrid"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.insufficient_input_reuse.md",
+        "sha256": "sha256:ec5efced73cd20f1e1abe65acaae9706903766522aac75837cab2b086ceb25d4"
+      },
+      "locator": "lines:252-381",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host NCDHW/grid[N,S,3]，owner为连续输出；每个输出从grid三元组算坐标/padding/邻域后取1或8个体素，FP32累加；half仅最终Cast与DataCopyPad批量，内层仍Scalar。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；同一地址和内容在复用窗口被重复从GM读入",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    },
+    {
+      "opportunity_ids": [
+        "vector"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.scalar_control_hot_loop.md",
+        "sha256": "sha256:fae732465d333ee78d87ed126fd37fad3a2f94aeb4dc78ab02306fe2eaa6c3ec"
+      },
+      "locator": "lines:279-414",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host NCDHW/grid[N,S,3]，owner为连续输出；每个输出从grid三元组算坐标/padding/邻域后取1或8个体素，FP32累加；half仅最终Cast与DataCopyPad批量，内层仍Scalar。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；本可按向量表达的元素处理使用逐元素Scalar访存或算术",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    },
+    {
+      "opportunity_ids": [
+        "geometry"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.control_metadata_overhead.md",
+        "sha256": "sha256:d0abe417c2a011184aa8351d5ca1433d987d7ed3a36eb195b9f912661234a1e4"
+      },
+      "locator": "lines:297-432",
+      "effect_kind": "mechanism",
+      "before": "源码观察不是瓶颈定论：Host NCDHW/grid[N,S,3]，owner为连续输出；每个输出从grid三元组算坐标/padding/邻域后取1或8个体素，FP32累加；half仅最终Cast与DataCopyPad批量，内层仍Scalar。",
+      "after": "采用正文的结构成本链并保留编译器、资源和替代机制限制；循环不变字段或公共地址前缀在每轮重复加载/计算",
+      "applicability": "partial：有当前源码结构支持，未确认目标硬件关键路径。"
+    }
+  ],
+  "selected_intent_gap": "保存派生数值几何D，既不是原输入块驻留，也不是控制地址外提；当前注册Action没有该意图，需审阅提案。"
+}

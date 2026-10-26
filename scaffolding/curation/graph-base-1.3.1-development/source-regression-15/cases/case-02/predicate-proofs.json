@@ -1,0 +1,12 @@
+{
+  "task_id": "raw15-case-02",
+  "basis": "手工逐谓词源码与数学分析；非自动由Action条件列表生成truth",
+  "proofs": {
+    "constraint.semantic_equivalence": "仅FP32将fi和in映射同一物理值、fo和out映射同一物理值；保留首尾+0以及Abs/Muls/两次Exp/Ln/Maxs/Add/Compare/两次Select/Tanh/Mul的次序与count。低精度原路径和RoundMode原样；完全原地API许可另待确认，未作数学近似。",
+    "constraint.dependency_lifetime": "fi=in从输入就绪一直保存至最后Mul读取，此前绝不交给work；fo=out从Maxs到最终Adds按单一Vector链更新，直到CopyOut完成才释放；work独立且不与fi/fo重叠。每个被删除TBuf对应的是同值in/out副本，不能复用相互同时活跃的fi/work。API具体原地读写保证由独立target_api_support补证。",
+    "constraint.task_ownership": "Mish保留原blockLength与offset，每个输出元素只由该核写一次，valid=min(T,end-off)，扩大T不改变核区间；低精度fallback不改变。原地只在本核UB，host输入输出地址独立。",
+    "constraint.valid_lengths": "Mish保留原blockLength与offset，每个输出元素只由该核写一次，valid=min(T,end-off)，扩大T不改变核区间；低精度fallback不改变。原地只在本核UB，host输入输出地址独立。",
+    "constraint.output_ownership": "Mish保留原blockLength与offset，每个输出元素只由该核写一次，valid=min(T,end-off)，扩大T不改变核区间；低精度fallback不改变。原地只在本核UB，host输入输出地址独立。"
+  },
+  "limitations": "需确认目标Adds/Abs/Mul/Tanh等在VECIN/VECOUT位置及完全原地alias的支持，实际UB及Select/Tanh临时需求；不改变负尾-8阈值或浮点运算顺序。"
+}

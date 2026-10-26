@@ -1,0 +1,439 @@
+{
+  "schema_version": "aprof.action-decision/v1",
+  "task_id": "case-09",
+  "context_hash": "sha256:71065fea7c0bc8758663cbe633162624749e3d43a9d6b266095812f8a2587bd1",
+  "knowledge_hash": "sha256:484e2107fbff032161df166d17b7be3b4ace2a34b8f98a843a1d9a629d0f3dc5",
+  "reasoning_ref": {
+    "path": "reasoning-R1.json",
+    "sha256": "sha256:f96fea4361b5a71b648b2f9896733f8358b06ea58aeeaa7c9c8b507ab422401f"
+  },
+  "reasoning_hash": "sha256:d6920f8855bfca3db7a8853651582ae2e4cfdae4afebafbee7f435e6ac056cf1",
+  "condition_policy_ref": {
+    "path": "workflows/references/action-condition-policies/v0001.json",
+    "sha256": "sha256:127058cc6911975c3e34d5f4d976a5a9ef0bc3d0fae5d48f4f54b7df64d9a6c6"
+  },
+  "routing_ref": {
+    "path": "workflows/references/action-routing-snapshots/f3a6d55be57ea647180e624b4fffe6a25b55beea2b35d140d50fe71108f4232d.json",
+    "sha256": "sha256:02d64ca8cc4efafae4665940ea3cfd6bf955b40e79d76125906445f4337450a4"
+  },
+  "round": 1,
+  "current_parent_ref": {
+    "path": "source-index.json",
+    "sha256": "sha256:b2c9b3ea4781ff18a6402f812403fdebf79af1237b7191a0e296abb3f1c6ae72"
+  },
+  "opportunities": [
+    {
+      "id": "opportunity.primary",
+      "hypothesis_id": "hypothesis.primary",
+      "action_id": "action.dispatch_by_workload",
+      "action_instance_id": "instance.primary",
+      "case_ids": [
+        "4",
+        "5",
+        "6",
+        "8",
+        "10",
+        "12",
+        "14",
+        "17",
+        "19"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "source.matrix",
+        "source.oracle"
+      ],
+      "cost_mechanism": "所有mode固定T1024；两Raw队列加fi/work/fo三个FP32区、Erfc5*T FP32 scratch以及mask无条件分配。显式UB=(2*b+32)*T+Align256(ceil(T/8))，尚不含API/编译保留；tanh不访问erfTmp/mask。none仍有Erfc和尾部特殊修正；tanh有2^-23网格RINT转换，不是无意义cast。",
+      "predictions": [
+        {
+          "id": "primary.source-work",
+          "kind": "source_work",
+          "statement": "tanh在T1024显式分配减少20736B；不删除任何运算或Cast。若T由1024增至4096且单核工作足够，tile循环数量按ceil(length/T)下降；none不删scratch。",
+          "check_method": "当前源码审读与完整20case公式；R2静态证据，后续真实patch/编译检查",
+          "on_support": "保留结构预测，按参数域继续条件规划",
+          "on_refute": "修订地址/分配公式或降低该候选优先级"
+        },
+        {
+          "id": "primary.performance",
+          "kind": "performance",
+          "statement": "tanh大N组可能降低tile控制与API发射成本；Vector算术主导或大tile影响排程时可能无收益。none暂不预期仅模式分配带来收益。",
+          "check_method": "未来完整正确性后，同源20case Task计时及针对性timeline/编译检查；本任务未测",
+          "on_support": "按组检查收益与回归后决定是否保留",
+          "on_refute": "保留失败与父本，按最强替代进一步判别"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "primary.performance",
+          "unknown_id": "primary.performance-unknown-1",
+          "reason": "当前仅有可适用来源及源码工作量；没有该项当前性能观察。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "primary.performance-unknown-1",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "tanh大N组可能降低tile控制与API发射成本；Vector算术主导或大tile影响排程时可能无收益。none暂不预期仅模式分配带来收益。；具体政策假设 cost_reduction 尚无当前编译/Task证据。",
+          "affects": "决定该变化是否缩短当前关键路径，不能从源码工作量直接推出时延。",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "primary.safety-1",
+          "kind": "implementation_safety",
+          "fact": "constraint.capacity",
+          "expected_state": true,
+          "statement": "不同mode/T的API临时空间、编译保留与实际可用UB尚未知；显式分配公式已给出。",
+          "affects": "限制具体参数/路径实施合法性，不否决条件方案或性能假设。",
+          "resolution": "check_before_implementation"
+        },
+        {
+          "id": "primary.safety-2",
+          "kind": "implementation_safety",
+          "fact": "constraint.target_api",
+          "expected_state": true,
+          "statement": "Tanh/Erfc及CompareScalar舍入count到64的最大count与scratch要求待目标SDK确认。",
+          "affects": "限制具体参数/路径实施合法性，不否决条件方案或性能假设。",
+          "resolution": "check_before_implementation"
+        }
+      ],
+      "strongest_alternative_id": "opportunity.alt1",
+      "comparison": "直接删掉tanh永不使用的20*T+mask静态字节，给更大tile提供可核算空间；相比强行复用none临时区，避免Erfc输入/tmp重叠未证问题。容量节约本身不是加速，收益假设来自同算术较少tile循环/API发射。",
+      "disposition": "selected",
+      "reason": "直接删掉tanh永不使用的20*T+mask静态字节，给更大tile提供可核算空间；相比强行复用none临时区，避免Erfc输入/tmp重叠未证问题。容量节约本身不是加速，收益假设来自同算术较少tile循环/API发射。"
+    },
+    {
+      "id": "opportunity.alt1",
+      "hypothesis_id": "hypothesis.alt1",
+      "action_id": "action.reuse_disjoint_onchip_buffers",
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "source.matrix",
+        "source.oracle"
+      ],
+      "cost_mechanism": "复用none的work/fo与Erfc scratch需要API alias和最后读证据；当前fi跨Erfc、Mul、Compare仍存活，不能仅按C++作用域共享。",
+      "predictions": [
+        {
+          "id": "alt1.source-work",
+          "kind": "source_work",
+          "statement": "复用none的work/fo与Erfc scratch需要API alias和最后读证据；当前fi跨Erfc、Mul、Compare仍存活，不能仅按C++作用域共享。",
+          "check_method": "当前源码审读与完整20case公式；R2静态证据，后续真实patch/编译检查",
+          "on_support": "保留结构预测，按参数域继续条件规划",
+          "on_refute": "修订地址/分配公式或降低该候选优先级"
+        },
+        {
+          "id": "alt1.performance",
+          "kind": "performance",
+          "statement": "复用none的work/fo与Erfc scratch需要API alias和最后读证据；当前fi跨Erfc、Mul、Compare仍存活，不能仅按C++作用域共享。：收益未知。",
+          "check_method": "未来完整正确性后，同源20case Task计时及针对性timeline/编译检查；本任务未测",
+          "on_support": "按组检查收益与回归后决定是否保留",
+          "on_refute": "保留失败与父本，按最强替代进一步判别"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "legacy_symptom_source_ub_live_bytes_near_capacity",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "alt1.performance",
+          "unknown_id": "alt1.performance-unknown-1",
+          "reason": "当前仅有可适用来源及源码工作量；没有该项当前性能观察。"
+        },
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "alt1.performance",
+          "unknown_id": "alt1.performance-unknown-2",
+          "reason": "当前仅有可适用来源及源码工作量；没有该项当前性能观察。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "alt1.performance-unknown-1",
+          "kind": "performance",
+          "fact": "symptom.source.ub_live_bytes_near_capacity",
+          "expected_state": null,
+          "statement": "复用none的work/fo与Erfc scratch需要API alias和最后读证据；当前fi跨Erfc、Mul、Compare仍存活，不能仅按C++作用域共享。；具体政策假设 legacy_symptom_source_ub_live_bytes_near_capacity 尚无当前编译/Task证据。",
+          "affects": "决定该变化是否缩短当前关键路径，不能从源码工作量直接推出时延。",
+          "resolution": "test_in_experiment"
+        },
+        {
+          "id": "alt1.performance-unknown-2",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "复用none的work/fo与Erfc scratch需要API alias和最后读证据；当前fi跨Erfc、Mul、Compare仍存活，不能仅按C++作用域共享。；具体政策假设 cost_reduction 尚无当前编译/Task证据。",
+          "affects": "决定该变化是否缩短当前关键路径，不能从源码工作量直接推出时延。",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "opportunity.primary",
+      "comparison": "复用none的work/fo与Erfc scratch需要API alias和最后读证据；当前fi跨Erfc、Mul、Compare仍存活，不能仅按C++作用域共享。",
+      "disposition": "deferred",
+      "reason": "复用none的work/fo与Erfc scratch需要API alias和最后读证据；当前fi跨Erfc、Mul、Compare仍存活，不能仅按C++作用域共享。"
+    },
+    {
+      "id": "opportunity.alt2",
+      "hypothesis_id": "hypothesis.alt2",
+      "action_id": "action.coalesce_cast",
+      "action_instance_id": null,
+      "case_ids": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "source_fact_ids": [
+        "source.kernel",
+        "source.tiling",
+        "source.matrix",
+        "source.oracle"
+      ],
+      "cost_mechanism": "移除tanh中FP32→int32 RINT→FP32会破坏明确2^-23概率量化；输入升精度/最终输出缩位也是数值契约。",
+      "predictions": [
+        {
+          "id": "alt2.source-work",
+          "kind": "source_work",
+          "statement": "移除tanh中FP32→int32 RINT→FP32会破坏明确2^-23概率量化；输入升精度/最终输出缩位也是数值契约。",
+          "check_method": "当前源码审读与完整20case公式；R2静态证据，后续真实patch/编译检查",
+          "on_support": "保留结构预测，按参数域继续条件规划",
+          "on_refute": "修订地址/分配公式或降低该候选优先级"
+        },
+        {
+          "id": "alt2.performance",
+          "kind": "performance",
+          "statement": "移除tanh中FP32→int32 RINT→FP32会破坏明确2^-23概率量化；输入升精度/最终输出缩位也是数值契约。：收益未知。",
+          "check_method": "未来完整正确性后，同源20case Task计时及针对性timeline/编译检查；本任务未测",
+          "on_support": "按组检查收益与回归后决定是否保留",
+          "on_refute": "保留失败与父本，按最强替代进一步判别"
+        }
+      ],
+      "performance_hypotheses": [
+        {
+          "hypothesis_id": "cost_reduction",
+          "state": "unknown",
+          "evidence_fact_ids": [],
+          "prediction_id": "alt2.performance",
+          "unknown_id": "alt2.performance-unknown-1",
+          "reason": "当前仅有可适用来源及源码工作量；没有该项当前性能观察。"
+        }
+      ],
+      "unknowns": [
+        {
+          "id": "alt2.performance-unknown-1",
+          "kind": "performance",
+          "fact": null,
+          "expected_state": null,
+          "statement": "移除tanh中FP32→int32 RINT→FP32会破坏明确2^-23概率量化；输入升精度/最终输出缩位也是数值契约。；具体政策假设 cost_reduction 尚无当前编译/Task证据。",
+          "affects": "决定该变化是否缩短当前关键路径，不能从源码工作量直接推出时延。",
+          "resolution": "test_in_experiment"
+        }
+      ],
+      "strongest_alternative_id": "opportunity.primary",
+      "comparison": "移除tanh中FP32→int32 RINT→FP32会破坏明确2^-23概率量化；输入升精度/最终输出缩位也是数值契约。",
+      "disposition": "rejected",
+      "reason": "移除tanh中FP32→int32 RINT→FP32会破坏明确2^-23概率量化；输入升精度/最终输出缩位也是数值契约。"
+    }
+  ],
+  "evidence_requests": [
+    {
+      "id": "request.safety-1",
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "unknown_ids": [
+        "primary.safety-1"
+      ],
+      "method": "在允许硬件/SDK阶段读取真实平台/API证据并对照方案逐项证明：不同mode/T的API临时空间、编译保留与实际可用UB尚未知；显式分配公式已给出。",
+      "discriminating_results": [
+        {
+          "outcome": "条件与所给参数域成立",
+          "decision_effect": "允许构建候选并完整20case验证；仍不代表性能改善"
+        },
+        {
+          "outcome": "条件不满足",
+          "decision_effect": "缩小参数域或走原fallback；不把失败解释为性能机制反证"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行硬件/构建；当前任务禁止相关动作。",
+      "defer_reason": "用户限定CPU源码/公式分析，保留具体补项交后继。"
+    },
+    {
+      "id": "request.safety-2",
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "unknown_ids": [
+        "primary.safety-2"
+      ],
+      "method": "在允许硬件/SDK阶段读取真实平台/API证据并对照方案逐项证明：Tanh/Erfc及CompareScalar舍入count到64的最大count与scratch要求待目标SDK确认。",
+      "discriminating_results": [
+        {
+          "outcome": "条件与所给参数域成立",
+          "decision_effect": "允许构建候选并完整20case验证；仍不代表性能改善"
+        },
+        {
+          "outcome": "条件不满足",
+          "decision_effect": "缩小参数域或走原fallback；不把失败解释为性能机制反证"
+        }
+      ],
+      "required_before_implementation": true,
+      "status": "deferred",
+      "resolution": "not_run",
+      "result_ref": null,
+      "finding": "未执行硬件/构建；当前任务禁止相关动作。",
+      "defer_reason": "用户限定CPU源码/公式分析，保留具体补项交后继。"
+    }
+  ],
+  "knowledge_use": [
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.dynamic_shape_mismatch.md",
+        "sha256": "sha256:24caeddf6063226e52e28c8d8fbd07a6cf7193ee2c3a2575d2a78f0cf28ea4b2"
+      },
+      "locator": "lines:305-352",
+      "effect_kind": "mechanism",
+      "before": "仅因20个shape不同建立20个分支",
+      "after": "只按mode/dtype的资源差异分组，none/tanh算法和容量不同；不按case号特化。",
+      "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "diagnosis",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-diagnosis/graph/problems/problem.onchip_capacity_pressure.md",
+        "sha256": "sha256:5a891db1219586ba9e282be035c81a632479d37de9b281c3f51156b1a0927a96"
+      },
+      "locator": "lines:307-354",
+      "effect_kind": "alternative",
+      "before": "看见大量scratch即可判断容量瓶颈",
+      "after": "当前实际UB未知，不能证明接近容量；只确认未使用的静态分配及可行tile域扩大。",
+      "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "parallel-planning",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/continuous.md",
+        "sha256": "sha256:67bf3f43825556595e88811e01fda95e1fd7c53c376440a8e6eca6530dec957d"
+      },
+      "locator": "lines:67-114",
+      "effect_kind": "parameters",
+      "before": "函数未用scratch意味着不计容量",
+      "after": "独立InitBuffer即使无读者仍占空间，需实际删分配；U算全部物理字节并加APIreserve。",
+      "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md",
+        "sha256": "sha256:04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483"
+      },
+      "locator": "lines:69-116",
+      "effect_kind": "parameters",
+      "before": "none和tanh串行分支的所有区可直接取max",
+      "after": "只有真实共享/条件分配才能扣字节；此处tanh省erfTmp/mask，none保留saved别名和完成边。",
+      "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/tiling-tail/recipes/dispatch.md",
+        "sha256": "sha256:9fe36578c284c773038c7f64644b58c9aaa708adc2bd00578b231e34e731fefa"
+      },
+      "locator": "lines:60-100",
+      "effect_kind": "plan",
+      "before": "引入key宏做模式特化",
+      "after": "当前为kernel直调，正文明确TILING_KEY_IS不适用于该框架；保持真实mode字段和入口接线。",
+      "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    },
+    {
+      "opportunity_ids": [
+        "opportunity.primary"
+      ],
+      "owner": "optimization",
+      "document_ref": {
+        "path": "skills/ascendc-aprof-optimization/knowledge/branches/precision-boundaries/recipes/numeric.md",
+        "sha256": "sha256:e09196536e4ee3258d0f310fef4d8511e0c743afa9074f4b00a39a00fe56af90"
+      },
+      "locator": "lines:70-110",
+      "effect_kind": "rejection",
+      "before": "两次Cast似乎可以删除",
+      "after": "RINT位置承担概率量化；保留其与负尾/NaN/Inf合同，拒绝未证数值改写。",
+      "applicability": "gelu当前host/tiling/kernel及完整20case；任务声明目标dav-2201，未据此推断硬件资源或收益。"
+    }
+  ],
+  "selection": {
+    "mode": "conditional_plan",
+    "opportunity_id": "opportunity.primary",
+    "action_instance_id": "instance.primary",
+    "reason": "直接删掉tanh永不使用的20*T+mask静态字节，给更大tile提供可核算空间；相比强行复用none临时区，避免Erfc输入/tmp重叠未证问题。容量节约本身不是加速，收益假设来自同算术较少tile循环/API发射。",
+    "concrete_plan": "保留none/tanh定义和全部Cast/尾部修正。在Init按mode分配：none保持原erfTmp/mask；tanh省去两项无用分配。基于mode,dtype合法容量选择T：tanh{1024,2048,4096}，none{1024,2048}，T均64整数倍。tanh U=2*Align32(b*T)+3*Align32(4*T)+APIreserve；none另加Align32(20*T)+Align256(ceil(T/8))。只有U≤actualUB且count API允许才选择较大T，否则原1024分支。直调用实际mode字段/template分支接线，不伪造TILING_KEY_IS。",
+    "stop_reason": null
+  },
+  "previous_feedback": null
+}
