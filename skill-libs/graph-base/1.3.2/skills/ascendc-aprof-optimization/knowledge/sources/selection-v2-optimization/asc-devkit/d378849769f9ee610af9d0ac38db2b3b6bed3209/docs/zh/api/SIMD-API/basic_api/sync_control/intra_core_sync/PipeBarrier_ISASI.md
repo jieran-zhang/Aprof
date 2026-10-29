@@ -38,7 +38,7 @@
 如下图1所示，完成同一流水线内的同步控制，用于在同一流水线内部约束执行顺序。其作用是，保证前序指令中所有数据的读写工作全部完成，后序指令才能执行。
 
 **图1**  PipeBarrier接口功能示意图<a name="zh-cn_topic_0000002549838971_fig7681194617307"></a>  
-![](../../../../figures/pipebarrier_function_diagram.png "PipeBarrier_接口功能示意图")
+
 
 ## 函数原型<a name="section620mcpsimp"></a>
 
@@ -67,7 +67,7 @@ __aicore__ inline void PipeBarrier()
 
 - PIPE\_MTE2/PIPE\_MTE3在搬运地址有重叠的情况下需要开发者插入同步。例如，当需要执行多个DataCopy指令，且DataCopy的目的地址存在重叠时，需要调用PipeBarrier接口插入单流水同步指令，保证多个DataCopy指令的串行化，防止出现异常数据。如下图左侧示意图，执行两个DataCopy指令，搬运的目的GM地址存在重叠，两条搬运指令之间需要通过调用`PipeBarrier<PIPE_MTE3>()`添加MTE3搬出流水的同步；如下图右侧示意图所示，搬运的目的地址Unified Buffer（UB）存在重叠，两条搬运指令之间需要调用`PipeBarrier<PIPE_MTE2>()`添加MTE2搬入流水的同步。
 
-![](../../../../figures/datacopy_address_overlap_pipebarrier.png "DataCopy_地址重叠_PipeBarrier_同步示意图")
+
 
 ## 调用示例<a name="section837496171220"></a>
 
@@ -82,7 +82,7 @@ __aicore__ inline void PipeBarrier()
 <!-- end id11 -->
 
 **图2**  Mul指令和Add指令是串行关系，必须等待Add指令执行完成后，才能执行Mul指令。<a name="fig1359216580459"></a>  
-![](../../../../figures/mul_add_pipebarrier_sync_diagram.png "Mul_Add_指令_串行依赖_PipeBarrier_同步示意图")
+
 
 ```cpp
 AscendC::LocalTensor<half> src0Local;

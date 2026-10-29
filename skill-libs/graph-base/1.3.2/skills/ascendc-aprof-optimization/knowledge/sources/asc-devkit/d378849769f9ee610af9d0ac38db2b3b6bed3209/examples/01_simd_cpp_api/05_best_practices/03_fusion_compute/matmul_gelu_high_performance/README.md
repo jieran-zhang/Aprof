@@ -317,7 +317,7 @@ AscendC::DataCopyPad<float>(cGM[gmOffset], geluOutUB, copyOutParams);
 
 下图展示了Scenario 1（CV融合-GM中转）场景下AIC和AIV的流水并行执行过程。AIC侧完成Matmul计算后通过Fixpipe将结果写入GM，AIV侧从GM读取数据完成GELU计算，两者按(baseM × baseN)块粒度流水并行：
 
-![Scenario1 CV融合-GM中转流水并行](figures/CVParallell_L0C_GM_UB.png)
+Scenario1 CV融合-GM中转流水并行
 
 > 💡 使用 msOpProf 工具需安装 CANN 商用/社区版，详细信息可参考[msOpProf工具安装指南](https://www.hiascend.com/document/detail/zh/canncommercial/900/devaids/optool/docs/zh/install_guide/msopprof_install_guide.md)。流水图基于msOpProf工具上板获取，获取命令：`msopprof --aic-metrics=PipeTimeline ./demo`
 
@@ -395,7 +395,7 @@ AscendC::DataCopyPad<float>(cGM[mBlockIdx * baseM * N + nBlockIdx * baseN + loca
 
 下图展示了Scenario 2（CV融合-UB直通）场景下AIC和AIV的流水并行执行过程。AIC侧完成Matmul计算后通过Fixpipe将结果直接写入UB（不经过GM中转），AIV侧直接在UB上进行GELU计算，省去了GM→UB的MTE2搬运开销：
 
-![Scenario2 CV融合-UB直通流水并行](figures/CVParallell_L0C_UB.png)
+Scenario2 CV融合-UB直通流水并行
 
 ## 编译运行
 

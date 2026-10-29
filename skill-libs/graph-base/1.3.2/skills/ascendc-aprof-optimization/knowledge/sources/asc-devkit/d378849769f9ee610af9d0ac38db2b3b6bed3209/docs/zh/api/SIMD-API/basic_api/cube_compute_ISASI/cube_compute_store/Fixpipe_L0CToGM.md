@@ -44,13 +44,13 @@
 <!-- npu="A3,910b" id11 -->
 **图1** L0C2GM流程图（NPU架构版本2201）<a id="zh-cn_topic_0000002542828493_fig542810249417"></a>
 
-![](../../../../figures/L0C2GM_Function_Combination.png)
+
 <!-- end id11 -->
 
 <!-- npu="950" id13 -->
 **图 2** L0C2GM流程图（NPU架构版本3510）<a id="zh-cn_topic_0000002542828493_fig542810249613"></a>
 
-![](../../../../figures/L0C2GM_Function_Combination_950.png)
+
 <!-- end id13 -->
 <!-- end id10 -->
 

@@ -46,7 +46,7 @@
 > - 每个模式的具体执行逻辑与细节可以参考关键特性说明。
 
 **图1**  同步控制模式示意图<a id="fig37581010773"></a>  
-![](../../../../figures/block_subblock_relationship_3510.png "同步控制模式示意图")
+
 
 ## 函数原型<a id="section620mcpsimp"></a>
 

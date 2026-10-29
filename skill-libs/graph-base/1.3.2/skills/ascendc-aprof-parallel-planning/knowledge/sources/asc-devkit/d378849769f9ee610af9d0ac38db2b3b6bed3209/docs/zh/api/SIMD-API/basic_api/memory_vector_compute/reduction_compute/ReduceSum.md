@@ -39,7 +39,7 @@
 
 **图1** `ReduceSum`计算示意图<a id="fig1"></a>
 
-![](../../../../figures/ReduceSum_basic_api.png "ReduceSum计算示意图")
+
 
 ## 函数原型
 

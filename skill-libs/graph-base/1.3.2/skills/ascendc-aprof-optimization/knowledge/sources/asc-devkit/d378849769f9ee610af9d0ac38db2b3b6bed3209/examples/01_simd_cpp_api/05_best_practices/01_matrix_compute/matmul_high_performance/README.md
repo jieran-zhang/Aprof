@@ -151,7 +151,7 @@ tilingApi.SetFixSplit(128, 256, 64);
 - 多核并行计算，将8192×8192的矩阵乘法切分到24个核上并行执行
 - 切分策略：M方向2块，N方向12块，**singleM=4096，singleN=683，尾块tailN=679**
 - 搬运策略：GM上输入的A、B矩阵按baseM×baseK、baseK×baseN分块依次搬运到L1中，再从L1搬运到L0A/L0B，Cube单元对每次搬运的base块执行一次baseM×baseN×baseK大小的Matmul计算
-<img src="figures/2_12_split_core.png">
+
 
 **关键代码**：
 ```cpp
@@ -183,7 +183,7 @@ SetL1(tilingData);
 - 切分策略：对M、N均匀切分，M方向4块，N方向6块
 - 搬运策略：GM上输入的A、B矩阵按baseM×baseK、baseK×baseN分块依次搬运到L1中，再从L1搬运到L0A/L0B，Cube单元对每次搬运的base块执行一次baseM×baseN×baseK大小的Matmul计算
 
-<img src="figures/4_6_split_core.png">
+
 
 **关键代码**：
 ```cpp
@@ -323,7 +323,7 @@ for (int i = 0; i < 2; i++) {
 
 分块计算适配L2Cache示意图：
 
-<img src="figures/L2Cache.png">
+
 
 ```
 计算过程：
@@ -406,8 +406,8 @@ mmCFG.enUnitFlag = true;
 
 UnitFlag功能示意图：
 
-<img src="figures/unitflag_close.png">
-<img src="figures/unitflag_open.png">
+
+
 
 **性能数据**：
 | Task Duration(μs) | Block Num | aicore_time(μs) | aic_mac_time(μs) | aic_mac_ratio | aic_scalar_time(μs) | aic_scalar_ratio | aic_mte1_time(μs) | aic_mte1_ratio | aic_mte2_time(μs) | aic_mte2_ratio | aic_fixpipe_time(μs) | aic_fixpipe_ratio |

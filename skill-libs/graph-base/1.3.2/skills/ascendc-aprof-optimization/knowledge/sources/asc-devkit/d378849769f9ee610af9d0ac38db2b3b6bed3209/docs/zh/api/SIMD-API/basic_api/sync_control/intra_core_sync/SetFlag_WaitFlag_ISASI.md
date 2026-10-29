@@ -44,7 +44,7 @@
 - WaitFlag：当目的流水执行到该指令时，如果发现硬件中对应标志位为0，目的流水的后续指令将一直被阻塞；如果发现硬件中对应标志位为1，则将硬件中对应标志位设置为0，同时目的流水的后续指令开始执行。
 
 **图1**  SetFlag/WaitFlag接口功能示意图<a name="zh-cn_topic_0000002511125384_fig58242463299"></a>  
-![](../../../../figures/setflag_waitflag_multi_pipeline_sync.png "SetFlag_WaitFlag_多流水同步示意图")
+
 
 ## 函数原型<a name="section620mcpsimp"></a>
 

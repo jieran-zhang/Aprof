@@ -37,25 +37,25 @@
 
 给定两个源操作数src0和src1，根据selMask（用于选择的Mask掩码）的比特位值选取元素，得到目的操作数dst。选择规则为：当selMask的比特位是1时，从src0中选取；比特位是0时从src1选取。
 
-![](../../../../figures/select_selMask.png)
+
 
 对于tensor高维切分计算接口，支持根据mask参数对上述选取结果再次进行过滤，有效位（mask的比特位为1）填入最终的dst，无效位（mask的比特位为0）则保持dst原始值。
 
-![](../../../../figures/select_mask.png)
+
 
 本接口功能支持三种模式：
 
 - 模式0（VSEL\_CMPMASK\_SPR）：根据selMask在两个tensor中选取元素。selMask的有效位数限制为256/sizeof\(T\)，多轮迭代均使用相同的selMask有效数值。
 
-    ![](../../../../figures/select_mode0.png)
+
 
 - 模式1（VSEL\_TENSOR\_SCALAR\_MODE）：根据selMask在1个tensor（src0）和1个scalar（src1）中选取元素。每次迭代使用selMask的位数为256/sizeof\(T\)，多轮迭代连续消耗selMask的不同部分。
 
-    ![](../../../../figures/select_mode1.png)
+
 
 - 模式2（VSEL\_TENSOR\_TENSOR\_MODE）：根据selMask在两个tensor中选取元素。每次迭代使用selMask的位数为256/sizeof\(T\)，多轮迭代连续消耗selMask的不同部分。
 
-    ![](../../../../figures/select_mode2.png)
+
 
 <!-- npu="950" id17 -->
 Ascend 950PR&950DT系列产品，支持模式0、1、2。
@@ -182,31 +182,31 @@ Kirin 9030处理器系列产品，支持模式0、1、2。
   <!-- npu="950" id25 -->
   - Ascend 950PR&950DT系列产品，支持的数据类型为：int8_t/uint8_t/int16_t/uint16_t/half/bfloat16_t/int32_t/uint32_t/float/complex32/int64_t/uint64_t/complex64。其中，int8\_t/uint8\_t/complex32/int64\_t/uint64\_t/complex64数据类型仅支持tensor前n个数据计算接口。
   <!-- end id25 -->
-    
+
   <!-- npu="A3" id26 -->
   - Atlas A3系列产品，支持的数据类型为：half/float。
   <!-- end id26 -->
-    
+
   <!-- npu="910b" id27 -->
   - Atlas A2系列产品，支持的数据类型为：half/float。
   <!-- end id27 -->
-    
+
   <!-- npu="310b" id28 -->
   - Atlas 200I/500 A2推理产品，支持的数据类型为：half/float。
   <!-- end id28 -->
-    
+
   <!-- npu="310p" id29 -->
   - Atlas推理系列产品AI Core，支持的数据类型为：half/float。
   <!-- end id29 -->
-    
+
   <!-- npu="910" id30 -->
   - Atlas训练系列产品，支持的数据类型为：half/float。
   <!-- end id30 -->
-    
+
   <!-- npu="x90" id31 -->
   - Kirin X90处理器系列产品，支持的数据类型为：int8_t/uint8_t/int16_t/uint16_t/half/int32_t/uint32_t/float。
   <!-- end id31 -->
-    
+
   <!-- npu="9030" id32 -->
   - Kirin 9030处理器系列产品，支持的数据类型为：int8_t/uint8_t/int16_t/uint16_t/half/int32_t/uint32_t/float。
     <!-- end id32 -->

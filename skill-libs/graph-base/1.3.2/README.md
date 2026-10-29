@@ -84,4 +84,4 @@ python3 "$APROF_PACKAGE/tools/release.py" --allow-unsealed
 
 部分来源及历史文档保留了原目录中的链接。包内 Markdown 阅读文档已修正可定位的引用，移除缺失材料的链接，并将仅按同名匹配的补充参考明确标注为“非历史原件”。原仓库的 `@ref` 标记改为普通来源注释，保持原仓库名称。
 
-这些阅读修改不重写既有证据身份。原始字节保存在 `sources/document-originals/`，每页末尾均提供原文入口；`tools/documentation-adaptations.json` 记录原文与阅读文档各自的 SHA-256 及逐项改动。证据读取和包校验核验两份内容，并继续按原文执行来源片段和历史回放检查。图片缺失尚未修复，完整目录与引用清单见仓库 `scaffolding/curation/graph-base-1.3.2-development/markdown-repair/missing-images.md`。
+这些阅读修改不重写既有证据身份。原始字节保存在 `sources/document-originals/`，每页末尾均提供原文入口；`tools/documentation-adaptations.json` 记录原文与阅读文档各自的 SHA-256 及逐项改动。证据读取和包校验核验两份内容，并继续按原文执行来源片段和历史回放检查。缺失图片的失效引用已从阅读文档移除；图片文件未补入，处理前的目录与引用清单见仓库 `scaffolding/curation/graph-base-1.3.2-development/markdown-repair/missing-images.md`。

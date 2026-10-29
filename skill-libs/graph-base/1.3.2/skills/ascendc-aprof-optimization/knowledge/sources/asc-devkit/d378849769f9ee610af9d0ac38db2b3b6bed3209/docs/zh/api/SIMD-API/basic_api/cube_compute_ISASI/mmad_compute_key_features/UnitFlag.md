@@ -33,7 +33,7 @@ Mmad和Fixpipe接口设置unitFlag值为2/3后，系统会启动单元标志位�
 
 **图1** Mmad和Fixpipe同时沿M方向写/读
 
-![Mmad和Fixpipe同时沿M方向写-读](../../../../figures/mmad_unitflag.png "Mmad和Fixpipe同时沿M方向写-读")
+Mmad和Fixpipe同时沿M方向写-读
 
 **特性约束：**
 

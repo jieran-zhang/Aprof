@@ -158,7 +158,7 @@
     对于32字节对齐搬运场景，从UB读取的所有数据都会搬运至Global Memory。
 
     **图1**  blockLen为32字节对齐时UB到Global Memory的非对齐搬运示意图<a name="fig_datacopypad3"></a><br>
-    ![](../../../../figures/datacopypad3.png)
+
 
 - 非32字节对齐场景<a name="非32字节对齐场景"></a>
 
@@ -167,7 +167,7 @@
     对于非32字节对齐的场景，由于UB要求32字节对齐，框架在搬出时会自动补充17字节的假数据来保证对齐，搬到Global Memory时再自动将填充的假数据丢弃掉，从而实现UB到Global Memory的非对齐搬运。
 
     **图2**  blockLen不满足32字节对齐时UB到Global Memory的非对齐搬运示意图<a name="fig_datacopypad4"></a><br>
-    ![](../../../../figures/datacopypad4.png)
+
 
 ## 数据类型<a name="section4219135304818"></a>
 

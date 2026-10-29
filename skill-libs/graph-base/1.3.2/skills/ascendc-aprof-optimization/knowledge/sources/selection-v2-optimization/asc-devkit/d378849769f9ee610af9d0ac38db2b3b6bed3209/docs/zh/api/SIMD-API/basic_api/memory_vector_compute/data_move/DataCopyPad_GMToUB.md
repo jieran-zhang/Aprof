@@ -186,7 +186,7 @@
 
         blockLen+leftPadding+rightPadding不满足32字节对齐时，框架会填充一些假数据dummy，保证左右填充的数据和blockLen、假数据为32字节对齐。leftPadding/rightPadding不为0：若isPad为false，左右两侧填充的数据值和dummy值均为随机值；否则为paddingValue。
 
-        ![](../../../../figures/datacopypad1.png)
+
 
     - 示例2：非32字节对齐场景
 
@@ -196,7 +196,7 @@
 
         blockLen+leftPadding+rightPadding不满足32字节对齐，leftPadding/rightPadding不为0：若isPad为false，左右两侧填充的数据值和dummy值均为随机值；否则为paddingValue。
 
-        ![](../../../../figures/datacopypad2.png)
+
 
     <!-- npu="950" id18 -->
 
@@ -208,7 +208,7 @@
 
         blockLen+leftPadding+rightPadding不满足32字节对齐，leftPadding/rightPadding不为0：若isPad为false，左右两侧填充的数据值和dummy值均为随机值；否则为paddingValue。
 
-        ![](../../../../figures/datacopypad.png)
+
 
     <!-- end id18 -->
 
@@ -230,7 +230,7 @@
 
         blockLen * blockCount + leftPadding + rightPadding满足32字节对齐，isPad为false，左右两侧填充的数据值会默认为随机值，否则为paddingValue。此处示例中，leftPadding为0，rightPadding为16，在最后一个数据块右侧填充16字节。目的操作数的总长度为160字节。
 
-        ![](../../../../figures/paddingMode.png)
+
 
     <!-- end id19 -->
 
