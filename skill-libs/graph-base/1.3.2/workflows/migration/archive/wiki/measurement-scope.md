@@ -1,6 +1,6 @@
 # 完整算子耗时、PMU 与输出核验范围
 
-> 本页保留历史协议下的观察与结论。1.1.0 新会话使用[统一计时协议](../skills/ascendc-aprof-profiling/references/unified-timing.md)，不照搬历史配对采集或置信区间门槛。
+> 本页保留历史协议下的观察与结论。1.1.0 新会话使用统一计时协议（同名参考，非历史原件：[unified-timing.md](../../../../skills/ascendc-aprof-profiling/references/unified-timing.md)），不照搬历史配对采集或置信区间门槛。
 
 ## 适用条件
 
@@ -26,3 +26,5 @@ kernel 会漏掉完整工作。历史方法记录中，1200 次 context session 
 报告每个指标的原始单位、采集协议、完整调用覆盖和实际输出核验数；机制 profile
 只解释可能原因，当前性能结果由统一协议下完整 workload 的 timing finalize 判定，历史收益按原配对协议解释。
 这些方法事实尚未作为 1.0.0 新技能独立复核。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../sources/document-originals/38ecd3ac99d0ec7c488a2e6b63c3855054e303cc768317cc785cd212331e8125.txt)。

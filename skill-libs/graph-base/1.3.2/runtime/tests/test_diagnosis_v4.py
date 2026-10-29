@@ -1,3 +1,4 @@
+from aprof_runtime.documentation_sources import original_path as evidence_original
 """CPU-only boundary checks for the independently versioned diagnosis runtime."""
 from copy import deepcopy
 import json
@@ -51,9 +52,8 @@ def package(tmp_path_factory):
             record["binding"] = {"object_bindings": [{"from_slot": "target", "to_slot": "target", "rule": "同对象"}], "joint_requirements": [], "exceptions": [], "rationale": "待证据判别", "discriminating_checks": ["对照机制"]}
         for source in record["sources"]:
             target = root / source["path"]
-            if not target.exists():
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy(ROOT / source["path"], target)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(evidence_original(ROOT, source["path"]), target)
         target = root / old["source_path"]
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text("---\n" + yaml.safe_dump(record, allow_unicode=True, sort_keys=False) + "---\n\n" + old["body"] + "\n")
@@ -357,7 +357,7 @@ def test_new_source_and_license_are_pinned_to_declared_repo_revision(tmp_path):
     relative = Path("skills/ascendc-aprof-diagnosis/sources") / repo / revision / original_path
     target = tmp_path / relative
     target.parent.mkdir(parents=True)
-    shutil.copy(ROOT / entry["path"], target)
+    shutil.copy(evidence_original(ROOT, entry["path"]), target)
     license_entry = next(i for i in manifest["archived_files"] if i["path"].endswith(f"/sources/{repo}/{revision}/LICENSE"))
     license_path = tmp_path / f"skills/ascendc-aprof-diagnosis/sources/{repo}/{revision}/LICENSE"
     shutil.copy(ROOT / license_entry["path"], license_path)

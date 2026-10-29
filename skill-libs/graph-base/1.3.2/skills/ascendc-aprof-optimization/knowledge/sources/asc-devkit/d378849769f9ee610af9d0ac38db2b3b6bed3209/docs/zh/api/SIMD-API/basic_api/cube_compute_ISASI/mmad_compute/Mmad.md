@@ -31,7 +31,7 @@
 <!-- npu="9030" id9 -->
 - Kirin 9030处理器系列产品：支持
 <!-- end id9 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/cube_compute_ISASI/mmad_compute/Mmad_res.md#id1 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/cube_compute_ISASI/mmad_compute/Mmad_res.md#id1 -->
 
 ### 传入bias的原型
 
@@ -62,7 +62,7 @@
 <!-- npu="9030" id18 -->
 - Kirin 9030处理器系列产品：不支持
 <!-- end id18 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/cube_compute_ISASI/mmad_compute/Mmad_res.md#id2 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/cube_compute_ISASI/mmad_compute/Mmad_res.md#id2 -->
 
 ## 功能说明
 
@@ -89,7 +89,7 @@ $$
 
 **图1** Mmad接口矩阵乘分形示意图（Ascend 950PR&950DT系列产品）<a id="zh_cn_topic_mmad_section2_figure1"></a>
 
-![Mmad接口计算分形示意图](../../../../figures/mmad_demo_950.png)
+Mmad接口计算分形示意图
 <!-- end id19 -->
 
 <!-- npu="A3,910b" id20 -->
@@ -174,9 +174,9 @@ Atlas A2系列产品
 | cmatrixInitVal | 是否开启C矩阵默认初始化清零操作。默认值为 true。<br>&nbsp;&nbsp;&bull; true：C矩阵默认初始化为0；<br>&nbsp;&nbsp;&bull; false：C矩阵不进行默认操作，通过设置cmatrixSource参数进行初始化。 |
 | cmatrixSource | 配置C矩阵初始值是否来源于BT Buffer。默认值为false。<br>&nbsp;&nbsp;&bull; false：不对L0C Buffer进行初始化操作；<br>&nbsp;&nbsp;&bull; true：使用BT Buffer(TPosition:C2)的数据对L0C Buffer进行初始化操作。<br><br>Atlas训练系列产品，仅支持配置为false。<br><br>Atlas推理系列产品AI Core，仅支持配置为false。<br><br>Atlas A2系列产品，支持配置为true/false。<br><br>Atlas A3系列产品，支持配置为true/false。<br><br>Atlas 200I/500 A2推理产品，支持配置为true/false。<br><br>Ascend 950PR&950DT系列产品，支持配置为true/false。<br><br>Kirin X90处理器系列产品仅支持配置为false。<br><br>Kirin 9030处理器系列产品仅支持配置为false。<br><br>注意：带Bias输入的接口配置该参数无效，会根据bias输入的位置来判断C矩阵初始值是否来源于BT Buffer。 |
 | isBias | 该参数废弃，新开发内容不要使用该参数。如果需要累加初始矩阵，请使用带Bias的接口来实现；也可以通过cmatrixInitVal和cmatrixSource参数配置C矩阵的初始值来源来实现。推荐使用带Bias的接口，相比于配置cmatrixInitVal和cmatrixSource参数更加简单方便。<br><br>配置是否需要累加初始矩阵，默认值为false，取值说明如下：<br>&nbsp;&nbsp;&bull; false：矩阵乘，无需累加初始矩阵，C = A \* B。<br>&nbsp;&nbsp;&bull; true：矩阵乘加，需要累加初始矩阵，C += A \* B。 |
-| disableGemv | M=1时，该参数用来配置Mmad计算是否开启[GEMV](../mmad_compute_key_features/GEMV.md#ZH-CN_TOPIC_0000002538231187)模式。<br>&nbsp;&nbsp;&bull; false：开启GEMV模式。<br>&nbsp;&nbsp;&bull; true：关闭GEMV模式。<br><br>该参数仅支持如下型号：<br><br>Ascend 950PR&950DT系列产品 |
+| disableGemv | M=1时，该参数用来配置Mmad计算是否开启GEMV模式。<br>&nbsp;&nbsp;&bull; false：开启GEMV模式。<br>&nbsp;&nbsp;&bull; true：关闭GEMV模式。<br><br>该参数仅支持如下型号：<br><br>Ascend 950PR&950DT系列产品 |
 | unitFlag | unitFlag可以控制Mmad指令和Fixpipe指令细粒度的并行，开启该功能后，硬件每计算完一个分形，计算结果就会被搬出。取值说明如下：<br>&nbsp;&nbsp;&bull; 0（2'b00）：不开启unitFlag；<br>&nbsp;&nbsp;&bull; 2（2'b10）：开启unitFlag，硬件执行完指令之后，不复位单元标记位；<br>&nbsp;&nbsp;&bull; 3（2'b11）：开启unitFlag，硬件执行完指令之后，复位单元标记位。<br><br>开启该功能时，须将Mmad指令和Fixpipe指令的unitFlag值设置为2或3。<br><br>该参数仅支持如下型号：<br><br>Ascend 950PR&950DT系列产品<br><br>Atlas A2系列产品<br><br>Atlas A3系列产品。参数设置方案和特性细节可参考：[UnitFlag特性说明](../mmad_compute_key_features/UnitFlag.md#ZH-CN_TOPIC_00000025690709788) |
-| kDirectionAlign | K方向对齐的核心功能是通过`kDirectionAlign`参数控制在使用float数据类型时，L0A Buffer和L0B Buffer矩阵在K方向上的对齐方式。<br><br>取值说明如下：<br>&nbsp;&nbsp;&bull; false：默认值，K方向对齐到`ceil(K / 8) * 8`。<br>&nbsp;&nbsp;&bull; true：K方向对齐到`ceil(K/16)*16`。<br><br>Atlas训练系列产品，仅支持配置为false。<br><br>Atlas推理系列产品AI Core，仅支持配置为false。<br><br>Atlas A2系列产品，仅支持配置为true/false。<br><br>Atlas A3系列产品，仅支持配置为true/false。<br><br>Atlas 200I/500 A2推理产品，仅支持配置为false。<br><br>Ascend 950PR&950DT系列产品，仅支持配置为false。<br><br>Kirin X90处理器系列产品支持配置为true/false。<br><br>Kirin 9030处理器系列产品支持配置为true/false。<br><br>特性细节可参考：[kDirectionAlign特性说明](../mmad_compute_key_features/k_direction_alignment_constraint.md#ZH-CN_TOPIC_0000002569070973)。 |
+| kDirectionAlign | K方向对齐的核心功能是通过`kDirectionAlign`参数控制在使用float数据类型时，L0A Buffer和L0B Buffer矩阵在K方向上的对齐方式。<br><br>取值说明如下：<br>&nbsp;&nbsp;&bull; false：默认值，K方向对齐到`ceil(K / 8) * 8`。<br>&nbsp;&nbsp;&bull; true：K方向对齐到`ceil(K/16)*16`。<br><br>Atlas训练系列产品，仅支持配置为false。<br><br>Atlas推理系列产品AI Core，仅支持配置为false。<br><br>Atlas A2系列产品，仅支持配置为true/false。<br><br>Atlas A3系列产品，仅支持配置为true/false。<br><br>Atlas 200I/500 A2推理产品，仅支持配置为false。<br><br>Ascend 950PR&950DT系列产品，仅支持配置为false。<br><br>Kirin X90处理器系列产品支持配置为true/false。<br><br>Kirin 9030处理器系列产品支持配置为true/false。<br><br>特性细节可参考：kDirectionAlign特性说明。 |
 | fmOffset | 左矩阵offset（整个左矩阵对应一个值），支持Scalar（应与src_fm.dtype一致）/立即数，默认0。<br><br>注：未使用，兼容旧款产品接口传入，Atlas A2系列产品及往后产品不做处理。 |
 | enSsparse | 开启结构化稀疏特性，默认false；<br><br>注：未使用，兼容旧款产品接口传入，Atlas A2系列产品及往后产品不做处理。 |
 | enWinogradA | 指示矩阵a是否通过winograd_feature_map_transform()生成，用于支持winograd特性，bool类型，默认false；<br><br>注：未使用，兼容旧款产品接口传入，Atlas A2系列产品及往后产品不做处理。 |
@@ -291,12 +291,12 @@ Atlas A2系列产品
 
 - 结果矩阵C只支持位于L0C Buffer（CO1），左矩阵A只支持位于L0A Buffer（A2），右矩阵B只支持位于L0B Buffer（B2）。
 - 当M、K、N中的任意一个值为0时，表示指令不会执行，该接口将被视为NOP（空操作）。
-- 当M = 1时，会默认开启GEMV（General Matrix-Vector Multiplication）功能。在这种情况下，Mmad API从L0A Buffer读取数据时，会以ND格式进行读取，而不会将其视为ZZ或NZ格式。所以此时左矩阵需要直接按照ND格式进行排布（[GEMV特性说明](../mmad_compute_key_features/GEMV.md#ZH-CN_TOPIC_0000002538231187)）。要注意的是，开启GEMV的情况下，A矩阵的起始地址仍要求512字节对齐。<!-- npu="950" id29 -->针对Ascend 950PR&950DT系列产品，可以通过设置MmadParams的disableGemv参数为true，将该功能关闭。<!-- end id29 -->
+- 当M = 1时，会默认开启GEMV（General Matrix-Vector Multiplication）功能。在这种情况下，Mmad API从L0A Buffer读取数据时，会以ND格式进行读取，而不会将其视为ZZ或NZ格式。所以此时左矩阵需要直接按照ND格式进行排布（GEMV特性说明）。要注意的是，开启GEMV的情况下，A矩阵的起始地址仍要求512字节对齐。<!-- npu="950" id29 -->针对Ascend 950PR&950DT系列产品，可以通过设置MmadParams的disableGemv参数为true，将该功能关闭。<!-- end id29 -->
 - 一般来说，一次Mmad计算至少完成一次A(16\*16\*half) \* B(16\*16\*half)数据块计算。但实际计算时M、K、N有效值可能不是16的倍数，从而有部分数据为无效数据。以M=30，K=70，N=40为例来介绍无效数据与有效数据的排布方式。
 
     数据为half类型，当M=30，K=70，N=40的时候，L0A Buffer（A2）中有2x5个16x16矩阵，L0B Buffer（B2）中有5x3个16x16矩阵，L0C Buffer（CO1）中有2x3个16x16矩阵。在这种场景下M、K和N都不是16的倍数，A2中右下角的矩阵实际有效的数据只有14x6个，但是也需要占一个16x16矩阵的空间，其他无效数据在计算中会被忽略。一个16x16分形的数据块中，无效数据与有效数据排布的方式示意如下：
 
-    ![有效数据相乘示意图](../../../../figures/mmad_validshape_demo.png)
+    有效数据相乘示意图
 
 - **同步优化说明**
 
@@ -305,7 +305,7 @@ Atlas A2系列产品
     然而，当矩阵维度m和n超过一定阈值时，由于计算量足够大，数据访问模式具备良好的局部性和流水线并行潜力，硬件调度器能够自动处理写-读依赖问题。此时无需插入PipeBarrier\(PIPE\_M\)，Mmad指令可并行执行，从而显著提升计算性能。
 
     阈值公式：
-    
+
     $$
     (m / 16) * (n / 16) < 10
     $$
@@ -346,4 +346,6 @@ Atlas A2系列产品
 
 ## 调用示例
 
-矩阵乘的样例请参考[Mmad样例](../../../../../../../examples/01_simd_cpp_api/03_basic_api/03_matrix_compute/mmad)。
+矩阵乘的样例请参考Mmad样例。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../sources/document-originals/1ebb798bb29605a5cbabb2b52964032fff2e5a3b0c02b9ba7556b05f573e062a.txt)。

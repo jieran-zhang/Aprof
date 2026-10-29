@@ -29,11 +29,11 @@ Mmad和Fixpipe接口设置unitFlag值为2/3后，系统会启动单元标志位�
 
 当开启unitFlag后，Mmad和Fixpipe会对同一块分形的L0C Buffer进行读写操作，因此Mmad计算和Fixpipe保持一致的读写顺序，有助于获得更优的性能表现。
 
-在调用Mmad接口时，需要通过[SetMMColumnMajor/SetMMRowMajor](../mmad_compute_aux_config/SetMMColumnMajor-SetMMRowMajor.md)接口设置Mmad的计算方向。当Fixpipe开启了NZ2ND或ChannelMerge等layout变换时，需将Mmad的计算方向设置为N方向优先，即调用SetMMRowMajor()；反之，若未使用这些特性，则应将计算方向设置为M方向优先，即调用SetMMColumnMajor()。
+在调用Mmad接口时，需要通过SetMMColumnMajor/SetMMRowMajor接口设置Mmad的计算方向。当Fixpipe开启了NZ2ND或ChannelMerge等layout变换时，需将Mmad的计算方向设置为N方向优先，即调用SetMMRowMajor()；反之，若未使用这些特性，则应将计算方向设置为M方向优先，即调用SetMMColumnMajor()。
 
 **图1** Mmad和Fixpipe同时沿M方向写/读
 
-![Mmad和Fixpipe同时沿M方向写-读](../../../../figures/mmad_unitflag.png "Mmad和Fixpipe同时沿M方向写-读")
+Mmad和Fixpipe同时沿M方向写-读
 
 **特性约束：**
 
@@ -64,7 +64,7 @@ fixpipeParams.unitFlag = 3;
 AscendC::Fixpipe(cGM, c, fixpipeParams);
 ```
 
-开启与不开启unitFlag功能的完整示例：[UnitFlag示例](../../../../../../../examples/01_simd_cpp_api/03_basic_api/03_matrix_compute/mmad_unitflag)
+开启与不开启unitFlag功能的完整示例：UnitFlag示例
 
 注意，开启unitFlag功能不会提升Mmad和Fixpipe指令的性能，性能提升源自于Mmad和Fixpipe指令的细粒度并行，降低了同步延迟。下表展示了是否开启unitFlag功能对Mmad指令性能的影响，实测数据显示开启unitFlag功能对性能无影响。
 
@@ -76,3 +76,5 @@ AscendC::Fixpipe(cGM, c, fixpipeParams);
 | 128 | 256 | 512 | Disable | 8 | 4156 | 4225 |
 | 128 | 128 | 512 | Enable | 8 | 2108 | 2172 |
 | 128 | 128 | 512 | Disable | 8 | 2108 | 2172 |
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../sources/document-originals/aae10d46db710c9ae9b24e5a6544267d1c67ed3294ab005d934f37ced21ac185.txt)。

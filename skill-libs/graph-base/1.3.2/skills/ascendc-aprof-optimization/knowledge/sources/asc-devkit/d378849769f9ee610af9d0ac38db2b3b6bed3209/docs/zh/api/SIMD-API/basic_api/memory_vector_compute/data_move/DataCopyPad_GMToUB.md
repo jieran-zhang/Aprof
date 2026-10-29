@@ -25,7 +25,7 @@
 <!-- npu="910" id7 -->
 - Atlas训练系列产品：不支持
 <!-- end id7 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB_res.md#id1 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB_res.md#id1 -->
 
 ### 含mode模板参数的函数原型
 
@@ -50,7 +50,7 @@
 <!-- npu="910" id14 -->
 - Atlas训练系列产品：不支持
 <!-- end id14 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB_res.md#id2 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_GMToUB_res.md#id2 -->
 
 ## 功能说明<a name="section618mcpsimp"></a>
 
@@ -64,7 +64,7 @@
 特别地，针对Ascend 950PR&950DT系列产品，支持Compact模式，该模式支持单个数据块非32字节对齐，将所有数据块合并成一个连续数据块，在该数据块右侧填充数据至32字节对齐。
 <!-- end id15 -->
 
-具体支持的数据通路为（以[逻辑位置TPosition](../../aux_data_structures/TPosition.md)表示）：
+具体支持的数据通路为（以逻辑位置TPosition表示）：
 
 - Global Memory -> UB
     - GM -> VECIN
@@ -76,7 +76,7 @@
 填充的数据有两种配置方式：
 
 - 配置结构体[DataCopyPadExtParams](#table_gm2ub_pad_5)的参数paddingValue，此时DataCopyPadExtParams的参数isPad需要设置为true。
-- 使用寄存器配置接口[SetPadValue](../data_move_aux_config/SetPadValue_ISASI.md)在接口外部设置需要填充的数据，此时DataCopyPadExtParams的参数isPad需要设置为false。
+- 使用寄存器配置接口SetPadValue在接口外部设置需要填充的数据，此时DataCopyPadExtParams的参数isPad需要设置为false。
 
 ## 函数原型<a name="section620mcpsimp"></a>
 
@@ -112,8 +112,8 @@
 
 | 参数名 | 输入/输出 | 描述 |
 | :--- | :---: | :--- |
-| dst | 输出 | 目的操作数，类型为[LocalTensor](../../data_structures/LocalTensor/LocalTensor_intro.md)，存储位置为UB，目的地址需要32字节对齐。 |
-| src | 输入 | 源操作数，类型为[GlobalTensor](../../data_structures/GlobalTensor/GlobalTensor_intro.md)，存储位置为Global Memory，源地址需要1字节对齐。 |
+| dst | 输出 | 目的操作数，类型为LocalTensor，存储位置为UB，目的地址需要32字节对齐。 |
+| src | 输入 | 源操作数，类型为GlobalTensor，存储位置为Global Memory，源地址需要1字节对齐。 |
 | dataCopyParams | 输入 | 搬运参数。DataCopyExtParams类型，具体参数说明见下文。 |
 | padParams | 输入 | 从Global Memory搬运数据至Local Memory时，可以根据开发者需要，在搬运数据左边或右边填充数据。padParams是用于控制数据填充过程的参数。DataCopyPadExtParams类型，具体参数请参考[表5](#table_gm2ub_pad_5)。 |
 
@@ -165,7 +165,7 @@
 
 | 参数名 | 描述 |
 | :--- | :--- |
-| isPad | 是否通过DataCopyPadExtParams结构体中的paddingValue字段设置填充值。<br>true：使用paddingValue字段作为填充值。<br>false：不使用paddingValue字段，根据是否调用寄存器配置接口[SetPadValue](../data_move_aux_config/SetPadValue_ISASI.md)分为两种情况。<br>&bull;调用SetPadValue时，在接口外部配置需要填充的数据。<br>&bull;不调用SetPadValue时，硬件自动在**每个数据块右侧**填充dummy数据至32字节对齐。若PaddingMode为Compact模式，则只会在**最后一个数据块右侧**填充dummy数据至32字节对齐。 |
+| isPad | 是否通过DataCopyPadExtParams结构体中的paddingValue字段设置填充值。<br>true：使用paddingValue字段作为填充值。<br>false：不使用paddingValue字段，根据是否调用寄存器配置接口SetPadValue分为两种情况。<br>&bull;调用SetPadValue时，在接口外部配置需要填充的数据。<br>&bull;不调用SetPadValue时，硬件自动在**每个数据块右侧**填充dummy数据至32字节对齐。若PaddingMode为Compact模式，则只会在**最后一个数据块右侧**填充dummy数据至32字节对齐。 |
 | leftPadding | 连续搬运数据块左侧需要补充的数据范围，单位为元素个数。<br>若PaddingMode为Compact模式，该参数无效，只会在**最后一个数据块右侧**填充数据。<br>**leftPadding、rightPadding所占的字节数均不能超过32字节。** |
 | rightPadding | 连续搬运数据块右侧需要补充的数据范围，单位为元素个数。<br>若PaddingMode为Compact模式，该参数无效，只会在**最后一个数据块右侧**填充数据。<br>**leftPadding、rightPadding所占的字节数均不能超过32字节。** |
 | paddingValue | 左右两侧需要填充的数据值，需要保证在数据占用字节范围内。<br>数据类型和源操作数保持一致，数据类型为模板参数T。<br>**当数据类型长度为64位时，该参数只能设置为0。** |
@@ -186,7 +186,7 @@
 
         blockLen+leftPadding+rightPadding不满足32字节对齐时，框架会填充一些假数据dummy，保证左右填充的数据和blockLen、假数据为32字节对齐。leftPadding/rightPadding不为0：若isPad为false，左右两侧填充的数据值和dummy值均为随机值；否则为paddingValue。
 
-        ![](../../../../figures/datacopypad1.png)
+
 
     - 示例2：非32字节对齐场景
 
@@ -196,7 +196,7 @@
 
         blockLen+leftPadding+rightPadding不满足32字节对齐，leftPadding/rightPadding不为0：若isPad为false，左右两侧填充的数据值和dummy值均为随机值；否则为paddingValue。
 
-        ![](../../../../figures/datacopypad2.png)
+
 
     <!-- npu="950" id18 -->
 
@@ -208,7 +208,7 @@
 
         blockLen+leftPadding+rightPadding不满足32字节对齐，leftPadding/rightPadding不为0：若isPad为false，左右两侧填充的数据值和dummy值均为随机值；否则为paddingValue。
 
-        ![](../../../../figures/datacopypad.png)
+
 
     <!-- end id18 -->
 
@@ -230,7 +230,7 @@
 
         blockLen * blockCount + leftPadding + rightPadding满足32字节对齐，isPad为false，左右两侧填充的数据值会默认为随机值，否则为paddingValue。此处示例中，leftPadding为0，rightPadding为16，在最后一个数据块右侧填充16字节。目的操作数的总长度为160字节。
 
-        ![](../../../../figures/paddingMode.png)
+
 
     <!-- end id19 -->
 
@@ -446,4 +446,6 @@
     AscendC::ResetLoopModePara(AscendC::DataCopyMVType::OUT_TO_UB);
     ```
 
-完整样例请参考[DataCopyPad样例](../../../../../../../examples/01_simd_cpp_api/03_basic_api/00_data_movement/data_copy_pad_gm2ub_ub2gm)。
+完整样例请参考DataCopyPad样例。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../sources/document-originals/8fd9166a39e7ab163695f1d965ad633725afa1c60cff08708b439f58f2a646ee.txt)。

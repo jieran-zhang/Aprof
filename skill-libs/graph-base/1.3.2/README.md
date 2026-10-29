@@ -68,14 +68,20 @@ python3 "$APROF_PACKAGE/tools/release.py" --allow-unsealed
 
 任务数据留在任务私有 scratch/final，预算与清理见 [生命周期](workflows/references/workflow-details.md)。交付需要的源码和证据保持可访问；旧发布包和默认版本不修改。
 
-本次机会比较与 R2 复盘维护见 [实施与知识变化](workflows/references/development-records.md#selection-reassessment-1.3.0)。D6 使用 decision v2；D5/v1 与旧知识正文按冻结身份继续回放。
+本次机会比较与 R2 复盘维护见 [实施与知识变化](workflows/references/development-records.md#selection-reassessment-130)。D6 使用 decision v2；D5/v1 与旧知识正文按冻结身份继续回放。
 
-910C 代码理解阶段的来源、独立复核与开发 A/B 评测见 [维护记录](workflows/references/development-records.md#code-understanding-1.3.0)。质量检查只用于开发验收，不成为每次任务的必跑步骤。
+910C 代码理解阶段的来源、独立复核与开发 A/B 评测见 [维护记录](workflows/references/development-records.md#code-understanding-130)。质量检查只用于开发验收，不成为每次任务的必跑步骤。
 
-当前完整优化方案采用 `aprof.action-decision/v3` 和 `aprof.handoff/v4`，可组合必要的多个 Action 并共享计划。跨轮维护任务内 `optimization-history.md`；轮数、达标停止条件与重试范围由用户或外层任务提供。详见[完整方案与交接](workflows/references/optimization-schemes.md)、[跨轮摘要](workflows/references/optimization-history.md)及[本次验收](workflows/references/development-records.md#optimization-schemes-1.3.0)。历史交接继续按原版本回放；当前未封版，不切换默认版本。
+当前完整优化方案采用 `aprof.action-decision/v3` 和 `aprof.handoff/v4`，可组合必要的多个 Action 并共享计划。跨轮维护任务内 `optimization-history.md`；轮数、达标停止条件与重试范围由用户或外层任务提供。详见[完整方案与交接](workflows/references/optimization-schemes.md)、[跨轮摘要](workflows/references/optimization-history.md)及[本次验收](workflows/references/development-records.md#optimization-schemes-130)。历史交接继续按原版本回放；当前未封版，不切换默认版本。
 
 ## 执行事实、完整代价与正式交接修复
 
-本轮修复的数据相关路径、准备工作收支、修复后重比、通用 Action 与无硬件验收见[开发交付报告](workflows/references/development-records.md#execution-cost-1.3.0)。新任务仍用 action-decision/v3 和 handoff/v4，历史快照及准入结论不追认。
+本轮修复的数据相关路径、准备工作收支、修复后重比、通用 Action 与无硬件验收见[开发交付报告](workflows/references/development-records.md#execution-cost-130)。新任务仍用 action-decision/v3 和 handoff/v4，历史快照及准入结论不追认。
 
-当前探索计时使用[中位数稳定性v2](skills/ascendc-aprof-profiling/references/median-stability-v2.md)：4/20、CV≤10%是试用轮内标准，跨窗口漂移、剔除敏感性及收益分别报告。来源数据的[离线比较及限制](workflows/references/development-records.md#median-timing-1.3.0)不追认历史候选；HAP、完整交接和工程收益门槛保持。
+当前探索计时使用[中位数稳定性v2](skills/ascendc-aprof-profiling/references/median-stability-v2.md)：4/20、CV≤10%是试用轮内标准，跨窗口漂移、剔除敏感性及收益分别报告。来源数据的[离线比较及限制](workflows/references/development-records.md#median-timing-130)不追认历史候选；HAP、完整交接和工程收益门槛保持。
+
+## 来源文档的阅读适配
+
+部分来源及历史文档保留了原目录中的链接。包内 Markdown 阅读文档已修正可定位的引用，移除缺失材料的链接，并将仅按同名匹配的补充参考明确标注为“非历史原件”。原仓库的 `@ref` 标记改为普通来源注释，保持原仓库名称。
+
+这些阅读修改不重写既有证据身份。原始字节保存在 `sources/document-originals/`，每页末尾均提供原文入口；`tools/documentation-adaptations.json` 记录原文与阅读文档各自的 SHA-256 及逐项改动。证据读取和包校验核验两份内容，并继续按原文执行来源片段和历史回放检查。缺失图片的失效引用已从阅读文档移除；图片文件未补入，处理前的目录与引用清单见仓库 `scaffolding/curation/graph-base-1.3.2-development/markdown-repair/missing-images.md`。

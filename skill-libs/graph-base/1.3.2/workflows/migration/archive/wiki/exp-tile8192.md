@@ -1,6 +1,6 @@
 # exp：固定并行划分内将 tile 从 4096 增至 8192
 
-> 本页保留历史协议下的观察与结论。1.1.0 新会话使用[统一计时协议](../skills/ascendc-aprof-profiling/references/unified-timing.md)，不照搬历史配对采集或置信区间门槛。
+> 本页保留历史协议下的观察与结论。1.1.0 新会话使用统一计时协议（同名参考，非历史原件：[unified-timing.md](../../../../skills/ascendc-aprof-profiling/references/unified-timing.md)），不照搬历史配对采集或置信区间门槛。
 
 ## 适用条件
 
@@ -117,3 +117,5 @@ MTE2 指令计数分别为 [87,87,87,87,87] / [44,44,44,44,44]，与减少 tile 
 
 待验证问题：不同硬件/SDK、不同实现与更大输入的收益是否保持；8192 不是通用最优值。
 保留上面的失败控制与旧 PMU 解析失败，新的应用仍必须独立验证。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../sources/document-originals/90ca5ffa91371300bb62cf53e6b6e6fe8ba73385ea72cd8401d23f39467dde2f.txt)。

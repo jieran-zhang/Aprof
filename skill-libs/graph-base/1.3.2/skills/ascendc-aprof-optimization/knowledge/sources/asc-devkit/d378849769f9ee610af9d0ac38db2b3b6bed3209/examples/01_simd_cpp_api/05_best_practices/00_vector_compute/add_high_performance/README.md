@@ -209,7 +209,7 @@ if (blockIdxM < remainderM) {
 
 - 本样例选择 `M` 方向切48份（`splitM=48, splitN=1`），而不是 `M` 切8、`N` 切6，核心目的是保持每个核处理的数据在GM上连续，从而在分块循环中用单条 `DataCopy` 搬运 `dataCopyLen`
 
-  <img src="figures/SplitCoreM.png" width="50%">
+
 
 **性能优化建议**：
 > 💡 **充分利用多核并行，采用均匀切分策略**
@@ -338,7 +338,7 @@ UB内存分配（双缓冲）：
 - **Ping-Pong机制**：
   - Ping缓冲区进行计算时，Pong缓冲区进行数据搬运
   - 交替执行，实现计算与搬运的流水线并行，如下图所示  
-    <img src="figures/DoubleBuffer.png" width="50%">
+
 
 **性能优化建议**：
 > 💡 **使用双缓冲实现搬运与计算并行**
@@ -440,12 +440,12 @@ static constexpr uint32_t zAddrPongBC = zAddrPingBC + BANK_CONFLICT_DATA_COPY_LE
 针对Atlas A2/A3 系列产品，UB的大小为192KB，包含16个Bank Group，每个Bank Group包含3个Bank，每个Bank大小为4KB，由128行组成，每行长度为32B。
 
 未优化前的UB Bank内存布局（即case5）
-<img src="figures/UBBankConflict.png" width="100%">
+
 
 可以看到这样同时存在一个bank内的读写冲突，一个bankgroup内的读读冲突以及写写冲突。
 
 优化后的UB Bank内存布局（case6）
-<img src="figures/UBBankConflictResolution.png" width="100%">
+
 
 由于vec指令一拍读取256B的数据（即同时读取8个block的数据），如上图xping、yping的起始地址正好错开了256B，有效消解了ub bank冲突。
 
@@ -607,13 +607,13 @@ Ascend 950系列未达到理论vector耗时峰值的原因如下：
   - `6`: 双缓冲 + L2Cache bypass + 避免Bank Conflict
 
 - 配置环境变量  
-  请根据当前环境上CANN开发套件包的[安装方式](../../../../../docs/zh/quick_start.md#prepare&install)，配置环境变量。
+  请根据当前环境上CANN开发套件包的安装方式，配置环境变量。
   ```bash
   source ${install_path}/cann/set_env.sh
   ```
 
   > **说明：** `${install_path}` 为CANN包安装目录，未指定安装目录时默认安装至 `/usr/local/Ascend` 下。
-    
+
 - 样例执行
 
   在本样例目录下执行如下命令。
@@ -634,7 +634,7 @@ Ascend 950系列未达到理论vector耗时峰值的原因如下：
   ```
 
   > **注意：** 切换编译模式前需清理 cmake 缓存，可在 build 目录下执行 `rm CMakeCache.txt` 后重新 cmake。
-  
+
 
 - 编译选项说明
 
@@ -643,7 +643,7 @@ Ascend 950系列未达到理论vector耗时峰值的原因如下：
   | `CMAKE_ASC_RUN_MODE` | `npu`（默认）、`cpu`、`sim` | 运行模式：NPU 运行、CPU调试、NPU仿真 |
   | `CMAKE_ASC_ARCHITECTURES` | `dav-2201`（默认）、`dav-3510` | NPU 架构：dav-2201 对应 Atlas A2系列产品和 Atlas A3系列产品，dav-3510 对应 Ascend 950PR&950DT系列产品 |
   | `SCENARIO_NUM` | `0`（默认）、`1`、`2`、`3`、`4`、`5`、`6` | 性能优化case编号 |
-  
+
   执行结果如下，说明精度对比成功。
   ```bash
   error ratio: 0.0000, tolerance:0.0001
@@ -656,7 +656,7 @@ Ascend 950系列未达到理论vector耗时峰值的原因如下：
 
 该接口提供CPU域/NPU域调试场景下的格式化输出功能。
 
-在算子kernel侧实现代码中需要输出日志信息的地方调用[printf](../../../../../docs/zh/api/Utils-API/tuning_interface/printf.md)接口打印相关内容。
+在算子kernel侧实现代码中需要输出日志信息的地方调用printf接口打印相关内容。
 
 示例如下：
 
@@ -668,9 +668,9 @@ AscendC::printf("add blockIdx=%d\n", AscendC::GetBlockIdx());
 
 ### DumpTensor
 
-基于算子工程开发的算子，可以使用该接口Dump指定[LocalTensor](../../../../../docs/zh/api/SIMD-API/basic_api/data_structures/LocalTensor/LocalTensor_intro.md)的内容。同时支持打印自定义的附加信息（仅支持uint32\_t数据类型的信息），比如打印当前行号等。
+基于算子工程开发的算子，可以使用该接口Dump指定LocalTensor的内容。同时支持打印自定义的附加信息（仅支持uint32\_t数据类型的信息），比如打印当前行号等。
 
-在算子kernel侧实现代码中需要打印Tensor数据的地方调用[DumpTensor](../../../../../docs/zh/api/SIMD-API/basic_api/debug_interface/onboard_print/DumpTensor.md)接口打印相关内容。样例如下：
+在算子kernel侧实现代码中需要打印Tensor数据的地方调用DumpTensor接口打印相关内容。样例如下：
 
 ```cpp
 // 向量计算: z = x + y
@@ -716,3 +716,5 @@ msOpProf工具是单算子性能分析工具。包含msopprof和msopprof simulat
 # 查看Task Duration 以及各项数据
 cat ./OPPROF_*/PipeUtilization.csv
 ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../sources/document-originals/b5b6a86283fe52b79c7990bb8ccf5072ead5a50fbd46ae5aaa7a3e056aab1580.txt)。

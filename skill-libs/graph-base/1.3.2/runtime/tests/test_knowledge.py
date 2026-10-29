@@ -1,3 +1,4 @@
+from aprof_runtime.documentation_sources import original_path as evidence_original
 """知识迁移、路由边界与五类 C1→C2→C3 纸面演练；不访问 NPU。"""
 from copy import deepcopy
 import json
@@ -54,7 +55,7 @@ def test_all_regions_rebuild_deterministically_and_history_is_frozen(artifacts, 
     manifest = json.loads((ROOT / "workflows/migration/migration.json").read_text())
     for file in manifest["files"]:
         if file["disposition"].startswith("frozen"):
-            assert digest((ROOT / file["path"]).read_bytes()) == file["original_hash"]
+            assert digest(evidence_original(ROOT, file["path"]).read_bytes()) == file["original_hash"]
     assert len({item["id"] for item in manifest["items"]}) == len(manifest["items"])
     assert all(item["targets"] and item["reason"] for item in manifest["items"])
 

@@ -108,4 +108,6 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_moe_finalize_routing.cpp](examples/test_aclnn_moe_finalize_routing.cpp) | 通过[aclnnMoeFinalizeRouting](docs/aclnnMoeFinalizeRouting.md)接口方式调用MoeFinalizeRouting算子。 |
+| aclnn接口  | test_aclnn_moe_finalize_routing.cpp | 通过[aclnnMoeFinalizeRouting](docs/aclnnMoeFinalizeRouting.md)接口方式调用MoeFinalizeRouting算子。 |
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../sources/document-originals/86f63ff730adb5c47fb9d3943d5b1bcbf0c77e9be9bef09a6562ebff9776251d.txt)。

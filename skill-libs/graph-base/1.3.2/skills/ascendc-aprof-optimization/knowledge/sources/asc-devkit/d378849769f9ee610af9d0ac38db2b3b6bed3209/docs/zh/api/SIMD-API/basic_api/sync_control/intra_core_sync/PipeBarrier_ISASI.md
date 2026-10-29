@@ -29,7 +29,7 @@
 <!-- npu="9030" id9 -->
 - Kirin 9030处理器系列产品：支持
 <!-- end id9 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/sync_control/intra_core_sync/PipeBarrier_ISASI_res.md#id1 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/sync_control/intra_core_sync/PipeBarrier_ISASI_res.md#id1 -->
 
 ## 功能说明<a name="section618mcpsimp"></a>
 
@@ -38,7 +38,7 @@
 如下图1所示，完成同一流水线内的同步控制，用于在同一流水线内部约束执行顺序。其作用是，保证前序指令中所有数据的读写工作全部完成，后序指令才能执行。
 
 **图1**  PipeBarrier接口功能示意图<a name="zh-cn_topic_0000002549838971_fig7681194617307"></a>  
-![](../../../../figures/pipebarrier_function_diagram.png "PipeBarrier_接口功能示意图")
+
 
 ## 函数原型<a name="section620mcpsimp"></a>
 
@@ -53,7 +53,7 @@ __aicore__ inline void PipeBarrier()
 
 | 参数名 | 描述 |
 | -------- | -------- |
-| pipe | 模板参数，表示阻塞的流水类别。<br>支持的流水参考[硬件流水类型](intra_core_sync_overview.md#zh-cn_topic_0000002542725361_section1272612276459)，其中不支持PIPE_S。<br>如果不关注流水类别，希望阻塞所有流水，可以传入PIPE_ALL。 |
+| pipe | 模板参数，表示阻塞的流水类别。<br>支持的流水参考硬件流水类型，其中不支持PIPE_S。<br>如果不关注流水类别，希望阻塞所有流水，可以传入PIPE_ALL。 |
 
 ## 返回值说明<a name="section640mcpsimp"></a>
 
@@ -67,7 +67,7 @@ __aicore__ inline void PipeBarrier()
 
 - PIPE\_MTE2/PIPE\_MTE3在搬运地址有重叠的情况下需要开发者插入同步。例如，当需要执行多个DataCopy指令，且DataCopy的目的地址存在重叠时，需要调用PipeBarrier接口插入单流水同步指令，保证多个DataCopy指令的串行化，防止出现异常数据。如下图左侧示意图，执行两个DataCopy指令，搬运的目的GM地址存在重叠，两条搬运指令之间需要通过调用`PipeBarrier<PIPE_MTE3>()`添加MTE3搬出流水的同步；如下图右侧示意图所示，搬运的目的地址Unified Buffer（UB）存在重叠，两条搬运指令之间需要调用`PipeBarrier<PIPE_MTE2>()`添加MTE2搬入流水的同步。
 
-![](../../../../figures/datacopy_address_overlap_pipebarrier.png "DataCopy_地址重叠_PipeBarrier_同步示意图")
+
 
 ## 调用示例<a name="section837496171220"></a>
 
@@ -75,14 +75,14 @@ __aicore__ inline void PipeBarrier()
 
 注：仅作为示例参考，以下情况下PIPE\_V同步无需开发者手动插入：
 <!-- npu="A3,910b" id10 -->
-- 开启[cce-auto-sync编译选项](key_features.md#cce-compiler-auto-sync)时，毕昇编译器自动插入PIPE\_V之间的同步。
+- 开启cce-auto-sync编译选项时，毕昇编译器自动插入PIPE\_V之间的同步。
 <!-- end id10 -->
 <!-- npu="950" id11 -->
 - 针对Ascend 950PR&950DT系列产品，PIPE\_V之间的同步由硬件保证。
 <!-- end id11 -->
 
 **图2**  Mul指令和Add指令是串行关系，必须等待Add指令执行完成后，才能执行Mul指令。<a name="fig1359216580459"></a>  
-![](../../../../figures/mul_add_pipebarrier_sync_diagram.png "Mul_Add_指令_串行依赖_PipeBarrier_同步示意图")
+
 
 ```cpp
 AscendC::LocalTensor<half> src0Local;
@@ -95,3 +95,5 @@ AscendC::Add(dst0Local, src0Local, src1Local, 512);
 AscendC::PipeBarrier<PIPE_V>();
 AscendC::Mul(dst1Local, dst0Local, src2Local, 512);
 ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../sources/document-originals/730571f5039906830624ccba76cff76d318305831f96538d7821be7c7c737773.txt)。

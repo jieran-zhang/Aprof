@@ -1,6 +1,6 @@
 # tile 放大与每 tile 设置开销
 
-> 本页保留历史协议下的观察与结论。1.1.0 新会话使用[统一计时协议](../skills/ascendc-aprof-profiling/references/unified-timing.md)，不照搬历史配对采集或置信区间门槛。
+> 本页保留历史协议下的观察与结论。1.1.0 新会话使用统一计时协议（同名参考，非历史原件：[unified-timing.md](../../../../skills/ascendc-aprof-profiling/references/unified-timing.md)），不照搬历史配对采集或置信区间门槛。
 
 ## 适用条件
 
@@ -29,3 +29,5 @@ exp/mish 的 A/A、CV 或资源控制尚不充分；固定算法不等于 vector
 ## 2026-10-14 独立复验
 
 910C/A3（9392）、CANN 9.0.0 上，exp 的 baseline 与 8192 tile 候选各自通过全部 20 个声明 case 和 42 个额外边界（含三种 dtype、tile/分区边界及特殊值）。预先固定的 A/A 对照中，case 3 与 9 的角色偏差分别为 2.4353% 和 3.6243%，超过 2% 上限；因此在候选 A/B 计时前停止，没有正式性能或机制结论。此结果只证明当前测量未通过控制实验，不能推断 tile 优化有收益或回退。未重采样，条目继续为 draft；哈希绑定回执见 evolution.jsonl 的 exp-tile8192-20261014。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../sources/document-originals/67e8af670f58f444b5ff228c1dc8cafbd3c11ce278bc385591f673368f6eb2f4.txt)。

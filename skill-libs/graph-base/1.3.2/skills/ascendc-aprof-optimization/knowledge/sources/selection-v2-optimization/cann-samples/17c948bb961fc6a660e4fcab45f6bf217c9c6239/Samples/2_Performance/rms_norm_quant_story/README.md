@@ -198,7 +198,7 @@ Cast(y, rms_buf, CAST_RINT, r);
 - gamma 跨 4096 行共享却每轮都重新搬（4095 次冗余）
 - 标准 API 几乎每步都写回 UB 一次
 
-![0_naive](./images/0_naive.png)
+0_naive
 
 打点图上 MTE2 与 VEC 基本交替，几乎没有重叠。每次计算前都有两个MTE2搬运动作，分别是搬运`x`和`gamma`到UB，但是每次搬运的`gamma`是同样的数据，存在重复搬运。
 
@@ -242,7 +242,7 @@ for (int64_t loop = 0; loop < a; loop++) {
 
 真正被删掉的不是一份 16 KB 数据，而是 **4095 次重复的搬运 + Cast + 调度链路**。
 
-![1_preload_gamma](./images/1_preload_gamma.png)
+1_preload_gamma
 
 以上所有的计算都是core0在执行，剩余的核都处于空闲状态；此算子有一个很重要的特性，行与行之间的计算时独立的没有依赖关系，因此可以将数据均匀的分到不同核并行计算。
 
@@ -284,7 +284,7 @@ yGm_.SetGlobalBuffer(y + blockIdx_ * tilingData_->blockFactor * r);
 
 并行效率：实际加速比 `6790 / 113.6 = 59.8x`，并行效率 `59.8 / 64 = 93.4%`。
 
-![2_multi_core](./images/2_multi_core.png)
+2_multi_core
 
 此时 `aiv_vec_ratio (65.8%) ≫ aiv_mte2_ratio (29.0%)`，同时存在多个VF函数，说明 VEC 链路过长仍是主要瓶颈，应优先压缩计算链路，而非立即开 Double Buffer。
 
@@ -343,7 +343,7 @@ AscendC::Reg::DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rmsAddr, vregRm
 
 `RVECST` 断崖式下降说明中间结果不再频繁落 UB，通过以下打点图也能够看出VF函数变少，VF调度开销也会变小。`aiv_mte2_ratio` 上升是好信号——VEC 链路更短了，MTE2 接近新瓶颈，**此时才是 Double Buffer 真正有价值的时机**。
 
-![3_vf](./images/3_vf.png)
+3_vf
 
 
 ---
@@ -388,7 +388,7 @@ static constexpr size_t BUF_NUM = 2;
 
 **指令没变，时延掉了 35%——收益完全来自调度重排。**
 
-![4_double_buffer](./images/4_double_buffer.png)
+4_double_buffer
 
 此时UB内每次只计算一行，还有大量空间没有使用，可以考虑一次搬运多行进UB计算，减少搬运指令的次数。
 
@@ -477,7 +477,7 @@ CopyOut(loop, ubFactor)   // MTE3: UB → GM, blockCount=ubFactor
 | MTE2 | 59 | **17** | **-71.2%** |
 | MTE3 | 58 | **16** | **-72.4%** |
 
-![5_ub_utilization](./images/5_ub_utilization.png)
+5_ub_utilization
 
 MTE2/MTE3 的次数明显减少。性能到达最优点。
 
@@ -501,7 +501,7 @@ $$
 
 具体实现：将长度 $r=8192$ 的行从折叠点 `binaryAddPoint=4096` 处对折，前后两段同步计算平方后立即相加，再做一次 ReduceSum。相比线性累加减少了一半的累加步数，误差界从 $O(8192\varepsilon)$ 降至 $O(4096\varepsilon)$，再经 ReduceSum 后约为 $O(\log 64 \cdot \varepsilon) = O(6\varepsilon)$。
 
-![binary_sum_algorithm](./images/binary_sum_algorithm.png)
+binary_sum_algorithm
 
 **2. Halley 迭代（替换 Div/Sqrt）**
 
@@ -587,7 +587,7 @@ __simd_vf__ inline void ComputeRstdVf(__ubuf__ float *rmsAddr, int64_t ubFactor,
 }
 ```
 
-![6_binary_sum](./images/6_binary_sum.png)
+6_binary_sum
 
 二分累加提升精度稳定性，减少依赖发挥指令双发能力。
 
@@ -605,3 +605,5 @@ __simd_vf__ inline void ComputeRstdVf(__ubuf__ float *rmsAddr, int64_t ubFactor,
 | 4 | Double Buffer | 54.3 | 1.55x | 141.7x |
 | 5 | UB 利用率 | **49.0** | 1.11x | **157.0x** |
 | 6 | 二分累加 | 49.5 | ≈1.0x | 155.4x |
+
+> 文档适配说明：缺失图片的引用已移除；来源及历史回放使用[保留的证据原文](../../../../../../../../../../sources/document-originals/31d54b8888424d789e909b56e16e410042d3575ce85c3b0df8e62f717affa2aa.txt)。

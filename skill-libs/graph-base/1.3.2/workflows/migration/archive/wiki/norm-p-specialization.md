@@ -1,6 +1,6 @@
 # foreach_norm 的运行时 p 分支代数特化
 
-> 本页保留历史协议下的观察与结论。1.1.0 新会话使用[统一计时协议](../skills/ascendc-aprof-profiling/references/unified-timing.md)，不照搬历史配对采集或置信区间门槛。
+> 本页保留历史协议下的观察与结论。1.1.0 新会话使用统一计时协议（同名参考，非历史原件：[unified-timing.md](../../../../skills/ascendc-aprof-profiling/references/unified-timing.md)），不照搬历史配对采集或置信区间门槛。
 
 ## 适用条件
 
@@ -24,3 +24,5 @@ case 的小回退。不能把 suite 加速写成所有分支均获益。
 先用独立正确性 oracle 检查所有 `p` 分支、dtype、尾部和特殊值，再测目标与
 非目标分支，保留一般 fallback。只有生产安全的全域验收通过后才能提升为
 skill 规则；本页保持 draft。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../sources/document-originals/3fe41d83888487eb55920e0673f59530e94b2056cc2cee88bd3fd4937d7e0ee2.txt)。

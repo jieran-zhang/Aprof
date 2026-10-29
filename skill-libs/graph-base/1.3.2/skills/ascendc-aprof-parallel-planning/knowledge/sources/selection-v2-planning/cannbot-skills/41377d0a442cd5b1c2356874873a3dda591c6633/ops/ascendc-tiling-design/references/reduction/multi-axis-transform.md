@@ -1,7 +1,7 @@
 # 多轴归约处理
 
 > 本文档描述合轴后仍为多段 A/R 交替序列（如 ARAR）时，如何展开执行。
-> 合轴规则见 [patterns.md](patterns.md#合轴)。
+> 合轴规则见 [patterns.md](../../../../../../../cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/reduction/patterns.md#合轴)。
 
 ---
 
@@ -58,8 +58,8 @@ IterateInnerA<0, N>()   ← 遍历所有 A 轴（递归模板，编译期展开�
 ```
 
 **每层 R 轴的 AR/ARA 判定**：看该 R 轴右侧是否还有 A 维度
-- R 轴是最内层（右侧无 A）→ **AR 模式**，用 Level 2 Reduce API，详见 [ar-fullload.md](ar-fullload.md) / [ar-colsplit.md](ar-colsplit.md)
-- R 轴右侧还有 A 维度 → **ARA 模式**，用 Pattern::Reduce::RA，详见 [ara-fullload.md](ara-fullload.md) / [ara-rowsplit.md](ara-rowsplit.md)
+- R 轴是最内层（右侧无 A）→ **AR 模式**，用 Level 2 Reduce API，详见 [ar-fullload.md](../../../../../../../cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/reduction/ar-fullload.md) / [ar-colsplit.md](../../../../../../../cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/reduction/ar-colsplit.md)
+- R 轴右侧还有 A 维度 → **ARA 模式**，用 Pattern::Reduce::RA，详见 [ara-fullload.md](../../../../../../../cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/reduction/ara-fullload.md) / [ara-rowsplit.md](../../../../../../../cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/reduction/ara-rowsplit.md)
 
 **示例**：ARAR [2,3,4,5] 展开为：
 ```
@@ -81,3 +81,5 @@ DAV_3510:    CopyInWithNddma() — 多维 DMA 自动处理 stride 跳跃
 DAV_2201: DataCopyPad 的 blockCount/blockLen/srcStride 参数配置 stride copy
        或外层循环逐 slice 搬运（每次搬连续片段，循环处理不连续间隔）
 ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../sources/document-originals/2a18e0f523a8101607fc3fbe388517869ce25bd6d2f51be57444f46617f7d96f.txt)。

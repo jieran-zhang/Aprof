@@ -11,7 +11,7 @@ problem family；它只帮助 agent 在看到 `Scalar`、`MTE`、`VEC/CUBE` 或 
 - 读取本文后仍然回到六类 reference：`tiling`、`data_movement`、`pipeline_parallel`、
   `onchip_memory`、`ai_core_utilization`、`api_algorithm`。
 - 不直接读取 外部大型 `SKILL.md`。若需要核对具体 API 或算子族细节，按
-  [local-knowledge-index.md](local-knowledge-index.md) 点读单个具体 reference。
+  local-knowledge-index.md（同名参考，非历史原件：[local-knowledge-index.md](../../../../../../../../../workflows/migration/archive/skills/ascendc-aprof-diagnosis/references/local-knowledge-index.md)） 点读单个具体 reference。
 
 ## 输入信号
 
@@ -94,3 +94,5 @@ MatMul、GMM、FA 先同时看 AIC、AIV、MTE1/MTE2、Fixpipe 和任务数：
 - 对 bound 现象输出 `bound_interpretation` 或写入 `roofline_interpretation`，说明为何没有停留在表层现象。
 - 对未确认的二级根因写入 `missing_evidence`，例如 `Memory.csv`、`ResourceConflictRatio.csv`、trace
   overlap、L1/UB capacity formula、repeat/mask 参数、platform bank structure。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../sources/document-originals/7b5f46925a304a3d6db77c905675c8ecae3d12eeedeac501743bdc07f932d44e.txt)。

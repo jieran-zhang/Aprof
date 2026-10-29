@@ -5,6 +5,38 @@ import re
 
 from . import _knowledge_v1 as _compiler
 from ._knowledge_v1 import *
+from .documentation_sources import original_path
+
+
+def local(root: Path, name: str) -> Path:
+    # Evidence keeps the upstream bytes; adapted .md files are reading views.
+    try:
+        return original_path(root, name)
+    except ValueError as exc:
+        raise _compiler.GraphError(str(exc)) from exc
+
+
+# Source resolution changes only where evidence bytes are stored. Generated
+# records and their original source hashes must remain exactly reproducible.
+_compiler.local = local
+
+if not hasattr(_compiler, "_source_read_record"):
+    _compiler._source_read_record = _compiler.read_record
+
+
+def read_record(path: Path, root: Path) -> dict:
+    """Compile the retained original and keep its declared logical path."""
+    root = Path(root).resolve()
+    try:
+        name = Path(path).absolute().relative_to(root).as_posix()
+    except ValueError as exc:
+        raise _compiler.GraphError("知识正文路径越出包") from exc
+    record = _compiler._source_read_record(local(root, name), root)
+    record["source_path"] = name
+    return record
+
+
+_compiler.read_record = read_record
 
 
 def __getattr__(name):

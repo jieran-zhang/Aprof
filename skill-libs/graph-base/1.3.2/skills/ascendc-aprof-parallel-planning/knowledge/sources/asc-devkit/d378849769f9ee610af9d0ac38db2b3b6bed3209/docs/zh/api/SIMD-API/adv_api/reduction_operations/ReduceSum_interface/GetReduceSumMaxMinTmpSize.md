@@ -19,8 +19,8 @@ void GetReduceSumMaxMinTmpSize(const AscendC::TensorShape& srcShape, const Ascen
 
 | 参数名 | 输入/输出 | 功能 |
 | --- | --- | --- |
-| srcShape | 输入 | 输入的shape信息，参数类型为[AscendC::TensorShape](../../data_structures/TensorShape.md)，参数取值与ReduceSum接口的srcShape参数保持一致。 |
-| dataType | 输入 | 输入的数据类型，参数类型为[AscendC::TensorDataType](../../data_structures/TensorDataType.md)，当前支持的数据类型与ReduceSum接口的模板参数T保持一致。 |
+| srcShape | 输入 | 输入的shape信息，参数类型为AscendC::TensorShape，参数取值与ReduceSum接口的srcShape参数保持一致。 |
+| dataType | 输入 | 输入的数据类型，参数类型为AscendC::TensorDataType，当前支持的数据类型与ReduceSum接口的模板参数T保持一致。 |
 | pattern | 输入 | 用于指定ReduceSum的计算轴。ReducePattern类型，该类型的定义如下代码所示，包括Reduce轴和Normal轴。pattern由与输入向量维度数量相同的A、R字母组合形成，字母A表示Normal轴，R表示Reduce轴。该参数的取值与ReduceSum接口的pattern参数保持一致，当前只支持取值为AscendC::ReducePattern::AR，AscendC::ReducePattern::RA。 |
 | isSrcInnerPad | 输入 | 表示实际需要计算的最内层轴数据是否32Bytes对齐，参数取值与ReduceSum接口的isSrcInnerPad参数保持一致。 |
 | isReuseSource | 输入 | 是否复用源操作数输入的空间，参数取值与ReduceSum接口的isReuseSource参数保持一致。 |
@@ -58,7 +58,7 @@ enum class ReducePattern : uint32_t {
 
 ## 调用示例
 
-完整的调用样例请参考[更多样例](../../math_compute/more_examples.md)。
+完整的调用样例请参考更多样例。
 
 ```
 // 输入shape信息为1024;算子输入的数据类型为float;不允许修改源操作数
@@ -70,3 +70,5 @@ bool isReuseSource = false;
 AscendC::GetReduceSumMaxMinTmpSize(
     shape, AscendC::TensorDataType::DT_FLOAT, AscendC::ReducePattern::AR, isSrcInnerPad, isReuseSource, maxValue, minValue);
 ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../sources/document-originals/fecb415cf8ad60515cc925323c983cde9e23e0fd79addb8cc3333a20bf567144.txt)。

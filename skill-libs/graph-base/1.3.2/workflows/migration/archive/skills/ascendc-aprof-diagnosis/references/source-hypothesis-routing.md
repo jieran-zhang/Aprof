@@ -47,10 +47,12 @@
 
 ## 输出检查
 
-[diagnosis 交接](../../../workflows/contracts/diagnosis.md) 中的每个 metric（或其引用的既有分析文件）需说明以下技术依据，不要求额外创建 diagnosis_hypotheses.json：
+diagnosis 交接（同名参考，非历史原件：[diagnosis.md](../../../../../contracts/diagnosis.md)） 中的每个 metric（或其引用的既有分析文件）需说明以下技术依据，不要求额外创建 diagnosis_hypotheses.json：
 
 - 来源文件或 trace。
 - 字段名或公式。
 - 支撑哪个假设。
 - 证据等级：`direct`、`derived`、`trace` 或 `source-hypothesis`。
 - 对小 workload，metric 的 `diagnosis_use` 必须写清“验证是否超过 workload 可达上限”，不能写成“利用率低即问题”。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../sources/document-originals/32bc6f8a53258c64d88a0937d0b0b6bcf8e32b24cd90b62386134bf0bfe71e75.txt)。

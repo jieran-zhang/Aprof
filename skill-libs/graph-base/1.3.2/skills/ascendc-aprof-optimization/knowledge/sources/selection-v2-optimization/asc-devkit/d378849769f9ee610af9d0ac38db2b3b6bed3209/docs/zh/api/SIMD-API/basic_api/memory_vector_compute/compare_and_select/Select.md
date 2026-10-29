@@ -29,7 +29,7 @@
 <!-- npu="9030" id9 -->
 - Kirin 9030处理器系列产品：支持
 <!-- end id9 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Select_res.md#id1 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Select_res.md#id1 -->
 
 ## 功能说明<a name="section618mcpsimp"></a>
 
@@ -37,25 +37,25 @@
 
 给定两个源操作数src0和src1，根据selMask（用于选择的Mask掩码）的比特位值选取元素，得到目的操作数dst。选择规则为：当selMask的比特位是1时，从src0中选取；比特位是0时从src1选取。
 
-![](../../../../figures/select_selMask.png)
+
 
 对于tensor高维切分计算接口，支持根据mask参数对上述选取结果再次进行过滤，有效位（mask的比特位为1）填入最终的dst，无效位（mask的比特位为0）则保持dst原始值。
 
-![](../../../../figures/select_mask.png)
+
 
 本接口功能支持三种模式：
 
 - 模式0（VSEL\_CMPMASK\_SPR）：根据selMask在两个tensor中选取元素。selMask的有效位数限制为256/sizeof\(T\)，多轮迭代均使用相同的selMask有效数值。
 
-    ![](../../../../figures/select_mode0.png)
+
 
 - 模式1（VSEL\_TENSOR\_SCALAR\_MODE）：根据selMask在1个tensor（src0）和1个scalar（src1）中选取元素。每次迭代使用selMask的位数为256/sizeof\(T\)，多轮迭代连续消耗selMask的不同部分。
 
-    ![](../../../../figures/select_mode1.png)
+
 
 - 模式2（VSEL\_TENSOR\_TENSOR\_MODE）：根据selMask在两个tensor中选取元素。每次迭代使用selMask的位数为256/sizeof\(T\)，多轮迭代连续消耗selMask的不同部分。
 
-    ![](../../../../figures/select_mode2.png)
+
 
 <!-- npu="950" id17 -->
 Ascend 950PR&950DT系列产品，支持模式0、1、2。
@@ -122,7 +122,7 @@ Kirin 9030处理器系列产品，支持模式0、1、2。
             __aicore__ inline void Select(const LocalTensor<T>& dst, const LocalTensor<U>& selMask, const LocalTensor<T>& src0, T src1, SELMODE selMode, uint64_t mask, uint8_t repeatTime, const BinaryRepeatParams& repeatParams)
             ```
 
-        - 不传入mask参数（需要和[SetVectorMask](../mask_operations/SetVectorMask.md)、[SetCmpMask\(ISASI\)](SetCmpMask_ISASI.md)配合使用）
+        - 不传入mask参数（需要和[SetVectorMask](../../../../../../../../../../asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/mask_operations/SetVectorMask.md)、SetCmpMask\(ISASI\)配合使用）
 
             ```cpp
             template <typename T, typename U>
@@ -144,7 +144,7 @@ Kirin 9030处理器系列产品，支持模式0、1、2。
             __aicore__ inline void Select(const LocalTensor<T>& dst, const LocalTensor<U>& selMask, const LocalTensor<T>& src0, const LocalTensor<T>& src1, SELMODE selMode, uint64_t mask, uint8_t repeatTime, const BinaryRepeatParams& repeatParams)
             ```
 
-        - 不传入mask参数（需要和[SetVectorMask](../mask_operations/SetVectorMask.md)、[SetCmpMask\(ISASI\)](SetCmpMask_ISASI.md)配合使用）
+        - 不传入mask参数（需要和[SetVectorMask](../../../../../../../../../../asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/mask_operations/SetVectorMask.md)、SetCmpMask\(ISASI\)配合使用）
 
             ```cpp
             template <typename T, SELMODE selMode>
@@ -166,14 +166,14 @@ Kirin 9030处理器系列产品，支持模式0、1、2。
 
 | 参数名称 | 输入/输出 | 描述 |
 | --- | --- | --- |
-| dst | 输出 | 目的操作数。<br>类型为[LocalTensor](../../data_structures/LocalTensor/LocalTensor.md)，支持的TPosition为VECIN/VECCALC/VECOUT。<br>LocalTensor的起始地址需要32字节对齐。 |
-| selMask | 输入 | 选取mask。<br>类型为[LocalTensor](../../data_structures/LocalTensor/LocalTensor.md)，支持的TPosition为VECIN/VECCALC/VECOUT。<br>LocalTensor的起始地址需要32字节对齐。<br>每个比特位表示1个元素的选取，当selMask的比特位为1时，从src0中选取元素；比特位为0时，从src1中选取元素。<br>各模式下的selMask使用方式详见selMode参数说明。<br> |
-| src0 | 输入 | 源操作数。<br>类型为[LocalTensor](../../data_structures/LocalTensor/LocalTensor.md)，支持的TPosition为VECIN/VECCALC/VECOUT。<br>LocalTensor的起始地址需要32字节对齐。 |
+| dst | 输出 | 目的操作数。<br>类型为LocalTensor，支持的TPosition为VECIN/VECCALC/VECOUT。<br>LocalTensor的起始地址需要32字节对齐。 |
+| selMask | 输入 | 选取mask。<br>类型为LocalTensor，支持的TPosition为VECIN/VECCALC/VECOUT。<br>LocalTensor的起始地址需要32字节对齐。<br>每个比特位表示1个元素的选取，当selMask的比特位为1时，从src0中选取元素；比特位为0时，从src1中选取元素。<br>各模式下的selMask使用方式详见selMode参数说明。<br> |
+| src0 | 输入 | 源操作数。<br>类型为LocalTensor，支持的TPosition为VECIN/VECCALC/VECOUT。<br>LocalTensor的起始地址需要32字节对齐。 |
 | src1 | 输入 | 源操作数。<br>&bull;当selMode为模式0或模式2时：<br>类型为LocalTensor，支持的TPosition为VECIN/VECCALC/VECOUT。<br>LocalTensor的起始地址需要32字节对齐。<br>&bull;当selMode为模式1时，类型为T，标量数据类型。 |
 | selMode | 输入 | 指令模式，SELMODE类型，取值如下：<br>enum class SELMODE : uint8_t {<br>    VSEL_CMPMASK_SPR = 0, <br>    VSEL_TENSOR_SCALAR_MODE,<br>    VSEL_TENSOR_TENSOR_MODE,<br>};<br> 三种模式详细说明请参考[功能说明](#section618mcpsimp)。|
-| mask/mask[] | 输入 | mask用于控制每次迭代内参与计算的元素。<br>设置详见[掩码](../SIMD_compute/mask.md)。|
-| repeatTime | 输入 | 重复迭代次数。矢量计算单元，每次读取连续的256Bytes数据进行计算，为完成对输入数据的处理，必须通过多次迭代（repeat）才能完成所有数据的读取与计算。repeatTime表示迭代的次数。<br>具体请参考[高维切分](../SIMD_compute/high_dim_split.md)。 |
-| repeatParams | 输入 | 控制操作数地址步长的参数。[BinaryRepeatParams](../../aux_data_structures/BinaryRepeatParams.md)类型，包含操作数相邻迭代间相同DataBlock的地址步长，操作数同一迭代内不同DataBlock的地址步长等参数。<br>相邻迭代间的地址步长参数说明请参考[repeatStride](../SIMD_compute/high_dim_split.md)；同一迭代内DataBlock的地址步长参数说明请参考[dataBlockStride](../SIMD_compute/high_dim_split.md)。 |
+| mask/mask[] | 输入 | mask用于控制每次迭代内参与计算的元素。<br>设置详见掩码。|
+| repeatTime | 输入 | 重复迭代次数。矢量计算单元，每次读取连续的256Bytes数据进行计算，为完成对输入数据的处理，必须通过多次迭代（repeat）才能完成所有数据的读取与计算。repeatTime表示迭代的次数。<br>具体请参考[高维切分](../../../../../../../../../../asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/SIMD_compute/high_dim_split.md)。 |
+| repeatParams | 输入 | 控制操作数地址步长的参数。BinaryRepeatParams类型，包含操作数相邻迭代间相同DataBlock的地址步长，操作数同一迭代内不同DataBlock的地址步长等参数。<br>相邻迭代间的地址步长参数说明请参考[repeatStride](../../../../../../../../../../asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/SIMD_compute/high_dim_split.md)；同一迭代内DataBlock的地址步长参数说明请参考[dataBlockStride](../../../../../../../../../../asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/SIMD_compute/high_dim_split.md)。 |
 | count | 输入 | 参与计算的元素个数。 |
 
 ## 数据类型
@@ -182,31 +182,31 @@ Kirin 9030处理器系列产品，支持模式0、1、2。
   <!-- npu="950" id25 -->
   - Ascend 950PR&950DT系列产品，支持的数据类型为：int8_t/uint8_t/int16_t/uint16_t/half/bfloat16_t/int32_t/uint32_t/float/complex32/int64_t/uint64_t/complex64。其中，int8\_t/uint8\_t/complex32/int64\_t/uint64\_t/complex64数据类型仅支持tensor前n个数据计算接口。
   <!-- end id25 -->
-    
+
   <!-- npu="A3" id26 -->
   - Atlas A3系列产品，支持的数据类型为：half/float。
   <!-- end id26 -->
-    
+
   <!-- npu="910b" id27 -->
   - Atlas A2系列产品，支持的数据类型为：half/float。
   <!-- end id27 -->
-    
+
   <!-- npu="310b" id28 -->
   - Atlas 200I/500 A2推理产品，支持的数据类型为：half/float。
   <!-- end id28 -->
-    
+
   <!-- npu="310p" id29 -->
   - Atlas推理系列产品AI Core，支持的数据类型为：half/float。
   <!-- end id29 -->
-    
+
   <!-- npu="910" id30 -->
   - Atlas训练系列产品，支持的数据类型为：half/float。
   <!-- end id30 -->
-    
+
   <!-- npu="x90" id31 -->
   - Kirin X90处理器系列产品，支持的数据类型为：int8_t/uint8_t/int16_t/uint16_t/half/int32_t/uint32_t/float。
   <!-- end id31 -->
-    
+
   <!-- npu="9030" id32 -->
   - Kirin 9030处理器系列产品，支持的数据类型为：int8_t/uint8_t/int16_t/uint16_t/half/int32_t/uint32_t/float。
     <!-- end id32 -->
@@ -219,12 +219,12 @@ Kirin 9030处理器系列产品，支持模式0、1、2。
 
 ## 约束说明<a name="section633mcpsimp"></a>
 
-- 操作数地址对齐要求请参见[通用地址对齐约束](../../../general_description_and_constraints.md)。
+- 操作数地址对齐要求请参见通用地址对齐约束。
 
-- 操作数地址重叠约束请参考[通用地址重叠约束](../../../general_description_and_constraints.md)。
+- 操作数地址重叠约束请参考通用地址重叠约束。
 
 <!-- npu="950" id10 -->
-- 当参数count或repeatTime取值为0时，针对Ascend 950PR&950DT系列产品，该接口通过VF调用[Reg矢量计算API](../../reg_vector_compute/reg_vector_compute.md)实现兼容，不保证该接口将被视为NOP（空操作）。
+- 当参数count或repeatTime取值为0时，针对Ascend 950PR&950DT系列产品，该接口通过VF调用Reg矢量计算API实现兼容，不保证该接口将被视为NOP（空操作）。
 <!-- end id10 -->
 <!-- npu="A3,910b,310p,950" id11 -->
 - 对Unified Buffer（UB）空间的占用说明。
@@ -248,13 +248,13 @@ Kirin 9030处理器系列产品，支持模式0、1、2。
 <!-- end id11 -->
 <!-- npu="310b" id33 -->
 - Atlas 200I/500 A2推理产品不支持如下函数原型：
-  - tensor高维切分计算Select模式1中，不传入mask参数的函数原型（需配合[SetVectorMask](../mask_operations/SetVectorMask.md)、[SetCmpMask_ISASI](SetCmpMask_ISASI.md)使用）。
-  - tensor高维切分计算Select模式0和模式2中，不传入mask参数的函数原型（需配合[SetVectorMask](../mask_operations/SetVectorMask.md)、[SetCmpMask_ISASI](SetCmpMask_ISASI.md)使用）。
+  - tensor高维切分计算Select模式1中，不传入mask参数的函数原型（需配合[SetVectorMask](../../../../../../../../../../asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/mask_operations/SetVectorMask.md)、SetCmpMask_ISASI使用）。
+  - tensor高维切分计算Select模式0和模式2中，不传入mask参数的函数原型（需配合[SetVectorMask](../../../../../../../../../../asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/mask_operations/SetVectorMask.md)、SetCmpMask_ISASI使用）。
 <!-- end id33 -->
 
 ## 调用示例<a name="section642mcpsimp"></a>
 
-本样中只展示部分关键代码。如果您需要运行样例代码，完整的调用样例可参考[Select样例](../../../../../../../examples/01_simd_cpp_api/03_basic_api/01_memory_vector_compute/select)。
+本样中只展示部分关键代码。如果您需要运行样例代码，完整的调用样例可参考Select样例。
 
 - Select-tensor高维切分计算样例（模式2）
 
@@ -343,3 +343,5 @@ Kirin 9030处理器系列产品，支持模式0、1、2。
     输出数据(dstLocal):
     [35.8789, 44.0334, -50.6124, -72.3737, -33.7107, -83.4001, -59.8013, 71.1663, 46.3484, 8.56818, -59.4716, 6.07412, -39.0137, -53.1848, 17.0849, 45.2641, -63.2115, 6.53722, -52.3835, 37.6655, 50.4909, 69.9812, -22.3447, -32.3809, 23.0464, 28.5975, -46.3033, -69.3535, 43.3368, 98.8541, -77.2888, 1.02385, 20.4965, 10.7653, 98.2463, -65.4774, -62.4907, -89.6462, -49.5058, -4.06369, 77.2982, -32.8221, -97.9312, -62.3829, 19.8888, -64.0522, -95.3497, -79.7642, 67.1185, 94.274, -72.868, -76.1646, 53.1497, 87.0729, -42.9392, 59.2962, -4.12072, 4.84555, -17.0687, -93.7445, 71.8209, -98.9565, -54.0959, 56.5437, -74.3328, 77.2781, 18.1016, -27.7082, -67.0339, -11.9576, 85.895, 25.4119, 71.9202, -73.1287, 63.6916, 21.4303, 66.0614, -67.2079, -22.2332, 84.0665, -7.86752, 42.1465, 1.37756, 82.3653, -35.847, -15.2647, -85.2363, -54.3978, 48.1772, -27.7686, 26.1484, -31.2539, 97.9558, 92.4507, 80.2871, -60.8802, -82.0434, -23.7061, 19.6418, -83.5848, 35.3667, 63.3315, -41.2088, 0.955906, -85.7743, 8.18112, 33.9888, -0.572343, -30.4885, 26.3331, -4.61647, 26.5385, 88.6082, 50.3262, 66.612, -42.173, 51.5339, 71.4549, 93.7096, -68.8219, 68.2573, 59.1608, -88.4579, -81.3639, -37.2619, -40.5576, -98.378, 32.3699, 64.6693, -73.1523, -39.3391, -33.7141, -88.6628, -94.1271, -80.6115, 44.2928, 76.6212, -29.3298, -58.1212, 83.3083, -20.6412, -30.1169, -82.1719, 26.8713, -56.5484, -37.6203, -8.59957, 5.09318, 27.8249, 76.6877, -27.5806, 63.2649, 11.9436, -22.4703, -58.5243, -79.6418, -9.31359, 63.7053, -8.37093, 55.6421, -99.0591, -85.9841, 91.4046, 48.9581, -92.1002, 2.42074, -6.41819, -18.15, 12.207, 48.6667, 51.6616, -21.0939, 74.2754, -51.1623, 7.64983, -82.6098, -89.6739, 79.6587, -31.1646, 20.8037, 21.483, -78.7341, 31.7695, 50.462, -83.7715, -80.3328, 52.7679, -77.979, -76.6814, -61.4531, -61.7242, 25.0575, -97.8702, 26.9708, -5.50804, -83.4637, -56.8385, 51.5406, -47.6936, -29.7551, 88.9603, -82.1242, -56.6307, 91.7884, 0.0381027, 5.28754, -43.5545, 47.3574, 97.1801, 70.5489, 22.7347, -53.5746, 63.7829, 22.3428, 53.4543, -91.4307, 19.083, -81.5139, 87.8383, 35.8835, -33.043, -79.7464, 69.0971, -82.6252, -63.0042, 56.4225, -8.00347, 91.5082, 56.2894, -81.7476, 17.976, 5.82004, 4.41524, -52.2192, -16.5589, 21.1114, 48.6597, -8.44998, 20.7356, -4.71108, -0.947533, 19.407, 88.1542, 96.1632, 41.4265, 59.5144, -83.7747, -97.6047, -60.7304, -31.3635, -42.6681, -26.9334, 79.3798, -14.6596, -41.1826, 48.8083]
     ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../../sources/document-originals/615845595e9b6ca5d150548eb27e9e6fd9d0bb972ee1533f933ad6bea8d940b5.txt)。

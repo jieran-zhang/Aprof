@@ -49,7 +49,7 @@ graph LR
 | 术语 | 简要说明 |
 |------|----------|
 | 非量化 | 左矩阵和右矩阵均为浮点类型直接计算 |
-| 全量化 | 左矩阵和右矩阵均为低精度计算，通过scale还原，详见[《量化介绍》](../../docs/zh/context/quant_mode_introduction.md) |
+| 全量化 | 左矩阵和右矩阵均为低精度计算，通过scale还原，详见《量化介绍》 |
 | 伪量化 | 对右矩阵权重进行量化，包括perchannel量化模式 |
 | pertensor | 简称T量化，每个Tensor共用一个相同的量化参数 |
 | perchannel | 简称C量化，量化对象是右矩阵，每个channel分别使用独立的量化参数 |
@@ -63,7 +63,7 @@ graph LR
 | G-B | 左矩阵pergroup，右矩阵perblock |
 | MX | pergroup-pergroup（G-G）量化模式，量化参数类型为FLOAT8_E8M0，group size为32 的特例 |
 | ND | 常规连续排布 |
-| NZ | [FRACTAL_NZ](../../docs/zh/context/data_format.md)格式（亲和排布） |
+| NZ | FRACTAL_NZ格式（亲和排布） |
 
 ## 功能说明
 
@@ -78,7 +78,7 @@ $$
 y_i=x_i\times weight_i + bias_i
 $$
 
-详细计算公式（按场景分类：非量化、伪量化、全量化）及版本演进请参见 [aclnnGroupedMatmulV5功能说明](docs/aclnnGroupedMatmulV5.md#3-功能说明)。
+详细计算公式（按场景分类：非量化、伪量化、全量化）及版本演进请参见 aclnnGroupedMatmulV5功能说明。
 
 ---
 
@@ -126,8 +126,8 @@ $$
 
 ### 公共约束
 
-- x/weight转置时对应 Tensor必须 [非连续](../../docs/zh/context/non_contiguous_tensor.md)。
-- weight为 [FRACTAL_NZ](../../docs/zh/context/data_format.md) 格式时，shape 须满足 NZ格式要求。
+- x/weight转置时对应 Tensor必须 非连续。
+- weight为 FRACTAL_NZ 格式时，shape 须满足 NZ格式要求。
 - perTokenScaleOptional：通常仅1维，长度与 x的M一致。仅支持 x/weight/out均为单Tensor场景。
 - groupListOptional：out中 TensorList长度为1时，groupList约束输出数据有效范围，未指定部分不参与更新。
 - groupListType：
@@ -135,7 +135,7 @@ $$
   - groupListType=1：须为非负数列（各组大小）。
   - groupListType=2：须为非负数列，shape `[E, 2]`（[组索引, 组大小]），非零组前置。
 
-> 各场景详细约束请参见 [aclnnGroupedMatmulV5约束说明](docs/aclnnGroupedMatmulV5.md#7-约束说明)。
+> 各场景详细约束请参见 aclnnGroupedMatmulV5约束说明。
 
 ---
 
@@ -143,4 +143,6 @@ $$
 
 | 调用方式 | 接口文档 | 调用样例 | 说明 |
 |----------|----------|----------|------|
-| aclnn调用 | [aclnnGroupedMatmulV5](docs/aclnnGroupedMatmulV5.md) | 见接口文档 [示例代码索引](docs/aclnnGroupedMatmulV5.md#调用示例) | 两段式接口：先调用 `aclnnGroupedMatmulV5GetWorkspaceSize` 获取workspace大小和executor，再调用 `aclnnGroupedMatmulV5` 执行计算 |
+| aclnn调用 | aclnnGroupedMatmulV5 | 见接口文档 示例代码索引 | 两段式接口：先调用 `aclnnGroupedMatmulV5GetWorkspaceSize` 获取workspace大小和executor，再调用 `aclnnGroupedMatmulV5` 执行计算 |
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../sources/document-originals/722098cea2767385e5a35e9b85410fd07cedd36608d3e2d2e6e16505d8e8389a.txt)。

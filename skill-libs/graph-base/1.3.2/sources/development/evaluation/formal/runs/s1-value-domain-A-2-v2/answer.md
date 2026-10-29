@@ -273,7 +273,7 @@ values 与 coeff 的有效标量读取次数不变：各 16,384 次。软件路�
 
 ### 实例 A1：`action.batch_vector_api_calls`
 
-- **任务/父实现**：本题 Weighted<float> 摘录 `454–485`。
+- **任务/父实现**：本题 `Weighted<float>` 摘录 `454–485`。
 - **目标**：八邻居 Gather 调用及其 values 消费链。
 - **阶段**：geometry 已完成后的 Weighted 计算阶段。
 - **workload 域**：FP32，N=1、C=8、D=H=W=16、S=256，bilinear/zeros/alignCorners=false；输入内容不作为派发条件。
@@ -396,7 +396,7 @@ U_{\rm explicit}=42240\text{ B}
 
 ### 当前状态
 
-- 保留实现：题目给定 Weighted<float>，未修改。
+- 保留实现：题目给定 `Weighted<float>`，未修改。
 - 探索方案：A1 八邻居合批、T=256，**paper / conditional_plan / not_measured**。
 - a：普通 Mul/Add；b：通道级软件 FMA，二者同元数据派发。
 - 无正确性通过、硬件收益或正式晋升结论。
@@ -417,3 +417,5 @@ U_{\rm explicit}=42240\text{ B}
 3. **边界验证**：完整通道、通道被 block 切碎、短 count、空 block、哨兵索引和检测 scratch 覆盖。
 4. **性能判别**：记录实际 \(J\)、dummy 初始化、编译后的调用/控制、软件 FMA 占用和完整 Task 时间。
 5. 若短片多使 a 的 dummy 乘法/初始化抵消调用节省，重开四邻居紧凑替代；若 b 时间几乎全由整数 FMA 决定，说明本轮优化覆盖有限，**不据此放宽数值契约**。
+
+> 文档适配说明：本页已规范代码文字格式；来源和历史回放使用[保留的证据原文](../../../../../document-originals/2d7ab52f26b3f3f9a3f472d0a148068913a935ee9a5cbe19a4a9016f32035dce.txt)。

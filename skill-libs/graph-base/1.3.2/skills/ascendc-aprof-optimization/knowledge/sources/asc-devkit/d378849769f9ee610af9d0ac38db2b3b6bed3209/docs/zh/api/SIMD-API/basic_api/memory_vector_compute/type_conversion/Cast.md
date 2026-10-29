@@ -29,7 +29,7 @@
 <!-- npu="9030" id9 -->
 - Kirin 9030处理器系列产品：支持
 <!-- end id9 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/type_conversion/Cast_res.md#id1 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/type_conversion/Cast_res.md#id1 -->
 
 ## 功能说明<a name="section618mcpsimp"></a>
 
@@ -77,11 +77,11 @@
 | ------ | --------- | ---- |
 | dst    |  输出     | 目的操作数。<br>类型为LocalTensor，支持的TPosition为VECIN/VECCALC/VECOUT。 |
 | src | 输入 | 源操作数。<br>类型为LocalTensor，支持的TPosition为VECIN/VECCALC/VECOUT。|
-| roundMode | 输入 | 精度转换处理模式，类型是RoundMode。<br>RoundMode为枚举类型，用以控制精度转换处理模式，可参考[精度转换规则](../../data_structures/precision_conversion.md)。RoundMode取值说明请参考[RoundMode取值说明](#roundmode取值说明)。 |
+| roundMode | 输入 | 精度转换处理模式，类型是RoundMode。<br>RoundMode为枚举类型，用以控制精度转换处理模式，可参考精度转换规则。RoundMode取值说明请参考[RoundMode取值说明](#roundmode取值说明)。 |
 | count | 输入 | 参与计算的元素个数。<br>**注：参数取值范围和操作数的数据类型有关，数据类型不同，能够处理的元素个数最大值不同，最大处理的数据量不能超过Unified Buffer（UB）大小限制。** |
-| mask/mask[] | 输入 | mask用于控制每次迭代内参与计算的元素。<br>注意：数据类型转换的mask会按照输入和输出类型中sizeof(dtype)较大的来筛选。<br>设置详见[掩码操作](../SIMD_compute/mask.md)。 |
+| mask/mask[] | 输入 | mask用于控制每次迭代内参与计算的元素。<br>注意：数据类型转换的mask会按照输入和输出类型中sizeof(dtype)较大的来筛选。<br>设置详见掩码操作。 |
 | repeatTime | 输入| 重复迭代次数。<br>矢量计算单元，每次读取连续的256Bytes数据进行计算，为完成对输入数据的处理，必须通过多次迭代（repeat）才能完成所有数据的读取与计算。repeatTime表示迭代的次数。<br>关于该参数的具体描述请参考[高维切分](../SIMD_compute/high_dim_split.md)。 |
-| repeatParams | 输入 | 控制操作数地址步长的参数。[UnaryRepeatParams](../../aux_data_structures//UnaryRepeatParams.md)类型，包含操作数相邻迭代间相同DataBlock的地址步长，操作数同一迭代内不同DataBlock的地址步长等参数。<br>相邻迭代间的地址步长参数说明请参考[repeatStride](../SIMD_compute/high_dim_split.md)；同一迭代内DataBlock的地址步长参数说明请参考[dataBlockStride](../SIMD_compute/high_dim_split.md)。 |
+| repeatParams | 输入 | 控制操作数地址步长的参数。UnaryRepeatParams类型，包含操作数相邻迭代间相同DataBlock的地址步长，操作数同一迭代内不同DataBlock的地址步长等参数。<br>相邻迭代间的地址步长参数说明请参考[repeatStride](../SIMD_compute/high_dim_split.md)；同一迭代内DataBlock的地址步长参数说明请参考[dataBlockStride](../SIMD_compute/high_dim_split.md)。 |
 
 ### RoundMode取值说明<a name="li5470114514"></a>
 
@@ -104,7 +104,7 @@ enum class RoundMode {
 
 ## 数据类型
 
-不同数据类型转换支持的舍入模式不同，可参考[精度转换规则](../../data_structures/precision_conversion.md)。
+不同数据类型转换支持的舍入模式不同，可参考精度转换规则。
 
 <!-- npu="950" id10 -->
 
@@ -151,7 +151,7 @@ enum class RoundMode {
 | int32_t | uint8_t | CAST_NONE |
 | int32_t | int16_t | CAST_NONE |
 | int32_t | uint16_t | CAST_NONE |
-| int32_t | half | roundMode不生效，与[SetDeqScale(half scale)](../type_conversion_aux_config/SetDeqScale.md)接口配合使用。 |
+| int32_t | half | roundMode不生效，与SetDeqScale(half scale)接口配合使用。 |
 | int32_t | float | CAST_RINT/CAST_FLOOR/CAST_CEIL/CAST_ROUND/CAST_TRUNC |
 | int32_t | int64_t | CAST_NONE |
 | uint32_t | uint8_t | CAST_NONE |
@@ -199,7 +199,7 @@ enum class RoundMode {
 | bfloat16_t | int32_t | CAST_RINT/CAST_FLOOR/CAST_CEIL/CAST_ROUND/CAST_TRUNC |
 | bfloat16_t | float | CAST_NONE |
 | int32_t | int16_t | CAST_NONE |
-| int32_t | half | roundMode不生效，与[SetDeqScale(half scale)](../type_conversion_aux_config/SetDeqScale.md)接口配合使用。 |
+| int32_t | half | roundMode不生效，与SetDeqScale(half scale)接口配合使用。 |
 | int32_t | float | CAST_RINT/CAST_FLOOR/CAST_CEIL/CAST_ROUND/CAST_TRUNC/CAST_NONE |
 | int32_t | int64_t | CAST_NONE |
 | float | int16_t | CAST_RINT/CAST_FLOOR/CAST_CEIL/CAST_ROUND/CAST_TRUNC |
@@ -233,7 +233,7 @@ enum class RoundMode {
 | bfloat16_t | int32_t | CAST_RINT/CAST_FLOOR/CAST_CEIL/CAST_ROUND/CAST_TRUNC |
 | bfloat16_t | float | CAST_NONE |
 | int32_t | int16_t | CAST_NONE |
-| int32_t | half | roundMode不生效，与[SetDeqScale(half scale)](../type_conversion_aux_config/SetDeqScale.md)接口配合使用。 |
+| int32_t | half | roundMode不生效，与SetDeqScale(half scale)接口配合使用。 |
 | int32_t | float | CAST_RINT/CAST_FLOOR/CAST_CEIL/CAST_ROUND/CAST_TRUNC/CAST_NONE |
 | int32_t | int64_t | CAST_NONE |
 | float | int16_t | CAST_RINT/CAST_FLOOR/CAST_CEIL/CAST_ROUND/CAST_TRUNC |
@@ -295,7 +295,7 @@ enum class RoundMode {
 | half | int32_t | CAST_RINT/CAST_FLOOR/CAST_CEIL/CAST_ROUND/CAST_TRUNC |
 | half | float | CAST_NONE |
 | int32_t | int16_t | CAST_NONE |
-| int32_t | half | roundMode不生效，与[SetDeqScale(half scale)](../type_conversion_aux_config/SetDeqScale.md)接口配合使用。 |
+| int32_t | half | roundMode不生效，与SetDeqScale(half scale)接口配合使用。 |
 | int32_t | float | CAST_NONE |
 | float | half | CAST_ODD/CAST_NONE |
 | float | int64_t | CAST_RINT/CAST_FLOOR/CAST_CEIL/CAST_ROUND/CAST_TRUNC |
@@ -355,13 +355,13 @@ enum class RoundMode {
 
 ## 约束说明
 
-- 操作数地址对齐要求请参见[通用地址对齐约束](../../../general_description_and_constraints.md#section796754519912)。
-- 操作数地址重叠约束请参考[通用地址重叠约束](../../../general_description_and_constraints.md#section668772811100)。特别地，对于长度较小的数据类型转换为长度较大的数据类型时，地址重叠可能会导致结果错误。
+- 操作数地址对齐要求请参见通用地址对齐约束。
+- 操作数地址重叠约束请参考通用地址重叠约束。特别地，对于长度较小的数据类型转换为长度较大的数据类型时，地址重叠可能会导致结果错误。
 
 - 当源操作数和目的操作数位数不同时，计算输入参数以数据类型的字节较大的为准。例如，源操作数为half类型，目的操作数为int32\_t类型时，每次迭代最多操作64个元素，为保证输出和输入是连续的，dstRepStride应设置为8，srcRepStride应设置为4。
 - 当dst或src为int4b\_t时，由于一个int4b\_t只占半个字节，故申请Tensor空间时，只需申请相同数量的int8\_t数据空间的一半。host侧目前暂不支持int4b\_t，故在申请int4b\_t类型的tensor时，应先申请一个类型为int8\_t的tensor，再用Reinterpretcast接口转化为int4b\_t类型的tensor，接着调用Cast指令。
 - 当dst或src为int4b\_t时，tensor高维切分计算接口的连续模式的mask与tensor前n个数据计算接口的count必须为偶数；对于tensor高维切分计算接口的逐bit模式，对应同一字节的相邻两个比特位的数值必须一致，即0-1位数值一致，2-3位数值一致，4-5位数值一致，以此类推。
-- int32\_t到half数据类型的转换，设置舍入模式无效，需要与[SetDeqScale](../type_conversion_aux_config/SetDeqScale.md)接口配合使用。
+- int32\_t到half数据类型的转换，设置舍入模式无效，需要与SetDeqScale接口配合使用。
 <!-- npu="950" id18 -->
 - 针对Ascend 950PR&950DT系列产品，complex32/complex64/double数据类型仅支持tensor前n个数据计算接口。
 <!-- end id18 -->
@@ -377,7 +377,7 @@ enum class RoundMode {
        <!-- end id20 -->
     <!-- end id21 -->
     <!-- npu="950" id22 -->
-    - 针对Ascend 950PR&950DT系列产品，该接口通过VF调用[Reg矢量计算](../../reg_vector_compute/reg_vector_compute.md)API实现兼容，当参数count或repeatTime取值为0时，不保证该接口被视为NOP（空操作）。
+    - 针对Ascend 950PR&950DT系列产品，该接口通过VF调用Reg矢量计算API实现兼容，当参数count或repeatTime取值为0时，不保证该接口被视为NOP（空操作）。
     <!-- end id22 -->
 <!-- end id23 -->
 
@@ -385,7 +385,7 @@ enum class RoundMode {
 
 本样中只展示部分关键代码。本样例的srcLocal为half类型，dstLocal为int32\_t类型，计算mask时以int32\_t为准。
 
-如果您需要运行样例代码，完整的调用样例请参考[Cast样例](../../../../../../../examples/01_simd_cpp_api/03_basic_api/01_memory_vector_compute/cast)。
+如果您需要运行样例代码，完整的调用样例请参考Cast样例。
 
 - tensor高维切分计算样例-mask连续模式。
 
@@ -641,3 +641,5 @@ AscendC::Cast(dstLocal, srcLocal, AscendC::RoundMode::CAST_CEIL, mask, 8, { 1, 1
  1199654414 1206405188 1214203847 1165183076 1213745302 1208830102
  1209944118 1215121459]
 ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../sources/document-originals/a41d8e8b10d541452de9c4542158d0bba6bc53f15e68c3d1d929712856a11f12.txt)。

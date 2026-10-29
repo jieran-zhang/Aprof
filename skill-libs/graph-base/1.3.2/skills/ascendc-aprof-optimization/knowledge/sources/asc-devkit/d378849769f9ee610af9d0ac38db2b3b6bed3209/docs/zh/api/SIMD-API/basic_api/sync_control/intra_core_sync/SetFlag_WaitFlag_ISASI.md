@@ -29,7 +29,7 @@
 <!-- npu="9030" id9 -->
 - Kirin 9030处理器系列产品：支持
 <!-- end id9 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/sync_control/intra_core_sync/SetFlag_WaitFlag_ISASI_res.md#id1 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/sync_control/intra_core_sync/SetFlag_WaitFlag_ISASI_res.md#id1 -->
 
 ## 功能说明<a name="section618mcpsimp"></a>
 
@@ -38,13 +38,13 @@
 如图1所示，SetFlag/WaitFlag接口用于核内多流水间的同步：
 
 > [!NOTE]说明
->该接口标注为ISASI类别，不能保证跨硬件版本兼容。如需保证跨硬件版本兼容的同步控制接口，请参见[TQueSync类](TQueSync.md)。二者的区别在于，TQueSync类接口可以保证跨硬件版本兼容。
+>该接口标注为ISASI类别，不能保证跨硬件版本兼容。如需保证跨硬件版本兼容的同步控制接口，请参见TQueSync类。二者的区别在于，TQueSync类接口可以保证跨硬件版本兼容。
 
 - SetFlag：当源流水的前序指令的所有读写操作都完成之后，当前指令开始执行，并将硬件中的对应标志位设置为1。SetFlag只是设置硬件中的对应标志位，并不会阻塞源流水中的下一个指令。
 - WaitFlag：当目的流水执行到该指令时，如果发现硬件中对应标志位为0，目的流水的后续指令将一直被阻塞；如果发现硬件中对应标志位为1，则将硬件中对应标志位设置为0，同时目的流水的后续指令开始执行。
 
 **图1**  SetFlag/WaitFlag接口功能示意图<a name="zh-cn_topic_0000002511125384_fig58242463299"></a>  
-![](../../../../figures/setflag_waitflag_multi_pipeline_sync.png "SetFlag_WaitFlag_多流水同步示意图")
+
 
 ## 函数原型<a name="section620mcpsimp"></a>
 
@@ -61,7 +61,7 @@ __aicore__ inline void WaitFlag(int32_t eventID)
 
 | 参数名 | 输入/输出 | 描述 |
 | :--- | :--- | :--- |
-| event | 输入 | 模板参数。同步事件，数据类型为HardEvent。同一核内的不同流水之间，在存在数据访问依赖时，需要根据数据访问的先后顺序，插入对应的同步事件。HardEvent用来表示对应的同步事件。<br>HardEvent命名规则为<源流水\_目标流水\>，其中源流水的指令先执行、目标流水中的指令后执行。例如MTE2\_V，代表PIPE\_MTE2为源流水，PIPE\_V为目标流水，标识从PIPE\_MTE2到PIPE\_V的同步，PIPE\_V等待PIPE\_MTE2。<br>流水类型的取值及含义请参考[硬件流水类型](intra_core_sync_overview.md#硬件流水类型)。由于硬件架构版本代际间的差异，不同硬件架构上的事件存在差异。[NPU架构2201](../../../../../guide/programming_guide/language_extension/simd_builtin_keywords.md#npu-arch)下HardEvent的取值范围请参考[核内同步组合](intra_core_sync_overview.md#npu_arch_2201_intra_core_sync_combinations)。 |
+| event | 输入 | 模板参数。同步事件，数据类型为HardEvent。同一核内的不同流水之间，在存在数据访问依赖时，需要根据数据访问的先后顺序，插入对应的同步事件。HardEvent用来表示对应的同步事件。<br>HardEvent命名规则为<源流水\_目标流水\>，其中源流水的指令先执行、目标流水中的指令后执行。例如MTE2\_V，代表PIPE\_MTE2为源流水，PIPE\_V为目标流水，标识从PIPE\_MTE2到PIPE\_V的同步，PIPE\_V等待PIPE\_MTE2。<br>流水类型的取值及含义请参考硬件流水类型。由于硬件架构版本代际间的差异，不同硬件架构上的事件存在差异。NPU架构2201下HardEvent的取值范围请参考核内同步组合。 |
 | eventID | 输入 | 事件ID。数据类型为int32_t类型。eventID的取值范围与产品型号有关，具体请参考[约束说明](#section633mcpsimp)。 |
 
 ## 返回值说明<a name="section640mcpsimp"></a>
@@ -74,9 +74,9 @@ __aicore__ inline void WaitFlag(int32_t eventID)
 
 - SetFlag和WaitFlag必须成对使用，且SetFlag和WaitFlag的参数必须完全一致（包括模板参数event和输入参数eventID）。如果不匹配，会引发timeout问题。例如，`SetFlag<HardEvent::S_MTE3>(1)`和`WaitFlag<HardEvent::MTE3_MTE1>(1)`并不匹配，因为其模板参数event不同。
 
-- 在采用[TPipe-TQue框架编程范式](../../../../../guide/programming_guide/programming_model/ai_core_simd_programming/tpipe_tque_programming/tpipe_tque_paradigm.md)时，eventID需要通过[AllocEventID](../../resource_management/TPipe/AllocEventID.md)或者[FetchEventID](../../resource_management/TPipe/FetchEventID.md)来获取。
+- 在采用TPipe-TQue框架编程范式时，eventID需要通过AllocEventID或者FetchEventID来获取。
 
-- 在采用[静态Tensor编程范式](../../../../../guide/programming_guide/programming_model/ai_core_simd_programming/cpp_tensor_programming/static_tensor_programming.md)时，事件的类型和事件ID由开发者自行管理，建议使用事件ID0-5，事件ID6用于系统内部规划（当前未使用），事件ID7用于TPipe编程中的**自动同步**功能，目前暂不建议直接使用事件ID6-7。
+- 在采用静态Tensor编程范式时，事件的类型和事件ID由开发者自行管理，建议使用事件ID0-5，事件ID6用于系统内部规划（当前未使用），事件ID7用于TPipe编程中的**自动同步**功能，目前暂不建议直接使用事件ID6-7。
 
 - eventID的取值范围如下：
 
@@ -122,3 +122,5 @@ AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(EVENT_ID0);
 AscendC::Maxs(tmpTensor1, src0Local, inputVal, tileLength);
 AscendC::Mins(tmpTensor2, src0Local, inputVal, tileLength);
 ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../sources/document-originals/dada622bc1f47bcdbb58acd765bd1d596bcaa14b0b8143a4d5f4f17ed6f929fe.txt)。

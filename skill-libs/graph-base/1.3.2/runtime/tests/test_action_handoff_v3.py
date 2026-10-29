@@ -1,3 +1,4 @@
+from aprof_runtime.documentation_sources import original_path as evidence_original
 """CPU paper fixtures: action identity, independent P/O routing and implementation gates."""
 from copy import deepcopy
 import json
@@ -56,9 +57,8 @@ def package(tmp_path_factory, request):
             record["binding"] = {"object_bindings": [{"from_slot": "target", "to_slot": "target", "rule": "同对象"}], "joint_requirements": [], "exceptions": [], "rationale": "待证据判别", "discriminating_checks": ["对照机制"]}
         for source in record["sources"]:
             target = root / source["path"]
-            if not target.exists():
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy(ROOT / source["path"], target)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(evidence_original(ROOT, source["path"]), target)
         target = root / old["source_path"]
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text("---\n" + yaml.safe_dump(record, allow_unicode=True, sort_keys=False) + "---\n\n" + old["body"] + "\n")
@@ -73,11 +73,12 @@ def package(tmp_path_factory, request):
         shutil.copytree(ROOT / region_path, root / region_path)
         index = json.loads((ROOT / region_path / "index.json").read_text())
         for record in index["records"]:
+            record_path = root / record["source_path"]
+            record_path.write_bytes(evidence_original(ROOT, record["source_path"]).read_bytes())
             for source in record["sources"]:
                 target = root / source["path"]
-                if not target.exists():
-                    target.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy(ROOT / source["path"], target)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy(evidence_original(ROOT, source["path"]), target)
     # D4 夹具绑定冻结旧路由，不能混入活跃 D7 新增的 Action。
     configs = [json.loads(path.read_text())
                for path in (ROOT / bindings.ROUTING_SNAPSHOTS).glob("*.json")]

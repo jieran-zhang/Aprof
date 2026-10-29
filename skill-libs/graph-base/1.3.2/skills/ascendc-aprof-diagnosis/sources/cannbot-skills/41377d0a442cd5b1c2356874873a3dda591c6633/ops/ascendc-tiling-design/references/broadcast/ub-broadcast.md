@@ -2,7 +2,7 @@
 
 > **适用场景**: 合轴后多维，存在需要广播的输入。搬入原始数据 → UB 内用 `Broadcast()` 静态接口扩展 → 计算。仅支持 rank=1/2、axis=0/1。
 >
-> **DAV_3510** 建议使用动态接口（rank 1~9，无对齐限制），详见 [dynamic-ub-broadcast.md](dynamic-ub-broadcast.md)。
+> **DAV_3510** 建议使用动态接口（rank 1~9，无对齐限制），详见 [dynamic-ub-broadcast.md](../../../../../../../../ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/broadcast/dynamic-ub-broadcast.md)。
 
 ---
 
@@ -329,3 +329,5 @@ __aicore__ inline void Process()
 | dim=2, axis=0 报错 | srcShape[1] 未 32B 对齐 | 使用动态接口或 pad 到对齐 |
 | 精度错误 | ubSplitAxis 处拆分导致广播范围不完整 | 确保广播轴不被 UB 切分拆断 |
 | 多维索引越界 | axesIndices 进位逻辑错误 | 检查 UpdateAxesIndices 边界 |
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../sources/document-originals/4aa3bffcf13401bfa2e2f2d13525a23bb107cf7ebf50f900db54bb08dccaa6ab.txt)。

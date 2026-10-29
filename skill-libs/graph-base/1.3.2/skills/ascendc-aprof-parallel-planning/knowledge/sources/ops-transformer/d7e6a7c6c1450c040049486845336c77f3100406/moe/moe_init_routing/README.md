@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- **算子功能**：MoE的routing计算，根据[aclnnMoeGatingTopKSoftmax](../moe_gating_top_k_softmax/docs/aclnnMoeGatingTopKSoftmax.md)的计算结果做routing处理。
+- **算子功能**：MoE的routing计算，根据aclnnMoeGatingTopKSoftmax的计算结果做routing处理。
 - **计算公式**：
 
   $$
@@ -105,4 +105,6 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_moe_init_routing](examples/test_aclnn_moe_init_routing.cpp) | 通过[aclnnMoeInitRouting](docs/aclnnMoeInitRouting.md)接口方式调用MoeInitRouting算子。 |
+| aclnn接口  | test_aclnn_moe_init_routing | 通过aclnnMoeInitRouting接口方式调用MoeInitRouting算子。 |
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../sources/document-originals/57645238a1824c52955ac13a4e802a573c29a248c65855c3358a49aa4bb60345.txt)。

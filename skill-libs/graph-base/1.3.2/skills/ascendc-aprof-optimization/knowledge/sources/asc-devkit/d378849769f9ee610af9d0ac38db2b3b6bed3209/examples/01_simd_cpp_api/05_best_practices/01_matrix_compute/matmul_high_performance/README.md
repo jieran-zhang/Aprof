@@ -151,7 +151,7 @@ tilingApi.SetFixSplit(128, 256, 64);
 - 多核并行计算，将8192×8192的矩阵乘法切分到24个核上并行执行
 - 切分策略：M方向2块，N方向12块，**singleM=4096，singleN=683，尾块tailN=679**
 - 搬运策略：GM上输入的A、B矩阵按baseM×baseK、baseK×baseN分块依次搬运到L1中，再从L1搬运到L0A/L0B，Cube单元对每次搬运的base块执行一次baseM×baseN×baseK大小的Matmul计算
-<img src="figures/2_12_split_core.png">
+
 
 **关键代码**：
 ```cpp
@@ -183,7 +183,7 @@ SetL1(tilingData);
 - 切分策略：对M、N均匀切分，M方向4块，N方向6块
 - 搬运策略：GM上输入的A、B矩阵按baseM×baseK、baseK×baseN分块依次搬运到L1中，再从L1搬运到L0A/L0B，Cube单元对每次搬运的base块执行一次baseM×baseN×baseK大小的Matmul计算
 
-<img src="figures/4_6_split_core.png">
+
 
 **关键代码**：
 ```cpp
@@ -323,7 +323,7 @@ for (int i = 0; i < 2; i++) {
 
 分块计算适配L2Cache示意图：
 
-<img src="figures/L2Cache.png">
+
 
 ```
 计算过程：
@@ -406,8 +406,8 @@ mmCFG.enUnitFlag = true;
 
 UnitFlag功能示意图：
 
-<img src="figures/unitflag_close.png">
-<img src="figures/unitflag_open.png">
+
+
 
 **性能数据**：
 | Task Duration(μs) | Block Num | aicore_time(μs) | aic_mac_time(μs) | aic_mac_ratio | aic_scalar_time(μs) | aic_scalar_ratio | aic_mte1_time(μs) | aic_mte1_ratio | aic_mte2_time(μs) | aic_mte2_ratio | aic_fixpipe_time(μs) | aic_fixpipe_ratio |
@@ -532,7 +532,7 @@ $$MTE2耗时误差 = \frac{{1900.322\mu s} - {1832.1\mu s}}{{1832.1\mu s}} = 3.7
 
 在本样例根目录下执行如下步骤，编译并执行样例。
 - 配置环境变量
-  请根据当前环境上CANN开发套件包的[安装方式](../../../../../docs/zh/quick_start.md#prepare&install)，配置环境变量。
+  请根据当前环境上CANN开发套件包的安装方式，配置环境变量。
   ```bash
   source ${install_path}/cann/set_env.sh
   ```
@@ -602,3 +602,5 @@ msOpProf工具是单算子性能分析工具。包含msopprof和msopprof simulat
       ├──ResourceConflictRatio.csv  # UB上的bank group、bank conflict和资源冲突率在所有指令中的占比
       └──visualize_data.bin         # MindStudio Insight呈现文件
       ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../sources/document-originals/0c92eaf287a50d35b217d4fd2b50d84a787fa9c685cd99cb2ccfbb4d9ae74ac6.txt)。
