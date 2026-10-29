@@ -1,8 +1,8 @@
 # 多核两级归并排序方案（MrgSort 外部归并）
 
-> **前提**：本方案针对 [patterns.md](patterns.md) 中的 **Pattern C（多核两级归并）**——数据量超过 `tileSize × coreNum`，每个核需要处理多个 tile。
+> **前提**：本方案针对 patterns.md（同名参考，非历史原件：[patterns.md](../../../../41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/sort/patterns.md)） 中的 **Pattern C（多核两级归并）**——数据量超过 `tileSize × coreNum`，每个核需要处理多个 tile。
 >
-> 如果 N 不满足 Pattern C 条件，请先阅读 [patterns.md](patterns.md) 选择正确的方案。
+> 如果 N 不满足 Pattern C 条件，请先阅读 patterns.md（同名参考，非历史原件：[patterns.md](../../../../41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/sort/patterns.md)） 选择正确的方案。
 
 ---
 
@@ -679,3 +679,5 @@ __aicore__ inline void Process()
     Phase4FinalMergeAndOutput();
 }
 ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../sources/document-originals/031b9829393ccd4f83ca8cd19d8a6ce47d42274e2975c247d487e9d87edcdcf6.txt)。

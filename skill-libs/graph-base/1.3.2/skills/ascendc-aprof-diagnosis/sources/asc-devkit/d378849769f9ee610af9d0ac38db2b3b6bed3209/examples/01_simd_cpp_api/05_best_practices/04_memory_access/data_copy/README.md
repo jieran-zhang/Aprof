@@ -399,7 +399,7 @@ for (uint32_t mBlockIdx = 0; mBlockIdx < fullMBlockCount; mBlockIdx++) {
 
 - 配置环境变量
 
-  请根据当前环境上 CANN 开发套件包的[安装方式](../../../../../docs/zh/quick_start.md#prepare&install)，配置环境变量。
+  请根据当前环境上 CANN 开发套件包的安装方式，配置环境变量。
 
 
   ```bash
@@ -471,3 +471,5 @@ for (uint32_t mBlockIdx = 0; mBlockIdx < fullMBlockCount; mBlockIdx++) {
   # 查看 Task Duration 以及各项数据
   cat ./OPPROF_*/PipeUtilization.csv
   ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../sources/document-originals/7126d511236c3539b2710934c468c56500e39ac336531597a3360d6c74282cff.txt)。

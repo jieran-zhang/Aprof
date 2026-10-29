@@ -88,7 +88,7 @@ L1→L0 加载选型取决于数据布局和平台能力(公开 API 见 asc-devk
 #### Q1:流水级数
 
 由两件事决定:
-- 数据流方向 stage 数(同一 KV 分块内的 stage 数,如 [`fundamentals.md` §2.2](../foundation/fundamentals.md) 的 4 stage:C1 / V1 / C2 / V2;变体扩展可能更多,见对应 `subfamilies/` 文件)
+- 数据流方向 stage 数(同一 KV 分块内的 stage 数,如 `fundamentals.md` §2.2 的 4 stage:C1 / V1 / C2 / V2;变体扩展可能更多,见对应 `subfamilies/` 文件)
 - 跨 KV 分块之间的交错深度(loop body 内同时活跃的 task 数)
 
 **级数选型**(承接上,确认该级数下的具体编排方案):
@@ -109,7 +109,7 @@ L1→L0 加载选型取决于数据布局和平台能力(公开 API 见 asc-devk
 - **跨 stage 握手槽**:跨核 / 跨 stage 的中间矩阵 buffer 轮转,用于让上一 stage 输出与下一 stage 输入错开
 - **跨 task 状态槽**:跨 task 持有的 stateful 状态(默认 task 级模式下的 softmax max/sum/exp)
 - **跨 loop 自读自写槽**:同一段在不同 loop 迭代中被自身读写(如默认 task 级模式下 V2 跨 s2 累积的 O_acc GM 段)
-- **L1 rotation 槽**(变体特定深度,见 [`extension_points.md` §1.2](../foundation/extension_points.md))
+- **L1 rotation 槽**(变体特定深度,见 `extension_points.md` §1.2)
 - **task 环形缓冲区槽**:task 元信息的环形缓冲区
 
 每类槽**数量独立**——可能相同也可能不同;**取值由各自所对应的"并行度需求"决定**,不可一并而论。
@@ -120,7 +120,7 @@ L1→L0 加载选型取决于数据布局和平台能力(公开 API 见 asc-devk
 
 **产出**:本算子涉及的所有槽语义类别 + 每类的槽数取值 + 决策依据。
 
-> **一种典型实例化**(GQA 2 级流水的槽数配置):跨 stage 握手槽 2(双缓冲)+ 跨 task 状态槽 `PRELOAD_N+1`(如 3)+ 跨 loop 自读自写槽 `PRELOAD_N+1`(V2 阶段同时活跃的 task 数)+ L1 rotation 槽 = 2(默认形态;MLA 因 latent history 需更深,见 [`extension_points.md` §1.2](../foundation/extension_points.md))。该实例采用 2 级流水(C1+V1 配对 → C2+V2 延后)。这些是方法论层面的槽数关系,常量命名由实现自定。
+> **一种典型实例化**(GQA 2 级流水的槽数配置):跨 stage 握手槽 2(双缓冲)+ 跨 task 状态槽 `PRELOAD_N+1`(如 3)+ 跨 loop 自读自写槽 `PRELOAD_N+1`(V2 阶段同时活跃的 task 数)+ L1 rotation 槽 = 2(默认形态;MLA 因 latent history 需更深,见 `extension_points.md` §1.2)。该实例采用 2 级流水(C1+V1 配对 → C2+V2 延后)。这些是方法论层面的槽数关系,常量命名由实现自定。
 
 ---
 
@@ -166,13 +166,13 @@ L1→L0 加载选型取决于数据布局和平台能力(公开 API 见 asc-devk
 
 基本块是最外层切分粒度(Bq = Q 序列块大小,Bk = KV 序列块大小),直接决定单次 tile 的算术强度与三通道吞吐平衡。
 
-**GQA 多头合并**:FA 类 Mmad 的有效 m 维不是 Bq 本身,而是 `mEff = Bq × curG`(见 [`fundamentals.md` §3.2 I2](../foundation/fundamentals.md))。curG ≤ G = Hq/Hkv。decode(Bq=1)时 `mEff = curG`,必须最大化 curG 才能提升 Cube m 维利用率与 AI。
+**GQA 多头合并**:FA 类 Mmad 的有效 m 维不是 Bq 本身,而是 `mEff = Bq × curG`(见 `fundamentals.md` §3.2 I2)。curG ≤ G = Hq/Hkv。decode(Bq=1)时 `mEff = curG`,必须最大化 curG 才能提升 Cube m 维利用率与 AI。
 
-**核心方法**:FA 是 mix kernel,性能瓶颈**不能用单一 AI 概括**——需按 **三通道 Roofline**(Cube 算力 / HBM 带宽 / 跨核片上吞吐)各自建模,性能取三者 min。完整模型(AI_HBM = 2·mEff/sizeof(T) ∝ mEff、cross-core-bound 校核、可行域上下界、prefill/decode/causal 场景特化、量化 AI 修正)见 **[`roofline.md`](../foundation/roofline.md)**。
+**核心方法**:FA 是 mix kernel,性能瓶颈**不能用单一 AI 概括**——需按 **三通道 Roofline**(Cube 算力 / HBM 带宽 / 跨核片上吞吐)各自建模,性能取三者 min。完整模型(AI_HBM = 2·mEff/sizeof(T) ∝ mEff、cross-core-bound 校核、可行域上下界、prefill/decode/causal 场景特化、量化 AI 修正)见 **`roofline.md`**。
 
-> ⚠️ **禁止**:把片上跨核握手(S/P/PV movement)与 HBM 加载混进同一 AI 分母求"混合带宽 AI"——会把 AI 人为封顶、掩盖真正的 AIV/片上瓶颈。详见 [`roofline.md` §1](../foundation/roofline.md)。
+> ⚠️ **禁止**:把片上跨核握手(S/P/PV movement)与 HBM 加载混进同一 AI 分母求"混合带宽 AI"——会把 AI 人为封顶、掩盖真正的 AIV/片上瓶颈。详见 `roofline.md` §1。
 
-**产出**(每项展示推导算式,禁止只给结论;完整清单见 [`roofline.md` §6](../foundation/roofline.md)):
+**产出**(每项展示推导算式,禁止只给结论;完整清单见 `roofline.md` §6):
 - **AI_HBM** + **ridge_HBM** + 三通道 ceiling 与 min 判定
 - **mEff_min**(下界)+ **mEff_max / Bk_max**(硬件上界)+ **V1 模式判定**
 - **最终选定** mEff, Bk + 性能区制(compute / HBM / cross-core-bound)
@@ -204,13 +204,13 @@ FA 类算子大量使用硬件特化 API,这些 API 在不同平台上的行为�
 
 回答:**单个 task 对应输入空间中的哪一段?taskIdx 如何解码到 (batch, kvHead, gS1Block, gBlock, ...)?**
 
-FA 类的任务维度通常是 `batch × kvHead × Sq 分块 × G 分块`(GQA;其他变体见对应 `subfamilies/` 文件)。映射到 taskIdx 可用闭式 decode 或 metadata range-walker,二者等价(见 [`base_design.md` §3.1](../subfamilies/base_design.md))——本节只要求产出任务空间的正确覆盖,不规定具体映射写法。
+FA 类的任务维度通常是 `batch × kvHead × Sq 分块 × G 分块`(GQA;其他变体见对应 `subfamilies/` 文件)。映射到 taskIdx 可用闭式 decode 或 metadata range-walker,二者等价(见 `base_design.md` §3.1)——本节只要求产出任务空间的正确覆盖,不规定具体映射写法。
 
 **产出**:task 解码方式(闭式或 range-walker)+ 每个 task 对应的输入/输出空间范围 + 任务总数公式。
 
 ### §5.2 不变量校核(I2 / I4 在切分上的体现)
 
-设计切分方案时必须显式校核(见 [`fundamentals.md` §3](../foundation/fundamentals.md)):
+设计切分方案时必须显式校核(见 `fundamentals.md` §3):
 
 - **I2(GQA 同 kvHead 同任务)**:任务维度构造必须让同一 kvHead 下的 G 个 qHead 在同一 task 内合并到 mEff
 - **I4(s2 状态累积正确性)**:已在 N2 完成"默认 task 级 / split-KV reduce"二选一声明;在本节复述该选择并校核切分实现
@@ -269,3 +269,5 @@ usedCoreNum = min(aicNum, totalTasks)
 
 - [ ] **清单 O8(核数利用率)**:典型 shape 下核数利用率已估算;空闲核有处理策略
 - [ ] **清单 O9(均衡策略)**:causal/变长场景下的均衡策略已选定
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../sources/document-originals/d7aba4c9f89b0422b630646f922fbe4705ff5329645e7f3bc85829a3b4c23a0b.txt)。

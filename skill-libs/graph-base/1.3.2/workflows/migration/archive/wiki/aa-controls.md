@@ -1,6 +1,6 @@
 # A/A 生命周期与跨阶段漂移
 
-> 本页保留历史协议下的观察与结论。1.1.0 新会话使用[统一计时协议](../skills/ascendc-aprof-profiling/references/unified-timing.md)，不照搬历史配对采集或置信区间门槛。
+> 本页保留历史协议下的观察与结论。1.1.0 新会话使用统一计时协议（同名参考，非历史原件：[unified-timing.md](../../../../skills/ascendc-aprof-profiling/references/unified-timing.md)），不照搬历史配对采集或置信区间门槛。
 
 ## 适用条件
 
@@ -42,3 +42,5 @@ masked_scale、mish、sigmoid 等组有条件不满足，不能把所有控制�
 分别为 14.2769% / 19.5621%，CV 均低于 5%。这次结果也拒绝了该协议
 在对应条件下的准入；还不能确认偏差来自哪个硬件或运行时因素。
 后续阶段按登记停止，证据见 `1.0.0-exp-round2-control-20261014`。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../sources/document-originals/64648ead82dffb6965e888ec36ba49edf08f6dd2d0350e818d9e3ec46e8b187c.txt)。

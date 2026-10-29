@@ -21,7 +21,7 @@
 <!-- npu="910" id6 -->
 - Atlas训练系列产品：不支持
 <!-- end id6 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/adv_api/reduction_operations/ReduceSum_interface/ReduceSum_res.md#id1 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/adv_api/reduction_operations/ReduceSum_interface/ReduceSum_res.md#id1 -->
 
 ## 功能说明
 
@@ -66,15 +66,15 @@
 | --- | --- |
 | T | 操作数的数据类型。不同型号支持的数据类型请参考[支持的数据类型](#li778844571310)。 |
 | pattern | 用于指定ReduceSum计算轴，包括Reduce轴和Normal轴。pattern由与向量维度数量相同的A、R字母组合形成，字母A表示Normal轴，R表示Reduce轴。例如，AR表示对二维向量进行ReduceSum计算：第一维是Normal轴，第二维是Reduce轴，即对第二维进行数据累加的计算。<br><br>pattern是定义在AscendC::Pattern::Reduce命名空间下的结构体，其成员变量用户无需关注。<br><br>pattern当前只支持取值为AR和RA。 |
-| isReuseSource | 是否允许修改源操作数，默认值为false。如果开发者允许源操作数被改写，可以设置该参数取值为true开启，开启后能够节省部分内存空间。<br><br>设置为true，则本接口内部计算时复用src的内存空间，节省内存空间；设置为false，则本接口内部计算时不复用src的内存空间。<br><br>isReuseSource的使用样例请参考[更多样例](../../math_compute/more_examples.md#section639165323915)。 |
+| isReuseSource | 是否允许修改源操作数，默认值为false。如果开发者允许源操作数被改写，可以设置该参数取值为true开启，开启后能够节省部分内存空间。<br><br>设置为true，则本接口内部计算时复用src的内存空间，节省内存空间；设置为false，则本接口内部计算时不复用src的内存空间。<br><br>isReuseSource的使用样例请参考更多样例。 |
 
 **表2**  接口参数说明
 
 | 参数名 | 输入/输出 | 描述 |
 | --- | --- | --- |
-| dstTensor | 输出 | 目的操作数。<br><br>类型为[LocalTensor](../../../basic_api/data_structures/LocalTensor/LocalTensor.md)，支持的TPosition为VECIN/VECCALC/VECOUT。 |
-| srcTensor | 输入 | 源操作数。<br><br>类型为[LocalTensor](../../../basic_api/data_structures/LocalTensor/LocalTensor.md)，支持的TPosition为VECIN/VECCALC/VECOUT。<br><br>源操作数的数据类型需要与目的操作数保持一致。 |
-| sharedTmpBuffer | 输入 | 临时缓存。<br><br>类型为[LocalTensor](../../../basic_api/data_structures/LocalTensor/LocalTensor.md)，支持的TPosition为VECIN/VECCALC/VECOUT。<br><br>用于ReduceSum内部复杂计算时存储中间变量，由开发者提供。<br><br>临时空间大小BufferSize的获取方式请参考[GetReduceSumMaxMinTmpSize](GetReduceSumMaxMinTmpSize.md)。 |
+| dstTensor | 输出 | 目的操作数。<br><br>类型为LocalTensor，支持的TPosition为VECIN/VECCALC/VECOUT。 |
+| srcTensor | 输入 | 源操作数。<br><br>类型为LocalTensor，支持的TPosition为VECIN/VECCALC/VECOUT。<br><br>源操作数的数据类型需要与目的操作数保持一致。 |
+| sharedTmpBuffer | 输入 | 临时缓存。<br><br>类型为LocalTensor，支持的TPosition为VECIN/VECCALC/VECOUT。<br><br>用于ReduceSum内部复杂计算时存储中间变量，由开发者提供。<br><br>临时空间大小BufferSize的获取方式请参考[GetReduceSumMaxMinTmpSize](GetReduceSumMaxMinTmpSize.md)。 |
 | srcShape | 输入 | uint32_t类型的数组，表示源操作数的shape信息。该shape的维度必须和模板参数pattern的维度一致，当前只支持二维shape。例如，pattern为AR，该shape维度只能是二维。 |
 | srcInnerPad | 输入 | 表示实际需要计算的最内层轴数据是否32Bytes对齐。<!-- npu="950" id7 --><br><br>Ascend 950PR&950DT系列产品，该参数预留。接口内由参数srcShape和pattern计算最内层轴数据是否32Bytes对齐。<!-- end id7 --><!-- npu="A3" id8 --><br><br>Atlas A3系列产品，当前只支持true。<!-- end id8 --><!-- npu="910b" id9 --><br><br>Atlas A2系列产品，当前只支持true。<!-- end id9 --> |
 
@@ -84,7 +84,7 @@
 
 ## 约束说明
 
--   操作数地址对齐要求请参见[通用地址对齐约束](../../../general_description_and_constraints.md#section796754519912)。
+-   操作数地址对齐要求请参见通用地址对齐约束。
 
 -   **不支持源操作数与目的操作数地址重叠。**
 -   不支持sharedTmpBuffer与源操作数和目的操作数地址重叠。
@@ -122,3 +122,5 @@ AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, isReuse>(
 输入shape：(2,8)
 输出数据(dst): [13.0 9.0]
 ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../sources/document-originals/d6cbc4b85d82e5cedc72de6bc544a61b600f2528cf028685bed88ea8c014c3fc.txt)。

@@ -64,7 +64,7 @@ softmax 之前必须对 P 矩阵的 padding 行(`[mEff, mPad)`)以及 causal 屏
 
 回答:**算子的可选特性中,哪些是条件性功能?**
 
-特性维度来自 [`fundamentals.md` §4.3](../foundation/fundamentals.md) 枚举(dtype / causal / sparse / 量化 / ...)。其中**条件性功能**指:启用 / 关闭会改变算子内部结构,而不只是改变数值参数。
+特性维度来自 `fundamentals.md` §4.3 枚举(dtype / causal / sparse / 量化 / ...)。其中**条件性功能**指:启用 / 关闭会改变算子内部结构,而不只是改变数值参数。
 
 ### §2.2 三维度分层判定(权威 taxonomy)
 
@@ -126,7 +126,7 @@ softmax 之前必须对 P 矩阵的 padding 行(`[mEff, mPad)`)以及 causal 屏
 
 **推荐条件**:GQA → **必须** m 维合并。
 
-> 这不是一个"优化选项"而是 **I2 不变量(正确性契约)的性能视角复述**——完整定义与 curG_max 求解见 [`base_design.md` §3.2](../subfamilies/base_design.md)。本表仅从性能角度说明"为何合并":避免 KV 重复搬运 G 次。禁止把它当可选优化跳过。
+> 这不是一个"优化选项"而是 **I2 不变量(正确性契约)的性能视角复述**——完整定义与 curG_max 求解见 `base_design.md` §3.2。本表仅从性能角度说明"为何合并":避免 KV 重复搬运 G 次。禁止把它当可选优化跳过。
 
 ### §2.5 量化子循环分解
 
@@ -168,7 +168,7 @@ tilingKey → layout → 输入 dtype → 累加/中间 dtype → BMM2 输出位
 
 回答:**已选流水级数(shape §1.4 Q1)下,loop body 内各 stage 的执行顺序如何编排?各 stage 之间用哪个同步事件 ID?ring buffer 交错多深?**
 
-**与 I1 的关系**:同一 KV 分块内的 stage 依赖方向严格 C1→V1→C2→V2(I1 不变量,见 [`fundamentals.md` §3.1](../foundation/fundamentals.md));**不同 KV 分块如何交错**由设计决定。
+**与 I1 的关系**:同一 KV 分块内的 stage 依赖方向严格 C1→V1→C2→V2(I1 不变量,见 `fundamentals.md` §3.1);**不同 KV 分块如何交错**由设计决定。
 
 **编排约束**:
 - 在 loop body 内任何重排都不能让某个 stage 读到本轮尚未产生的状态
@@ -207,7 +207,7 @@ Ring buffer 深度(通常记为 `PRELOAD_N`)决定流水能"看到"多远的前/
 
 **决策依据**:AIC↔AIV 通信延迟、UB/GM 可用容量、跨 KV 分块数量。
 
-> 📊 **数值标定项**:`PRELOAD_N` 的**精确取值**(1/2/3)是可后置的数值标定——设计期取默认 `PRELOAD_N=2` 并预留 buffer 余量即可,working baseline 跑起来后按 PipeUtilization profiling 在 1/2/3 间微调。但"是否启用 ring buffer 预取"这一**结构决策**必须设计期定死(**禁止**退化为逐 KV 块串行,见 [`base_design.md` §10.2 清单 10](../subfamilies/base_design.md))。
+> 📊 **数值标定项**:`PRELOAD_N` 的**精确取值**(1/2/3)是可后置的数值标定——设计期取默认 `PRELOAD_N=2` 并预留 buffer 余量即可,working baseline 跑起来后按 PipeUtilization profiling 在 1/2/3 间微调。但"是否启用 ring buffer 预取"这一**结构决策**必须设计期定死(**禁止**退化为逐 KV 块串行,见 `base_design.md` §10.2 清单 10)。
 
 **产出**:loop body 执行顺序声明 + 各 stage 同步事件 ID 列表 + ring buffer 深度 + 顺序选择理由。
 
@@ -238,7 +238,7 @@ Ring buffer 深度(通常记为 `PRELOAD_N`)决定流水能"看到"多远的前/
 | 模式 B(双 AIV,推荐)| 双 AIV 全程参与计算,Vector 算力充分利用 |
 | 模式 A(单 AIV,简化替代)| 仅 AIV0 参与,AIV1 early-return,代码更简单 |
 
-**决策 2 — 平台 modeId**(由目标芯片决定):950PR/950DT(A5)支持 modeId 0/1/2/4,核内 AIC↔单 AIV 握手用 modeId=4;上一代(A2/A3)仅支持 0/1/2。**modeId 语义、双 AIV flagId 映射、ISASI flagId 冲突约束是实现层细节,统一见 [`implementation_ref.md` §1-§2](../implementation_ref.md)。**
+**决策 2 — 平台 modeId**(由目标芯片决定):950PR/950DT(A5)支持 modeId 0/1/2/4,核内 AIC↔单 AIV 握手用 modeId=4;上一代(A2/A3)仅支持 0/1/2。**modeId 语义、双 AIV flagId 映射、ISASI flagId 冲突约束是实现层细节,统一见 `implementation_ref.md` §1-§2。**
 
 **同步原语选择**:
 
@@ -247,7 +247,7 @@ Ring buffer 深度(通常记为 `PRELOAD_N`)决定流水能"看到"多远的前/
 | `CrossCoreSetFlag<modeId,pipe>` / `CrossCoreWaitFlag<modeId,pipe>`(公开 ISASI API)| 精确跨核通知,fire-and-forget | 精确、开销小 | 需手动管理 flagId 与 modeId/pipe 模板参数 |
 | PipeBarrier\<PIPE_ALL\> | 整核 drain | 简单粗暴 | drain 所有 pipe |
 
-> ⚠️ **两端 modeId 必须一致**:`CrossCoreSetFlag<modeId,pipe>` 与配对的 `CrossCoreWaitFlag<modeId,pipe>` 若 modeId 不一致(如一侧 4、另一侧默认 0),flagId 空间独立 → 挂死。目标平台不支持的 modeId 不能用。省略模板参数会退回默认 `modeId=0`(多核同步),与 `modeId=4`(核内 AIC↔单 AIV)flagId 空间独立 → WaitFlag 永远等不到 → **挂死**(见 [`implementation_ref.md` §1](../implementation_ref.md))。
+> ⚠️ **两端 modeId 必须一致**:`CrossCoreSetFlag<modeId,pipe>` 与配对的 `CrossCoreWaitFlag<modeId,pipe>` 若 modeId 不一致(如一侧 4、另一侧默认 0),flagId 空间独立 → 挂死。目标平台不支持的 modeId 不能用。省略模板参数会退回默认 `modeId=0`(多核同步),与 `modeId=4`(核内 AIC↔单 AIV)flagId 空间独立 → WaitFlag 永远等不到 → **挂死**(见 `implementation_ref.md` §1)。
 
 **判定标准**:
 - `CrossCoreSetFlag/WaitFlag`:精确通知,fire-and-forget,FA 跨核握手的默认选择
@@ -255,7 +255,7 @@ Ring buffer 深度(通常记为 `PRELOAD_N`)决定流水能"看到"多远的前/
 
 **禁止**:以"PipeBarrier 是保险屏障"为由四处散布——冗余 barrier 让 Cube 流水利用率系统性下降。
 
-**决策产出**:本节只需**声明**"架构模式 + 目标平台 modeId + 同步粒度 + 各同步点原语"。架构模式决策建议表、公开 API 实现骨架(签名、PIPE 映射表、AIV1 偏移)进入实现阶段查 [`implementation_ref.md` §3](../implementation_ref.md);实现自检清单见 [`implementation_ref.md` §5](../implementation_ref.md)。
+**决策产出**:本节只需**声明**"架构模式 + 目标平台 modeId + 同步粒度 + 各同步点原语"。架构模式决策建议表、公开 API 实现骨架(签名、PIPE 映射表、AIV1 偏移)进入实现阶段查 `implementation_ref.md` §3;实现自检清单见 `implementation_ref.md` §5。
 
 ### §3.3 cache slot 语义命名 + slot 公式分离(权威表)
 
@@ -335,9 +335,9 @@ task 环形缓冲区 slot:   cacheSlot     = loop  & (CACHE_SIZE-1)
 
 回答:**Fixpipe(L0C→UB/GM)使用什么参数结构体?**
 
-Fixpipe 参数结构体因平台而异(双目标分发 / 量化预处理 / 子块控制)。**设计阶段只需声明"是否需要双目标分发(dualDstCtl)"**;具体参数结构体(A5/DAV_3510 为 `FixpipeParamsArch3510`,见 asc-devkit `Fixpipe_L0CToUB.md`)与关键参数取值是实现层细节,见 [`implementation_ref.md` §4](../implementation_ref.md)。
+Fixpipe 参数结构体因平台而异(双目标分发 / 量化预处理 / 子块控制)。**设计阶段只需声明"是否需要双目标分发(dualDstCtl)"**;具体参数结构体(A5/DAV_3510 为 `FixpipeParamsArch3510`,见 asc-devkit `Fixpipe_L0CToUB.md`)与关键参数取值是实现层细节,见 `implementation_ref.md` §4。
 
-> ⚠️ **中间段落地位置(片上 L0C→UB vs L0C→GM)是结构决策,默认优选片上 L0C→UB。** 950PR 的 Fixpipe **支持** L0C→UB 片上握手(见 [`implementation_ref.md` §3.3/§4](../implementation_ref.md) 与 [`roofline.md` §2.3](../foundation/roofline.md)),优先走片上通路以省一趟 GM 往返。调用 L0C→UB 时**必须显式构造 `isToUB=true` 的 FixpipeConfig**——默认 `CFG_ROW_MAJOR`(`isToUB=false`)指向 GM 物理地址,用它写 UB 目的地会**静默出错**(编译过、结果错),极易被误诊为"硬件不支持 L0C→UB"而错误退到全程 L0C→GM。
+> ⚠️ **中间段落地位置(片上 L0C→UB vs L0C→GM)是结构决策,默认优选片上 L0C→UB。** 950PR 的 Fixpipe **支持** L0C→UB 片上握手(见 `implementation_ref.md` §3.3/§4 与 `roofline.md` §2.3),优先走片上通路以省一趟 GM 往返。调用 L0C→UB 时**必须显式构造 `isToUB=true` 的 FixpipeConfig**——默认 `CFG_ROW_MAJOR`(`isToUB=false`)指向 GM 物理地址,用它写 UB 目的地会**静默出错**(编译过、结果错),极易被误诊为"硬件不支持 L0C→UB"而错误退到全程 L0C→GM。
 
 **产出**:是否需要 Fixpipe 双目标分发的声明。
 
@@ -375,7 +375,7 @@ Fixpipe 参数结构体因平台而异(双目标分发 / 量化预处理 / 子�
 - [ ] **清单 O4(同步原语纪律)**:所有跨核同步点使用 `CrossCoreSetFlag/WaitFlag`(显式 modeId/pipe,两端一致),非 PipeBarrier 兜底;PipeBarrier 仅出现在契约位置
 - [ ] **清单 O5(GM 自读自写管理)**:O_acc 累积段的 GM 管理方式已确定,有明确同步机制
 - [ ] **清单 O6(PipeBarrier 契约位置已列举)**:设计期只需产出 PipeBarrier 契约位置清单 + 预计数量(见 §3.4);**冗余率 < 30% 是实测验收指标(_governance §4.3(b)),归性能验收阶段,不在设计期判定**
-- [ ] **清单 O7(实现层校核)**:跨核同步实现细节已按 [`implementation_ref.md` §5](../implementation_ref.md) 清单校核(平台 mode / flagId / 双通知)
+- [ ] **清单 O7(实现层校核)**:跨核同步实现细节已按 `implementation_ref.md` §5 清单校核(平台 mode / flagId / 双通知)
 
 **产出**:每个跨核传递段的 buffer 策略 + GM 自读自写段的管理方式 + 同步机制。
 
@@ -418,10 +418,10 @@ Fixpipe 参数结构体因平台而异(双目标分发 / 量化预处理 / 子�
 
 | 变体 | `subfamilies/` §9 | 核心问题 |
 |------|-----------|---------|
-| FA / GQA | [`base_design.md` §9](../subfamilies/base_design.md) | gMaxPerTask 选择 |
-| MLA(base 内变体分支)| [`base_design.md` §11 MLA 变体分支](../subfamilies/base_design.md) | latent absorption 流水 |
-| 量化 FA | [`quantization_design.md` §9](../subfamilies/quantization_design.md) | 子循环分解 / buffer 缩减 / stride 访问 |
-| 稀疏 FA | [`sparse_design.md` §9](../specialization/sparse_design.md) | sparse 剪枝 / KV chunk 跳过 |
+| FA / GQA | `base_design.md` §9 | gMaxPerTask 选择 |
+| MLA(base 内变体分支)| `base_design.md` §11 MLA 变体分支 | latent absorption 流水 |
+| 量化 FA | `quantization_design.md` §9 | 子循环分解 / buffer 缩减 / stride 访问 |
+| 稀疏 FA | `sparse_design.md` §9 | sparse 剪枝 / KV chunk 跳过 |
 
 ### §5.2 DESIGN.md 优化策略产出模板
 
@@ -467,3 +467,5 @@ Fixpipe 参数结构体因平台而异(双目标分发 / 量化预处理 / 子�
 ```
 
 **产出**:在 DESIGN.md 中按本模板输出"优化策略"章节。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../sources/document-originals/7e8c5e809dd82af6d846d9ca2a2e391e9ff3ba096830da7f68d8ed942f7a1cb9.txt)。

@@ -48,16 +48,16 @@ Step 2: A0 决定模式
 
 | 维度 | 选项 | 适用条件 | 详细文档 |
 |------|------|---------|---------|
-| 算法选择 | Welford Online | 分载 + 需要流式计算两个相关统计量 | [algorithms.md](algorithms.md#welford-online在线单遍) |
-| 多核策略 | Group Reduce | R 太大单核处理不完 + A 太小不足以并行 | [algorithms.md](algorithms.md#group-reduce跨核归约) |
-| 精度策略 | 二分累加 | 大向量 sum 精度敏感 | [algorithms.md](algorithms.md#二分累加--half-interval) |
+| 算法选择 | Welford Online | 分载 + 需要流式计算两个相关统计量 | algorithms.md |
+| 多核策略 | Group Reduce | R 太大单核处理不完 + A 太小不足以并行 | algorithms.md |
+| 精度策略 | 二分累加 | 大向量 sum 精度敏感 | algorithms.md |
 | 索引跟踪 | With-Index | 归约+返回极值位置 | [with-index.md](with-index.md) |
 
 ---
 
 ## 通用规则
 
-以下规则适用于所有场景。Tiling 设计原则和 tmpBufSize 公式见 [tiling-fields.md](tiling-fields.md)。
+以下规则适用于所有场景。Tiling 设计原则和 tmpBufSize 公式见 tiling-fields.md。
 
 **rLength vs rLengthAlign 参数使用对照表**:
 
@@ -172,7 +172,7 @@ ARA 模式 (A1, R, A0)，A0 > 1
 
 ### S4: Welford Online（R 需 UB 切片）
 
-**适用**: ARA 模式下需要流式计算两个相关统计量（第二个依赖第一个的增量更新）。典型算子：reduce_var / reduce_std。参见 [algorithms.md](algorithms.md#welford-online在线单遍)。
+**适用**: ARA 模式下需要流式计算两个相关统计量（第二个依赖第一个的增量更新）。典型算子：reduce_var / reduce_std。参见 algorithms.md。
 
 ### S5: Group Reduce（R 跨核）
 
@@ -208,5 +208,7 @@ Stage2:
 | 主题 | 文档 |
 |------|------|
 | 多输出 Buffer 方程 | [multi-output-buffer.md](multi-output-buffer.md) |
-| 通用 Tiling 字段定义 | [tiling-fields.md](tiling-fields.md) |
+| 通用 Tiling 字段定义 | tiling-fields.md |
 | 索引跟踪变体 | [with-index.md](with-index.md) |
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../sources/document-originals/9b8d774662fadf2fc4db38e48bd4124974d27a8ad7a6feac73a1ef55937fdcd8.txt)。

@@ -6,13 +6,13 @@
 
 ## 设计、隔离与证据
 
-先从原始case-08/case-12及研究候选源码独立确定事实，再冻结[FACTS锁](FACTS-LOCK.json)；输入没有旧诊断报告、标准答案、评分或预选Problem/Action。六组源码题及每组两个事实变化小例保留原定位，实际全文在每个prompt/request中。第六题是明确标注的合成原始谱系、正确性结果和计时窗口，不是硬件报告。
+先从原始case-08/case-12及研究候选源码独立确定事实，再冻结FACTS锁；输入没有旧诊断报告、标准答案、评分或预选Problem/Action。六组源码题及每组两个事实变化小例保留原定位，实际全文在每个prompt/request中。第六题是明确标注的合成原始谱系、正确性结果和计时窗口，不是硬件报告。
 
-A冻结包为before，B为after-evaluation；[A协议](PROTOCOL-A.json)、[B协议](PROTOCOL-B.json)列正文及输入hash。两版题目和源码前缀逐项相同，见[输入一致性](INPUT-PARITY.json)。按相同目录策略预展开全部Problem/Action、O分支及相关P家族，A127文档、B131文档；重复来源frontmatter统一压缩，完整正文及必要实施条件保留。B新增正文自然纳入，不反向塞给A。
+A冻结包为before，B为after-evaluation；A协议（同名参考，非历史原件：[PROTOCOL-A.json](../preflight-v1/PROTOCOL-A.json)）、B协议列正文及输入hash。两版题目和源码前缀逐项相同，见输入一致性。按相同目录策略预展开全部Problem/Action、O分支及相关P家族，A127文档、B131文档；重复来源frontmatter统一压缩，完整正文及必要实施条件保留。B新增正文自然纳入，不反向塞给A。
 
-所有正式请求同gpt-6.1-sol、reasoning=high、max_output_tokens=20000、tools=[]、tool_choice=none、store=false，无previous_response_id。24个provider终态均completed、incomplete_details=null，请求/响应双向工具禁用、输出类型仅reasoning/message、零工具调用，见[逐次审计](REQUEST-AUDIT.json)。真实request、终态response、SSE、正文和RUN全部保留；没有认证文件、凭据或HTTP headers。完成后按固定规则检查，首次均成功，因此未追加基础设施重试。
+所有正式请求同gpt-6.1-sol、reasoning=high、max_output_tokens=20000、tools=[]、tool_choice=none、store=false，无previous_response_id。24个provider终态均completed、incomplete_details=null，请求/响应双向工具禁用、输出类型仅reasoning/message、零工具调用，见逐次审计（同名参考，非历史原件：[REQUEST-AUDIT.json](../preflight-v1/REQUEST-AUDIT.json)）。真实request、终态response、SSE、正文和RUN全部保留；没有认证文件、凭据或HTTP headers。完成后按固定规则检查，首次均成功，因此未追加基础设施重试。
 
-人工对照源码和原四项0/1/2标准语义复核，不用关键词/正则过关，也不强制子例不同Action。[逐次评分](grades.json)记录具体事实、所选Action、采用正文和意图覆盖；[评分锁](GRADES-LOCK.json)绑定24正文与审计、协议hash。该评测衡量显式预展开材料中的无工具信息使用和选择，**不评价按需retrieval质量**。
+人工对照源码和原四项0/1/2标准语义复核，不用关键词/正则过关，也不强制子例不同Action。逐次评分记录具体事实、所选Action、采用正文和意图覆盖；评分锁绑定24正文与审计、协议hash。该评测衡量显式预展开材料中的无工具信息使用和选择，**不评价按需retrieval质量**。
 
 ## 六组结果
 
@@ -45,11 +45,11 @@ A冻结包为before，B为after-evaluation；[A协议](PROTOCOL-A.json)、[B协�
 | A | 12 | 2,798,104 | 126,742 | 49,334 | 230,912 | 3683.764 |
 | B | 12 | 2,893,672 | 121,519 | 42,604 | 0 | 3263.260 |
 
-B正式输入比A多95,568 tokens（3.42%），每题同样多7,964 tokens；包长不计入得分。A最大实际input=238,897，B=246,861；B最大输入加20k预算为266,861，小于本次使用的272k检查界。见[精确预算核对](B-BUDGET-CHECK.json)、[成本JSON](COSTS.json)和逐次表。
+B正式输入比A多95,568 tokens（3.42%），每题同样多7,964 tokens；包长不计入得分。A最大实际input=238,897，B=246,861；B最大输入加20k预算为266,861，小于本次使用的272k检查界。见精确预算核对、成本JSON（同名参考，非历史原件：[COSTS.json](../preflight-v1/COSTS.json)）和逐次表。
 
 ### 失败的v1 preflight单列
 
-最初同输入/模型/high、12k输出预算暴露截断瓶颈。协调者停止未发请求，保留在途终态，再统一改为20k并将两版全部24项重新请求；没有只保留对某版有利的结果，也没有按分数择优。A新旧prompt/doc hash逐项相同。原3份暂存评分已撤回，v1所有答案不进入正式A/B。详见[V2修订](V2-AMENDMENT.json)及[完整协议](PROTOCOL.md)。
+最初同输入/模型/high、12k输出预算暴露截断瓶颈。协调者停止未发请求，保留在途终态，再统一改为20k并将两版全部24项重新请求；没有只保留对某版有利的结果，也没有按分数择优。A新旧prompt/doc hash逐项相同。原3份暂存评分已撤回，v1所有答案不进入正式A/B。详见V2修订及完整协议。
 
 v1准备12项、实际发出9项：5 completed、4 max_output_tokens截断、3未发出取消。额外input=2,104,067、output=97,178（其中reasoning=41,741），wall累计2955.090秒。此成本不混进正式版间比较，全部原始证据在[preflight成本记录](../../../../sources/development/evaluation/preflight-v1/COSTS-FINAL.json)及相邻runs。v2确有超过12k且completed的输出，统一提高预算解除了已观察到的基础设施瓶颈。
 
@@ -87,3 +87,5 @@ v1准备12项、实际发出9项：5 completed、4 max_output_tokens截断、3�
 ## 限制
 
 六组自足源码题、每组两次，且A已经具备完整方案/历史等知识、正文预展开量很大；事实评分出现满分，不能据此推断总体任务成功率或所有方案质量相同。新增意图覆盖是本轮观察，不等于编译可行、实际router检索改善或910C性能提升。没有编译、硬件校准、oracle执行、profile或设备计时；所有优化仍须真实工程的语义/存储/同步与完整计时验证。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../document-originals/ffc6de2e53e094f9698cc5fe19e2e612ea761ead45d25b97aa64f76492450dea.txt)。

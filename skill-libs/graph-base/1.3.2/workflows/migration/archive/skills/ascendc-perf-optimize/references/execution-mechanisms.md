@@ -20,4 +20,6 @@ Softmax/attention 的 running max/sum/output 只由所属任务维护，按声�
 
 Sort/reduce 每种 merge/reduction 宽度都验证 scratch 和尾 mask。不能把记忆中的 MrgSort proposal 宽度、repeat 上限或索引打包套到其他 SDK；跨核合并/归约属于算法并行决策。
 
-报告预期指标方向、反证、源码锚点、资源公式、API 来源与首次失败。[统一计时](../../ascendc-aprof-profiling/references/unified-timing.md) 与机制 PMU 分开记录。
+报告预期指标方向、反证、源码锚点、资源公式、API 来源与首次失败。统一计时（同名参考，非历史原件：[unified-timing.md](../../../../../../skills/ascendc-aprof-profiling/references/unified-timing.md)） 与机制 PMU 分开记录。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../sources/document-originals/117f27ba6fb7cd69f3e5c6f32448b052d958a8e70e5c4dad044a34aa47aec071.txt)。

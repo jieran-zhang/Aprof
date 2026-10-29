@@ -29,7 +29,7 @@
 <!-- npu="9030" id9 -->
 - Kirin 9030处理器系列产品：支持
 <!-- end id9 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/reduction_compute/ReduceSum_res.md#id1 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/reduction_compute/ReduceSum_res.md#id1 -->
 
 ## 功能说明
 
@@ -72,21 +72,21 @@
 | 参数名 | 描述 |
 | --- | --- |
 | T | 操作数数据类型。 |
-| isSetMask | 是否在接口内部设置mask模式和mask值。<br>&bull; true，表示在接口内部设置。<br>&nbsp; tensor前n个数据计算API内部使用了mask的[Counter模式](../SIMD_compute/mask.md#mask-mode)，一般情况下保持isSetMask默认值即可，表示在API内部根据开发者传入的count参数进行mask模式和mask值的设置。<br>&bull; false，表示在接口外部设置。<br>&nbsp; 开发者需要使用[SetVectorMask](../mask_operations/SetVectorMask.md)接口设置mask值。此时，接口入参中的count不生效，建议设置成1。<br>部分产品型号该参数不生效，详情请参考[约束说明](#约束说明)。 |
+| isSetMask | 是否在接口内部设置mask模式和mask值。<br>&bull; true，表示在接口内部设置。<br>&nbsp; tensor前n个数据计算API内部使用了mask的Counter模式，一般情况下保持isSetMask默认值即可，表示在API内部根据开发者传入的count参数进行mask模式和mask值的设置。<br>&bull; false，表示在接口外部设置。<br>&nbsp; 开发者需要使用[SetVectorMask](../../../../../../../../../../../../ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/mask_operations/SetVectorMask.md)接口设置mask值。此时，接口入参中的count不生效，建议设置成1。<br>部分产品型号该参数不生效，详情请参考[约束说明](#约束说明)。 |
 
 **表2**  参数说明
 
 | 参数名称 | 输入/输出 | 含义 |
 | --- | --- | --- |
-| dst | 输出 | 目的操作数。<br>类型为[LocalTensor](../../data_structures/LocalTensor/LocalTensor.md)，支持的TPosition为VECIN、VECCALC、VECOUT。 |
-| src | 输入 | 源操作数。<br>类型为[LocalTensor](../../data_structures/LocalTensor/LocalTensor.md)，支持的TPosition为VECIN、VECCALC、VECOUT。 |
-| sharedTmpBuffer | 输入 | 指令执行期间存储中间结果，用于内部计算所需操作空间，需特别注意空间大小。详情请参考[关键特性说明](#关键特性说明)。<br>类型为[LocalTensor](../../data_structures/LocalTensor/LocalTensor.md)，支持的TPosition为VECIN、VECCALC、VECOUT。 |
-| count | 输入 | 参与计算的元素个数。关于该参数的具体说明请参考[连续计算](../SIMD_compute/continuous_compute.md)。最大处理的数据量不能超过Unified Buffer（UB）大小限制。 |
-| mask/mask[] | 输入 | `mask`用于控制每次迭代内参与计算的源操作数。详细设置参考[掩码概述](../SIMD_compute/mask.md)。 |
-| repeatTime | 输入 | 迭代次数。关于该参数的具体描述请参考[高维切分](../SIMD_compute/high_dim_split.md)。**注：与高维切分中不同的是，`repeatTime`可以支持更大的取值范围，保证不超过int32_t的最大值即可。** |
+| dst | 输出 | 目的操作数。<br>类型为LocalTensor，支持的TPosition为VECIN、VECCALC、VECOUT。 |
+| src | 输入 | 源操作数。<br>类型为LocalTensor，支持的TPosition为VECIN、VECCALC、VECOUT。 |
+| sharedTmpBuffer | 输入 | 指令执行期间存储中间结果，用于内部计算所需操作空间，需特别注意空间大小。详情请参考[关键特性说明](#关键特性说明)。<br>类型为LocalTensor，支持的TPosition为VECIN、VECCALC、VECOUT。 |
+| count | 输入 | 参与计算的元素个数。关于该参数的具体说明请参考连续计算。最大处理的数据量不能超过Unified Buffer（UB）大小限制。 |
+| mask/mask[] | 输入 | `mask`用于控制每次迭代内参与计算的源操作数。详细设置参考掩码概述。 |
+| repeatTime | 输入 | 迭代次数。关于该参数的具体描述请参考[高维切分](../../../../../../../../../../../../ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/SIMD_compute/high_dim_split.md)。**注：与高维切分中不同的是，`repeatTime`可以支持更大的取值范围，保证不超过int32_t的最大值即可。** |
 | srcRepStride | 输入 | 源操作数相邻迭代间的地址步长，即源操作数每次迭代跳过的DataBlock数目。取值范围为[0, $2^{16}-1$]。 |
 
-**注：以上高维切分相关参数`mask`，`repeatTime`，`srcRepStride`请参考[高维切分](../SIMD_compute/high_dim_split.md)中的介绍。**
+**注：以上高维切分相关参数`mask`，`repeatTime`，`srcRepStride`请参考[高维切分](../../../../../../../../../../../../ascendc-aprof-optimization/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/SIMD_compute/high_dim_split.md)中的介绍。**
 
 ## 数据类型
 
@@ -123,8 +123,8 @@
 
 ## 约束说明
 
-- 源操作数及`sharedTmpBuffer`的地址对齐约束请参考[通用地址对齐约束](../../../general_description_and_constraints.md#section796754519912)，起始地址需要32字节对齐；目的操作数的起始地址对齐约束请参考[ReduceRepeat-表3](./ReduceRepeat.md#tab3)。
-- 操作数地址重叠约束请参考[通用地址重叠约束](../../../general_description_and_constraints.md#通用地址重叠约束)。
+- 源操作数及`sharedTmpBuffer`的地址对齐约束请参考通用地址对齐约束，起始地址需要32字节对齐；目的操作数的起始地址对齐约束请参考ReduceRepeat-表3。
+- 操作数地址重叠约束请参考通用地址重叠约束。
 - 需要使用`sharedTmpBuffer`的情况下，支持`dst`与`sharedTmpBuffer`地址重叠（通常情况下`dst`比`sharedTmpBuffer`所需的空间要小），此时`sharedTmpBuffer`必须满足所需空间要求，详情请参考[关键特性说明](#关键特性说明)。
 
 <!-- npu="950,A3,910b" id18 -->
@@ -140,7 +140,7 @@
   <!-- end id19 -->
 
   <!-- npu="950" id22 -->
-  - 针对Ascend 950PR&950DT系列产品，该接口通过VF调用[Reg矢量计算](../../reg_vector_compute/reg_vector_compute.md)API实现兼容，当参数count或repeatTime取值为0时，不保证该接口被视为NOP（空操作）。
+  - 针对Ascend 950PR&950DT系列产品，该接口通过VF调用Reg矢量计算API实现兼容，当参数count或repeatTime取值为0时，不保证该接口被视为NOP（空操作）。
   <!-- end id22 -->
 <!-- end id18 -->
 
@@ -176,7 +176,7 @@
 - 方式二：同一repeat内采用二叉树累加，不同repeat的结果也按二叉树累加。
 - 方式三：不同repeat间通过向量加法将数据合并为一个repeat，repeat内采用二叉树累加。
 
-`ReduceSum`接口以二叉树累加的方式完成每个repeat内的求和，详情请参考[ReduceDataBlock关键特性说明](./ReduceDataBlock.md#关键特性说明)。
+`ReduceSum`接口以二叉树累加的方式完成每个repeat内的求和，详情请参考ReduceDataBlock关键特性说明。
 
 **对于上述两种累加方式，`sharedTmpBuffer`所需空间设置：**
 
@@ -199,8 +199,8 @@
 <!-- npu="950" id30 -->
 - Ascend 950PR&950DT系列产品，按场景采用不同的累加方式：
   - int64_t、uint64_t采用方式三。
-  - [Counter模式](../SIMD_compute/mask.md#mask-mode)且数据量在256~1024字节之间采用方式三；否则采用方式二。
-  - [Normal模式](../SIMD_compute/mask.md#mask-mode)采用方式二。
+  - Counter模式且数据量在256~1024字节之间采用方式三；否则采用方式二。
+  - Normal模式采用方式二。
 <!-- end id30 -->
 <!-- npu="A3" id31 -->
 - Atlas A3系列产品，tensor前n个数据计算接口采用方式一，tensor高维切分计算接口采用方式二。
@@ -226,7 +226,7 @@
 
 ## 调用示例
 
-更多样例请参考[ReduceSum样例](../../../../../../../examples/01_simd_cpp_api/03_basic_api/01_memory_vector_compute/reduce_computation)。
+更多样例请参考ReduceSum样例。
 
 - tensor高维切分计算样例-`mask`连续模式：
 
@@ -303,3 +303,5 @@
     > 输入数据src_gm：[1. 1. 1. ... 1. 1. 1.]
     >
     > 输出数据dst_gm：[288.   0.   0.   0.   0.   0.   0.   0.   0.   0.   0.   0.   0.   0.   0.   0.]
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../sources/document-originals/bd72fc07e459c8cc3e15984c2ba1c3b06071a24ecbf7f1ca1116f85ae55888bf.txt)。

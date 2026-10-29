@@ -368,7 +368,7 @@ Scenario1 至 Scenario2 的实现代码差异可概括为两处：
 
 ## 编译与运行
 
-在仓库根目录先配置环境与工程（参考根目录 [README.md](../../../../README.md)）：
+在仓库根目录先配置环境与工程（参考根目录 README.md（同名参考，非历史原件：[README.md](../../../../../../selection-v2-optimization/cann-samples/17c948bb961fc6a660e4fcab45f6bf217c9c6239/Samples/2_Performance/rms_norm_quant_story/README.md)））：
 
 ```bash
 source ${install_path}/cann/set_env.sh
@@ -498,3 +498,4 @@ msprof op --aic-metrics=PipeTimeline ./cv_datapath_2_mix_scenario2
 
 ![image.png](https://raw.gitcode.com/user-images/assets/8788227/c37adf5b-f8f4-4738-badb-58216c06b725/image.png 'image.png')
 
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../sources/document-originals/75fd879ecc4bf94dd4c72e40bdc1b1a343c250292430cb6c0b5c566144fd2283.txt)。

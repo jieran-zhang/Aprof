@@ -29,7 +29,7 @@
 <!-- npu="9030" id9 -->
 - Kirin 9030处理器系列产品：支持
 <!-- end id9 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/sync_control/intra_core_sync/PipeBarrier_ISASI_res.md#id1 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/sync_control/intra_core_sync/PipeBarrier_ISASI_res.md#id1 -->
 
 ## 功能说明<a name="section618mcpsimp"></a>
 
@@ -53,7 +53,7 @@ __aicore__ inline void PipeBarrier()
 
 | 参数名 | 描述 |
 | -------- | -------- |
-| pipe | 模板参数，表示阻塞的流水类别。<br>支持的流水参考[硬件流水类型](intra_core_sync_overview.md#zh-cn_topic_0000002542725361_section1272612276459)，其中不支持PIPE_S。<br>如果不关注流水类别，希望阻塞所有流水，可以传入PIPE_ALL。 |
+| pipe | 模板参数，表示阻塞的流水类别。<br>支持的流水参考硬件流水类型，其中不支持PIPE_S。<br>如果不关注流水类别，希望阻塞所有流水，可以传入PIPE_ALL。 |
 
 ## 返回值说明<a name="section640mcpsimp"></a>
 
@@ -75,7 +75,7 @@ __aicore__ inline void PipeBarrier()
 
 注：仅作为示例参考，以下情况下PIPE\_V同步无需开发者手动插入：
 <!-- npu="A3,910b" id10 -->
-- 开启[cce-auto-sync编译选项](key_features.md#cce-compiler-auto-sync)时，毕昇编译器自动插入PIPE\_V之间的同步。
+- 开启cce-auto-sync编译选项时，毕昇编译器自动插入PIPE\_V之间的同步。
 <!-- end id10 -->
 <!-- npu="950" id11 -->
 - 针对Ascend 950PR&950DT系列产品，PIPE\_V之间的同步由硬件保证。
@@ -95,3 +95,5 @@ AscendC::Add(dst0Local, src0Local, src1Local, 512);
 AscendC::PipeBarrier<PIPE_V>();
 AscendC::Mul(dst1Local, dst0Local, src2Local, 512);
 ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../sources/document-originals/730571f5039906830624ccba76cff76d318305831f96538d7821be7c7c737773.txt)。

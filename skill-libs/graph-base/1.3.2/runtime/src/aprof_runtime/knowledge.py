@@ -5,6 +5,20 @@ import re
 
 from . import _knowledge_v1 as _compiler
 from ._knowledge_v1 import *
+from .documentation_sources import original_path
+
+
+def local(root: Path, name: str) -> Path:
+    # Evidence keeps the upstream bytes; adapted .md files are reading views.
+    try:
+        return original_path(root, name)
+    except ValueError as exc:
+        raise _compiler.GraphError(str(exc)) from exc
+
+
+# Source resolution changes only where evidence bytes are stored. Generated
+# records and their original source hashes must remain exactly reproducible.
+_compiler.local = local
 
 
 def __getattr__(name):

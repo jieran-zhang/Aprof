@@ -29,7 +29,7 @@
 <!-- npu="9030" id9 -->
 - Kirin 9030处理器系列产品：支持
 <!-- end id9 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/resource_management/TBuf/Get_res.md#id1 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/resource_management/TBuf/Get_res.md#id1 -->
 
 ## 功能说明<a name="section954881431816"></a>
 
@@ -66,7 +66,7 @@
 </thead>
 <tbody><tr id="row6129355182310"><td class="cellrowborder" valign="top" width="12.65%" headers="mcps1.2.3.1.1 "><p id="p81291855102318"><a name="p81291855102318"></a><a name="p81291855102318"></a>T</p>
 </td>
-<td class="cellrowborder" valign="top" width="87.35000000000001%" headers="mcps1.2.3.1.2 "><p id="p14983161812418"><a name="p14983161812418"></a><a name="p14983161812418"></a>待获取Tensor的数据类型，支持的类型请见<a href="../../data_structures/LocalTensor/LocalTensor.md">LocalTensor</a>相关描述。</p>
+<td class="cellrowborder" valign="top" width="87.35000000000001%" headers="mcps1.2.3.1.2 "><p id="p14983161812418"><a name="p14983161812418"></a><a name="p14983161812418"></a>待获取Tensor的数据类型，支持的类型请见<a>LocalTensor</a>相关描述。</p>
 </td>
 </tr>
 </tbody>
@@ -99,7 +99,7 @@ len的数值是Tensor中元素的个数，len\*sizeof\(T\)不能超过TBuf初始
 
 ## 返回值说明<a name="section640mcpsimp"></a>
 
-获取到的[LocalTensor](../../data_structures/LocalTensor/LocalTensor.md)。
+获取到的LocalTensor。
 
 ## 调用示例<a name="section5725818154718"></a>
 
@@ -129,3 +129,5 @@ AscendC::LocalTensor<int32_t> tensor1 = calcBuf.Get<int32_t>();
 // 用户指定tensor1的第256个int32_t的偏移位置为tensor2的首地址，实际上tensor2可以使用的内存大小为1024字节，两个tensor首地址相差256 * sizeof(int32_t)字节
 auto tensor2 = tensor1[256];
 ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../sources/document-originals/23ef70d79cf63af9b179082dc436f6fc80c6441a050e3a7600838af3cd94617a.txt)。

@@ -24,15 +24,15 @@
 <!-- npu="x90" id1 -->
 - Kirin X90处理器系列产品：支持
 <!-- end id1 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/adv_api/cube_compute/Matmul_Kernel/GetMatmulApiTiling_res.md#id1 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/adv_api/cube_compute/Matmul_Kernel/GetMatmulApiTiling_res.md#id1 -->
 
 ## 功能说明
 
 本接口用于在编译期间获取常量化的Matmul Tiling参数。
 
-Matmul Tiling常量化功能为在编译期间获取常量化的Matmul Tiling参数并进行算子编译，从而减少Scalar计算开销，提升算子整体性能。具体为，在获取[Matmul模板](Matmul_template_params.md)时，可以确定[MatmulConfig](MatmulConfig.md)的singleCore Shape（[MatmulConfig](MatmulConfig.md)中的singleCoreM/singleCoreN/singleCoreK）和Base Shape（[MatmulConfig](MatmulConfig.md)中的basicM/basicN/basicK）参数，或者只确定Base Shape参数；通过指定获取模板的接口中的singleCore Shape和Base Shape参数，或者只指定Base Shape参数，获取自定义模板；然后调用本接口，得到常量化的Matmul Tiling参数。
+Matmul Tiling常量化功能为在编译期间获取常量化的Matmul Tiling参数并进行算子编译，从而减少Scalar计算开销，提升算子整体性能。具体为，在获取Matmul模板时，可以确定[MatmulConfig](MatmulConfig.md)的singleCore Shape（[MatmulConfig](MatmulConfig.md)中的singleCoreM/singleCoreN/singleCoreK）和Base Shape（[MatmulConfig](MatmulConfig.md)中的basicM/basicN/basicK）参数，或者只确定Base Shape参数；通过指定获取模板的接口中的singleCore Shape和Base Shape参数，或者只指定Base Shape参数，获取自定义模板；然后调用本接口，得到常量化的Matmul Tiling参数。
 
-当在调用[获取MatmulConfig模板的接口](MatmulConfig.md)时，只将\(baseM, baseN, baseK\)设置为常数值时，称为部分常量化，此时\(singleCoreM, singleCoreN, singleCoreK\)都保持默认值0，部分常量化场景在核函数（Kernel）侧使用[REGIST\_MATMUL\_OBJ](REGIST_MATMUL_OBJ.md)初始化Matmul对象时，仍需要使用Tiling；将\(baseM, baseN, baseK, singleCoreM, singleCoreN, singleCoreK\)都设置为常数值时，称为全量常量化，这时可以在[REGIST\_MATMUL\_OBJ](REGIST_MATMUL_OBJ.md)的入参传递Tiling参数的位置，使用空指针替代。
+当在调用[获取MatmulConfig模板的接口](MatmulConfig.md)时，只将\(baseM, baseN, baseK\)设置为常数值时，称为部分常量化，此时\(singleCoreM, singleCoreN, singleCoreK\)都保持默认值0，部分常量化场景在核函数（Kernel）侧使用REGIST\_MATMUL\_OBJ初始化Matmul对象时，仍需要使用Tiling；将\(baseM, baseN, baseK, singleCoreM, singleCoreN, singleCoreK\)都设置为常数值时，称为全量常量化，这时可以在REGIST\_MATMUL\_OBJ的入参传递Tiling参数的位置，使用空指针替代。
 
 经过上述部分常量化或全部常量化后，将得到带有常量化参数的MatmulConfig模板，然后使用本接口将Tiling参数常量化。本接口的返回值包含常量化的Matmul Tiling参数和MatmulConfig模板。
 
@@ -49,10 +49,10 @@ __aicore__ constexpr MatmulApiStaticTiling GetMatmulApiTiling(const MatmulConfig
 
 | 参数名 | 描述 |
 | --- | --- |
-| A_TYPE | A矩阵类型信息，通过[MatmulType](Matmul_usage.md#table1188045714378)来定义。 |
-| B_TYPE | B矩阵类型信息，通过[MatmulType](Matmul_usage.md#table1188045714378)来定义。 |
-| C_TYPE | C矩阵类型信息，通过[MatmulType](Matmul_usage.md#table1188045714378)来定义。 |
-| BIAS_TYPE | BIAS矩阵类型信息，通过[MatmulType](Matmul_usage.md#table1188045714378)来定义。 |
+| A_TYPE | A矩阵类型信息，通过MatmulType来定义。 |
+| B_TYPE | B矩阵类型信息，通过MatmulType来定义。 |
+| C_TYPE | C矩阵类型信息，通过MatmulType来定义。 |
+| BIAS_TYPE | BIAS矩阵类型信息，通过MatmulType来定义。 |
 
 **表2**  参数说明
 
@@ -63,14 +63,14 @@ __aicore__ constexpr MatmulApiStaticTiling GetMatmulApiTiling(const MatmulConfig
 
 ## 返回值说明
 
-[MatmulApiStaticTiling](Matmul_template_params.md#table7939847143412)
+MatmulApiStaticTiling
 
 ## 约束说明
 
 -   入参mmCFG，在调用获取MatmulConfig模板的接口获取时，需要使用常数值指定\(baseM, baseN, baseK\)或者指定\(baseM, baseN, baseK, singleCoreM, singleCoreN, singleCoreK\)，并且指定的参数值需要和Tiling计算的值保持一致。
 -   Batch Matmul场景支持全量常量化，但不支持使用空指针替代REGIST\_MATMUL\_OBJ的入参Tiling。
 
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/adv_api/cube_compute/Matmul_Kernel/GetMatmulApiTiling_res.md#id2 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/adv_api/cube_compute/Matmul_Kernel/GetMatmulApiTiling_res.md#id2 -->
 
 ## 调用示例
 
@@ -85,3 +85,5 @@ typedef AscendC::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, float> biasT
 constexpr auto staticTiling = GetMatmulApiTiling<aType, bType, cType, biasType>(CFG, 524288);
 AscendC::Matmul<aType, bType, cType, biasType, staticTiling> mm;
 ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../sources/document-originals/b87c52b6b8d9cac9fd72b89f80b7fe04f96d78ee79e4d1d5151e82d3ea495fea.txt)。

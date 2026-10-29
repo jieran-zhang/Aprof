@@ -60,4 +60,4 @@ MAD系数沿用旧实现精度，约为4.4478。快慢两侧对称，恰好等�
 
 沿用`tools/aprofctl timing finalize`及按需`timing verify`，不增加日常必跑工具。新结果schema_version=2，记录统计协议、全部窗口和decision_hash。新schema分别为[声明v3](../../../schemas/unified-timing-declaration-v3.schema.json)、[请求v2](../../../schemas/unified-timing-request-v2.schema.json)、[结果v2](../../../schemas/unified-timing-result-v2.schema.json)。旧声明／请求／结果schema及`bounded_outlier_v1`保持原字节和判定；不能事后重写声明把历史capture升级为新协议，旧handoff/v2也不接收新稳定性结果。
 
-独立数据尚未验证本试用协议。既有数据的[离线对照](../../../workflows/references/development-records.md#median-timing-1.3.0)只做阈值及窗口敏感性分析，不能追认历史候选、HAP或未准入的完整交接。
+独立数据尚未验证本试用协议。既有数据的[离线对照](../../../workflows/references/development-records.md#median-timing-130)只做阈值及窗口敏感性分析，不能追认历史候选、HAP或未准入的完整交接。

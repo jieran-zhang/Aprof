@@ -25,7 +25,7 @@
 <!-- npu="910" id7 -->
 - Atlas训练系列产品：支持
 <!-- end id7 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/data_structures/LocalTensor/LocalTensor_constructor_res.md#id1 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/data_structures/LocalTensor/LocalTensor_constructor_res.md#id1 -->
 
 ### 是否支持C++ Tensor编程
 
@@ -50,7 +50,7 @@
 <!-- npu="910" id14 -->
 - Atlas训练系列产品：不支持
 <!-- end id14 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/data_structures/LocalTensor/LocalTensor_constructor_res.md#id2 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/data_structures/LocalTensor/LocalTensor_constructor_res.md#id2 -->
 
 
 ## 功能说明<a name="section618mcpsimp"></a>
@@ -59,13 +59,13 @@ LocalTensor构造函数。
 
 ## 函数原型<a name="section620mcpsimp"></a>
 
--   适用于[Pipe编程框架](../../../../../guide/programming_guide/programming_model/ai_core_simd_programming/tpipe_tque_programming/tpipe_tque_principles.md)，通常情况下开发者不直接调用，该函数不会对LocaTensor成员变量赋初值，均为随机值。
+-   适用于Pipe编程框架，通常情况下开发者不直接调用，该函数不会对LocaTensor成员变量赋初值，均为随机值。
 
     ```cpp
     __aicore__ inline LocalTensor<T>() {}
     ```
 
--   适用于[静态Tensor编程](../../../../../guide/programming_guide/programming_model/ai_core_simd_programming/cpp_tensor_programming/static_tensor_programming.md)，根据指定的逻辑位置/地址/长度，返回Tensor对象。
+-   适用于静态Tensor编程，根据指定的逻辑位置/地址/长度，返回Tensor对象。
 
     ```cpp
     __aicore__ inline LocalTensor<T>(TPosition pos, uint32_t addr, uint32_t tileSize)
@@ -85,7 +85,7 @@ LocalTensor构造函数。
 </thead>
 <tbody><tr id="zh-cn_topic_0000001429830437_row1835857145817"><td class="cellrowborder" valign="top" width="16.28%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001429830437_p5835457165816"><a name="zh-cn_topic_0000001429830437_p5835457165816"></a><a name="zh-cn_topic_0000001429830437_p5835457165816"></a>T</p>
 </td>
-<td class="cellrowborder" valign="top" width="83.72%" headers="mcps1.2.3.1.2 "><a name="ul171781281310"></a><a name="ul171781281310"></a><ul id="ul171781281310"><li>适用于Pipe编程框架的原型，支持基础数据类型以及<a href="../../aux_data_structures/TensorTrait/TensorTrait.md">TensorTrait</a>类型。</li><li>适用于C++ Tensor编程的原型，支持的数据类型如下：<pre class="screen" id="screen148501140172610"><a name="screen148501140172610"></a><a name="screen148501140172610"></a>// 仅支持基础数据类型
+<td class="cellrowborder" valign="top" width="83.72%" headers="mcps1.2.3.1.2 "><a name="ul171781281310"></a><a name="ul171781281310"></a><ul id="ul171781281310"><li>适用于Pipe编程框架的原型，支持基础数据类型以及<a>TensorTrait</a>类型。</li><li>适用于C++ Tensor编程的原型，支持的数据类型如下：<pre class="screen" id="screen148501140172610"><a name="screen148501140172610"></a><a name="screen148501140172610"></a>// 仅支持基础数据类型
 __aicore__ inline LocalTensor&lt;T&gt;(TPosition pos, uint32_t addr, uint32_t tileSize)
 // 仅支持TensorTrait类型
 __aicore__ inline LocalTensor&lt;T&gt;(uint32_t addr)</pre>
@@ -294,3 +294,5 @@ auto tensorTraitMake = AscendC::MakeTensorTrait<float, AscendC::TPosition::VECIN
 uint32_t addr = 128;
 auto tensor1 = AscendC::LocalTensor<decltype(tensorTraitMake)>(addr);
 ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../sources/document-originals/103ec2d4324f59620a49df8b4ddaec36c81552c1a5a850233177ecec77a34946.txt)。

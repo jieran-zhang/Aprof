@@ -156,17 +156,36 @@ def test_preparation_rejects_unavailable_or_unqualified_environment(installed, m
     with pytest.raises(ContractError): discover(installed)
 
 
-def test_explicit_separate_python_is_preflighted_and_frozen(installed, tmp_path, monkeypatch):
-    environment = tmp_path/'export-python'
-    venv.EnvBuilder(system_site_packages=True, symlinks=False, with_pip=False).create(environment)
-    python = environment/'bin/python'
-    monkeypatch.setattr(tools, '_python_environment', _REAL_PROBE)
-    binding = tools.discover_task_toolchain(sdk_root=installed[0], python=str(python), **installed[1])
-    assert binding['tools']['python'] == str(python)
-    assert binding['python_binary'] == str(python.resolve())
-    assert str(environment/'pyvenv.cfg') in binding['files']
-    assert binding['python_packages']['numpy']['version']
-    assert tools.export_argv(binding, tmp_path/'profile')[0] == str(python)
+def test_explicit_separate_python_is_preflighted_and_frozen(
+    installed, tmp_path, monkeypatch
+):
+    environment = tmp_path / "export-python"
+    venv.EnvBuilder(system_site_packages=True, symlinks=False, with_pip=False).create(
+        environment
+    )
+    python = environment / "bin/python"
+    monkeypatch.setattr(tools, "_python_environment", _REAL_PROBE)
+    observed = _REAL_PROBE(str(python))
+    if observed["host_arch"] != "aarch64":
+        with pytest.raises(ContractError, match="executable/architecture differs"):
+            tools.discover_task_toolchain(
+                sdk_root=installed[0], python=str(python), **installed[1]
+            )
+    # The CPU fixture simulates only target architecture; interpreter, NumPy
+    # import, pyvenv.cfg and installed file roster remain real checks.
+    monkeypatch.setattr(
+        tools,
+        "_python_environment",
+        lambda selected: dict(_REAL_PROBE(selected), host_arch="aarch64"),
+    )
+    binding = tools.discover_task_toolchain(
+        sdk_root=installed[0], python=str(python), **installed[1]
+    )
+    assert binding["tools"]["python"] == str(python)
+    assert binding["python_binary"] == str(python.resolve())
+    assert str(environment / "pyvenv.cfg") in binding["files"]
+    assert binding["python_packages"]["numpy"]["version"]
+    assert tools.export_argv(binding, tmp_path / "profile")[0] == str(python)
     assert tools.validate_task_toolchain(binding, live=True) == binding
 
 

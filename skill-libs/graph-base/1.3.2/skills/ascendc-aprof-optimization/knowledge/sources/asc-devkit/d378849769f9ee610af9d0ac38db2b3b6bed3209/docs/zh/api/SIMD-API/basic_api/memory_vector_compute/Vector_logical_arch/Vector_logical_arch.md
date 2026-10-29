@@ -39,8 +39,8 @@ Vector计算单元专用于执行向量计算。如下图所示，高亮部分�
 
 ### UB的通用约束说明
 
-- UB地址对齐约束，请参考[通用地址对齐约束](../../../general_description_and_constraints.md#通用地址对齐约束)。
-- UB地址重叠约束，请参考[通用地址重叠约束](../../../general_description_and_constraints.md#通用地址重叠约束)。
+- UB地址对齐约束，请参考通用地址对齐约束。
+- UB地址重叠约束，请参考通用地址重叠约束。
 
 ### UB的内存结构与bank冲突
 
@@ -61,7 +61,7 @@ Vector计算单元专用于执行向量计算。如下图所示，高亮部分�
 
   - bank冲突优化
 
-    可参考[避免bank冲突（NPU架构版本2201）](../../../../../guide/operator_practice/simd_operator_optimization/memory_access/avoid_ub_bank_conflict/avoid_bank_conflict_npu_arch_2201.md)。
+    可参考避免bank冲突（NPU架构版本2201）。
 <!-- end id3 -->
 
 <!-- npu="950" id4 -->
@@ -79,5 +79,7 @@ Vector计算单元专用于执行向量计算。如下图所示，高亮部分�
   
   - bank冲突优化
 
-    可参考[避免bank冲突（NPU架构版本3510）](../../../../../guide/operator_practice/simd_operator_optimization/memory_access/avoid_ub_bank_conflict/avoid_bank_conflict_npu_arch_3510.md)。
+    可参考避免bank冲突（NPU架构版本3510）。
 <!-- end id4 -->
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../sources/document-originals/3ea2f2b1805ea780d7a3b675bea3288878477fcb8a8fb3b94817f5cc004d91ea.txt)。

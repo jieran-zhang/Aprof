@@ -29,7 +29,7 @@
 <!-- npu="9030" id9 -->
 - Kirin 9030处理器系列产品：支持
 <!-- end id9 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/basic_arithmetic/Add_res.md#id1 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/basic_arithmetic/Add_res.md#id1 -->
 
 ## 功能说明<a name="section618mcpsimp"></a>
 
@@ -82,12 +82,12 @@ $dst_i = src0_i + src1_i$
 
 | 参数名 | 输入/输出 | 描述 |
 |---|---|---|
-| dst | 输出 | 目的操作数。<br>类型为LocalTensor，支持的TPosition为VECIN/VECCALC/VECOUT。<br>地址对齐约束参考[通用地址对齐约束](../../../general_description_and_constraints.md)。 |
-| src0、src1 | 输入 | 源操作数。<br>类型为LocalTensor，支持的TPosition为VECIN/VECCALC/VECOUT。<br>地址对齐约束参考[通用地址对齐约束](../../../general_description_and_constraints.md)。 |
-| count | 输入 | 参与计算的元素个数。关于该参数的具体说明请参考[连续计算](../SIMD_compute/continuous_compute.md)。 |
-| mask[]/mask | 输入 | mask用于控制每次迭代内参与计算的元素。详细设置参考[掩码](../SIMD_compute/mask.md)。 |
+| dst | 输出 | 目的操作数。<br>类型为LocalTensor，支持的TPosition为VECIN/VECCALC/VECOUT。<br>地址对齐约束参考通用地址对齐约束。 |
+| src0、src1 | 输入 | 源操作数。<br>类型为LocalTensor，支持的TPosition为VECIN/VECCALC/VECOUT。<br>地址对齐约束参考通用地址对齐约束。 |
+| count | 输入 | 参与计算的元素个数。关于该参数的具体说明请参考连续计算。 |
+| mask[]/mask | 输入 | mask用于控制每次迭代内参与计算的元素。详细设置参考掩码。 |
 | repeatTime | 输入 | 重复迭代次数。矢量计算单元，每次读取连续的256Bytes数据进行计算，为完成对输入数据的处理，必须通过多次迭代（repeat）才能完成所有数据的读取与计算。repeatTime表示迭代的次数。<br>关于该参数的具体说明请参考[高维切分](../SIMD_compute/high_dim_split.md)。 |
-| repeatParams | 输入 | 控制操作数地址步长的参数。[BinaryRepeatParams](../../aux_data_structures/BinaryRepeatParams.md)类型，包含操作数相邻迭代间相同DataBlock的地址步长，操作数同一迭代内不同DataBlock的地址步长等参数。<br>相邻迭代间的地址步长参数说明请参考[repeatStride](../SIMD_compute/high_dim_split.md)；同一迭代内DataBlock的地址步长参数说明请参考[dataBlockStride](../SIMD_compute/high_dim_split.md)。 |
+| repeatParams | 输入 | 控制操作数地址步长的参数。BinaryRepeatParams类型，包含操作数相邻迭代间相同DataBlock的地址步长，操作数同一迭代内不同DataBlock的地址步长等参数。<br>相邻迭代间的地址步长参数说明请参考[repeatStride](../SIMD_compute/high_dim_split.md)；同一迭代内DataBlock的地址步长参数说明请参考[dataBlockStride](../SIMD_compute/high_dim_split.md)。 |
 
 ## 数据类型
 
@@ -122,8 +122,8 @@ $dst_i = src0_i + src1_i$
 
 ## 约束说明<a name="section633mcpsimp"></a>
 
-- 操作数地址对齐要求请参见[通用地址对齐约束](../../../general_description_and_constraints.md)。
-- 操作数地址重叠约束请参考[通用地址重叠约束](../../../general_description_and_constraints.md)。
+- 操作数地址对齐要求请参见通用地址对齐约束。
+- 操作数地址重叠约束请参考通用地址重叠约束。
 - 使用整个tensor参与计算接口符号重载时，运算量为目的LocalTensor的总长度。
 
 <!-- npu="A3,910b,950" id20 -->
@@ -138,7 +138,7 @@ $dst_i = src0_i + src1_i$
     <!-- end id26 -->
   <!-- end id23 -->
   <!-- npu="950" id27 -->
-  - 针对Ascend 950PR&950DT系列产品：该接口通过VF调用[Reg矢量计算API](../../reg_vector_compute/reg_vector_compute.md)实现兼容，当参数count或repeatTime取值为0时，软仿行为不保证该接口被视为NOP（空操作）。
+  - 针对Ascend 950PR&950DT系列产品：该接口通过VF调用Reg矢量计算API实现兼容，当参数count或repeatTime取值为0时，软仿行为不保证该接口被视为NOP（空操作）。
   <!-- end id27 -->
 <!-- end id20 -->
 <!-- npu="950" id21 -->
@@ -188,3 +188,5 @@ $dst_i = src0_i + src1_i$
 输入数据src1Local: [513 514 515 ... 1024]
 输出数据dstLocal: [514 516 518 ... 1536]
 ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../sources/document-originals/d0fe0a42a4720850442a3745e2ac9551654a1fd26c3debecd42f8755d0af461b.txt)。

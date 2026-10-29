@@ -607,7 +607,7 @@ Ascend 950系列未达到理论vector耗时峰值的原因如下：
   - `6`: 双缓冲 + L2Cache bypass + 避免Bank Conflict
 
 - 配置环境变量  
-  请根据当前环境上CANN开发套件包的[安装方式](../../../../../docs/zh/quick_start.md#prepare&install)，配置环境变量。
+  请根据当前环境上CANN开发套件包的安装方式，配置环境变量。
   ```bash
   source ${install_path}/cann/set_env.sh
   ```
@@ -656,7 +656,7 @@ Ascend 950系列未达到理论vector耗时峰值的原因如下：
 
 该接口提供CPU域/NPU域调试场景下的格式化输出功能。
 
-在算子kernel侧实现代码中需要输出日志信息的地方调用[printf](../../../../../docs/zh/api/Utils-API/tuning_interface/printf.md)接口打印相关内容。
+在算子kernel侧实现代码中需要输出日志信息的地方调用printf接口打印相关内容。
 
 示例如下：
 
@@ -668,9 +668,9 @@ AscendC::printf("add blockIdx=%d\n", AscendC::GetBlockIdx());
 
 ### DumpTensor
 
-基于算子工程开发的算子，可以使用该接口Dump指定[LocalTensor](../../../../../docs/zh/api/SIMD-API/basic_api/data_structures/LocalTensor/LocalTensor_intro.md)的内容。同时支持打印自定义的附加信息（仅支持uint32\_t数据类型的信息），比如打印当前行号等。
+基于算子工程开发的算子，可以使用该接口Dump指定LocalTensor的内容。同时支持打印自定义的附加信息（仅支持uint32\_t数据类型的信息），比如打印当前行号等。
 
-在算子kernel侧实现代码中需要打印Tensor数据的地方调用[DumpTensor](../../../../../docs/zh/api/SIMD-API/basic_api/debug_interface/onboard_print/DumpTensor.md)接口打印相关内容。样例如下：
+在算子kernel侧实现代码中需要打印Tensor数据的地方调用DumpTensor接口打印相关内容。样例如下：
 
 ```cpp
 // 向量计算: z = x + y
@@ -716,3 +716,5 @@ msOpProf工具是单算子性能分析工具。包含msopprof和msopprof simulat
 # 查看Task Duration 以及各项数据
 cat ./OPPROF_*/PipeUtilization.csv
 ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../sources/document-originals/b5b6a86283fe52b79c7990bb8ccf5072ead5a50fbd46ae5aaa7a3e056aab1580.txt)。

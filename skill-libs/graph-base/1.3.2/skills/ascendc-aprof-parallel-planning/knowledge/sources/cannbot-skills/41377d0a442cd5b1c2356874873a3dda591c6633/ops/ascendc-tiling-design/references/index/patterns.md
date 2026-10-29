@@ -56,9 +56,9 @@ Step 3 — 写索引型（Scatter 系）:
 | P2 | 沿轴索引取数 | Gather, GatherElements | index 与输出同形，沿指定轴取数、需按行分解前导维坐标 | 已补充（三档模式：mode0 批量 / mode1 双轴分片，indexAxis 无上限 / mode2 scalar） | [gather.md](gather.md) |
 | P3 | 写索引覆盖 | ScatterUpdate, ScatterElements | index 形状与输出一致，写位置无归约冲突 | 已补充（按输出元素空间 64B 整块分核 + **UB 内 RMW 散写 + 批量回写**，快原生 3.2x） | [scatter.md](scatter.md) |
 | P4 | 写索引归约 | ScatterReduce | 同一写位置多次命中，需归约合并 | 已补充（与 P3 共用分核：输出元素单属主，累加无需原子） | [scatter.md](scatter.md) |
-| P5 | 沿轴单索引取数 | **IndexSelect** | index 为 1-D 全行共享，输出行连续、源行查找纯算术 | 已补充（mode0 纯搬运行/段拷贝 / mode1 Gather 向量化 + kSplit 防空核） | [index_select.md](index_select.md) |
-| P6 | 沿轴索引累加 | **IndexAdd** | index 沿轴 1-D，一行 index 影响整个 inner 块，累加语义 | 已补充（t-tile slab RMW + 选择性 upd 行搬入 + **per-core 命中表**，实测 1.04~17.50x） | [index_add.md](index_add.md) |
-| P7 | 沿轴重复展开 | **RepeatInterleave** | 无 index 输入，展开位置由 repeats 解析确定（前缀和） | 已补充（不物化 index → bit-exact；mode0 段拷贝 / mode1 展开下标 + Gather） | [repeat_interleave.md](repeat_interleave.md) |
+| P5 | 沿轴单索引取数 | **IndexSelect** | index 为 1-D 全行共享，输出行连续、源行查找纯算术 | 已补充（mode0 纯搬运行/段拷贝 / mode1 Gather 向量化 + kSplit 防空核） | index_select.md |
+| P6 | 沿轴索引累加 | **IndexAdd** | index 沿轴 1-D，一行 index 影响整个 inner 块，累加语义 | 已补充（t-tile slab RMW + 选择性 upd 行搬入 + **per-core 命中表**，实测 1.04~17.50x） | index_add.md |
+| P7 | 沿轴重复展开 | **RepeatInterleave** | 无 index 输入，展开位置由 repeats 解析确定（前缀和） | 已补充（不物化 index → bit-exact；mode0 段拷贝 / mode1 展开下标 + Gather） | repeat_interleave.md |
 
 ---
 
@@ -90,19 +90,19 @@ Step 3 — 写索引型（Scatter 系）:
   `index=(4,16,8)` / `dim=1`），这些行要按输入原值整片回写，只遍历 index 行会漏写
   （实测 Max diff 5.24，详见 [scatter.md §3/§4](scatter.md)）。
   纯读型（IndexSelect / RepeatInterleave）输出全新、本来就不需要 clone，用 `at::empty` 即可。
-  详见 [index_add.md](index_add.md)
+  详见 index_add.md
 - **🛑 `stream(true)` 必须在「所有 torch 侧算子之后」调用**：
   `NPUStream::stream(true)` → `stream()` → `MakeSureQueueEmpty()`，会清空 torch_npu 的
   延迟任务队列、把此前 enqueue 的 torch 算子真正下发。若先取 stream 再执行 `fill_`/`clone`，
   这些算子会留在队列里没下发，kernel 读到 `at::empty` 的**未初始化内存** →
   表现为「**首调用随机错、重跑即好、加 synchronize 即好**」。
   诊断特征：失败集每次不同 + 对失败用例重复 5 次恒为「第 1 次失败后 4 次全过」。
-  详见 [index_add.md](index_add.md)
+  详见 index_add.md
 - **⚠️ 单元内含「扫描全部 index」的 Pattern，成本 ∝ 单元数 × index 长度**：
   当 UB 放不下整行导致单元数激增（如 `tTiles` 大）且 index 长时，标量扫描会成为瓶颈，
   而非搬运（诊断：固定 shape 扫 index 长度，耗时线性增长即为扫描放大）。
   缓解：branchless compaction（`selp[nSel]=k; nSel += hit;`）+ 4 路展开；
-  根治：每核只扫一次 index 并按 tile 分桶（per-core 命中表）。详见 [index_add.md §5](index_add.md)
+  根治：每核只扫一次 index 并按 tile 分桶（per-core 命中表）。详见 index_add.md §5
 - **🛑 index 类型必须 host / kernel 一致，统一按 int32**：
   host 侧 `index.to(at::kInt)`，kernel 侧 `GlobalTensor<int32_t>`；上游为 int64 时
   （PyTorch 默认）须转换并**核对索引上界 < 2^31**（int32 溢出会越界读）。
@@ -122,7 +122,7 @@ Step 3 — 写索引型（Scatter 系）:
   增大 30~70%，净亏（瓶颈是**同步次数与搬运延迟**，不是带宽——实测带宽利用率仅 0.7~1.5 GB/s）
 - **⚠️ 不要忽视 host 固定开销**：小 shape 上 kernel 可能比 torch 快 2x 而端到端更慢，
   瓶颈是 `at::empty` + launch（kernel 在途时 allocator 需延迟回收）。用输出缓冲池复用显存，
-  详见 [index_select.md](index_select.md) §Host 固定开销与输出缓冲池
+  详见 index_select.md §Host 固定开销与输出缓冲池
 
 ---
 
@@ -197,3 +197,5 @@ Step 3 — 写索引型（Scatter 系）:
 | 主题 | 文档 |
 |------|------|
 | 归约索引型（ArgMax/ArgMin 返回极值索引） | [../reduction/with-index.md](../reduction/with-index.md) |
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../sources/document-originals/b67ec969c55ab5d7b8a763a69fb71c5c1588d91fc07e23f7645688f9bcb1a74c.txt)。

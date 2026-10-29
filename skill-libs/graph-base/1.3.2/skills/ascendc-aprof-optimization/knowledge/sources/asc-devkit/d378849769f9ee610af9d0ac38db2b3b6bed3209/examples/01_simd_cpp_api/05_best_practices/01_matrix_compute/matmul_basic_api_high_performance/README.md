@@ -58,7 +58,7 @@
 | aic_mac_ratio | Cube 计算单元的时间占比，反映计算单元利用率 |
 | aic_mte1_time(μs) | MTE1（L1 到 L0A/L0B 搬运）的执行时间 |
 | aic_mte1_ratio | MTE1 的时间占比，反映 L1 到 L0 的数据搬运压力 |
-| aic_mte2_time(μs) | MTE2（[GM](../../../../../docs/zh/guide/programming_guide/programming_model/ai_core_simd_programming/abstract_hardware_architecture.md)（Global Memory） 到 L1 搬运）的执行时间 |
+| aic_mte2_time(μs) | MTE2（GM（Global Memory） 到 L1 搬运）的执行时间 |
 | aic_mte2_ratio | MTE2 的时间占比，反映 GM 到 L1 的数据加载压力 |
 | aic_fixpipe_time(μs) | [Fixpipe](../../../../../docs/zh/api/SIMD-API/basic_api/cube_compute_ISASI/cube_compute_store/Fixpipe_L0CToGM.md)（L0C 到 GM 搬运）的执行时间 |
 | aic_fixpipe_ratio | [Fixpipe](../../../../../docs/zh/api/SIMD-API/basic_api/cube_compute_ISASI/cube_compute_store/Fixpipe_L0CToGM.md) 的时间占比，反映结果写回的访存压力 |
@@ -189,7 +189,7 @@ nd2nzParams.dValue = baseK * stepKa;  // 大包包含 stepKa 个 baseM * baseK
 
 #### 6. LoadData3D 替代 LoadData2D——减少指令队列占用
 
-在 Atlas A2/A3 架构上，本样例使用 [`LoadData3DParamsV2`](../../../../../docs/zh/api/SIMD-API/basic_api/cube_compute_ISASI/cube_compute_load/LoadData_3D.md)（即 [LoadData3D](../../../../../docs/zh/api/SIMD-API/basic_api/cube_compute_ISASI/cube_compute_load/LoadData_3D.md)）替代 [`LoadData2DParams`](../../../../../docs/zh/api/SIMD-API/basic_api/cube_compute_ISASI/cube_compute_load/LoadData_2D.md)（即 LoadData2D）完成 L1→L0 的数据搬运。这是一个关键的指令队列优化。
+在 Atlas A2/A3 架构上，本样例使用 `LoadData3DParamsV2`（即 LoadData3D）替代 `LoadData2DParams`（即 LoadData2D）完成 L1→L0 的数据搬运。这是一个关键的指令队列优化。
 
 **问题背景**：MTE1 指令队列深度为 32。使用 LoadData2D 时，由于单条 LoadData2D 指令搬运粒度有限，搬运一个 baseM×baseK 的切片需要用 for 循环发射多条 LoadData2D 指令。例如 baseM=128、baseK=64 时，最少需要发射 `baseK/16 = 4` 条 LoadData2D 指令。
 
@@ -428,7 +428,7 @@ $$MTE2耗时误差 = \frac{1874.267 - 1832.10}{1832.10} = 2.30\%$$
 
 - 配置环境变量
 
-  请根据当前环境上CANN开发套件包的[安装方式](../../../../../docs/zh/quick_start.md#prepare&install)，配置环境变量。
+  请根据当前环境上CANN开发套件包的安装方式，配置环境变量。
   ```bash
   source ${install_path}/cann/set_env.sh
   ```
@@ -530,3 +530,5 @@ msOpProf工具是单算子性能分析工具。包含msopprof和msopprof simulat
       ├──ResourceConflictRatio.csv  # UB上的bank group、bank conflict和资源冲突率在所有指令中的占比
       └──visualize_data.bin         # MindStudio Insight呈现文件
       ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../sources/document-originals/fe8df2c2792de115f12584e3444941930d39da00174759871ab98e4f48779c3d.txt)。

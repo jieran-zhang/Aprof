@@ -12,7 +12,7 @@
 - 若源码或 profiling 已经呈现 Scalar / Memory / Vec / CUBE / no-bound 现象，读取
   [bound-deep-routing.md](bound-deep-routing.md) 做二级分流；仍然把输出落到六类 problem family。
 - 不直接打开 外部大型 `SKILL.md`。只有 AProf 本地 reference 明确需要 API 或算子族细节时，才按
-  [local-knowledge-index.md](local-knowledge-index.md) 点读单个具体 reference。
+  local-knowledge-index.md（同名参考，非历史原件：[local-knowledge-index.md](../../../../../../../../../workflows/migration/archive/skills/ascendc-aprof-diagnosis/references/local-knowledge-index.md)） 点读单个具体 reference。
 
 ## 源码模式映射
 
@@ -54,3 +54,5 @@
 - 支撑哪个假设。
 - 证据等级：`direct`、`derived`、`trace` 或 `source-hypothesis`。
 - 对小 workload，metric 的 `diagnosis_use` 必须写清“验证是否超过 workload 可达上限”，不能写成“利用率低即问题”。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../sources/document-originals/ef273a362b02e6e2409ca55e684d55d5f54cf539529acb9154319b996090dd1c.txt)。
