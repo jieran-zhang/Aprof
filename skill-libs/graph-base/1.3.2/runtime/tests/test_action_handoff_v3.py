@@ -73,6 +73,8 @@ def package(tmp_path_factory, request):
         shutil.copytree(ROOT / region_path, root / region_path)
         index = json.loads((ROOT / region_path / "index.json").read_text())
         for record in index["records"]:
+            record_path = root / record["source_path"]
+            record_path.write_bytes(evidence_original(ROOT, record["source_path"]).read_bytes())
             for source in record["sources"]:
                 target = root / source["path"]
                 target.parent.mkdir(parents=True, exist_ok=True)

@@ -2684,7 +2684,7 @@
     "skills/ascendc-aprof-optimization/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/flashattention/design/execution.md": {
       "original": "sources/document-originals/7e8c5e809dd82af6d846d9ca2a2e391e9ff3ba096830da7f68d8ed942f7a1cb9.txt",
       "source_sha256": "7e8c5e809dd82af6d846d9ca2a2e391e9ff3ba096830da7f68d8ed942f7a1cb9",
-      "view_sha256": "e4fe4d0e8ad40e73695128c7d934e74874e5ccd95ac1a9672f65a0c12e28285e",
+      "view_sha256": "af4162972e1165dcbf930d9281f70c90b4513105845541871baa4b70c7bb1cf4",
       "changes": [
         {
           "line": 67,
@@ -2781,6 +2781,12 @@
           "kind": "remove-unavailable-reference",
           "old": "../specialization/sparse_design.md",
           "new": null
+        },
+        {
+          "line": 254,
+          "kind": "format-cpp-template-name",
+          "old": "- PipeBarrier<PIPE_ALL>:整核 drain,仅用于跨 pipe 无对应 HardEvent 时的兜底",
+          "new": "- `PipeBarrier<PIPE_ALL>`:整核 drain,仅用于跨 pipe 无对应 HardEvent 时的兜底"
         }
       ]
     },
@@ -5362,6 +5368,191 @@
           "kind": "remove-missing-image-reference",
           "old": "./images/6_binary_sum.png",
           "new": null
+        }
+      ]
+    },
+    "workflows/references/knowledge-history/e9656ff1eb44e019b72c4199f8a993f084e587f92b65b1c740d23fd4912d5cee.md": {
+      "original": "sources/document-originals/e9656ff1eb44e019b72c4199f8a993f084e587f92b65b1c740d23fd4912d5cee.txt",
+      "source_sha256": "e9656ff1eb44e019b72c4199f8a993f084e587f92b65b1c740d23fd4912d5cee",
+      "view_sha256": "32125efbfa0c3f1d8c2db727d26a84d2cdab7deefb709de1a5dfac2a5bdbe687",
+      "changes": [
+        {
+          "line": 160,
+          "kind": "format-cpp-template-name",
+          "old": "下面是 A3/950 均可候选的 FP32 静态 axis=0 小片段，前提为实际 srcShape={1,8}、dstShape={m,8}、m>0，源与目标不重叠，容量足够，src 已通过队列完成搬入；sharedTmp 为查询所得大小的 LocalTensor<uint8_t>。8*sizeof(float)=32B 满足该特定源的接口约束，8 不是通用 tile 推荐值。",
+          "new": "下面是 A3/950 均可候选的 FP32 静态 axis=0 小片段，前提为实际 srcShape={1,8}、dstShape={m,8}、m>0，源与目标不重叠，容量足够，src 已通过队列完成搬入；sharedTmp 为查询所得大小的 `LocalTensor<uint8_t>`。8*sizeof(float)=32B 满足该特定源的接口约束，8 不是通用 tile 推荐值。"
+        }
+      ]
+    },
+    "workflows/references/knowledge-history/956301b3e9b43f9f4e8fd8074811f5723f43478b3b82c3591af1aef8aafabce4.md": {
+      "original": "sources/document-originals/956301b3e9b43f9f4e8fd8074811f5723f43478b3b82c3591af1aef8aafabce4.txt",
+      "source_sha256": "956301b3e9b43f9f4e8fd8074811f5723f43478b3b82c3591af1aef8aafabce4",
+      "view_sha256": "315e5afbc07740b8c24cc15a6df1b94ac68df967d579b502ec8cf88d171a1745",
+      "changes": [
+        {
+          "line": 129,
+          "kind": "format-cpp-template-name",
+          "old": "转换 dtype 后重算字节：half输入T元素为`2T`，float中间量T元素为`4T`，不能复用旧元素容量字段。InitBuffer 的 len 单位是字节，TBuf::Get<T>(len) 的 len 单位是元素，`len*sizeof(T)` 必须不超过分配长度。双缓冲增加的是实际物理槽数，不只是把队列模板深度改成2。",
+          "new": "转换 dtype 后重算字节：half输入T元素为`2T`，float中间量T元素为`4T`，不能复用旧元素容量字段。InitBuffer 的 len 单位是字节，`TBuf::Get<T>(len)` 的 len 单位是元素，`len*sizeof(T)` 必须不超过分配长度。双缓冲增加的是实际物理槽数，不只是把队列模板深度改成2。"
+        },
+        {
+          "line": 157,
+          "kind": "format-cpp-template-name",
+          "old": "布局偏移按字节对齐递增，Get<T> 切片按元素解释；记录每段 `[offset,offset+span)`，检查并发存活段不相交、末端不超目标实际可用 UB。为避 bank 加 padding 时重新计算所有后继 offset、高水位和可用 tile；arch22 的详细地址候选见 `implementation.buffer-lifetime.arch22-bank-layout`，不从 arch35 搬常量。",
+          "new": "布局偏移按字节对齐递增，`Get<T>` 切片按元素解释；记录每段 `[offset,offset+span)`，检查并发存活段不相交、末端不超目标实际可用 UB。为避 bank 加 padding 时重新计算所有后继 offset、高水位和可用 tile；arch22 的详细地址候选见 `implementation.buffer-lifetime.arch22-bank-layout`，不从 arch35 搬常量。"
+        }
+      ]
+    },
+    "workflows/references/knowledge-history/04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483.md": {
+      "original": "sources/document-originals/04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483.txt",
+      "source_sha256": "04ddd83ab8567df04f97620e9e8f381f0a44d5fe57f4739e09135a926f930483",
+      "view_sha256": "51b13de6e2308f9494bd506d1b5be4d771e73b111782c480317dbbdc91de717e",
+      "changes": [
+        {
+          "line": 89,
+          "kind": "format-cpp-template-name",
+          "old": "转换 dtype 后重算字节：half输入T元素为`2T`，float中间量T元素为`4T`，不能复用旧元素容量字段。InitBuffer 的 len 单位是字节，TBuf::Get<T>(len) 的 len 单位是元素，`len*sizeof(T)` 必须不超过分配长度。双缓冲增加的是实际物理槽数，不只是把队列模板深度改成2。",
+          "new": "转换 dtype 后重算字节：half输入T元素为`2T`，float中间量T元素为`4T`，不能复用旧元素容量字段。InitBuffer 的 len 单位是字节，`TBuf::Get<T>(len)` 的 len 单位是元素，`len*sizeof(T)` 必须不超过分配长度。双缓冲增加的是实际物理槽数，不只是把队列模板深度改成2。"
+        },
+        {
+          "line": 117,
+          "kind": "format-cpp-template-name",
+          "old": "布局偏移按字节对齐递增，Get<T> 切片按元素解释；记录每段 `[offset,offset+span)`，检查并发存活段不相交、末端不超目标实际可用 UB。为避 bank 加 padding 时重新计算所有后继 offset、高水位和可用 tile；arch22 的详细地址候选见 `implementation.buffer-lifetime.arch22-bank-layout`，不从 arch35 搬常量。",
+          "new": "布局偏移按字节对齐递增，`Get<T>` 切片按元素解释；记录每段 `[offset,offset+span)`，检查并发存活段不相交、末端不超目标实际可用 UB。为避 bank 加 padding 时重新计算所有后继 offset、高水位和可用 tile；arch22 的详细地址候选见 `implementation.buffer-lifetime.arch22-bank-layout`，不从 arch35 搬常量。"
+        }
+      ]
+    },
+    "sources/development/evaluation/preflight-v1/runs/s1-value-domain-A-2/answer.md": {
+      "original": "sources/document-originals/88aaa7675c01736dd31e722d14856763c6b1b9282107367c8ed366d236f5e6db.txt",
+      "source_sha256": "88aaa7675c01736dd31e722d14856763c6b1b9282107367c8ed366d236f5e6db",
+      "view_sha256": "c0a198c8e07ce9453a642743c3014eafe33be9ac62ef23ff40227046f078619f",
+      "changes": [
+        {
+          "line": 282,
+          "kind": "format-cpp-template-name",
+          "old": "| 父实现 | 当前 Weighted<float> 摘录 454–485 行及辅助函数 |",
+          "new": "| 父实现 | 当前 `Weighted<float>` 摘录 454–485 行及辅助函数 |"
+        },
+        {
+          "line": 411,
+          "kind": "format-cpp-template-name",
+          "old": "1. **绑定真实父本与接线。**确认实际 Weighted<float> 入口、扩展 tiling、BlockDim、几何 workspace 分配及生产完成协议；冻结真实源码身份。",
+          "new": "1. **绑定真实父本与接线。**确认实际 `Weighted<float>` 入口、扩展 tiling、BlockDim、几何 workspace 分配及生产完成协议；冻结真实源码身份。"
+        },
+        {
+          "line": 439,
+          "kind": "format-cpp-template-name",
+          "old": "- 基线：题给 Weighted<float> 当前路径，未在本轮验证。",
+          "new": "- 基线：题给 `Weighted<float>` 当前路径，未在本轮验证。"
+        }
+      ]
+    },
+    "sources/development/evaluation/preflight-v1/runs/s1-value-domain-A-1/answer.md": {
+      "original": "sources/document-originals/f8994fa1fff0b163d4e53cae2aadd402a8a4a8f0c01afd42d17e4252eeea36b7.txt",
+      "source_sha256": "f8994fa1fff0b163d4e53cae2aadd402a8a4a8f0c01afd42d17e4252eeea36b7",
+      "view_sha256": "de64a4a3ac7bbd275323a63acd9fa2b2c61bf3d27a98185399927a88ad4b77cc",
+      "changes": [
+        {
+          "line": 18,
+          "kind": "format-cpp-template-name",
+          "old": "## 1. 当前执行的不是原始 Scalar<float> 路径",
+          "new": "## 1. 当前执行的不是原始 `Scalar<float>` 路径"
+        },
+        {
+          "line": 311,
+          "kind": "format-cpp-template-name",
+          "old": "  目标：Weighted<float> 输出任务；阶段：Host任务分配及 `Process`；参数：Q=1、tile256。",
+          "new": "  目标：`Weighted<float>` 输出任务；阶段：Host任务分配及 `Process`；参数：Q=1、tile256。"
+        }
+      ]
+    },
+    "sources/development/evaluation/formal/runs/s1-value-domain-B-1-v2/answer.md": {
+      "original": "sources/document-originals/7b895c5fd253115e4c9078cb7e6abd8ad14b3c6a35cabb3301fe3b2238a96477.txt",
+      "source_sha256": "7b895c5fd253115e4c9078cb7e6abd8ad14b3c6a35cabb3301fe3b2238a96477",
+      "view_sha256": "eed32001bc6771598bf06acd51e637ec45d37f57bb29d6cabc37d4a90eea44a0",
+      "changes": [
+        {
+          "line": 310,
+          "kind": "format-cpp-template-name",
+          "old": "| implementation | 输入中的 Weighted<float> 摘录父本 | 同一父本 |",
+          "new": "| implementation | 输入中的 `Weighted<float>` 摘录父本 | 同一父本 |"
+        }
+      ]
+    },
+    "sources/development/evaluation/formal/runs/s1-value-domain-A-2-v2/answer.md": {
+      "original": "sources/document-originals/2d7ab52f26b3f3f9a3f472d0a148068913a935ee9a5cbe19a4a9016f32035dce.txt",
+      "source_sha256": "2d7ab52f26b3f3f9a3f472d0a148068913a935ee9a5cbe19a4a9016f32035dce",
+      "view_sha256": "f4b878a17bb63ecce5498c53a3823ba9cb4d47451604be98020beb78a59b9ffd",
+      "changes": [
+        {
+          "line": 276,
+          "kind": "format-cpp-template-name",
+          "old": "- **任务/父实现**：本题 Weighted<float> 摘录 `454–485`。",
+          "new": "- **任务/父实现**：本题 `Weighted<float>` 摘录 `454–485`。"
+        },
+        {
+          "line": 399,
+          "kind": "format-cpp-template-name",
+          "old": "- 保留实现：题目给定 Weighted<float>，未修改。",
+          "new": "- 保留实现：题目给定 `Weighted<float>`，未修改。"
+        }
+      ]
+    },
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/statistics.md": {
+      "original": "sources/document-originals/19c5b1113ee43393664c25dd4684b3763f6764e409b013cfe69be05563503e38.txt",
+      "source_sha256": "19c5b1113ee43393664c25dd4684b3763f6764e409b013cfe69be05563503e38",
+      "view_sha256": "2dd4a8ccf6f7f9b9165e2d10c3b3512e853f556a7d20eb7f490958c48859a960",
+      "changes": [
+        {
+          "line": 176,
+          "kind": "format-cpp-template-name",
+          "old": "用于 `[rCount,vAlign]` 的 FP32 计算区，rCount>0，vValid>0；mean/M2/delta1/delta2/tmp 为容量足够、互不覆盖的 LocalTensor<float>，mean/M2 初始化为 0，valid lanes 的 count 在进入片段前为 n。每个 r 是 V 个独立输出的一次新样本；该片段不是 AR 向量的直接横向 Welford。",
+          "new": "用于 `[rCount,vAlign]` 的 FP32 计算区，rCount>0，vValid>0；mean/M2/delta1/delta2/tmp 为容量足够、互不覆盖的 `LocalTensor<float>`，mean/M2 初始化为 0，valid lanes 的 count 在进入片段前为 n。每个 r 是 V 个独立输出的一次新样本；该片段不是 AR 向量的直接横向 Welford。"
+        }
+      ]
+    },
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/reduction/templates/fullload.md": {
+      "original": "sources/document-originals/d3eb3798cdb00847fb3c8f5da79da7216224e5dbce2d206eaf597a8376b07870.txt",
+      "source_sha256": "d3eb3798cdb00847fb3c8f5da79da7216224e5dbce2d206eaf597a8376b07870",
+      "view_sha256": "95a7087330c5f3855bb3a62ceaf34bbc51a823442687290fc727672b14353142",
+      "changes": [
+        {
+          "line": 180,
+          "kind": "format-cpp-template-name",
+          "old": "这个接口的第四个实参是 count，不应照抄上游草图给 sum 添加第五个 false。ReduceMax 的 calIndex 与本函数不同。ARA 使用 **高级** Pattern 接口，输入已经装成 `[rValid,vAlign]`，tmpByte 为查询后分配的 LocalTensor<uint8_t>，dst/src/tmp 互不重叠：",
+          "new": "这个接口的第四个实参是 count，不应照抄上游草图给 sum 添加第五个 false。ReduceMax 的 calIndex 与本函数不同。ARA 使用 **高级** Pattern 接口，输入已经装成 `[rValid,vAlign]`，tmpByte 为查询后分配的 `LocalTensor<uint8_t>`，dst/src/tmp 互不重叠："
+        }
+      ]
+    },
+    "skills/ascendc-aprof-parallel-planning/knowledge/families/elementwise/templates/broadcast.md": {
+      "original": "sources/document-originals/485c6aec11ef4e73458f85be904d0692bf7ed6b97db0ecd88d7694b039c505f0.txt",
+      "source_sha256": "485c6aec11ef4e73458f85be904d0692bf7ed6b97db0ecd88d7694b039c505f0",
+      "view_sha256": "838f1fcd72820e42e70759d56f0d5020fa8bdaa6e414dfddf5aa7b270f24cfed",
+      "changes": [
+        {
+          "line": 200,
+          "kind": "format-cpp-template-name",
+          "old": "下面是 A3/950 均可候选的 FP32 静态 axis=0 小片段，前提为实际 srcShape={1,8}、dstShape={m,8}、m>0，源与目标不重叠，容量足够，src 已通过队列完成搬入；sharedTmp 为查询所得大小的 LocalTensor<uint8_t>。8*sizeof(float)=32B 满足该特定源的接口约束，8 不是通用 tile 推荐值。",
+          "new": "下面是 A3/950 均可候选的 FP32 静态 axis=0 小片段，前提为实际 srcShape={1,8}、dstShape={m,8}、m>0，源与目标不重叠，容量足够，src 已通过队列完成搬入；sharedTmp 为查询所得大小的 `LocalTensor<uint8_t>`。8*sizeof(float)=32B 满足该特定源的接口约束，8 不是通用 tile 推荐值。"
+        }
+      ]
+    },
+    "skills/ascendc-aprof-optimization/knowledge/branches/buffer-lifetime/recipes/reuse.md": {
+      "original": "sources/document-originals/fc54fa89be01819a42bfa96c981991188191e0fc5bebf127b49303f03ce98a48.txt",
+      "source_sha256": "fc54fa89be01819a42bfa96c981991188191e0fc5bebf127b49303f03ce98a48",
+      "view_sha256": "6eaab92c3806f9e8ea0115117f7119d7681b9c0aaab13731d5dfa7e535dd0951",
+      "changes": [
+        {
+          "line": 128,
+          "kind": "format-cpp-template-name",
+          "old": "转换 dtype 后重算字节：half输入T元素为`2T`，float中间量T元素为`4T`，不能复用旧元素容量字段。InitBuffer 的 len 单位是字节，TBuf::Get<T>(len) 的 len 单位是元素，`len*sizeof(T)` 必须不超过分配长度。双缓冲增加的是实际物理槽数，不只是把队列模板深度改成2。",
+          "new": "转换 dtype 后重算字节：half输入T元素为`2T`，float中间量T元素为`4T`，不能复用旧元素容量字段。InitBuffer 的 len 单位是字节，`TBuf::Get<T>(len)` 的 len 单位是元素，`len*sizeof(T)` 必须不超过分配长度。双缓冲增加的是实际物理槽数，不只是把队列模板深度改成2。"
+        },
+        {
+          "line": 156,
+          "kind": "format-cpp-template-name",
+          "old": "布局偏移按字节对齐递增，Get<T> 切片按元素解释；记录每段 `[offset,offset+span)`，检查并发存活段不相交、末端不超目标实际可用 UB。为避 bank 加 padding 时重新计算所有后继 offset、高水位和可用 tile；arch22 的详细地址候选见 `implementation.buffer-lifetime.arch22-bank-layout`，不从 arch35 搬常量。",
+          "new": "布局偏移按字节对齐递增，`Get<T>` 切片按元素解释；记录每段 `[offset,offset+span)`，检查并发存活段不相交、末端不超目标实际可用 UB。为避 bank 加 padding 时重新计算所有后继 offset、高水位和可用 tile；arch22 的详细地址候选见 `implementation.buffer-lifetime.arch22-bank-layout`，不从 arch35 搬常量。"
         }
       ]
     }

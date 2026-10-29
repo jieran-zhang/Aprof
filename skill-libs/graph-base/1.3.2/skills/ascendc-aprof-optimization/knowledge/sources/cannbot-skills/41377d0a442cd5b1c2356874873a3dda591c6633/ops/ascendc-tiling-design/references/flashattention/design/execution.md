@@ -251,7 +251,7 @@ Ring buffer 深度(通常记为 `PRELOAD_N`)决定流水能"看到"多远的前/
 
 **判定标准**:
 - `CrossCoreSetFlag/WaitFlag`:精确通知,fire-and-forget,FA 跨核握手的默认选择
-- PipeBarrier<PIPE_ALL>:整核 drain,仅用于跨 pipe 无对应 HardEvent 时的兜底
+- `PipeBarrier<PIPE_ALL>`:整核 drain,仅用于跨 pipe 无对应 HardEvent 时的兜底
 
 **禁止**:以"PipeBarrier 是保险屏障"为由四处散布——冗余 barrier 让 Cube 流水利用率系统性下降。
 

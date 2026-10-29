@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+from pathlib import Path
 
 import pytest
 
@@ -73,3 +74,25 @@ def test_unadapted_documents_keep_normal_paths(tmp_path):
     path = tmp_path / "normal.md"
     path.write_text("# Normal\n")
     assert local(tmp_path, "normal.md") == path
+
+
+@pytest.mark.parametrize(
+    "owner,relative",
+    [
+        ("parallel-planning", "families/reduction/templates/statistics.md"),
+        ("parallel-planning", "families/reduction/templates/fullload.md"),
+        ("parallel-planning", "families/elementwise/templates/broadcast.md"),
+        ("optimization", "branches/buffer-lifetime/recipes/reuse.md"),
+    ],
+)
+def test_formatted_reading_views_preserve_existing_record_identity(owner, relative):
+    from aprof_runtime.knowledge import REGIONS, read_record
+
+    root = Path(__file__).resolve().parents[2]
+    region = root / REGIONS[owner]
+    name = (region / relative).relative_to(root).as_posix()
+    index = json.loads((region / "index.json").read_text())
+    before = next(r for r in index["records"] if r["source_path"] == name)
+    after = read_record(root / name, root)
+    for field in ("source_path", "source_hash", "body", "sources"):
+        assert after[field] == before[field]

@@ -279,7 +279,7 @@ a_{k+1,p}=\mathrm{FMA32Bits}(v_{k,p},w_{k,p},a_{k,p}).
 | 项目 | 绑定 |
 |---|---|
 | Action | `action.coalesce_contiguous_transfers`，输入所给版本 |
-| 父实现 | 当前 Weighted<float> 摘录 454–485 行及辅助函数 |
+| 父实现 | 当前 `Weighted<float>` 摘录 454–485 行及辅助函数 |
 | target | 几何 workspace 的 index、weight 两个连续行组 |
 | stage | `Process` 468–470 行 GM→UB |
 | workload | 两例相同 shape、float、NCDHW、bilinear/zeros/alignCorners=false |
@@ -408,7 +408,7 @@ dstStride=\frac{4T'-AlignUp(4v,32)}{32}
 
 以下为交给后继的步骤，**本轮均未执行**。
 
-1. **绑定真实父本与接线。**确认实际 Weighted<float> 入口、扩展 tiling、BlockDim、几何 workspace 分配及生产完成协议；冻结真实源码身份。
+1. **绑定真实父本与接线。**确认实际 `Weighted<float>` 入口、扩展 tiling、BlockDim、几何 workspace 分配及生产完成协议；冻结真实源码身份。
 2. **加入本域参数。**在合法元数据域取 \(T'=256\)，其他域原样 fallback；不改变 `blockLength`。
 3. **合并物理分配。**删除原独立 index/weight 两次分配，改为一份 16 行 VECIN；索引前半视图为 uint32，后半视图为 float。不能只合并变量名而仍保留两份分配。
 4. **保持阈值检查位置。**仍先完成 cache 搬入及完整通道检查，再覆盖 index/acc scratch；b 必须继续得到 software=true。
@@ -436,7 +436,7 @@ dstStride=\frac{4T'-AlignUp(4v,32)}{32}
 
 ## 当前状态
 
-- 基线：题给 Weighted<float> 当前路径，未在本轮验证。
+- 基线：题给 `Weighted<float>` 当前路径，未在本轮验证。
 - 探索方案：单个合并搬运 Action，配套 \(T'=256\) 和合并 VECIN 布局。
 - a：保留普通 Mul/Add；b：保留 16384 次软件 FMA。
 - 状态：**paper/conditional_plan，构建、正确性、性能均 not_measured**。
@@ -469,3 +469,5 @@ dstStride=\frac{4T'-AlignUp(4v,32)}{32}
 - fallback 元数据及相邻边界。
 
 性能验证应分别观察发射数、UB 初始化/Gather 工作、软件 FMA 残余和完整调用时间。若 b 的总体改善很小，不能据此否定已减少的准备工作；应判断软件 FMA 是否支配剩余路径。反之，即使整体变快，也不能在没有消融时把收益精确分摊给“DMA 合并”或“跨度收紧”。
+
+> 文档适配说明：本页已规范代码文字格式；来源和历史回放使用[保留的证据原文](../../../../../document-originals/88aaa7675c01736dd31e722d14856763c6b1b9282107367c8ed366d236f5e6db.txt)。

@@ -15,7 +15,7 @@
 
 # 一、共用的实际路径与数值依赖
 
-## 1. 当前执行的不是原始 Scalar<float> 路径
+## 1. 当前执行的不是原始 `Scalar<float>` 路径
 
 按题目指定，实际执行的是后续摘录中的：
 
@@ -308,7 +308,7 @@ U_B=16640+84\times128=27392\text{B}
 分别提出：
 
 - `A1`：`action.decompose_tasks_dynamically`  
-  目标：Weighted<float> 输出任务；阶段：Host任务分配及 `Process`；参数：Q=1、tile256。
+  目标：`Weighted<float>` 输出任务；阶段：Host任务分配及 `Process`；参数：Q=1、tile256。
 - `B1`：同一注册 Action 的独立实例  
   参数：Q=4、每任务64点、tile128。
 
@@ -446,3 +446,5 @@ C3可调自由度仅为冻结任务内的合法 API 参数和已列缓冲；改�
 - 性能比较完整几何阶段和加权阶段，不只看Gather时间；
 - 若a的8任务关键路径过长，重开Q=4；若b的额外装入/小调用超过并行收益，重开Q=1；
 - 不把逻辑lane减少换算为固定加速比，也不把任一子例结果转成按输入分布派发的许可。
+
+> 文档适配说明：本页已规范代码文字格式；来源和历史回放使用[保留的证据原文](../../../../../document-originals/f8994fa1fff0b163d4e53cae2aadd402a8a4a8f0c01afd42d17e4252eeea36b7.txt)。
