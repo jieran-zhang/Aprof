@@ -1,7 +1,7 @@
 # FlashAttention 类算子设计层
 
 > 本文档列出设计阶段**必须回答的问题**(WHAT)。**不给具体数值、不给完整代码**——具体取值与可行实现由后续单独维护的参考代码承接。
-> 进入本阶段的前置:已完成 [`overview.md` §4 分析阶段产出](./overview.md)(子族选定 + shape 边界 + 可选特性枚举 + 性能精度目标)。
+> 进入本阶段的前置:已完成 `overview.md` §4 分析阶段产出(子族选定 + shape 边界 + 可选特性枚举 + 性能精度目标)。
 
 ---
 
@@ -114,7 +114,7 @@ L0 / L1 容量有限,FA 类的 Cube GEMM 在大 D 场景下必然超容。判定
 - **跨 stage 握手槽**:跨核 / 跨 stage 的中间矩阵 buffer 轮转,用于让上一 stage 输出与下一 stage 输入错开
 - **跨 task 状态槽**:跨 task 持有的 stateful 状态(默认 task 级模式下的 softmax max/sum/exp)
 - **跨 loop 自读自写槽**:同一段在不同 loop 迭代中被自身读写(如默认 task 级模式下 V2 跨 s2 累积的 O_acc GM 段)
-- **L1 rotation 槽**(子族特定深度,见 [`subfamilies.md §2.2`](./subfamilies.md))
+- **L1 rotation 槽**(子族特定深度,见 `subfamilies.md §2.2`)
 
 每类槽**数量独立**——可能相同也可能不同;**取值由各自所对应的"并行度需求"决定**,不可一并而论。
 
@@ -287,7 +287,7 @@ perSlotElems = L1_PORT_SIZE / rotation_slots / sizeof(elem)
 若 一次 Nd2Nz 元素数 > perSlotElems → 必须实施 M 轴(或 N 轴)L1 分块
 ```
 
-`L1_PORT_SIZE` 是 A1 / B1 端口的预算分配(`PlatformAscendC::GetCoreMemSize(CoreMemType::L1_A/L1_B)` 查询所得 ≥ 该预算)。`rotation_slots` 由 §2.4 流水线深度决策与 [`subfamilies.md` §2.2 L1 rotation 子族差异](./subfamilies.md)决定。
+`L1_PORT_SIZE` 是 A1 / B1 端口的预算分配(`PlatformAscendC::GetCoreMemSize(CoreMemType::L1_A/L1_B)` 查询所得 ≥ 该预算)。`rotation_slots` 由 §2.4 流水线深度决策与 `subfamilies.md` §2.2 L1 rotation 子族差异决定。
 
 **M 轴分块**:外层 `for (m = 0; m < mPad; m += M_BASE)` 只搬 M_BASE 行到 L1。
 
@@ -303,7 +303,7 @@ perSlotElems = L1_PORT_SIZE / rotation_slots / sizeof(elem)
 
 回答:**Q/P 与 K/V 各自的 L1 rotation 槽数是多少?依据是什么?**
 
-L1 rotation 深度**因 FA 子族而异**,见 [`subfamilies.md` §2.2](./subfamilies.md)。设计时按子族查表选值,不要凭直觉拍。
+L1 rotation 深度**因 FA 子族而异**,见 `subfamilies.md` §2.2。设计时按子族查表选值,不要凭直觉拍。
 
 **禁止**:把 §2.4 决策的跨核握手槽数和 L1 rotation 槽数混用同一常量(语义不同)。
 
@@ -352,7 +352,7 @@ P·V 阶段 n = D 较大,L0C 容易吃紧,可能需要 N 轴 L1 分块配合(见
 - **跨核握手段**(Cube 写 → Vector 读 / Vector 写 → Cube 读):承载 `[Bq, Bk]` Q·K^T 中间矩阵、`[Bq, Bk]` P 矩阵、`[Bq, D]` P·V 中间矩阵 等
 - **跨 loop 自读自写段**(若需要):默认 task 级 + streaming UB 模式下,V2 跨 s2 块在线累积的 O_acc 落地段(设计在 GM 而非 UB,见 §2.2)
 - **任务级状态段**(若需要 stateful 跨 s2 累积):softmax max / sum / exp 在默认 task 级模式下的持有
-- **子族扩展段**:见 [`subfamilies.md`](./subfamilies.md)(如 MLA 的 int32 中间段)
+- **子族扩展段**:见 `subfamilies.md`(如 MLA 的 int32 中间段)
 - **并行策略扩展段**:若 §2.5 选 split-KV reduce → 增 partial O / partial logsumexp max / partial logsumexp sum 三段
 
 #### Q2:槽数选择依据(语义分离)
@@ -624,11 +624,13 @@ MVP(单核 + 单 qHead 单 kvHead + fp16 + non-causal + 对齐 shape + 小 D)
 
 | 阶段 / 主题 | 入口 |
 |---|---|
-| 分析阶段产出 | [`overview.md`](./overview.md) |
-| 子族扩展契约 | [`subfamilies.md`](./subfamilies.md) |
+| 分析阶段产出 | `overview.md` |
+| 子族扩展契约 | `subfamilies.md` |
 | 通用调试方法 | `/ascendc-precision-debug` |
 | 运行时错误码 | `/ascendc-runtime-debug` |
 | 精度门禁 | `/ops-precision-standard` |
 | 平台差异 / 架构基础 | `/npu-arch` |
 | Ascend C API 用法 | `/ascendc-api-best-practices` |
 | 通用编码规范 / 工程配置 / 修复循环纪律 / 性能调优纪律 | `ops-direct-invoke` plugin `workflows/development-guide.md` |
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../sources/document-originals/83ed347947ce330ed2940beb797be67fdc3cc30d60b9cf376d81711d76ab09cb.txt)。

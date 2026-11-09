@@ -2,7 +2,7 @@
 
 ## 概述
 
-本样例基于静态Tensor编程范式，展示了Cube-Vector（CV）融合的实现方法，将Matmul矩阵乘法与GELU激活函数融合到同一AI Core中并行执行。AIC侧完成Matmul计算后通过Fixpipe将结果输出到GM或UB，AIV侧从GM或UB读取数据完成GELU向量计算。其中Matmul部分的优化细节参考[Matmul基础API最佳实践样例](../../01_matrix_compute/matmul_basic_api_high_performance/README.md)，GELU部分的优化细节参考[Gelu性能调优样例](../../02_reg_compute/gelu_high_performance/README.md)。
+本样例基于静态Tensor编程范式，展示了Cube-Vector（CV）融合的实现方法，将Matmul矩阵乘法与GELU激活函数融合到同一AI Core中并行执行。AIC侧完成Matmul计算后通过Fixpipe将结果输出到GM或UB，AIV侧从GM或UB读取数据完成GELU向量计算。其中Matmul部分的优化细节参考[Matmul基础API最佳实践样例](../../01_matrix_compute/matmul_basic_api_high_performance/README.md)，GELU部分的优化细节参考Gelu性能调优样例（同名参考，非历史原件：[README.md](../../../../../../../../../../ascendc-aprof-parallel-planning/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/03_fusion_compute/matmul_gelu_high_performance/README.md)）。
 
 ## 本样例支持的产品及CANN软件版本
 
@@ -99,7 +99,7 @@ GM ──(MTE2)──> L1 ──(MTE1)──> L0A/L0B ──(Cube)──> L0C �
 
 ### 中级性能优化
 
-本样例的Matmul部分采用与[Matmul基础API最佳实践样例](../../01_matrix_compute/matmul_basic_api_high_performance/README.md)相同的优化手段（L1/L0双缓冲、大包搬运、细粒度流水同步、UnitFlag等），GELU部分在Ascend 950PR架构上采用RegBase方式，在A2/A3架构上采用MemBase方式。GELU公式的化简、RegBase API与VF融合的详细优化分析请参考[Gelu性能调优样例](../../02_reg_compute/gelu_high_performance/README.md)。
+本样例的Matmul部分采用与[Matmul基础API最佳实践样例](../../01_matrix_compute/matmul_basic_api_high_performance/README.md)相同的优化手段（L1/L0双缓冲、大包搬运、细粒度流水同步、UnitFlag等），GELU部分在Ascend 950PR架构上采用RegBase方式，在A2/A3架构上采用MemBase方式。GELU公式的化简、RegBase API与VF融合的详细优化分析请参考Gelu性能调优样例（同名参考，非历史原件：[README.md](../../../../../../../../../../ascendc-aprof-parallel-planning/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/03_fusion_compute/matmul_gelu_high_performance/README.md)）。
 
 #### Matmul优化手段
 
@@ -114,7 +114,7 @@ GM ──(MTE2)──> L1 ──(MTE1)──> L0A/L0B ──(Cube)──> L0C �
 
 | Case                                                                                              | 优化手段             | 说明                                                |
 | ------------------------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------- |
-| [Case 1](../../02_reg_compute/gelu_high_performance/README.md#case-1-启用regbase-api和vf融合能力) | RegBase API + VF融合 | 寄存器级计算减少中间Load/Store，利用双发特性提升IPC |
+| Case 1（同名参考，非历史原件：[README.md](../../../../../../../../../../ascendc-aprof-parallel-planning/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/03_fusion_compute/matmul_gelu_high_performance/README.md)） | RegBase API + VF融合 | 寄存器级计算减少中间Load/Store，利用双发特性提升IPC |
 
 #### GELU计算实现
 
@@ -225,7 +225,7 @@ Matmul和Gelu相关高阶极限打磨手段请参考下方列表。
 
 | Case                                                                                                          | 优化手段          | 说明                                     |
 | ------------------------------------------------------------------------------------------------------------- | ----------------- | ---------------------------------------- |
-| [Case 2](../../02_reg_compute/gelu_high_performance/README.md#case-2-启用regbase-apivf融合能力和循环展开优化) | VF融合 + 循环展开 | #pragma unroll展开循环，提高指令级并行度 |
+| Case 2（同名参考，非历史原件：[README.md](../../../../../../../../../../ascendc-aprof-parallel-planning/knowledge/sources/asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/examples/01_simd_cpp_api/05_best_practices/03_fusion_compute/matmul_gelu_high_performance/README.md)） | VF融合 + 循环展开 | #pragma unroll展开循环，提高指令级并行度 |
 
 #### CV融合-GM中转
 
@@ -317,7 +317,7 @@ AscendC::DataCopyPad<float>(cGM[gmOffset], geluOutUB, copyOutParams);
 
 下图展示了Scenario 1（CV融合-GM中转）场景下AIC和AIV的流水并行执行过程。AIC侧完成Matmul计算后通过Fixpipe将结果写入GM，AIV侧从GM读取数据完成GELU计算，两者按(baseM × baseN)块粒度流水并行：
 
-![Scenario1 CV融合-GM中转流水并行](figures/CVParallell_L0C_GM_UB.png)
+Scenario1 CV融合-GM中转流水并行
 
 > 💡 使用 msOpProf 工具需安装 CANN 商用/社区版，详细信息可参考[msOpProf工具安装指南](https://www.hiascend.com/document/detail/zh/canncommercial/900/devaids/optool/docs/zh/install_guide/msopprof_install_guide.md)。流水图基于msOpProf工具上板获取，获取命令：`msopprof --aic-metrics=PipeTimeline ./demo`
 
@@ -395,7 +395,7 @@ AscendC::DataCopyPad<float>(cGM[mBlockIdx * baseM * N + nBlockIdx * baseN + loca
 
 下图展示了Scenario 2（CV融合-UB直通）场景下AIC和AIV的流水并行执行过程。AIC侧完成Matmul计算后通过Fixpipe将结果直接写入UB（不经过GM中转），AIV侧直接在UB上进行GELU计算，省去了GM→UB的MTE2搬运开销：
 
-![Scenario2 CV融合-UB直通流水并行](figures/CVParallell_L0C_UB.png)
+Scenario2 CV融合-UB直通流水并行
 
 ## 编译运行
 
@@ -411,7 +411,7 @@ AscendC::DataCopyPad<float>(cGM[mBlockIdx * baseM * N + nBlockIdx * baseN + loca
 
 - 配置环境变量
 
-  请根据当前环境上CANN开发套件包的[安装方式](../../../../../docs/zh/quick_start.md#prepare&install)，配置环境变量。
+  请根据当前环境上CANN开发套件包的安装方式，配置环境变量。
 
   ```bash
   source ${install_path}/cann/set_env.sh
@@ -476,7 +476,7 @@ AscendC::printf("matmul blockIdx=%d\n", AscendC::GetBlockIdx());
 
 ### DumpTensor
 
-基于算子工程开发的算子，可以使用该接口Dump指定[LocalTensor](../../../../../docs/zh/api/SIMD-API/basic_api/data_structures/LocalTensor/LocalTensor_intro.md)的内容。同时支持打印自定义的附加信息（仅支持uint32_t数据类型的信息），比如打印当前行号等。
+基于算子工程开发的算子，可以使用该接口Dump指定LocalTensor的内容。同时支持打印自定义的附加信息（仅支持uint32_t数据类型的信息），比如打印当前行号等。
 
 在算子kernel侧实现代码中需要打印Tensor数据的地方调用DumpTensor接口打印相关内容。样例如下：
 
@@ -486,7 +486,7 @@ AscendC::Div(yLocal, xLocal, yLocal, n);
 AscendC::DumpTensor(yLocal, 1, 16);
 ```
 
-> **注意：** [DumpTensor](../../../../../docs/zh/api/SIMD-API/basic_api/debug_interface/onboard_print/DumpTensor.md)接口打印功能会对算子实际运行的性能带来一定影响，通常在调测阶段使用。开发者可以按需通过设置ASCENDC_DUMP=0来关闭打印功能。
+> **注意：** DumpTensor接口打印功能会对算子实际运行的性能带来一定影响，通常在调测阶段使用。开发者可以按需通过设置ASCENDC_DUMP=0来关闭打印功能。
 
 ## 性能调试
 
@@ -524,3 +524,5 @@ msOpProf工具是单算子性能分析工具。包含msopprof和msopprof simulat
 # 查看Task Duration 以及各项数据
 cat ./OPPROF_*/PipeUtilization.csv
 ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../sources/document-originals/f455633ee4affaed0ad5591c0acc1d47c2d7099c3bc25a8a87a3f2259783008e.txt)。

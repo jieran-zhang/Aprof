@@ -1,6 +1,6 @@
 # Scalar 性能优化策略索引
 
-> 适用架构：通用（arch22 / arch35）。通用编码原则可跨代参考；具体指令、cache/寄存器参数及子族案例按 [代际范围](../architecture-scope.md) 核验。先用目标 profiling/编译结果确认根因，不能把所有 ScalarBound 都归因为 spill。
+> 适用架构：通用（arch22 / arch35）。通用编码原则可跨代参考；具体指令、cache/寄存器参数及子族案例按 代际范围 核验。先用目标 profiling/编译结果确认根因，不能把所有 ScalarBound 都归因为 spill。
 
 
 Scalar 单元负责标量计算、地址计算、指令参数构造与指令分发。当它本身成为瓶颈、无法及时把指令发到 Cube / Vector / MTE 的 Issue 队列时，其他流水线会出现 bubble，整个算子被拖慢。这种现象称为 **ScalarBound**。
@@ -29,5 +29,7 @@ Scalar 优化与算子族优化**正交**：算子族优化决定"做什么计�
 
 | 算子族 | 场景 | 核心思路 | 指南 |
 |--------|------|---------|------|
-| Conv | Depthwise、小 case（FMAP/Weight 全载 L1） | 固定循环轴 + 去除高层抽象 + TilingData 常量化 | [Conv Scalar 优化指南](conv_scalar.md) |
+| Conv | Depthwise、小 case（FMAP/Weight 全载 L1） | 固定循环轴 + 去除高层抽象 + TilingData 常量化 | Conv Scalar 优化指南 |
 | FA | — | 📋 规划中 | — |
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../sources/document-originals/1f9161d4bdd0ed256130213ce0e61598369c869b00ce28d54db38f5860536fdc.txt)。

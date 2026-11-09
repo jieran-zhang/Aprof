@@ -197,7 +197,7 @@ for t in balanced_owned_tasks(T, core_id, core_count):
 
 ## 有界 Ascend C 片段
 
-下面是 A3/950 均可候选的 FP32 静态 axis=0 小片段，前提为实际 srcShape={1,8}、dstShape={m,8}、m>0，源与目标不重叠，容量足够，src 已通过队列完成搬入；sharedTmp 为查询所得大小的 LocalTensor<uint8_t>。8*sizeof(float)=32B 满足该特定源的接口约束，8 不是通用 tile 推荐值。
+下面是 A3/950 均可候选的 FP32 静态 axis=0 小片段，前提为实际 srcShape={1,8}、dstShape={m,8}、m>0，源与目标不重叠，容量足够，src 已通过队列完成搬入；sharedTmp 为查询所得大小的 `LocalTensor<uint8_t>`。8*sizeof(float)=32B 满足该特定源的接口约束，8 不是通用 tile 推荐值。
 
 ```cpp
 uint32_t srcShape[2] = {1, 8};
@@ -242,3 +242,5 @@ AscendC::Broadcast<float>(expanded, src, dstShape, srcShape, &brTiling);
 短内轴 H 可将若干行组合，但只有所有输入广播位图一致的相邻轴才能合轴。`A=[P,1,H]、B=[P,R,1]` 的两类广播轴不同，不能错误合并成连续 RH 源。每行边界、部分尾行和输出物理搬出边界都应归同一 owner 或采用已经证明的非重叠写法。
 
 **影响选择的结论**：记录保留源块、展开值、派生中间量三者的对象/生命周期；连续段处理未解决的昂贵函数、其他 dtype 和不规则 stride 作为残余范围。来源知识足以提出条件方案，不要求先测出 bandwidth；但 API、别名、容量与精度未知不能用性能假设代替。若现有 Action 只承载输入值驻留，不能用它隐含授权重排派生几何计算。
+
+> 文档适配说明：本页已规范代码文字格式；来源和历史回放使用[保留的证据原文](../../../../../../sources/document-originals/485c6aec11ef4e73458f85be904d0692bf7ed6b97db0ecd88d7694b039c505f0.txt)。

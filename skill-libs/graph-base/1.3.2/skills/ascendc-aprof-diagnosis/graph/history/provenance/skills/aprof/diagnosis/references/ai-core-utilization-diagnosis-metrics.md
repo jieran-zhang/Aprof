@@ -5,9 +5,9 @@
 使用时应交叉参考：
 
 - [workload-aware 诊断](workload-aware-diagnosis.md)：先判断任务规模、每核工作量和可达利用率。
-- [tiling 诊断矩阵](tiling-diagnosis-metrics.md)：`blockDim`、`totalTiles`、tail、动态 shape、AIC/AIV 配比。
-- [流水并行不足诊断矩阵](pipeline-parallel-diagnosis-metrics.md)：流水线气泡、AIC/AIV 节拍不匹配、wait ratio。
-- [数据搬运瓶颈诊断矩阵](data-movement-diagnosis-metrics.md)：MTE 主导导致计算单元闲置。
+- tiling 诊断矩阵（同名参考，非历史原件：[tiling-diagnosis-metrics.md](../../../../../../../../../workflows/migration/archive/skills/ascendc-aprof-diagnosis/references/tiling-diagnosis-metrics.md)）：`blockDim`、`totalTiles`、tail、动态 shape、AIC/AIV 配比。
+- 流水并行不足诊断矩阵（同名参考，非历史原件：[pipeline-parallel-diagnosis-metrics.md](../../../../../../../../../workflows/migration/archive/skills/ascendc-aprof-diagnosis/references/pipeline-parallel-diagnosis-metrics.md)）：流水线气泡、AIC/AIV 节拍不匹配、wait ratio。
+- 数据搬运瓶颈诊断矩阵（同名参考，非历史原件：[data-movement-diagnosis-metrics.md](../../../../../../../../../workflows/migration/archive/skills/ascendc-aprof-diagnosis/references/data-movement-diagnosis-metrics.md)）：MTE 主导导致计算单元闲置。
 
 ## 证据等级
 
@@ -75,8 +75,8 @@
 | Vector 利用不足 | MTE/Scalar/同步主导，或 Vector API 粒度太小 | Vector-heavy 全部 | `aiv_vec_ratio` 低；MTE2/MTE3/Scalar 高；Vector wait 高 | 增大 vector 粒度，减少搬运/同步，检查 UB conflict | 直接/派生 |
 | Cube 利用不足 | M/N/K 分块不合理，L1/L0 复用不足，AIC 等 AIV | MatMul、GMM、FA | `aic_cube_ratio` 低；MTE1/MTE2 或 Cube wait 高；Cube 理论利用低 | 调整 baseM/baseN/baseK、L1/L0 复用、AIC/AIV 节拍 | 直接/派生 |
 | AIC/AIV 配比不匹配 | Cube 阶段和 Vector 后处理耗时差异大 | MatMul、GMM、FA | AIC/AIV time 差大；Cube/Vector wait 高；流水线气泡 | 调整 mix kernel 配比、stage/workspace 份数或后处理融合策略 | 派生/Trace |
-| 搬运瓶颈导致计算单元空等 | MTE2/MTE3 主导，计算 pipe 占比低 | 全部 | MTE ratio 高；Vector/Cube ratio 低；MTE wait 或 bandwidth 异常 | 参考 [数据搬运瓶颈诊断矩阵](data-movement-diagnosis-metrics.md) 减少搬运或掩盖搬运 | 直接/派生 |
-| 流水气泡导致利用率低 | DB 未生效、queue depth 不足、同步等待多 | 全部 | 多 pipe 都不满；wait ratio 高；trace 有空洞 | 参考 [流水并行不足诊断矩阵](pipeline-parallel-diagnosis-metrics.md) 修复 DB、queue、同步 | 派生/Trace |
+| 搬运瓶颈导致计算单元空等 | MTE2/MTE3 主导，计算 pipe 占比低 | 全部 | MTE ratio 高；Vector/Cube ratio 低；MTE wait 或 bandwidth 异常 | 参考 数据搬运瓶颈诊断矩阵（同名参考，非历史原件：[data-movement-diagnosis-metrics.md](../../../../../../../../../workflows/migration/archive/skills/ascendc-aprof-diagnosis/references/data-movement-diagnosis-metrics.md)） 减少搬运或掩盖搬运 | 直接/派生 |
+| 流水气泡导致利用率低 | DB 未生效、queue depth 不足、同步等待多 | 全部 | 多 pipe 都不满；wait ratio 高；trace 有空洞 | 参考 流水并行不足诊断矩阵（同名参考，非历史原件：[pipeline-parallel-diagnosis-metrics.md](../../../../../../../../../workflows/migration/archive/skills/ascendc-aprof-diagnosis/references/pipeline-parallel-diagnosis-metrics.md)） 修复 DB、queue、同步 | 派生/Trace |
 | 动态 shape 下策略不适配 | 固定 blockDim/tile/task 规则覆盖大小 shape | 全部 | 不同 shape 下核利用率、负载均衡波动大 | Host Tiling 按 shape 重算 usedCoreNum、tile 和分支策略 | 派生/对比 |
 | Reduction A 维任务不足 | 外层 A 太小，R 轴单核串行 | Reduction | 核利用率低；少数核 `aiv_time` 长 | A 不足时评估 Group Reduce 或跨 R 分段并行 | 派生 |
 | Sort 归并阶段串行拖尾 | 归并轮次多，跨核同步后部分核等待 | Sort/TopK | trace SyncAll 等待；后期 active core 下降 | 先核内归并再跨核归并，调整 tileSize 和归并路数 | Trace |
@@ -148,3 +148,5 @@
 5. 看 Vector/Cube/MTE/Scalar ratio，判断计算不足是因为搬运、同步、标量还是算法本身。
 6. 看 wait ratio 和 trace，确认是否流水气泡或 AIC/AIV 互等。
 7. 对 tail、小 shape、动态 shape 分别采样，避免把单个边界 case 误判为整体利用率问题。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../sources/document-originals/0a70b21924e9ba29d6a75280699009b1f46afd4e9bd0fd3eb9880d592105e475.txt)。

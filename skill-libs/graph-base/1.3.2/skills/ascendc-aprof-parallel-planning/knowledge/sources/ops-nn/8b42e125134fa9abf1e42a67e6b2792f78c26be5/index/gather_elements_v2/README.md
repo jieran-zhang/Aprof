@@ -103,4 +103,6 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_gather_elements_v2](./examples/test_aclnn_gather_elements_v2.cpp) | 通过[aclnnGather](./docs/aclnnGather.md)接口方式调用GatherElementsV2算子。 |
+| aclnn调用 | test_aclnn_gather_elements_v2 | 通过aclnnGather接口方式调用GatherElementsV2算子。 |
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../sources/document-originals/c8df45df36e823c8531e2e64a7d396d53f04c7e75ddc223dfb476c3910ffc43e.txt)。

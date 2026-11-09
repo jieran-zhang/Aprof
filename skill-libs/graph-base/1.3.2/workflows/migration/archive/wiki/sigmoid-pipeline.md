@@ -1,6 +1,6 @@
 # sigmoid 两槽流水观察
 
-> 本页保留历史协议下的观察与结论。1.1.0 新会话使用[统一计时协议](../skills/ascendc-aprof-profiling/references/unified-timing.md)，不照搬历史配对采集或置信区间门槛。
+> 本页保留历史协议下的观察与结论。1.1.0 新会话使用统一计时协议（同名参考，非历史原件：[unified-timing.md](../../../../skills/ascendc-aprof-profiling/references/unified-timing.md)），不照搬历史配对采集或置信区间门槛。
 
 ## 适用条件
 
@@ -48,3 +48,5 @@ FP16 `[8192,8192]` 的 case 4 总体角色偏差为 4.2631%，两个周期分别
 任务实际退出 2；未构建、未采集硬件数据、未形成源码审查结论。这是评估
 流程拒绝，不是两槽流水的性能或正确性反例。该尝试已关闭，原始日志由
 任务后的收集流程保存，见演化事件 `1.0.0-sigmoid-task-v5-review-budget-20261015`。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../sources/document-originals/e41563e1e12e9f4c13c116aae042f3cffaefb8011fbded70f34cd350ea8bf7f6.txt)。

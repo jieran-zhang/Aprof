@@ -14,7 +14,7 @@
 
 环境与 architecture 证据有效即可复用，实际执行身份仍需核验。修改前分析任务分解、容量、每核工作、流量下界和可达性能；默认保持 `production_safe` 的数学、精度、动态域、尾块与边界。风险 API 修改先查准确来源，修改后先静态审查再构建与完整正确性。
 
-候选反馈与正式收尾统一遵循 [主工作流](../../ascendc-aprof-workflow/SKILL.md) 和 [计时协议](../../ascendc-aprof-profiling/references/unified-timing.md)。PMU 是按需机制证据，simulator 是代理证据；二者不能替代完整调用计时。合法图要求的 profile predicate 缺失时需补证据，未实现 extractor 保持未知。
+候选反馈与正式收尾统一遵循 主工作流（同名参考，非历史原件：[SKILL.md](../../ascendc-perf-optimize/SKILL.md)） 和 计时协议（同名参考，非历史原件：[unified-timing.md](../../../../../../skills/ascendc-aprof-profiling/references/unified-timing.md)）。PMU 是按需机制证据，simulator 是代理证据；二者不能替代完整调用计时。合法图要求的 profile predicate 缺失时需补证据，未实现 extractor 保持未知。
 
 固定 tile 本身不等于特化；只有 case 捷径、未经验证的固定假设、删动态处理、降精度或缩小契约域时才标 `scope_status=benchmark_specialized`。
 
@@ -40,3 +40,5 @@
 本轮输出候选代码与 runtime 的 `performance_engineering_only` 结果，不据此指定 `best_op`。`semantic_status=preserved`、`scope_status=production_safe`、`portability_risk != high` 和 `accepted_for` 含 `production` 是历史生产选择契约的条件，不是新计时结果字段；当前流程不为补这些字段转入旧配对或 episode 通道。快但被拒或仅适合 benchmark 的结果，在 `final_optimization_report.md` 保留实际比较及拒绝原因。
 
 正确性失败交 `ascendc-precision-debug`，运行错误交 `ascendc-runtime-debug`，超时/崩溃/AIC 交 `ascendc-crash-debug`，缺采集证据交 `ops-profiling`。回归先保留结果并停止该尝试，有剩余范围和预算才开始下一候选。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../sources/document-originals/62dbc6b907da0bfe840032271ee0d448180eb48fa1acddb43b6fa97c184c75c2.txt)。

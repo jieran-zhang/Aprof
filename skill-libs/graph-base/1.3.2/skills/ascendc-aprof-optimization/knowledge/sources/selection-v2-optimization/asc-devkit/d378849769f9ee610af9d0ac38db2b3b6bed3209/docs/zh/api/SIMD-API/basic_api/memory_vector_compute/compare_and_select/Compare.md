@@ -29,7 +29,7 @@
 <!-- npu="9030" id9 -->
 - Kirin 9030处理器系列产品：支持
 <!-- end id9 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Compare_res.md#id1 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/compare_and_select/Compare_res.md#id1 -->
 
 ## 功能说明<a name="section618mcpsimp"></a>
 
@@ -106,13 +106,13 @@
 
 | 参数名称 | 输入/输出 | 描述 |
 | --- | --- | --- |
-| dst | 输出 | 目的操作数。<br>类型为[LocalTensor](../../data_structures/LocalTensor/LocalTensor.md)，支持的TPosition为VECIN/VECCALC/VECOUT。<br>LocalTensor的起始地址需要32字节对齐。<br>dst用于存储比较结果，将dst中uint8_t类型的数据按照bit位展开，由左至右依次表征对应位置的src0和src1的比较结果，如果比较后的结果为真，则对应比特位为1，否则为0。 |
-| src0、src1 | 输入 | 源操作数。<br>类型为[LocalTensor](../../data_structures/LocalTensor/LocalTensor.md)，支持的TPosition为VECIN/VECCALC/VECOUT。<br>LocalTensor的起始地址需要32字节对齐。 |
+| dst | 输出 | 目的操作数。<br>类型为LocalTensor，支持的TPosition为VECIN/VECCALC/VECOUT。<br>LocalTensor的起始地址需要32字节对齐。<br>dst用于存储比较结果，将dst中uint8_t类型的数据按照bit位展开，由左至右依次表征对应位置的src0和src1的比较结果，如果比较后的结果为真，则对应比特位为1，否则为0。 |
+| src0、src1 | 输入 | 源操作数。<br>类型为LocalTensor，支持的TPosition为VECIN/VECCALC/VECOUT。<br>LocalTensor的起始地址需要32字节对齐。 |
 | cmpMode | 输入 | CMPMODE类型，表示比较模式，包括EQ，NE，GE，LE，GT，LT。<br>&bull; LT：src0小于（less than）src1 <br>&bull; GT：src0大于（greater than）src1 <br>&bull; GE：src0大于或等于（greater than or equal to）src1 <br>&bull; EQ：src0等于（equal to）src1 <br>&bull; NE：src0不等于（not equal to）src1 <br>&bull; LE：src0小于或等于（less than or equal to）src1<br> |
-| mask/mask[] | 输入 | mask用于控制每次迭代内参与计算的元素。详细设置参考[掩码](../SIMD_compute/mask.md)。 |
-| repeatTime | 输入 | 重复迭代次数。矢量计算单元，每次读取连续的256Bytes数据进行计算，为完成对输入数据的处理，必须通过多次迭代（repeat）才能完成所有数据的读取与计算。repeatTime表示迭代的次数。<br>关于该参数的具体描述请参考[高维切分](../SIMD_compute/high_dim_split.md)。 |
-| repeatParams | 输入 | 控制操作数地址步长的参数。[BinaryRepeatParams](../../aux_data_structures/BinaryRepeatParams.md)类型，包含操作数相邻迭代间相同DataBlock的地址步长，操作数同一迭代内不同DataBlock的地址步长等参数。<br>相邻迭代间的地址步长参数说明请参考[repeatStride](../SIMD_compute/high_dim_split.md)；同一迭代内DataBlock的地址步长参数说明请参考[dataBlockStride](../SIMD_compute/high_dim_split.md)。 |
-| count | 输入 | 参与计算的元素个数。关于该参数的具体说明请参考[连续计算](../SIMD_compute/continuous_compute.md)。 |
+| mask/mask[] | 输入 | mask用于控制每次迭代内参与计算的元素。详细设置参考掩码。 |
+| repeatTime | 输入 | 重复迭代次数。矢量计算单元，每次读取连续的256Bytes数据进行计算，为完成对输入数据的处理，必须通过多次迭代（repeat）才能完成所有数据的读取与计算。repeatTime表示迭代的次数。<br>关于该参数的具体描述请参考[高维切分](../../../../../../../../../../asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/SIMD_compute/high_dim_split.md)。 |
+| repeatParams | 输入 | 控制操作数地址步长的参数。BinaryRepeatParams类型，包含操作数相邻迭代间相同DataBlock的地址步长，操作数同一迭代内不同DataBlock的地址步长等参数。<br>相邻迭代间的地址步长参数说明请参考[repeatStride](../../../../../../../../../../asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/SIMD_compute/high_dim_split.md)；同一迭代内DataBlock的地址步长参数说明请参考[dataBlockStride](../../../../../../../../../../asc-devkit/d378849769f9ee610af9d0ac38db2b3b6bed3209/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/SIMD_compute/high_dim_split.md)。 |
+| count | 输入 | 参与计算的元素个数。关于该参数的具体说明请参考连续计算。 |
 
 ### mask/mask[]参数说明
 
@@ -204,7 +204,7 @@
 
 ## 约束说明<a name="section633mcpsimp"></a>
 
-- 操作数地址对齐要求请参见[通用地址对齐约束](../../../general_description_and_constraints.md)。
+- 操作数地址对齐要求请参见通用地址对齐约束。
 
 - dst按照小端顺序排序成二进制结果，对应src中相应位置的数据比较结果。
 
@@ -220,7 +220,7 @@
     <!-- end id30 -->
   <!-- end id28 -->
   <!-- npu="950" id31 -->
-  - 针对Ascend 950PR&950DT系列产品，该接口通过VF调用[Reg矢量计算API](../../reg_vector_compute/reg_vector_compute.md)实现兼容，当参数count或repeatTime取值为0时，不保证该接口将被视为NOP（空操作）。
+  - 针对Ascend 950PR&950DT系列产品，该接口通过VF调用Reg矢量计算API实现兼容，当参数count或repeatTime取值为0时，不保证该接口将被视为NOP（空操作）。
   <!-- end id31 -->
 <!-- end id27 -->
 
@@ -239,7 +239,7 @@
 
 本样例中，源操作数src0和src1各存储了256个float类型的数据。样例实现的功能为，逐元素对src0和src1中的数据进行比较，如果src0中的元素小于src1中的元素，dst结果中对应的比特位置1；反之，则置0。dst结果使用uint8\_t类型数据存储。
 
-完整的调用样例可参考[Compare类样例](../../../../../../../examples/01_simd_cpp_api/03_basic_api/01_memory_vector_compute/compare)场景一。
+完整的调用样例可参考Compare类样例场景一。
 
 - 整个tensor参与计算
 
@@ -355,3 +355,5 @@
     输入数据mask：64
     输出数据dstLocal： [ 255(0b11111111) 255(0b11111111) 255(0b11111111) 255(0b11111111) 0(0b00000000) 0(0b00000000) 0(0b00000000) 0(0b00000000) ]
     ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../../sources/document-originals/353264a38c342ca8b668d0400e48750461820fa743be89ba59d6824eb4764262.txt)。

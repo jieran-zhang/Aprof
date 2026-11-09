@@ -29,7 +29,7 @@
 <!-- npu="9030" id9 -->
 - Kirin 9030处理器系列产品：支持
 <!-- end id9 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/resource_management/TPipe/InitBuffer_res.md#id1 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/resource_management/TPipe/InitBuffer_res.md#id1 -->
 
 ## 功能说明<a name="section618mcpsimp"></a>
 
@@ -70,7 +70,7 @@
 </thead>
 <tbody><tr id="row14345472346"><td class="cellrowborder" valign="top" width="12.13%" headers="mcps1.2.3.1.1 "><p id="p149121233183416"><a name="p149121233183416"></a><a name="p149121233183416"></a>T</p>
 </td>
-<td class="cellrowborder" valign="top" width="87.87%" headers="mcps1.2.3.1.2 "><p id="p1034577203412"><a name="p1034577203412"></a><a name="p1034577203412"></a>队列的类型，支持取值<a href="../TQue/TQue.md">TQue</a>、<a href="../TQueBind/TQueBind.md">TQueBind</a>、<a href="../TSCM/TSCM.md">TSCM</a>。</p>
+<td class="cellrowborder" valign="top" width="87.87%" headers="mcps1.2.3.1.2 "><p id="p1034577203412"><a name="p1034577203412"></a><a name="p1034577203412"></a>队列的类型，支持取值<a>TQue</a>、<a>TQueBind</a>、<a>TSCM</a>。</p>
 </td>
 </tr>
 </tbody>
@@ -122,7 +122,7 @@
 </thead>
 <tbody><tr id="row20527115315514"><td class="cellrowborder" valign="top" width="12.13%" headers="mcps1.2.3.1.1 "><p id="p85273533517"><a name="p85273533517"></a><a name="p85273533517"></a>T</p>
 </td>
-<td class="cellrowborder" valign="top" width="87.87%" headers="mcps1.2.3.1.2 "><p id="p352719537516"><a name="p352719537516"></a><a name="p352719537516"></a>队列的类型，支持取值<a href="../TQue/TQue.md">TQue</a>、<a href="../TQueBind/TQueBind.md">TQueBind</a>。</p>
+<td class="cellrowborder" valign="top" width="87.87%" headers="mcps1.2.3.1.2 "><p id="p352719537516"><a name="p352719537516"></a><a name="p352719537516"></a>队列的类型，支持取值<a>TQue</a>、<a>TQueBind</a>。</p>
 </td>
 </tr>
 <tr id="row1865712321528"><td class="cellrowborder" valign="top" width="12.13%" headers="mcps1.2.3.1.1 "><p id="p15657123285218"><a name="p15657123285218"></a><a name="p15657123285218"></a>U</p>
@@ -189,7 +189,7 @@
 </thead>
 <tbody><tr id="row167376215416"><td class="cellrowborder" valign="top" width="12.34%" headers="mcps1.2.3.1.1 "><p id="p14568152324113"><a name="p14568152324113"></a><a name="p14568152324113"></a>bufPos</p>
 </td>
-<td class="cellrowborder" valign="top" width="87.66000000000001%" headers="mcps1.2.3.1.2 "><p id="p188271137124113"><a name="p188271137124113"></a><a name="p188271137124113"></a>TBuf所在的逻辑位置，<a href="../../aux_data_structures//TPosition.md">TPosition</a>类型。</p>
+<td class="cellrowborder" valign="top" width="87.66000000000001%" headers="mcps1.2.3.1.2 "><p id="p188271137124113"><a name="p188271137124113"></a><a name="p188271137124113"></a>TBuf所在的逻辑位置，<a>TPosition</a>类型。</p>
 </td>
 </tr>
 </tbody>
@@ -226,11 +226,11 @@
 ## 约束说明<a name="section633mcpsimp"></a>
 
 -   InitBuffer申请的内存会在TPipe对象销毁时通过析构函数自动释放，无需手动释放。
--   如果需要重新分配InitBuffer申请的内存，可以调用[Reset](Reset.md)，再调用InitBuffer接口。
+-   如果需要重新分配InitBuffer申请的内存，可以调用Reset，再调用InitBuffer接口。
 -   一个核函数（Kernel）中所有使用的Buffer数量之和不能超过64。
 -   自定义地址InitBuffer方式分配不建议与不指定地址的混用，可能会导致内存冲突。
 <!-- npu="950" id10 -->
-- 针对Ascend 950PR&950DT系列产品，对Unified Buffer（UB）的内存分配，会基于静态内存的基础上进行分配，即动态内存初始位置，参考[内存层级](../../../../../guide/programming_guide/advanced_programming/advanced_ai_core_programming_model/simd_simt_hybrid_programming/memory_hierarchy.md)。
+- 针对Ascend 950PR&950DT系列产品，对Unified Buffer（UB）的内存分配，会基于静态内存的基础上进行分配，即动态内存初始位置，参考内存层级。
 <!-- end id10 -->
 - 当前暂不支持与L1 Buffer, L0A Buffer, L0B Buffer, L0C Buffer, BiasTable静态数组混用。
 
@@ -262,3 +262,5 @@ AscendC::TBuf<AscendC::TPosition::A1> buf; // 输出数据管理对象，TPositi
 uint32_t len = 128;
 pipe.InitBuffer(buf, len);
 ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../sources/document-originals/36da88132f7d5f62484bc98896bd99577bcce25d71a84e21220731a557aea34d.txt)。

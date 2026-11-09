@@ -160,7 +160,7 @@
     输入张量x支持BNSD、BSND、SBND、TND排布。各参数的shape约束可以描述如下：
     - 输入张量x、cos、sin及输出张量y的最后一维大小必须相同，且小于等于1024。对于half、interleave和interleave-half模式，最后一维必须能被2整除，对于quarter模式，最后一维必须能被4整除。
     - 输入张量x和输出张量y的shape必须完全相同。
-    - 输入张量cos和sin的shape必须完全相同，cos和sin的shape需要与x满足[broadcast关系](../../docs/zh/context/broadcast_relationship.md)，且广播后的shape必须等于x的shape。
+    - 输入张量cos和sin的shape必须完全相同，cos和sin的shape需要与x满足broadcast关系，且广播后的shape必须等于x的shape。
     - 当x为TND时，cos、sin支持T1D、TND。
 
   - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：
@@ -186,4 +186,6 @@
 
 | 调用方式           | 调用样例                                                                                    | 说明                                                                                                  |
 |----------------|-----------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_rotary_position_embedding](./examples/test_aclnn_rotary_position_embedding.cpp) | 通过[aclnnRotaryPositionEmbedding](./docs/aclnnRotaryPositionEmbedding.md)接口方式调用RotaryPositionEmbedding算子。             |
+| aclnn调用 | test_aclnn_rotary_position_embedding | 通过aclnnRotaryPositionEmbedding接口方式调用RotaryPositionEmbedding算子。             |
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../sources/document-originals/5c367eaca3ad1b7008afd6804ccc997be9cde35a76bb03d23df2a931d810a784.txt)。

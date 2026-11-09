@@ -25,7 +25,7 @@
 <!-- npu="910" id7 -->
 - Atlas训练系列产品：不支持
 <!-- end id7 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_UBToGM_res.md#id1 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_UBToGM_res.md#id1 -->
 
 ### 支持数据搬运模式mode的原型
 
@@ -50,7 +50,7 @@
 <!-- npu="910" id14 -->
 - Atlas训练系列产品：不支持
 <!-- end id14 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_UBToGM_res.md#id2 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/data_move/DataCopyPad_UBToGM_res.md#id2 -->
 
 ## 功能说明<a name="section618mcpsimp"></a>
 
@@ -58,7 +58,7 @@
 
 该接口提供将数据从Unified Buffer（UB）非对齐搬运至Global Memory的功能。
 
-具体支持的数据通路为（以[逻辑位置TPosition](../../aux_data_structures/TPosition.md)表示）：
+具体支持的数据通路为（以逻辑位置TPosition表示）：
 
 - UB -> Global Memory
     - VECIN -> GM
@@ -101,8 +101,8 @@
 
 | 参数名 | 输入/输出 | 描述 |
 | :--- | :---: | :--- |
-| dst | 输出 | 目的操作数，类型为[GlobalTensor](../../data_structures/GlobalTensor/GlobalTensor_intro.md)。<br>起始地址无地址对齐约束。 |
-| src | 输入 | 源操作数，类型为[LocalTensor](../../data_structures/LocalTensor/LocalTensor_intro.md)。<br>起始地址需要保证32字节对齐。 |
+| dst | 输出 | 目的操作数，类型为GlobalTensor。<br>起始地址无地址对齐约束。 |
+| src | 输入 | 源操作数，类型为LocalTensor。<br>起始地址需要保证32字节对齐。 |
 | dataCopyParams | 输入 | 搬运参数，DataCopyExtParams类型，具体参数说明见下文。 |
 
 下文表格中列出的结构体参数定义请参考`${INSTALL_DIR}/asc/include/basic_api/kernel_struct_data_copy.h`，`${INSTALL_DIR}`请替换为CANN软件安装后文件存储路径。
@@ -158,7 +158,7 @@
     对于32字节对齐搬运场景，从UB读取的所有数据都会搬运至Global Memory。
 
     **图1**  blockLen为32字节对齐时UB到Global Memory的非对齐搬运示意图<a name="fig_datacopypad3"></a><br>
-    ![](../../../../figures/datacopypad3.png)
+
 
 - 非32字节对齐场景<a name="非32字节对齐场景"></a>
 
@@ -167,7 +167,7 @@
     对于非32字节对齐的场景，由于UB要求32字节对齐，框架在搬出时会自动补充17字节的假数据来保证对齐，搬到Global Memory时再自动将填充的假数据丢弃掉，从而实现UB到Global Memory的非对齐搬运。
 
     **图2**  blockLen不满足32字节对齐时UB到Global Memory的非对齐搬运示意图<a name="fig_datacopypad4"></a><br>
-    ![](../../../../figures/datacopypad4.png)
+
 
 ## 数据类型<a name="section4219135304818"></a>
 
@@ -258,4 +258,6 @@ AscendC::DataCopyExtParams copyParams{1, dstTotalLength * sizeof(T), 0, 0, 0};
 AscendC::DataCopyPad(dstGlobal, srcLocal, copyParams);
 ```
 
-完整样例请参考[DataCopyPad样例](../../../../../../../examples/01_simd_cpp_api/03_basic_api/00_data_movement/data_copy_pad_gm2ub_ub2gm)。
+完整样例请参考DataCopyPad样例。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../../sources/document-originals/23e9b37e62ff5c2fed4b142ad65b346f8987aa6be527e291dae63466dc88f315.txt)。

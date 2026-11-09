@@ -4,11 +4,18 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 import re
 import tomllib
 import sys
+
+
+_HELPER = Path(__file__).resolve().parents[1] / "runtime/src/aprof_runtime/documentation_sources.py"
+_SPEC = importlib.util.spec_from_file_location("aprof_release_document_sources", _HELPER)
+_DOCS = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(_DOCS)
 
 IGNORED = {'__pycache__', '.runtime-env', '.pytest_cache', '.git', '.cursor', 'build', 'dist', '.eggs'}
 
@@ -29,7 +36,7 @@ def local(root, name):
             break
     if not path.resolve().is_relative_to(root.resolve()):
         raise ValueError(f'release path escapes package: {name}')
-    return path
+    return _DOCS.original_path(root, name)
 
 
 def inventory(root):
@@ -280,6 +287,7 @@ def verify_unsealed(root, *, check_knowledge=True):
         'runtime/pyproject.toml', 'runtime/src/aprof_runtime/__init__.py',
         'runtime/src/aprof_runtime/__main__.py', 'runtime/src/aprof_runtime/cli.py',
         'runtime/src/aprof_runtime/knowledge.py', 'runtime/src/aprof_runtime/_knowledge_v1.py',
+        'runtime/src/aprof_runtime/diagnosis.py', 'runtime/src/aprof_runtime/_diagnosis_v1.py',
         'schemas/context.schema.json', 'schemas/gate-request.schema.json',
         'schemas/gate-outcome.schema.json', 'skills/registry.json',
         'workflows/migration/migration.json', 'workflows/aprof-performance-workflow.md',

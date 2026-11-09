@@ -22,7 +22,7 @@ A/B间隔、测量有效期、完整Task数、20 cases、5预热/20正式、真�
 
 ## 本地运行与采集
 
-workspace-create 生成唯一 /dev/shm/aprof-<task-id>/。源码副本、输入、构建、TMPDIR、缓存、输出、profile/SQLite/CSV、日志、checkpoint、报告和 memory 均在任务根。系统 CANN/驱动从安装位置读。准备时检查可用 bytes/inode/内存；不足具体报缺项，不回退共享盘。不得自动复制/归档回 JuiceFS。仅交付框架源码可按仓库约定保存。
+workspace-create 生成唯一任务目录，例如 `/dev/shm/aprof-task-001/`。源码副本、输入、构建、TMPDIR、缓存、输出、profile/SQLite/CSV、日志、checkpoint、报告和 memory 均在任务根。系统 CANN/驱动从安装位置读。准备时检查可用 bytes/inode/内存；不足具体报缺项，不回退共享盘。不得自动复制/归档回 JuiceFS。仅交付框架源码可按仓库约定保存。
 
 先源码诊断；若确需早期采样，只采预声明代表集。两侧构建、输入、候选完整正确性和容量齐备后调用 single_role_task.collect_pair：顺序完成 A/B native，再集中顺序导出。pending.json 允许在原目录仍存在时 finish_case 恢复后处理，保留原始采样顺序与全部 trace。已完成 capture 必须回放验证后才能复用。
 

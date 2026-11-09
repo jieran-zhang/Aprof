@@ -29,7 +29,7 @@
 
 ## UB（Unified Buffer）内存结构
 
-![UB内存结构图](./figures/ub_memory_layout.png)
+UB内存结构图
 
 - 在A2/A3架构上，UB空间大小为192KB；
 - 共有48个**bank**，组成16个**bank group**，每个bank group包含3个bank（`bank_id` = 0, 1, 2）；
@@ -100,7 +100,7 @@ UB的18位地址编码遵循如下规则：
 
 #### UB读写示意
 
-![scenario1](./figures/scenario1.png)
+scenario1
 
 - 每8个绿色数据块（32B）代表src0每次repeat读取的数据（256B）；
 - 每8个黄色数据块（32B）代表src1每次repeat读取的数据（256B）；
@@ -124,7 +124,7 @@ UB的18位地址编码遵循如下规则：
 
 #### UB读写示意
 
-![scenario2](./figures/scenario2.png)
+scenario2
 
 - 每8个绿色数据块（32B）代表src0每次repeat读取的数据（256B）；
 - 每8个黄色数据块（32B）代表src1每次repeat读取的数据（256B）；
@@ -148,7 +148,7 @@ UB的18位地址编码遵循如下规则：
 
 #### UB读写示意
 
-![scenario3](./figures/scenario3.png)
+scenario3
 
 - 每8个绿色数据块（32B）代表src0每次repeat读取的数据（256B）；
 - 每8个黄色数据块（32B）代表src1每次repeat读取的数据（256B）；
@@ -174,7 +174,7 @@ UB的18位地址编码遵循如下规则：
 
 #### UB读写示意
 
-![scenario4](./figures/scenario4.png)
+scenario4
 
 - 每8个绿色数据块（32B）代表src0每次repeat读取的数据（256B）；
 - 每8个黄色数据块（32B）代表src1每次repeat读取的数据（256B）；
@@ -218,7 +218,7 @@ UB的18位地址编码遵循如下规则：
 
 #### UB读写示意
 
-![scenario5](./figures/scenario5.png)
+scenario5
 
 - 每8个绿色数据块（32B）代表src0每次repeat读取的数据（256B）；
 - 每8个黄色数据块（32B）代表src1每次repeat读取的数据（256B）；
@@ -252,7 +252,7 @@ UB的18位地址编码遵循如下规则：
 
 #### UB读写示意
 
-![scenario6](./figures/scenario6.png)
+scenario6
 
 - 每8个绿色数据块（32B）代表src0每次repeat读取的数据（256B）；
 - 每8个黄色数据块代表每次repeat，src1读取与dst写入同一块数据空间（256B），即src1和dst地址完全重叠；
@@ -297,7 +297,7 @@ UB的18位地址编码遵循如下规则：
 
 #### UB读写示意
 
-![scenario7](./figures/scenario7.png)
+scenario7
 
 - 每次重复读取同1个绿色数据块（32B）共8次（src0BlkStride=0）；
 - 每8个黄色数据块代表每次repeat，src1读取与dst写入同一块数据空间（256B），即src1和dst地址完全重叠；
@@ -336,7 +336,7 @@ UB的18位地址编码遵循如下规则：
 
 #### UB读写示意
 
-![scenario8](./figures/scenario8.png)
+scenario8
 
 - 每次重复读取同1个绿色数据块（32B）共8次（src0BlkStride=0）；
 - 每8个黄色数据块代表每次repeat，src1读取与dst写入同一块数据空间（256B），即src1和dst地址完全重叠；
@@ -384,7 +384,7 @@ UB的18位地址编码遵循如下规则：
 
 - 配置环境变量
 
-  请根据当前环境上CANN开发套件包的[安装方式](../../../../../docs/zh/quick_start.md#prepare&install)，配置环境变量。
+  请根据当前环境上CANN开发套件包的安装方式，配置环境变量。
 
   ```bash
   source ${install_path}/cann/set_env.sh
@@ -417,3 +417,5 @@ UB的18位地址编码遵循如下规则：
   ```bash
   test pass!
   ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../sources/document-originals/2e26c33689d8ffdc94543961c8ac2e3d118c24b2c03bfa18bbc7455bfac85490.txt)。

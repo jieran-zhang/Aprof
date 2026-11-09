@@ -65,3 +65,7 @@ description: 为 Ascend C 算子执行统一 L2 清理 Task 计时、完整调�
 - `scripts/device_task_window_timing.py`、`device_task_timing.py`、`device_shared_timing.py`、`device_paired_timing.py`、`paired_timing.py`：仅保留历史协议工具；不得作为 soft_targets_local_v1 新任务的诊断或性能执行入口。
 
 仅在解释历史结果时读 [旧 v5 边界](references/shared-timing.md)。当前命令见 [统一协议](references/unified-timing.md)和 [collector 接口](references/collector-interface.md)。
+
+## 指标定义与数据字段
+
+[统一指标字典](references/metrics.md)维护 Block Dim、可达并行度、每核工作量、不均衡、空闲核比例、计算与搬运层级。采集回执保存当前后端的实际表头、单位和作用域，报告引用字典定义。

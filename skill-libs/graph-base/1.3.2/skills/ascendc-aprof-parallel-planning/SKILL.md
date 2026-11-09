@@ -63,3 +63,7 @@ aprofctl dispatch select --plan <dispatch-plan.json> --workload <metadata.json>
 ## 当前Action实例交接
 
 按[机制与交接规则](../../workflows/references/diagnosis-v4.md)核对Action实例与目标范围。路由提示不是事实，不能改platform/family/dtype/features或facts以强行命中。P/O分别运行内部router，具体recipe由C3选择；组合结果在选择后记录。独立命中不能简单并集，前序步骤保证须明确对象和依赖，C3 核实最终源码兑现；P_KEEP 引用覆盖全部相关目标的完整有效共同计划。unknown可供C2分析，C3实施受所绑定版本的Action安全/结构条件及方法合法性约束，性能未知可用于有依据的假设试验。
+
+## 任务并行的统一定义
+
+指标与字段统一使用[指标字典](../ascendc-aprof-profiling/references/metrics.md)。核数、算法和任务分解比较使用[核任务并行策略](../ascendc-aprof-optimization/references/task-parallelism.md)的互斥场景、成本公式与迁移词汇，选定模板后把检查和阈值实例化到计划引用报告。

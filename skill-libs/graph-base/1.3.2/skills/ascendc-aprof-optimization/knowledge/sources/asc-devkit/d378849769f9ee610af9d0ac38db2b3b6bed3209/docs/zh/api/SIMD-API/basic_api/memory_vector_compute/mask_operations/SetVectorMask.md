@@ -29,7 +29,7 @@
 <!-- npu="9030" id9 -->
 - Kirin 9030处理器系列产品：支持
 <!-- end id9 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/mask_operations/SetVectorMask_res.md#id1 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/memory_vector_compute/mask_operations/SetVectorMask_res.md#id1 -->
 
 ## 功能说明<a name="section618mcpsimp"></a>
 
@@ -37,7 +37,7 @@
 
 本接口用于在矢量计算时设置mask。
 
-- 当模板参数isSetMask = false时，推荐使用本接口。使用前需要先调用[SetMaskCount](SetMaskCount.md)/[SetMaskNorm](SetMaskNorm.md)手动设置Mask模式，并通过调用本接口设置Counter/Normal模式下的mask。在不同的模式下，mask的含义不同：
+- 当模板参数isSetMask = false时，推荐使用本接口。使用前需要先调用SetMaskCount/SetMaskNorm手动设置Mask模式，并通过调用本接口设置Counter/Normal模式下的mask。在不同的模式下，mask的含义不同：
 
     - Normal模式下，mask参数用来控制单次迭代内参与计算的元素个数。此时又可以划分为如下两种模式：
         - 连续模式：表示前面连续的多少个元素参与计算。取值范围和操作数的数据类型有关，数据类型不同，每次迭代内能够处理的元素个数最大值不同。当操作数为16位时，mask∈\[0, 128\]；当操作数为32位时，mask∈\[0, 64\]；当操作数为64位时，mask∈\[0, 32\]。
@@ -46,7 +46,7 @@
 
     - Counter模式下，mask参数表示整个矢量计算参与计算的元素个数。
 
-- 当模板参数isSetMask = true时，不需要调用本接口，参考[接口内设置Mask](../SIMD_compute/mask.md#接口内设置mask)。
+- 当模板参数isSetMask = true时，不需要调用本接口，参考接口内设置Mask。
 
 ## 函数原型<a name="section620mcpsimp"></a>
 
@@ -87,7 +87,7 @@
 
 ## 约束说明<a name="section633mcpsimp"></a>
 
-- 该接口仅在矢量计算API的isSetMask模板参数为false时生效，使用完成后需要使用[ResetMask](ResetMask.md)将mask恢复为默认值。
+- 该接口仅在矢量计算API的isSetMask模板参数为false时生效，使用完成后需要使用ResetMask将mask恢复为默认值。
 
 <!-- npu="910b,A3" id10 -->
 - 针对Atlas A3系列产品、Atlas A2系列产品，mask = 0表示指令不会执行计算操作，该接口将被视为NOP（空操作）。
@@ -95,7 +95,7 @@
 
 ## 调用示例<a name="section837496171220"></a>
 
-可结合[SetMaskCount](SetMaskCount.md)与[SetMaskNorm](SetMaskNorm.md)使用，先设置Mask模式再设置mask：
+可结合SetMaskCount与SetMaskNorm使用，先设置Mask模式再设置mask：
 
 - Normal模式调用示例
 
@@ -146,4 +146,6 @@
     AscendC::ResetMask();
     ```
 
-更多示例请参考[接口外设置Mask](../SIMD_compute/mask.md#接口外设置mask)。
+更多示例请参考接口外设置Mask。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../sources/document-originals/0de631e061a2e005d01aaf2efe0076a9e2adb3287edf1d1e96dd515ab919a256.txt)。

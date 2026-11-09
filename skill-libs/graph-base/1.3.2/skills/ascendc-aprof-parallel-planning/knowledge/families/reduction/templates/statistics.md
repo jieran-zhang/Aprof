@@ -173,7 +173,7 @@ Welford 若每个 lane 的 count 相同，可将 n 作为共享整数，mean/M2 
 
 ## 有界 Ascend C：ARA 逐样本 Welford 更新
 
-用于 `[rCount,vAlign]` 的 FP32 计算区，rCount>0，vValid>0；mean/M2/delta1/delta2/tmp 为容量足够、互不覆盖的 LocalTensor<float>，mean/M2 初始化为 0，valid lanes 的 count 在进入片段前为 n。每个 r 是 V 个独立输出的一次新样本；该片段不是 AR 向量的直接横向 Welford。
+用于 `[rCount,vAlign]` 的 FP32 计算区，rCount>0，vValid>0；mean/M2/delta1/delta2/tmp 为容量足够、互不覆盖的 `LocalTensor<float>`，mean/M2 初始化为 0，valid lanes 的 count 在进入片段前为 n。每个 r 是 V 个独立输出的一次新样本；该片段不是 AR 向量的直接横向 Welford。
 
 ```cpp
 for (uint32_t r = 0; r < rCount; ++r) {
@@ -195,3 +195,5 @@ for (uint32_t r = 0; r < rCount; ++r) {
 方差覆盖常量输入、大均值小扰动、n=0/1、correction 边界、不同 chunk/合并树；norm 覆盖所有允许 p、负数、零、接近但不等于特化 p、空组及溢出；softmax 覆盖极大/极小差值、全相等、全 −∞、+∞/NaN、mask 全空，以及不同分片的总和与逐元素输出。所有验证均对照当前 oracle 的 dtype/舍入/特殊值规则。
 
 若数值/容量/平台证据缺失，回退已验证的原始统计实现并保留实际 entry/key；不能以性能动机减少 count 精度、删除 correction 或改变 epsilon 位置。cannbot 提供 Welford/Group Reduce 算法事实，ops-nn 提供 arch35 实现候选；softmax 状态合并与完整字节模型是显式工程推导。未执行 NPU 正确性或性能验证；A3/910C 与 950 能力、临时区查询及指令必须分别核实。
+
+> 文档适配说明：本页已规范代码文字格式；来源和历史回放使用[保留的证据原文](../../../../../../sources/document-originals/19c5b1113ee43393664c25dd4684b3763f6764e409b013cfe69be05563503e38.txt)。

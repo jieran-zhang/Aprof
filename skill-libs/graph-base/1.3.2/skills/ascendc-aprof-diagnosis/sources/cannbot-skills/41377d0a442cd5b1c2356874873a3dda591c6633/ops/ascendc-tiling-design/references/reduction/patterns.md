@@ -48,16 +48,16 @@ Step 2: A0 决定模式
 
 | 维度 | 选项 | 适用条件 | 详细文档 |
 |------|------|---------|---------|
-| 算法选择 | Welford Online | 分载 + 需要流式计算两个相关统计量 | [algorithms.md](algorithms.md#welford-online在线单遍) |
-| 多核策略 | Group Reduce | R 太大单核处理不完 + A 太小不足以并行 | [algorithms.md](algorithms.md#group-reduce跨核归约) |
-| 精度策略 | 二分累加 | 大向量 sum 精度敏感 | [algorithms.md](algorithms.md#二分累加--half-interval) |
-| 索引跟踪 | With-Index | 归约+返回极值位置 | [with-index.md](with-index.md) |
+| 算法选择 | Welford Online | 分载 + 需要流式计算两个相关统计量 | algorithms.md |
+| 多核策略 | Group Reduce | R 太大单核处理不完 + A 太小不足以并行 | algorithms.md |
+| 精度策略 | 二分累加 | 大向量 sum 精度敏感 | algorithms.md |
+| 索引跟踪 | With-Index | 归约+返回极值位置 | [with-index.md](../../../../../../../../ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/reduction/with-index.md) |
 
 ---
 
 ## 通用规则
 
-以下规则适用于所有场景。Tiling 设计原则和 tmpBufSize 公式见 [tiling-fields.md](tiling-fields.md)。
+以下规则适用于所有场景。Tiling 设计原则和 tmpBufSize 公式见 tiling-fields.md。
 
 **rLength vs rLengthAlign 参数使用对照表**:
 
@@ -97,9 +97,9 @@ AR 模式 (A1, R)，A0 = 1
 | 分支 | 条件 | 说明 | 详细文档 |
 |------|------|------|---------|
 | **全载（FullLoad）** | 可以在UB中至少处理1整行数据 | 整行驻留 UB，中间结果直接复用 | [ar-fullload.md](ar-fullload.md) |
-| **分载（ColSplit）** | 其他 | 对列方向分段，每次搬入 Ar < AR 个元素，跨 chunk 合并 | [ar-colsplit.md](ar-colsplit.md) |
+| **分载（ColSplit）** | 其他 | 对列方向分段，每次搬入 Ar < AR 个元素，跨 chunk 合并 | [ar-colsplit.md](../../../../../../../../ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/reduction/ar-colsplit.md) |
 
-> **索引变体**：需要返回极值位置时，AR-FullLoad 用 `ReduceMax(calIndex=true)`，详见 [with-index.md](with-index.md)。
+> **索引变体**：需要返回极值位置时，AR-FullLoad 用 `ReduceMax(calIndex=true)`，详见 [with-index.md](../../../../../../../../ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/reduction/with-index.md)。
 
 > **AR 归约后的标量广播操作**：Level 2 Reduce 归约 [R] 后得到 1 个标量。
 > 如果后续需要将该标量广播到 [R] 向量参与逐元素运算，使用 `Adds(dst, src, scalar, count)`
@@ -152,11 +152,11 @@ ARA 模式 (A1, R, A0)，A0 > 1
 
 | 分支 | 条件 | 说明 | 详细文档 |
 |------|------|------|---------|
-| **全载（FullLoad）** | 可以在UB中处理所有R*tileA0Len数据（32字节对齐） | R 行一次放入 UB，中间结果直接复用 | [ara-fullload.md](ara-fullload.md) |
-| **分载（RowSplit）** | 其他 | 每次搬入 r < R 行，分多次归约后跨 chunk 合并 | [ara-rowsplit.md](ara-rowsplit.md) |
+| **全载（FullLoad）** | 可以在UB中处理所有R*tileA0Len数据（32字节对齐） | R 行一次放入 UB，中间结果直接复用 | [ara-fullload.md](../../../../../../../../ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/reduction/ara-fullload.md) |
+| **分载（RowSplit）** | 其他 | 每次搬入 r < R 行，分多次归约后跨 chunk 合并 | [ara-rowsplit.md](../../../../../../../../ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/reduction/ara-rowsplit.md) |
 
 > **索引变体**：需要返回极值位置时，用 `Compare+Select` 逐行迭代替代 `Pattern::Reduce::RA`。
-> 详见 [with-index.md](with-index.md)。
+> 详见 [with-index.md](../../../../../../../../ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/reduction/with-index.md)。
 
 > **ARA 归约后的广播操作**：Pattern::Reduce::RA 归约 [R, alignedCols] 后得到 [1, alignedCols] 的结果向量。
 > 如果后续需要将该向量广播回 [R, alignedCols] 参与逐元素运算，使用 Sub/Div/Mul 等二元 API 的
@@ -168,11 +168,11 @@ ARA 模式 (A1, R, A0)，A0 > 1
 适用: 合轴后多轴归约，比如：ARARA场景
 
 **Shape 变换**：任意 N 维 shape + axes 经三步变换压缩为 A/R 交替序列。
-详见 [multi-axis-transform.md](multi-axis-transform.md)。
+详见 [multi-axis-transform.md](../../../../../../../../ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/reduction/multi-axis-transform.md)。
 
 ### S4: Welford Online（R 需 UB 切片）
 
-**适用**: ARA 模式下需要流式计算两个相关统计量（第二个依赖第一个的增量更新）。典型算子：reduce_var / reduce_std。参见 [algorithms.md](algorithms.md#welford-online在线单遍)。
+**适用**: ARA 模式下需要流式计算两个相关统计量（第二个依赖第一个的增量更新）。典型算子：reduce_var / reduce_std。参见 algorithms.md。
 
 ### S5: Group Reduce（R 跨核）
 
@@ -207,6 +207,8 @@ Stage2:
 
 | 主题 | 文档 |
 |------|------|
-| 多输出 Buffer 方程 | [multi-output-buffer.md](multi-output-buffer.md) |
-| 通用 Tiling 字段定义 | [tiling-fields.md](tiling-fields.md) |
-| 索引跟踪变体 | [with-index.md](with-index.md) |
+| 多输出 Buffer 方程 | [multi-output-buffer.md](../../../../../../../../ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/reduction/multi-output-buffer.md) |
+| 通用 Tiling 字段定义 | tiling-fields.md |
+| 索引跟踪变体 | [with-index.md](../../../../../../../../ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/reduction/with-index.md) |
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../sources/document-originals/9b8d774662fadf2fc4db38e48bd4124974d27a8ad7a6feac73a1ef55937fdcd8.txt)。

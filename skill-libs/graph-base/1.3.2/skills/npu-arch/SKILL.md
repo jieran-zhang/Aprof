@@ -18,3 +18,7 @@ aprofctl contract validate --kind architecture_profile --input <architecture.jso
 ```
 
 在并行计划与上下文保留规范内容 hash。SDK/INI 配置、simulator 档案与真实硬件观测须明确区分，模拟计时不能称为硬件性能。
+
+## BT、FP 与时钟域
+
+资源档案按[BT、FP Buffer 与频率口径](references/buffers-and-frequency.md)分别记录容量及用途，BT 用于实例化 bias tile 容量检查。Current Freq 和 Rated Freq 保留原始数据源、单位、设备与时钟域。

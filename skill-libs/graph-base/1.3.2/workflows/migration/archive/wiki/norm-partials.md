@@ -1,6 +1,6 @@
 # foreach_norm 的独立 partial 归约划分
 
-> 本页保留历史协议下的观察与结论。1.1.0 新会话使用[统一计时协议](../skills/ascendc-aprof-profiling/references/unified-timing.md)，不照搬历史配对采集或置信区间门槛。
+> 本页保留历史协议下的观察与结论。1.1.0 新会话使用统一计时协议（同名参考，非历史原件：[unified-timing.md](../../../../skills/ascendc-aprof-profiling/references/unified-timing.md)），不照搬历史配对采集或置信区间门槛。
 
 ## 适用条件
 
@@ -28,3 +28,5 @@ case3/9 约为 1×。这是条件性效果，不能把低核利用率直接归�
 ## 2026-10-14 独立复验
 
 910C/A3（9392）、CANN 9.0.0 上，baseline 与动态 partial 候选均通过 20 个声明 case。参考计算使用历史已核验的 32 个 PyTorch CPU 线程；首次 2 线程参考的 FP32 p=3 偏差、与 FP64 复核结果均已保存，未改生成器或容差。预先声明的额外边界在 FP16 p=0 上发现 baseline 语义错误（MERE 0.1660，阈值 0.0009766；特殊值掩码也不一致）。此前五个 p 分组的 baseline/candidate 共 160 个张量检查通过；失败分组的 candidate 及剩余分组未运行。按停止规则未计时、未 profile、未晋升，不能归因于 partial 改动。机器 accuracy_failed 表示额外语义范围尚未完成验收，不能写成候选 20 个声明 case 失败。回执见 evolution.jsonl 的 norm-partials-001-independent-20261014。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../sources/document-originals/f01f135530a55dbaf0223a5e43453e07438aaf98edeebadd9731e82930afd3e3.txt)。

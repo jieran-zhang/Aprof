@@ -178,7 +178,9 @@ def test_scaffolding_dispatch_requires_explicit_package_and_keeps_legacy_bytes(t
     old=dispatcher.with_name('archive_local_evidence_v051.py')
     assert 'skill-libs/graph-base/0.5.1' in old.read_text()
     assert 'task_terminal_v1' not in old.read_text()
-    missing=subprocess.run([sys.executable,'-B',str(dispatcher),'--skill-lib',str(archive.PACKAGE.with_name('1.0.0'))],
+    unsupported=tmp_path/'unsupported-package'
+    unsupported.mkdir()
+    missing=subprocess.run([sys.executable,'-B',str(dispatcher),'--skill-lib',str(unsupported)],
         cwd=tmp_path,capture_output=True,text=True)
     assert missing.returncode!=0 and 'no fallback' in missing.stderr
 

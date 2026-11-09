@@ -16,7 +16,8 @@
       "workflows/agents/diagnosis.md",
       "workflows/agents/parallel-planning.md",
       "workflows/agents/optimization.md",
-      "workflows/agents/profiling.md"
+      "workflows/agents/profiling.md",
+      "workflows/agents/reviewer.md"
     ],
     "codex": {
       "marketplace_name": "aprof",
@@ -191,6 +192,15 @@
         "optimization"
       ],
       "trigger": "C0/C3；只有裸 kernel、缺少启动工程"
+    },
+    {
+      "name": "ascendc-aprof-inject-problems",
+      "source": "skills/ascendc-aprof-inject-problems",
+      "roles": [
+        "coordinator",
+        "diagnosis"
+      ],
+      "trigger": "明确的算法选择评测；生成对照 kernel 与 oracle，单独验证设备正确性和盲测 alignment"
     }
   ],
   "cursor_agents": [
@@ -221,6 +231,10 @@
     {
       "name": "aprof-profiling-agent",
       "source": "workflows/agents/profiling.md"
+    },
+    {
+      "name": "aprof-reviewer",
+      "source": "workflows/agents/reviewer.md"
     }
   ],
   "knowledge": {

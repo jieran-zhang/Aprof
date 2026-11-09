@@ -23,7 +23,7 @@
 <!-- npu="910" id7 -->
 - Atlas训练系列产品：支持
 <!-- end id7 -->
-<!-- @ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/Kernel-Tiling/TILING_KEY_IS_res.md#id1 -->
+<!-- upstream-ref: asc-devkit/res/docs/zh/api/SIMD-API/basic_api/Kernel-Tiling/TILING_KEY_IS_res.md#id1 -->
 
 
 ## 功能说明<a name="zh-cn_topic_0000001610027821_section212607105720"></a>
@@ -109,3 +109,4 @@ ge::graphStatus TilingFunc(gert::TilingContext* context)
 }
 ```
 
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../sources/document-originals/6aa47a2f6a12a5b0954fed6e93f3c0c2c25922b37849c866187a04f21560ee74.txt)。

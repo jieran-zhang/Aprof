@@ -34,7 +34,7 @@ Step 2 — dtype × 运算 判定（决定 Compute 路径）:
 - **UB 对齐**：按 256B 对齐，确保 Vector 指令效率
 - **区分首/尾 block**：尾 block 数据量可能小于首 block，循环次数和 tail 大小不同
 
-常量定义和计算公式详见 [tiling.md](tiling.md)。
+常量定义和计算公式详见 tiling.md（同名参考，非历史原件：[tiling.md](../../../../../../../../ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/elewise/tiling.md)）。
 
 ---
 
@@ -42,5 +42,7 @@ Step 2 — dtype × 运算 判定（决定 Compute 路径）:
 
 | 主题 | 文档 |
 |------|------|
-| EleWise Tiling 详细计算（常量、公式、模板、dtype 分支 UB 预算） | [tiling.md](tiling.md) |
-| Broadcast 场景路由（输入 Shape 不同时） | [../broadcast/patterns.md](../broadcast/patterns.md) |
+| EleWise Tiling 详细计算（常量、公式、模板、dtype 分支 UB 预算） | tiling.md（同名参考，非历史原件：[tiling.md](../../../../../../../../ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/ops/ascendc-tiling-design/references/elewise/tiling.md)） |
+| Broadcast 场景路由（输入 Shape 不同时） | ../broadcast/patterns.md（同名参考，非历史原件：[patterns.md](../../../../../../../../ascendc-aprof-diagnosis/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/broadcast/patterns.md)） |
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../sources/document-originals/8a1351ff5295af67a53383682a4264aca6a19a113a2cdb47158938f73bae0cec.txt)。

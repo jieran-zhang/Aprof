@@ -1,6 +1,6 @@
 # 父本改善不代表超过原始 baseline
 
-> 本页保留历史协议下的观察与结论。1.1.0 新会话使用[统一计时协议](../skills/ascendc-aprof-profiling/references/unified-timing.md)，不照搬历史配对采集或置信区间门槛。
+> 本页保留历史协议下的观察与结论。1.1.0 新会话使用统一计时协议（同名参考，非历史原件：[unified-timing.md](../../../../skills/ascendc-aprof-profiling/references/unified-timing.md)），不照搬历史配对采集或置信区间门槛。
 
 ## 适用条件
 
@@ -22,3 +22,5 @@ reward。它们说明只看“比上一轮快”会选错整体候选。
 
 每轮独立采候选对直接父本与原始 baseline 的实际比较；不得连乘不同时期
 或不同协议的倍率。新计时结果不自动选择生产 best；生产选择另循独立契约，此页只保留决策反例。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../sources/document-originals/c562e3d429c7f1b338add8ba8dac9d49d478af904e3db285b6713cff2314684b.txt)。

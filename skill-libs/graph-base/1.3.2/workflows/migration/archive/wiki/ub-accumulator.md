@@ -1,6 +1,6 @@
 # UB 累加器消除逐 tile scalar 反馈的反例
 
-> 本页保留历史协议下的观察与结论。1.1.0 新会话使用[统一计时协议](../skills/ascendc-aprof-profiling/references/unified-timing.md)，不照搬历史配对采集或置信区间门槛。
+> 本页保留历史协议下的观察与结论。1.1.0 新会话使用统一计时协议（同名参考，非历史原件：[unified-timing.md](../../../../skills/ascendc-aprof-profiling/references/unified-timing.md)），不照搬历史配对采集或置信区间门槛。
 
 ## 适用条件
 
@@ -21,3 +21,5 @@ foreach_norm 历史候选把 GENERAL/ZERO 的 sum 留在 UB。20-case suite 观�
 
 保留这个未达收益条件的实验，防止把低于正式门槛的小幅观察写成强规则。
 新候选必须另做容量、正确性、直接父本和全量正式计时。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../sources/document-originals/792df6e0d5f474660e4f29743f32a703cf794f795dc013d3e684f0d6bb876e3e.txt)。

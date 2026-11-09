@@ -29,7 +29,7 @@
 - **输出 queue**:V1 / V2 写出
 - **softmax 状态 buffer**(默认 task 级模式下):跨 s2 块在线累积的 max / sum / exp
 - **softmax 临时 buffer**:由 Ascend C SoftmaxFlashV2 类 API 的临时 buffer size 查询函数返回
-- **causal mask buffer**:**默认不预分配完整 `[mEff, Bk]` 矩阵**——优先在 S 矩阵上原地生成 mask(逐行按行号公式 + Compare/Select 写回),或仅用单行模板(见 [`base_design.md` §10.2 清单 5](../subfamilies/base_design.md))。仅当 mask 确实无法原地、且必须整块常驻时才分配独立 buffer,并计入 UB 总量
+- **causal mask buffer**:**默认不预分配完整 `[mEff, Bk]` 矩阵**——优先在 S 矩阵上原地生成 mask(逐行按行号公式 + Compare/Select 写回),或仅用单行模板(见 `base_design.md` §10.2 清单 5)。仅当 mask 确实无法原地、且必须整块常驻时才分配独立 buffer,并计入 UB 总量
 
 #### Q2:单次 DataCopy 量是否 ≤ 单槽容量?
 
@@ -97,7 +97,7 @@ UB_total = v1In(min(mEff, chunkRows_v1) × Bk_pad × sizeof(compute_T))
 
 > 📊 **数值标定项**:`chunkRows` 由 `chunkBufferBytes` 预算派生,**是自适应数值**——设计期给出公式与默认 `chunkBufferBytes` 预算即可,精确值随 shape 运行时自适应/profiling 微调。但"O_acc 是否 streaming(不常驻 UB)"这一**结构决策**必须设计期定死。
 
-> **结构决策必须落成 TilingData 字段(不能只停在文档)**:"O_acc 是否 streaming" 定死后,**必须**在 TilingData 里体现为一个 kernel 可读的显式信号(角色名 `oAccInUb` / `streamingMode`,命名由实现自定,见 [`base_design.md` §7.3](../subfamilies/base_design.md)),kernel **必须**按该字段选择 O_acc 布局(常驻 UB vs GM streaming),**不得**在 kernel 内自行硬编码另一种布局。
+> **结构决策必须落成 TilingData 字段(不能只停在文档)**:"O_acc 是否 streaming" 定死后,**必须**在 TilingData 里体现为一个 kernel 可读的显式信号(角色名 `oAccInUb` / `streamingMode`,命名由实现自定,见 `base_design.md` §7.3),kernel **必须**按该字段选择 O_acc 布局(常驻 UB vs GM streaming),**不得**在 kernel 内自行硬编码另一种布局。
 >
 > ❌ **反例(GQA 实测踩坑)**:DESIGN.md 定死 streaming、TilingData 里却没有对应字段,kernel 遂自选"O_acc 常驻 UB"——结构决策停在文档、没变成强制信号,是 UB 溢出的直接一环。凡设计期定死的**结构**决策(非数值标定项),都必须有 TilingData 字段承载并被 kernel 读取。
 
@@ -143,7 +143,7 @@ perSlotElems = L1_PORT_SIZE / rotation_slots / sizeof(elem)
 
 回答:**Q/P 与 K/V 各自的 L1 rotation 槽数是多少?依据是什么?**
 
-L1 rotation 深度**因 FA 变体而异**,见 [`extension_points.md` §1.2](../foundation/extension_points.md)。
+L1 rotation 深度**因 FA 变体而异**,见 `extension_points.md` §1.2。
 
 **禁止**:把 shape §1.4 决策的跨核握手槽数和 L1 rotation 槽数混用同一常量(语义不同)。
 
@@ -195,7 +195,7 @@ L0C: m × n × sizeof(accumulator_dtype)  ≤  L0_C 查询值
 - **跨核握手段**(Cube 写 → Vector 读 / Vector 写 → Cube 读)
 - **跨 loop 自读自写段**(若需要)
 - **任务级状态段**(若需要 stateful 跨 s2 累积)
-- **变体扩展段**:见 [`extension_points.md` §1.4](../foundation/extension_points.md)(如 MLA 的 int32 中间段)
+- **变体扩展段**:见 `extension_points.md` §1.4(如 MLA 的 int32 中间段)
 - **并行策略扩展段**:若 N2 选 split-KV reduce → 增 partial O / partial logsumexp 段
 
 #### Q2:槽数选择依据(语义分离)
@@ -242,7 +242,7 @@ kernel 侧按 `aiCoreIdx` 索引 per-core 偏移。
 - [ ] **清单 9(长 Sk workspace 槽轮转)**:所有 workspace 段按运行时 Sk 分配;shape §1.4 列出的所有槽语义类别数量与公式分清楚
 - [ ] **清单 9b(workspace 外层乘子)**:workspace 总量按 `min(totalTasks, usedCoreNum)` 分配,**不是** totalTasks;kernel 侧按 `aiCoreIdx` 索引 per-core 偏移
 
-> GQA 特有的 **清单 4-8**(M 轴尾块 padding 行 / causal mask 边界 / bf16 V Cube 直通 / 输出 BSND 写回 / mPad>16+多 s2 块)定义见 [`base_design.md` §10.2](../subfamilies/base_design.md)——这些内容随变体(mEff / Bq-major / BSND 写回)特化,以 base_design.md 为准。设计 GQA/MLA 时须一并校核。
+> GQA 特有的 **清单 4-8**(M 轴尾块 padding 行 / causal mask 边界 / bf16 V Cube 直通 / 输出 BSND 写回 / mPad>16+多 s2 块)定义见 `base_design.md` §10.2——这些内容随变体(mEff / Bq-major / BSND 写回)特化,以 base_design.md 为准。设计 GQA/MLA 时须一并校核。
 
 ### §1.6 内存层自检清单 O10-O12
 
@@ -306,7 +306,7 @@ Host Tiling 函数返回的 TilingData 必须按以下**职责类别**覆盖:
 
 回答:**新算子开发时,各特性 / lever 按什么顺序接入?哪些能逐步放开、哪些必须一开始就按最优设计?**
 
-接入顺序服务于"精度回归可定位"(每接入一项跑一次全场景回归,出错能定位),但**接入顺序只约束实现期 build 的先后,不放松设计目标**——设计阶段必须一并承诺全部最优配置(见 [`_governance.md` §2](./_governance.md) 设计即最优门禁)。按对核内计算方案的影响分三类:
+接入顺序服务于"精度回归可定位"(每接入一项跑一次全场景回归,出错能定位),但**接入顺序只约束实现期 build 的先后,不放松设计目标**——设计阶段必须一并承诺全部最优配置(见 `_governance.md` §2 设计即最优门禁)。按对核内计算方案的影响分三类:
 
 | 类别 | 实现期能否逐步放开 | 典型项 | 纪律 |
 |---|---|---|---|
@@ -337,3 +337,5 @@ MVP(单核 + 单 head bring-up 脚手架 + fp16 + non-causal + 对齐 + 小 D)
 **强制门禁**:用户需求中 D 上限较大时,MVP 之后必须在多核 + 流水线到位后立即打开"D = 用户上限"的精度回归。
 
 **产出**:接入顺序声明(标明各项所属类别) + 各维度的精度回归覆盖 + 核内性能方案均已按最优设计(非"后续放开")的确认。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../sources/document-originals/36c29cd0eb871d5357a461228ea4e7431caf25f889fb3ae5c1ac7753fcfe5f0e.txt)。

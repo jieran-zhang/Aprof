@@ -6,7 +6,7 @@
 > **扩展策略**：当新架构出现时，按新架构 NpuArch 新增 reference 文件或更新现有平台适配说明。
 >
 > 适用算子：GroupedMatmul（分组矩阵乘），每组 M/K/N 可不同。
-> MatMul 通用 Tiling（L2/Block/BaseBlock 三级、batch 处理、Split-K）见 [ascendc-api-matmul-tiling.md](ascendc-api-matmul-tiling.md)。本文档仅覆盖 GMM 差异化设计。
+> MatMul 通用 Tiling（L2/Block/BaseBlock 三级、batch 处理、Split-K）见 ascendc-api-matmul-tiling.md（同名参考，非历史原件：[ascendc-api-matmul-tiling.md](../../../../41377d0a442cd5b1c2356874873a3dda591c6633/community/ops/ascendc-evolution-strategies/references/tiling-design/matmul/ascendc-api-matmul-tiling.md)）。本文档仅覆盖 GMM 差异化设计。
 
 ---
 
@@ -311,3 +311,5 @@ GMM 使用 `GET_TPL_TILING_KEY` 宏编码 8 维模板参数，其中 `AIV_AIC_RA
 - [ ] workspaceSize 足够覆盖 `CV阶段数 × baseM × baseN × usedCoreNum × sizeof(int32)`
 - [ ] FullLoadK 仅在条件满足时启用，否则保持 stepKa=1
 - [ ] 对角线分核仅当 `nDim >= coreNum` 时生效
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../sources/document-originals/90d9b2c693a9fb876326157a618e383413c28cf660e8d4f92941a96b6c593cb1.txt)。

@@ -9,7 +9,7 @@ Vector计算单元专用于执行向量计算。如下图所示，高亮部分�
 
   **图1** 向量计算单元架构图
 
-  ![](../../../../figures/a2a3_npu_arch.png)
+
 
   **表1** 向量计算单元关联的存储单元
 
@@ -24,7 +24,7 @@ Vector计算单元专用于执行向量计算。如下图所示，高亮部分�
 
   **图2** 向量计算单元架构图
 
-  ![](../../../../figures/npu_3510_hw_arch_vector.png)
+
 
   **表2** 向量计算单元关联的存储单元
 
@@ -39,8 +39,8 @@ Vector计算单元专用于执行向量计算。如下图所示，高亮部分�
 
 ### UB的通用约束说明
 
-- UB地址对齐约束，请参考[通用地址对齐约束](../../../general_description_and_constraints.md#通用地址对齐约束)。
-- UB地址重叠约束，请参考[通用地址重叠约束](../../../general_description_and_constraints.md#通用地址重叠约束)。
+- UB地址对齐约束，请参考通用地址对齐约束。
+- UB地址重叠约束，请参考通用地址重叠约束。
 
 ### UB的内存结构与bank冲突
 
@@ -52,7 +52,7 @@ Vector计算单元专用于执行向量计算。如下图所示，高亮部分�
 
     **图3** UB的内存结构图
 
-    ![](../../../../figures/a2a3_ub_memory_structure.png)
+
 
     如图3所示，UB总大小为192KB，包含16个bank group（BG0 ~ BG15），每个bank group包含3个bank。每个bank大小为4KB，由128行组成，每行长度为32B。
     - **读写冲突**：读操作和写操作同时尝试访问同一个bank。
@@ -61,7 +61,7 @@ Vector计算单元专用于执行向量计算。如下图所示，高亮部分�
 
   - bank冲突优化
 
-    可参考[避免bank冲突（NPU架构版本2201）](../../../../../guide/operator_practice/simd_operator_optimization/memory_access/avoid_ub_bank_conflict/avoid_bank_conflict_npu_arch_2201.md)。
+    可参考避免bank冲突（NPU架构版本2201）。
 <!-- end id3 -->
 
 <!-- npu="950" id4 -->
@@ -70,14 +70,16 @@ Vector计算单元专用于执行向量计算。如下图所示，高亮部分�
 
     **图4** UB的内存结构图
 
-    ![](../../../../figures/950_ub_memory_structure.png)
+
 
     如图4所示，UB总大小为256KB，包含8个bank group（BG0 ~ BG7），每个bank group包含2个bank。每个bank大小为16KB，由512行组成，每行长度为32B。
     - **读写冲突**：读操作和写操作同时尝试访问同一个bank。
     - **写写冲突**：多个写操作同时尝试访问同一个bank group。
     - **读读冲突**：两个读操作同时尝试访问同一个bank，或者两个以上读操作同时尝试访问同一个bank group。
-  
+
   - bank冲突优化
 
-    可参考[避免bank冲突（NPU架构版本3510）](../../../../../guide/operator_practice/simd_operator_optimization/memory_access/avoid_ub_bank_conflict/avoid_bank_conflict_npu_arch_3510.md)。
+    可参考避免bank冲突（NPU架构版本3510）。
 <!-- end id4 -->
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../../sources/document-originals/3ea2f2b1805ea780d7a3b675bea3288878477fcb8a8fb3b94817f5cc004d91ea.txt)。

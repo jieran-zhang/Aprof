@@ -1,6 +1,6 @@
 # 一 tile 预取的收益边界
 
-> 本页保留历史协议下的观察与结论。1.1.0 新会话使用[统一计时协议](../skills/ascendc-aprof-profiling/references/unified-timing.md)，不照搬历史配对采集或置信区间门槛。
+> 本页保留历史协议下的观察与结论。1.1.0 新会话使用统一计时协议（同名参考，非历史原件：[unified-timing.md](../../../../skills/ascendc-aprof-profiling/references/unified-timing.md)），不照搬历史配对采集或置信区间门槛。
 
 ## 适用条件
 
@@ -30,3 +30,5 @@ masked_scale 的四个 PMU sentinel 的 MTE2 stall 均下降，但 20-case 主 t
 910C/A3、CANN 9.0.0 上，masked_scale 原始 baseline 与预取候选各通过声明 20 case。预先固定的第一项额外边界使用 shape=[33]、FP16 x=65504、int8 mask=2、scale=0.5：原有 PyTorch oracle 的中间 FP16 乘法溢出，期望 33 个 +Inf；baseline 在 FP32 中计算，实际为 33 个 65504，特殊值掩码检查失败。原始算术及 verifier 均未修改。
 
 这是 baseline 已存在的语义差异，不能归因于预取。按计划停止，候选在该边界及其余 60 个额外边界尚未运行；没有 A/A、候选计时或 PMU 结论。未删除反例或缩窄范围，未晋升。完整 trace、原始诊断、执行成本和哈希见 evolution.jsonl 对应的 masked_scale 独立提案。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../sources/document-originals/24e01b7a1c612ea1f5323fce9e5e54c4a2ef6aaa768df6748013c2981152d997.txt)。

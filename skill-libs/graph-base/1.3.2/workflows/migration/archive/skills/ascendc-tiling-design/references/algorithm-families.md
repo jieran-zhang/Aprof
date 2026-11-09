@@ -14,4 +14,6 @@
 
 架构改变合法性和成本，不改变算子语义。2201 分别按可见资源规划 AIC/AIV。A3 共用 ISA，但 device/die/topology 和 SKU 资源可不同，不能按封装 die 数乘单设备核数。3510 可考虑 RegBase、非规则索引 SIMT 和新 CV 路径，先核算寄存器/UB/DCache 与 SDK 支持。
 
-算法修改先通过独立正确性，再按 [统一协议](../../ascendc-aprof-profiling/references/unified-timing.md) 计时。tile/buffer/pipeline 候选前冻结所选计划及 hash；保留被拒算法计划，不能混入仅执行调优记录。
+算法修改先通过独立正确性，再按 统一协议（同名参考，非历史原件：[unified-timing.md](../../../../../../skills/ascendc-aprof-profiling/references/unified-timing.md)） 计时。tile/buffer/pipeline 候选前冻结所选计划及 hash；保留被拒算法计划，不能混入仅执行调优记录。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../sources/document-originals/9036a42db1a5c59c0df65aa065346ee5b6e0e951ac7e22f0522b96c8bfb3bd9b.txt)。

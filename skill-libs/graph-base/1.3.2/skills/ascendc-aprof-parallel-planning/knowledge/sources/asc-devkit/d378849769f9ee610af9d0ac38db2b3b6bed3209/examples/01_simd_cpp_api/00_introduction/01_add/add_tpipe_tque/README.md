@@ -66,7 +66,7 @@
 
 在本样例根目录下执行如下步骤，编译并执行样例。
 - 配置环境变量  
-  请根据当前环境上CANN开发套件包的[安装方式](../../../../../docs/zh/quick_start.md#prepare&install)，配置环境变量。
+  请根据当前环境上CANN开发套件包的安装方式，配置环境变量。
   ```bash
   source ${install_path}/cann/set_env.sh
   ```
@@ -105,3 +105,5 @@
   ```bash
   test pass!
   ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../sources/document-originals/14f2219ba48fdf536ac5cf018c2f70b6fd4a0a074d2dede49c9a6ca187d8e9dd.txt)。

@@ -21,7 +21,7 @@
 
 ## 可执行计划模板
 
-候选意图应能说明以下 5 个部分，记录在 [candidate 交接](../../../workflows/contracts/candidate.md) 的结果/引用产物中。既有 JSON 格式保持不变；已有设计对象可引用，不额外生成同义计划。
+候选意图应能说明以下 5 个部分，记录在 candidate 交接（同名参考，非历史原件：[candidate.md](../../../../../contracts/candidate.md)） 的结果/引用产物中。既有 JSON 格式保持不变；已有设计对象可引用，不额外生成同义计划。
 
 | 模板字段 | 写什么 | 不合格示例 |
 | --- | --- | --- |
@@ -76,8 +76,10 @@
 
 - Build 和 accuracy 先于 profile。
 - 每次候选源码变化都执行完整正确性；准备数据命中缓存不能替代这个检查。
-- 按 [主工作流](../../ascendc-aprof-workflow/SKILL.md) 使用唯一计时协议：代表 case 反馈、全 case 正式收尾。同源合格证据可复用；异常或近阈值按预声明规则以同方法独立复验，不强制重采或切换旧配对协议。
+- 按 主工作流（同名参考，非历史原件：[SKILL.md](../../ascendc-perf-optimize/SKILL.md)） 使用唯一计时协议：代表 case 反馈、全 case 正式收尾。同源合格证据可复用；异常或近阈值按预声明规则以同方法独立复验，不强制重采或切换旧配对协议。
 - PMU 只按路由或机制需求采集；正式工程结果由 runtime 给出，早停和无结论保留原始记录，不编造 verdict 或 reward。
 - 结构性改动必须多 shape 验证：主 shape、tail shape、小 shape、边界对齐 shape。
 - 复杂算子必须验证阶段性语义：Reduction partial、Sort 稳定性/索引、Softmax 数值稳定、MatMul/FA workspace combine。
 - simulator-only 结果只能作为 proxy，不能替代真实硬件 metric。
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../sources/document-originals/9525b72487a720ddf75106506f99cf021baaf196245a644fd1c4a5fc8f0de597.txt)。

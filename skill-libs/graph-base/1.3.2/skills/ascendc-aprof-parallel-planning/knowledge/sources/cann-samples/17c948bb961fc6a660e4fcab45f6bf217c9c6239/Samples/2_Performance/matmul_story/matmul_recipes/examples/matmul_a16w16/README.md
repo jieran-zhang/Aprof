@@ -40,7 +40,7 @@ $$
 totalNum = \frac{N}{baseN} \times \frac{M}{baseM}
 $$
 
-如果输入参数不满足上述条件，直接运行 `matmul_a16w16_streamk` 将会报错退出，详细条件判断可以参考[具体tiling计算](../../include/tiling/matmul_tiling_streamk.h)。建议使用算法推荐脚本自动选择适合当前形状的算法。
+如果输入参数不满足上述条件，直接运行 `matmul_a16w16_streamk` 将会报错退出，详细条件判断可以参考[具体tiling计算](../../include/tiling/matmul_tiling_streamk.h.txt)。建议使用算法推荐脚本自动选择适合当前形状的算法。
 
 ## 支持架构
 
@@ -48,7 +48,7 @@ NPU ARCH 3510
 
 ## 性能优化指南
 
-关于算子涉及的模板实现及优化策略，请参考[非量化矩阵乘算子性能优化指南](../../../docs/matmul_performance.md)
+关于算子涉及的模板实现及优化策略，请参考非量化矩阵乘算子性能优化指南
 
 ## API参考
 
@@ -180,3 +180,5 @@ python3 matmul_a16w16_algorithm_recommend.py 128 16384 128 false true
 | matmul_a16w16_streamk     |    15.678|   2.100 |     0.800|   0.200 |   0.300 |     0.500 |        0.250 |
 +---------------------------+----------+---------+----------+---------+---------+------------+--------------+
 ```
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../../../../sources/document-originals/859310bf9a0f40bdb3d04489c6f855a6d8ceac5af492d7fad4e053e284a71ade.txt)。

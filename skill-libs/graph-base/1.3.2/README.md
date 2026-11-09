@@ -16,7 +16,7 @@
 | [parallel-planning/knowledge](skills/ascendc-aprof-parallel-planning/knowledge/ROUTER.md) | C2；算子族/模式策略与模板、容量和成本比较 |
 | [optimization/knowledge](skills/ascendc-aprof-optimization/knowledge/ROUTER.md) | C3；执行方法、代码片段、约束、验证和失败特征 |
 | [profiling](skills/ascendc-aprof-profiling/SKILL.md) | C4；统一计时、按需机制采集与原始解析 |
-| [skills/registry.json](skills/registry.json) | 6 个角色入口、12 个辅助能力及其触发阶段；插件/安装清单 |
+| [skills/registry.json](skills/registry.json) | 6 个角色入口、13 个辅助能力及其触发阶段；插件/安装清单 |
 | [workflows](workflows/aprof-performance-workflow.md) | agents、contracts、流程和运行生命周期；migration 隔离冻结来源与逐项去向 |
 | [schemas](schemas/README.md)、runtime、tools | 数据格式、构建/路由/回放和完整包安装验证；不承担另一份知识 router |
 
@@ -54,6 +54,8 @@ runtime 0.2.6 增加预声明的 `bounded_outlier_v1`：20 次完整调用中最
 
 保留完整包，安装器给宿主创建符号链接。来源原文和许可证随包携带，运行不依赖上游五个源码仓库、原工作树或临时下载目录。不要只拷贝单个 skill。
 
+39 份第三方头文件证据以 `.h.txt` / `.hpp.txt` 原字节归档保存，逻辑引用及 SHA-256 保持。读取与复用方法见[来源归档说明](references/source-archives.md)。
+
 ```bash
 APROF_PACKAGE=/absolute/retained/graph-base/1.3.2
 APROF_HOST_SKILLS=/absolute/host/skills
@@ -68,14 +70,24 @@ python3 "$APROF_PACKAGE/tools/release.py" --allow-unsealed
 
 任务数据留在任务私有 scratch/final，预算与清理见 [生命周期](workflows/references/workflow-details.md)。交付需要的源码和证据保持可访问；旧发布包和默认版本不修改。
 
-本次机会比较与 R2 复盘维护见 [实施与知识变化](workflows/references/development-records.md#selection-reassessment-1.3.0)。D6 使用 decision v2；D5/v1 与旧知识正文按冻结身份继续回放。
+本次机会比较与 R2 复盘维护见 [实施与知识变化](workflows/references/development-records.md#selection-reassessment-130)。D6 使用 decision v2；D5/v1 与旧知识正文按冻结身份继续回放。
 
-910C 代码理解阶段的来源、独立复核与开发 A/B 评测见 [维护记录](workflows/references/development-records.md#code-understanding-1.3.0)。质量检查只用于开发验收，不成为每次任务的必跑步骤。
+910C 代码理解阶段的来源、独立复核与开发 A/B 评测见 [维护记录](workflows/references/development-records.md#code-understanding-130)。质量检查只用于开发验收，不成为每次任务的必跑步骤。
 
-当前完整优化方案采用 `aprof.action-decision/v3` 和 `aprof.handoff/v4`，可组合必要的多个 Action 并共享计划。跨轮维护任务内 `optimization-history.md`；轮数、达标停止条件与重试范围由用户或外层任务提供。详见[完整方案与交接](workflows/references/optimization-schemes.md)、[跨轮摘要](workflows/references/optimization-history.md)及[本次验收](workflows/references/development-records.md#optimization-schemes-1.3.0)。历史交接继续按原版本回放；当前未封版，不切换默认版本。
+当前完整优化方案采用 `aprof.action-decision/v3` 和 `aprof.handoff/v4`，可组合必要的多个 Action 并共享计划。跨轮维护任务内 `optimization-history.md`；轮数、达标停止条件与重试范围由用户或外层任务提供。详见[完整方案与交接](workflows/references/optimization-schemes.md)、[跨轮摘要](workflows/references/optimization-history.md)及[本次验收](workflows/references/development-records.md#optimization-schemes-130)。历史交接继续按原版本回放；当前未封版，不切换默认版本。
 
 ## 执行事实、完整代价与正式交接修复
 
-本轮修复的数据相关路径、准备工作收支、修复后重比、通用 Action 与无硬件验收见[开发交付报告](workflows/references/development-records.md#execution-cost-1.3.0)。新任务仍用 action-decision/v3 和 handoff/v4，历史快照及准入结论不追认。
+本轮修复的数据相关路径、准备工作收支、修复后重比、通用 Action 与无硬件验收见[开发交付报告](workflows/references/development-records.md#execution-cost-130)。新任务仍用 action-decision/v3 和 handoff/v4，历史快照及准入结论不追认。
 
-当前探索计时使用[中位数稳定性v2](skills/ascendc-aprof-profiling/references/median-stability-v2.md)：4/20、CV≤10%是试用轮内标准，跨窗口漂移、剔除敏感性及收益分别报告。来源数据的[离线比较及限制](workflows/references/development-records.md#median-timing-1.3.0)不追认历史候选；HAP、完整交接和工程收益门槛保持。
+当前探索计时使用[中位数稳定性v2](skills/ascendc-aprof-profiling/references/median-stability-v2.md)：4/20、CV≤10%是试用轮内标准，跨窗口漂移、剔除敏感性及收益分别报告。来源数据的[离线比较及限制](workflows/references/development-records.md#median-timing-130)不追认历史候选；HAP、完整交接和工程收益门槛保持。
+
+## 来源文档的阅读适配
+
+部分来源及历史文档保留了原目录中的链接。包内 Markdown 阅读文档已修正可定位的引用，移除缺失材料的链接，并将仅按同名匹配的补充参考明确标注为“非历史原件”。原仓库的 `@ref` 标记改为普通来源注释，保持原仓库名称。
+
+这些阅读修改不重写既有证据身份。原始字节保存在 `sources/document-originals/`，每页末尾均提供原文入口；`tools/documentation-adaptations.json` 记录原文与阅读文档各自的 SHA-256 及逐项改动。证据读取和包校验核验两份内容，并继续按原文执行来源片段和历史回放检查。缺失图片的失效引用已从阅读文档移除；图片文件未补入，处理前的目录与引用清单见[来源仓库缺图清单](https://github.com/jieran-zhang/Aprof/blob/34eba7a56fbbb8157c94e96b7dbbbc9104b005a9/scaffolding/curation/graph-base-1.3.2-development/markdown-repair/missing-images.md)。
+
+## 评审修复与复核入口
+
+本次补充独立 reviewer、统一指标、核任务并行的判定与检查，以及两个算法选择注入 recipe。逐项处理记录和验证结果见[评审修复说明](references/review-repairs.md)。使用者从[参考索引](references/README.md)进入现行说明。

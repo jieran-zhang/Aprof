@@ -10,6 +10,7 @@ agents:
   - aprof-parallel-planning-agent
   - aprof-optimization-agent
   - aprof-profiling-agent
+  - aprof-reviewer
 ---
 
 # 协调者
@@ -57,3 +58,7 @@ C0 后、C1 前完成或复用 [code-understanding](../contracts/code-understand
 ## 当前方案与实例交接
 
 新方案使用 action-decision/v3 与 handoff/v4，历史按精确版本回放；机制部分遵循[机制与交接规则](../references/diagnosis-v4.md)。候选机制保留支持、反证、unknown及替代解释；临时Problem可复用注册Action，不需要补造SPA边。按实例ID/hash、目标和计划核对证据。C2选择实际P并允许条件化分析，C3才选择O方法；未满足所绑定版本的实施安全/结构条件不实施；性能假设依照[Action选择规则](../references/action-selection.md)处理。新增证据与重规划创建后继，不覆盖旧记录。
+
+## 独立 reviewer 调度
+
+C3 实现者提交候选后，调用[独立 reviewer](reviewer.md)在独立上下文复核当前源码、计划和检查回执。审查者输出 review.md，协调者把 changes_requested 返回实现者并安排复审。pass 且构建、完整正确性及身份绑定成立后进入 C4。

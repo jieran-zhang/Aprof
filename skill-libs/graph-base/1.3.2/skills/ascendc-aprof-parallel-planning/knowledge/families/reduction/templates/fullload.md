@@ -177,7 +177,7 @@ AscendC::ReduceSum<float>(result, xFp32[row * rAlign], tmpFloat,
                          static_cast<int32_t>(rValid));
 ```
 
-这个接口的第四个实参是 count，不应照抄上游草图给 sum 添加第五个 false。ReduceMax 的 calIndex 与本函数不同。ARA 使用 **高级** Pattern 接口，输入已经装成 `[rValid,vAlign]`，tmpByte 为查询后分配的 LocalTensor<uint8_t>，dst/src/tmp 互不重叠：
+这个接口的第四个实参是 count，不应照抄上游草图给 sum 添加第五个 false。ReduceMax 的 calIndex 与本函数不同。ARA 使用 **高级** Pattern 接口，输入已经装成 `[rValid,vAlign]`，tmpByte 为查询后分配的 `LocalTensor<uint8_t>`，dst/src/tmp 互不重叠：
 
 ```cpp
 // 高级 ReduceSum 的依赖头及库按工程配置；false 是模板 isReuseSource。
@@ -195,3 +195,5 @@ AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, false>(
 来源说明 A2/A3 与 950 的 API 支持范围不同；910C/A3 实机需核实 SoC 对应编译目标，不能带入 950 寄存器实现或 NDDMA。验证 R=1、非对齐 R、V=1/V尾片、A1 多核尾任务、FullLoad 容量边界、不同输入/累加 dtype、keepDims、空归约轴和特殊值。R=0 的单位元/报错由算子合同单独处理，不把零 count API 当正确归约。
 
 来源事实是 AR/ARA 路径、行所有权、有效/对齐长度区别和 API 约束；字节方程、任务映射及选择顺序为工程推导。仅来源审读，无 NPU 性能验证；C2 固定所有权和数值合同，C3 只能在已证明的容量/语义域内调 tile/API。
+
+> 文档适配说明：本页已规范代码文字格式；来源和历史回放使用[保留的证据原文](../../../../../../sources/document-originals/d3eb3798cdb00847fb3c8f5da79da7216224e5dbce2d206eaf597a8376b07870.txt)。

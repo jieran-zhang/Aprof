@@ -92,3 +92,7 @@ bash run.sh sim
 ## workload tiling-key 接线
 
 多区域实现先有 `ascendc-aprof-parallel-planning` 的有效计划和分发。Host 根据真实 shape/dtype/layout/属性算 uint64 key，启动对应编译实现，或显式传给匹配 kernel 参数。注册算子的 `SetTilingKey`/`TILING_KEY_IS` 示例不能直接假定适用于裸直调。保持参数声明、Host 启动、Kernel 定义一致和通用 fallback；在正确性/计时输出记录真实 group/key/entry，测试完整 case 集、条件等值边界及相邻未见 shape。
+
+## 编译命令核验
+
+脚本的 SDK 选择与已验证边界见[编译说明](references/build-kernel.md)。从完整包取得脚本路径，工程目录显式传入 kernel 路径、输出目录和 ISA。

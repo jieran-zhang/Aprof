@@ -151,7 +151,7 @@ axesAfterSplit = shapeLen - ubSplitAxis
 ≤ 5 → WITHOUT_LOOP：一次 NDDMA 调用完成（API 为 DataCopy<T, 5, config>）
 > 5 → WITH_LOOP：最内 5 轴交给 NDDMA，外层轴 Kernel for-loop 遍历
 ```
-WITH_LOOP 模式下 NDDMA config 不变，只有 GM/UB 偏移随外层循环变化。详见 [nddma-broadcast.md](nddma-broadcast.md)。
+WITH_LOOP 模式下 NDDMA config 不变，只有 GM/UB 偏移随外层循环变化。详见 [nddma-broadcast.md](../../../../../../../../ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/broadcast/nddma-broadcast.md)。
 
 ---
 
@@ -159,7 +159,9 @@ WITH_LOOP 模式下 NDDMA config 不变，只有 GM/UB 偏移随外层循环变�
 
 | 主题 | 文档 |
 |------|------|
-| OneDim 分支（合轴后单维） | [onedim.md](onedim.md) |
+| OneDim 分支（合轴后单维） | [onedim.md](../../../../../../../../ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/broadcast/onedim.md) |
 | UB Broadcast（DAV_2201，静态接口 + 搬运指令 fallback） | [ub-broadcast.md](ub-broadcast.md) |
-| UB Broadcast 动态接口（DAV_3510，rank 1~9） | [dynamic-ub-broadcast.md](dynamic-ub-broadcast.md) |
-| NDDMA Broadcast（DAV_3510，GM→UB 硬件广播） | [nddma-broadcast.md](nddma-broadcast.md) |
+| UB Broadcast 动态接口（DAV_3510，rank 1~9） | [dynamic-ub-broadcast.md](../../../../../../../../ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/broadcast/dynamic-ub-broadcast.md) |
+| NDDMA Broadcast（DAV_3510，GM→UB 硬件广播） | [nddma-broadcast.md](../../../../../../../../ascendc-aprof-parallel-planning/knowledge/sources/cannbot-skills/41377d0a442cd5b1c2356874873a3dda591c6633/ops/ascendc-tiling-design/references/broadcast/nddma-broadcast.md) |
+
+> 文档适配说明：本页已修复引用；缺失材料的链接已移除，同名补充参考不代表历史原件。来源及历史回放使用[保留的证据原文](../../../../../../../../../sources/document-originals/8b118ddbc4e70ada3debaf013838c8690abc85bb5f9d847d113ed2db40208830.txt)。
