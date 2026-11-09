@@ -7,7 +7,7 @@ license: CANN-2.0
 # AProf graph-base 1.3.2
 
 从[协调者技能](skills/ascendc-aprof-coordinator/SKILL.md)和[主工作流](workflows/aprof-performance-workflow.md)开始。
-保留完整目录；安装与独立验证见 [README](README.md)，接入范围见 [IMPORT](IMPORT.md)。
+保留完整目录；安装与独立验证见 [README](README.md)，评审修改见[修复说明](references/review-repairs.md)。
 本包未封版，历史实验结果不作为本版本新增硬件验证。
 
 ## 使用参考
