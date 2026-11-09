@@ -8,7 +8,7 @@ import shutil
 import pytest
 import yaml
 
-from aprof_runtime import bindings, diagnosis
+from aprof_runtime import bindings, diagnosis, _diagnosis_v1
 from aprof_runtime.errors import GraphError
 from aprof_runtime.jsonio import content_hash, file_hash
 from aprof_runtime.knowledge import digest, build as build_tree, verify as verify_tree
@@ -24,12 +24,12 @@ def package(tmp_path_factory, request):
     root = tmp_path_factory.mktemp("diagnosis-package")
     # Freeze the actual imported compiler bytes inside this independent package.
     # Other maintenance agents may edit the checkout while this CPU fixture runs.
-    original_file = diagnosis.__file__
+    original_file = _diagnosis_v1.__file__
     frozen_compiler = root / "runtime/src/aprof_runtime/diagnosis.py"
     frozen_compiler.parent.mkdir(parents=True)
     shutil.copy(original_file, frozen_compiler)
-    diagnosis.__file__ = str(frozen_compiler)
-    request.addfinalizer(lambda: setattr(diagnosis, "__file__", original_file))
+    _diagnosis_v1.__file__ = str(frozen_compiler)
+    request.addfinalizer(lambda: setattr(_diagnosis_v1, "__file__", original_file))
     (root / "schemas").mkdir()
     for name in diagnosis.SCHEMA_NAMES + ("diagnosis-retrieval", "diagnosis-reasoning", "diagnosis-case", "diagnosis-proposal"):
         shutil.copy(ROOT / f"schemas/{name}.schema.json", root / "schemas")

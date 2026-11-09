@@ -9,7 +9,7 @@ from .documentation_sources import original_path
 
 
 def local(root: Path, name: str) -> Path:
-    # Evidence keeps the upstream bytes; adapted .md files are reading views.
+    # Resolve logical evidence paths to byte-exact originals or source archives.
     try:
         return original_path(root, name)
     except ValueError as exc:

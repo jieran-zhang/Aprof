@@ -40,7 +40,7 @@ $$
 totalNum = \frac{N}{baseN} \times \frac{M}{baseM}
 $$
 
-如果输入参数不满足上述条件，直接运行 `matmul_a16w16_streamk` 将会报错退出，详细条件判断可以参考[具体tiling计算](../../include/tiling/matmul_tiling_streamk.h)。建议使用算法推荐脚本自动选择适合当前形状的算法。
+如果输入参数不满足上述条件，直接运行 `matmul_a16w16_streamk` 将会报错退出，详细条件判断可以参考[具体tiling计算](../../include/tiling/matmul_tiling_streamk.h.txt)。建议使用算法推荐脚本自动选择适合当前形状的算法。
 
 ## 支持架构
 

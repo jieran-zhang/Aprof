@@ -287,6 +287,7 @@ def verify_unsealed(root, *, check_knowledge=True):
         'runtime/pyproject.toml', 'runtime/src/aprof_runtime/__init__.py',
         'runtime/src/aprof_runtime/__main__.py', 'runtime/src/aprof_runtime/cli.py',
         'runtime/src/aprof_runtime/knowledge.py', 'runtime/src/aprof_runtime/_knowledge_v1.py',
+        'runtime/src/aprof_runtime/diagnosis.py', 'runtime/src/aprof_runtime/_diagnosis_v1.py',
         'schemas/context.schema.json', 'schemas/gate-request.schema.json',
         'schemas/gate-outcome.schema.json', 'skills/registry.json',
         'workflows/migration/migration.json', 'workflows/aprof-performance-workflow.md',

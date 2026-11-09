@@ -54,6 +54,8 @@ runtime 0.2.6 增加预声明的 `bounded_outlier_v1`：20 次完整调用中最
 
 保留完整包，安装器给宿主创建符号链接。来源原文和许可证随包携带，运行不依赖上游五个源码仓库、原工作树或临时下载目录。不要只拷贝单个 skill。
 
+39 份第三方头文件证据以 `.h.txt` / `.hpp.txt` 原字节归档保存，逻辑引用及 SHA-256 保持。读取与复用方法见[来源归档说明](references/source-archives.md)。
+
 ```bash
 APROF_PACKAGE=/absolute/retained/graph-base/1.3.2
 APROF_HOST_SKILLS=/absolute/host/skills

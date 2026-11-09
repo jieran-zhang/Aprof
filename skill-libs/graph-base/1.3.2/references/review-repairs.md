@@ -60,7 +60,7 @@
 
 旧 api-algorithm-diagnosis-metrics_en.md 假英文副本未导入；本轮明确只保留中文，不伪造翻译。
 
-[修改依据](../IMPORT.md)
+[修改依据](https://gitcode.com/cann/asc-tools/blob/eed7e5094c78ad062123a6c9fb4f4b6dec1bebe7/skills/tool-ops-optimize/IMPORT.md)
 
 ### 7. 规范确认：skills 目录无需中英双份 Markdown
 
@@ -68,7 +68,7 @@
 
 遵循评审确认的 skills 无需中英双份，不再生成重复 _en 文档。
 
-[修改依据](../IMPORT.md)
+[修改依据](https://gitcode.com/cann/asc-tools/blob/eed7e5094c78ad062123a6c9fb4f4b6dec1bebe7/skills/tool-ops-optimize/IMPORT.md)
 
 ### 8. 安装命令及路径与 asc-tools 目录布局不一致
 
@@ -332,4 +332,4 @@ npu-arch 明确为技能入口；实际值来自 PlatformAscendC、设备探测�
 
 未继续提供字节相同的假 _en 文档。当前中文入口引用中文正文，按评审建议采用只维护中文这一选项。
 
-[修改依据](../IMPORT.md)
+[修改依据](https://gitcode.com/cann/asc-tools/blob/eed7e5094c78ad062123a6c9fb4f4b6dec1bebe7/skills/tool-ops-optimize/IMPORT.md)
