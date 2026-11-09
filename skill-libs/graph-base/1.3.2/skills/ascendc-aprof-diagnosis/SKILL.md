@@ -28,3 +28,7 @@ description: 从源码、workload和观测检索Ascend C机制知识，比较支
 C1 携带推理、证据、所选方案和各成员 Action 完整必要快照，下游无需读诊断图目录。新增证据创建后继，不改旧记录。P/O自行选实际模板／recipe；诊断不提前锁定具体 P/O 组合，不写候选代码或裁决性能。
 
 历史v0003显式用 `graph route --graph <v0003目录> --context <旧evidence.json>` 回放。知识晋升、临时机制边界及四个[纸面案例](examples/README.md)按需阅读。本轮知识仅来源审阅，不声称目标设备瓶颈或收益。
+
+## 源码与指标入口
+
+源码分析先读[源码观察](references/source-observations.md)，输出字段见[契约迁移](references/output-contract.md)。性能数值统一使用[指标字典](../ascendc-aprof-profiling/references/metrics.md)的字段、分母和消费者定义。算法选择评测使用[注入技能](../ascendc-aprof-inject-problems/SKILL.md)，盲测时隔离标签。

@@ -16,7 +16,7 @@
 | [parallel-planning/knowledge](skills/ascendc-aprof-parallel-planning/knowledge/ROUTER.md) | C2；算子族/模式策略与模板、容量和成本比较 |
 | [optimization/knowledge](skills/ascendc-aprof-optimization/knowledge/ROUTER.md) | C3；执行方法、代码片段、约束、验证和失败特征 |
 | [profiling](skills/ascendc-aprof-profiling/SKILL.md) | C4；统一计时、按需机制采集与原始解析 |
-| [skills/registry.json](skills/registry.json) | 6 个角色入口、12 个辅助能力及其触发阶段；插件/安装清单 |
+| [skills/registry.json](skills/registry.json) | 6 个角色入口、13 个辅助能力及其触发阶段；插件/安装清单 |
 | [workflows](workflows/aprof-performance-workflow.md) | agents、contracts、流程和运行生命周期；migration 隔离冻结来源与逐项去向 |
 | [schemas](schemas/README.md)、runtime、tools | 数据格式、构建/路由/回放和完整包安装验证；不承担另一份知识 router |
 
@@ -84,4 +84,8 @@ python3 "$APROF_PACKAGE/tools/release.py" --allow-unsealed
 
 部分来源及历史文档保留了原目录中的链接。包内 Markdown 阅读文档已修正可定位的引用，移除缺失材料的链接，并将仅按同名匹配的补充参考明确标注为“非历史原件”。原仓库的 `@ref` 标记改为普通来源注释，保持原仓库名称。
 
-这些阅读修改不重写既有证据身份。原始字节保存在 `sources/document-originals/`，每页末尾均提供原文入口；`tools/documentation-adaptations.json` 记录原文与阅读文档各自的 SHA-256 及逐项改动。证据读取和包校验核验两份内容，并继续按原文执行来源片段和历史回放检查。缺失图片的失效引用已从阅读文档移除；图片文件未补入，处理前的目录与引用清单见仓库 `scaffolding/curation/graph-base-1.3.2-development/markdown-repair/missing-images.md`。
+这些阅读修改不重写既有证据身份。原始字节保存在 `sources/document-originals/`，每页末尾均提供原文入口；`tools/documentation-adaptations.json` 记录原文与阅读文档各自的 SHA-256 及逐项改动。证据读取和包校验核验两份内容，并继续按原文执行来源片段和历史回放检查。缺失图片的失效引用已从阅读文档移除；图片文件未补入，处理前的目录与引用清单见[来源仓库缺图清单](https://github.com/jieran-zhang/Aprof/blob/34eba7a56fbbb8157c94e96b7dbbbc9104b005a9/scaffolding/curation/graph-base-1.3.2-development/markdown-repair/missing-images.md)。
+
+## 评审修复与复核入口
+
+本次补充独立 reviewer、统一指标、核任务并行的判定与检查，以及两个算法选择注入 recipe。逐项处理记录和验证结果见[评审修复说明](references/review-repairs.md)。使用者从[参考索引](references/README.md)进入现行说明。

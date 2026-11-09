@@ -38,3 +38,7 @@ features 可含 cube-api、scalar-control、fusion-composition，分别读取计
 输入复用先区分：同一原输入的多个消费者保留 UB 值，读取 [input-tile-residency](knowledge/branches/memory-transfer/recipes/input-tile-residency.md)；不同临时值共用存储读 buffer-lifetime.reuse；仅改善缓存距离读 l2-reuse-order；改变融合区间读 fusion-composition。Action ready 不能替代原值、有效地址域、生命周期和物理容量的逐项核验。选中的正文及必要支持资料随实际选择记录，不把多个命中等同于多个已执行变换。
 
 方案咨询已经点名具体 API 或数值替换时，按[选择规则](../../workflows/references/action-selection.md)展开对应叶：语义、调用粒度、尾块和内部 scratch 必须进入比较。通用分支概述不能替代具体 API 约束；不要把包内可查条件推迟为笼统 unknown。
+
+## 核并行策略与独立审查
+
+修改核数、任务划分或归约时，先逐项执行[核任务并行策略](references/task-parallelism.md)，保存固定 strategy_id、判定顺序、容量、pre/post 检查和失败交接。实现完成后由协调者调用[独立 reviewer](../../workflows/agents/reviewer.md)，审查结论绑定最终候选 hash。
